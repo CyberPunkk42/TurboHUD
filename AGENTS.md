@@ -1,14 +1,19 @@
 # TurboKit — notes for AI agents
 
-TurboKit is a new tool for Turbo Sliders Unlimited (TSU). Its purpose, stack and entry
-point are still to be decided; update this section once they are.
+TurboKit is a new tool for Turbo Sliders Unlimited (TSU): a HUD overlay on top of the
+running game (fuel estimate, minimap, lap times). Stack and entry point are still to be
+decided; findings and suggested features are in `docs/SUGGESTIONS.md` (local only).
 Sister project: LiveryStudio (`../LiveryStudio`), an offline livery editor (Python 3.12+
 with Tk, standard library only). Reuse its findings about TSU's files where they apply,
 but never import from or write into that folder.
 
 ## Start here
 1. Read `RESUME.md` (once it exists): current state, next steps and recent changes.
-2. Read `docs/IMPROVEMENT_BACKLOG.md` (once it exists): open items ordered by value.
+2. Read `docs/SUGGESTIONS.md` if it is there: what the game exposes, suggested features,
+   open decisions. It is private and gitignored: never commit it, quote it in commits or
+   PRs, or move its contents into tracked files. The repository will be made public
+   later for the TSU community.
+3. Read `docs/IMPROVEMENT_BACKLOG.md` (once it exists): open items ordered by value.
 
 ## Where things are
 - This folder is the working copy. It is a local Git repository on branch `main`; no
