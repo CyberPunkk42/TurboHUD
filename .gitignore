@@ -1,0 +1,22 @@
+# Python caches
+__pycache__/
+*.pyc
+
+# Per-user state
+settings/preferences.json
+
+# Real liveries and game data stay on this computer only. TSU writes the
+# player's Steam ID into every export (exportId), so none of them are published.
+samples/*
+!samples/README.md
+
+# Build outputs
+build/
+releases/*.zip
+releases/*.zip.sha256
+
+# Development tools environment (Ruff formatter); never shipped
+.buildtools/
+
+# Folder view settings the macOS Finder writes into every folder it shows
+.DS_Store

@@ -1,0 +1,9 @@
+# Development tool settings only; the app itself needs no packaging metadata.
+
+[tool.ruff]
+line-length = 110
+extend-exclude = ["samples", "releases", "build", ".buildtools"]
+
+[tool.ruff.format]
+quote-style = "preserve"
+line-ending = "auto"

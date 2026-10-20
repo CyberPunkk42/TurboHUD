@@ -1,0 +1,3 @@
+# Store every file byte-for-byte: release and acceptance checks compare exact hashes,
+# and TSU paint-job JSON must not have its line endings rewritten.
+* -text
