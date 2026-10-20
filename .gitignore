@@ -20,3 +20,6 @@ releases/*.zip.sha256
 
 # Folder view settings the macOS Finder writes into every folder it shows
 .DS_Store
+
+# Private notes: stay on this computer, never on GitHub (the repo will be public later)
+docs/SUGGESTIONS.md
