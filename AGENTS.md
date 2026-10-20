@@ -16,8 +16,10 @@ but never import from or write into that folder.
 3. Read `docs/IMPROVEMENT_BACKLOG.md` (once it exists): open items ordered by value.
 
 ## Where things are
-- This folder is the working copy. It is a local Git repository on branch `main`; no
-  GitHub remote yet. Ask before creating one or pushing anywhere.
+- This folder is the working copy and a private GitHub repository
+  (https://github.com/CyberPunkk42/TurboKit, branch `main`). It sits next to
+  `../LiveryStudio`. Commits use the GitHub noreply address: set
+  `git config user.email 203462244+CyberPunkk42@users.noreply.github.com` in every clone.
 - The user's TSU data (`player.json`, liveries in `SavedPaintJobs`) lives in
   `%USERPROFILE%\AppData\LocalLow\Turbo Sliders\Unlimited\<Steam ID>`. On the user's Mac,
   TSU runs in a CrossOver bottle, so the same folder is inside the bottle. Read from it
@@ -40,10 +42,10 @@ people the user trusts.
 - Never use `git push --all` or `git push --mirror`.
 
 ## Branches and pull requests
-The user approves every change by merging its pull request on GitHub. Until the
-GitHub repository exists, work on local branches and let the user review them.
-- Never commit to `main` or push to it (the initial setup commit excepted). Never merge
-  a pull request yourself, unless the user says so for that PR.
+The user approves every change by merging its pull request on GitHub. GitHub Free
+cannot enforce this for a private repository, so it is up to you to follow it.
+- Never commit to `main` or push to it. Never merge a pull request yourself
+  (`gh pr merge`, or a local merge into `main`), unless the user says so for that PR.
 - Start each task from an up-to-date `main`: `git switch main`, `git pull`, then
   `git switch -c <type>/<short-name>`. Types: `feature/`, `fix/`, `docs/`, `chore/`.
   Keep one task (usually one backlog item) per branch.
@@ -57,6 +59,9 @@ GitHub repository exists, work on local branches and let the user review them.
 - Then stop and give the user the PR link. Fixes requested in review go on the same
   branch as further commits.
 - After the user merges: `git switch main`, `git pull`, `git branch -d <branch>`.
+  GitHub deletes the remote branch.
+- Pull requests are opened under the user's own GitHub account, so GitHub shows no
+  "Approve" button. The user approves by clicking **Merge**.
 - Releases are built only from `main` after the merge. Ask before pushing a release
   tag (`vYYYY.MM.DD`).
 
