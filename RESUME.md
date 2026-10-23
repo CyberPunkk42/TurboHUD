@@ -35,15 +35,16 @@
 See `docs/IMPROVEMENT_BACKLOG.md`. In short:
 1. Test TurboKit and the probes on Windows over TSU in windowed, Fullscreen and
    Fullscreen Exclusive.
-2. The first real HUD data (lap times, fuel estimate or minimap).
-3. A settings window for the look; Linux shortcuts and AppImage.
+2. Move the move-mode hint so it no longer overlaps the Lock and Close buttons.
+3. The first real HUD data (lap times, fuel estimate or minimap).
+4. A settings window for the look; Linux shortcuts and AppImage.
 
 ## Recent changes
 - 2026-10-24: App skeleton and bundled builds. `turbokit/` holds the overlay (locked and
   move mode, shortcuts, tray icon, saved placement and theme) with a session clock as the
   first HUD. `tools/build_app.py` builds a ready-to-run app with PyInstaller (Mac: 27 MB
   ZIP); GitHub Actions builds and smoke-tests Windows, macOS and Linux. `README.md`
-  explains install and use for players.
+  explains install, first start (step by step per system) and use.
 - 2026-10-24: Qt overlay probe tested over TSU on the Mac, in Fullscreen with and
   without Fullscreen Exclusive: the HUD shows, text is crisp, clicks pass through,
   shortcuts and move mode work, and the game does not stutter. Qt is confirmed for the

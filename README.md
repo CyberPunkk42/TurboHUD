@@ -7,20 +7,52 @@ Fullscreen mode too.
 Early version: for now the HUD shows a session clock. Fuel estimate, minimap and lap
 times are planned.
 
-## Install
+## Install and first start
 
-Download the archive for your system from the release page and unpack it. Nothing else
-needs to be installed.
+Nothing else needs to be installed: Python and Qt are inside the download. TurboKit is
+not signed with a paid certificate yet, so Windows and macOS ask once whether to trust
+it. After that it starts with a double-click.
 
-- **Windows:** unpack `TurboKit-<version>-windows-x64.zip` and start
-  `TurboKit\TurboKit.exe`. Windows may warn about an unknown app the first time: choose
-  **More info**, then **Run anyway**.
-- **macOS (Apple silicon):** unpack `TurboKit-<version>-macos-arm64.zip` and move
-  `TurboKit.app` to Applications. The first start is blocked because the app is not
-  signed: open **System Settings > Privacy & Security** and choose **Open Anyway**.
-  TurboKit has no Dock icon; it shows a **T** in the menu bar.
-- **Linux:** unpack `TurboKit-<version>-linux-x64.tar.gz` and start `TurboKit/TurboKit`.
-  The overlay needs X11, or XWayland on a Wayland desktop.
+**What to expect:** TurboKit opens no window and has no Dock or taskbar button. When it
+runs, you see:
+- the HUD at the top left of the screen ("TurboKit - session time" and a clock)
+- a yellow **T** icon in the menu bar (Mac) or in the taskbar's notification area
+  (Windows; it may be hidden behind the **^** arrow)
+
+### macOS (Apple silicon)
+1. Download `TurboKit-<version>-macos-arm64.zip` and double-click it in Downloads. You get
+   `TurboKit.app`.
+2. Drag `TurboKit.app` into **Applications**.
+3. Double-click it. macOS says it "could not verify" TurboKit: click **Done** (not Move to
+   Trash).
+4. Open **System Settings > Privacy & Security** and scroll down to **Security**. Next to
+   "TurboKit was blocked", click **Open Anyway**, enter your password, and click **Open
+   Anyway** once more.
+5. TurboKit starts: look for the HUD at the top left and the **T** in the menu bar. From
+   now on, a double-click is enough.
+
+### Windows
+1. Download `TurboKit-<version>-windows-x64.zip`.
+2. Right-click it, choose **Extract All**, and extract it, for example to your Desktop.
+   Starting it from inside the ZIP without extracting does not work.
+3. Open the extracted `TurboKit` folder and double-click `TurboKit.exe`.
+4. If "Windows protected your PC" appears, click **More info**, then **Run anyway**.
+5. TurboKit starts: look for the HUD at the top left and the **T** in the notification
+   area.
+
+### Linux
+1. Download `TurboKit-<version>-linux-x64.tar.gz` and unpack it:
+   `tar -xzf TurboKit-<version>-linux-x64.tar.gz`
+2. Start it: `./TurboKit/TurboKit`
+3. Linux has no shortcuts yet: use the **T** icon's menu for move mode. The overlay needs
+   X11, or XWayland on a Wayland desktop.
+
+### Trying a test build from a pull request
+Before a release, every pull request that changes the app builds it for all three
+systems. On the pull request page, open **Checks**, then **Build**, and download
+**TurboKit-macOS**, **TurboKit-Windows** or **TurboKit-Linux** under **Artifacts**.
+GitHub packs the download into one more ZIP: unpack it first, then follow the steps for
+your system above with the file inside.
 
 ## Use
 
@@ -43,10 +75,13 @@ In `settings.json`, `theme` sets the text colour, accent colour, outline colour
 
 ## Run from the source
 
-Needs Python 3.10 or later. The start script sets up Qt (PySide6) in `.buildtools/venv`
-on the first run:
-- macOS, Linux: `sh run_turbokit.sh`
-- Windows: `run_turbokit.cmd`
+For development, or to try a change without building. Needs Python 3.10 or later and a
+copy of this repository. The start script sets up Qt (PySide6) in `.buildtools/venv` on
+the first run, which takes a minute; later starts are quick.
+- macOS, Linux: in a terminal, in the repository folder: `sh run_turbokit.sh`
+- Windows: in a command prompt, in the repository folder: `run_turbokit.cmd`
+
+The terminal shows TurboKit's log while it runs; Ctrl+C there quits it.
 
 Tests: `python3 -B -m unittest discover -s tests` (Windows: `py -3 -B -m unittest
 discover -s tests`). Builds: `python tools/build_app.py --smoke` with the packages in

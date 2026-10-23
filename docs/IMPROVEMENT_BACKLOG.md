@@ -10,15 +10,21 @@ Over TSU on Windows, in windowed, Fullscreen and Fullscreen Exclusive: the built
 run on a build machine. Expected: windowed and Fullscreen work; Exclusive may not, and an
 overlay that injects into the game is out of scope.
 
-## 2. First real HUD data
+## 2. Move-mode hint overlaps the buttons
+In move mode, the hint ("Drag to move, resize at the corner...") is drawn over the Lock
+and Close buttons. Put it at the bottom of the box, on its own line next to or above the
+buttons, so it is easy to read and nothing overlaps; check it at the minimum size and at
+larger theme scales.
+
+## 3. First real HUD data
 Pick the first feature (lap times, fuel estimate or minimap), find the game data it
 needs, and show it in place of the session clock. Read the game's files only.
 
-## 3. Customising the look in the app
+## 4. Customising the look in the app
 A small settings window (from the tray menu) for the theme's colours and scale, instead
 of editing `settings.json` by hand.
 
-## 4. Linux: shortcuts and AppImage
+## 5. Linux: shortcuts and AppImage
 System-wide shortcuts on X11, and an AppImage instead of the `.tar.gz`. Test on a Linux
 desktop with TSU under Proton.
 

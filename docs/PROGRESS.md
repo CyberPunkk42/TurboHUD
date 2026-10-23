@@ -27,4 +27,4 @@ its "Recent changes".
   move mode, shortcuts, tray icon, saved placement and theme) with a session clock as the
   first HUD. `tools/build_app.py` builds a ready-to-run app with PyInstaller (Mac: 27 MB
   ZIP); GitHub Actions builds and smoke-tests Windows, macOS and Linux. `README.md`
-  explains install and use for players.
+  explains install, first start (step by step per system) and use.
