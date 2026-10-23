@@ -2,18 +2,15 @@
 
 Open items, most valuable first. Finished items move to `docs/PROGRESS.md`.
 
-## 1. Overlay probe on Windows
-Run `experiments/overlay_probe.py` over TSU on Windows in windowed, Fullscreen and
-Fullscreen Exclusive, and add the results to `experiments/README.md`. Expected: windowed
+## 1. Overlay probes on Windows
+Run `experiments/qt_overlay_probe.py` (the chosen stack; `run_qt_overlay_probe.cmd`) and
+`experiments/overlay_probe.py` over TSU on Windows in windowed, Fullscreen and
+Fullscreen Exclusive, and add the results to `experiments/README.md`. Check the Qt
+probe's shortcuts especially: its Windows hotkey code has not run yet. Expected: windowed
 and Fullscreen work; Exclusive may not, and an overlay that injects into the game is out
 of scope.
 
-## 2. Test the Qt overlay probe over TSU
-`experiments/qt_overlay_probe.py` (see `experiments/README.md`) is built and starts on
-the Mac. Test it by hand over TSU in Fullscreen on the Mac, and on Windows together with
-item 1: visible, smooth graphics, click-through, shortcuts, move mode, no stutter.
-
-## 3. App skeleton and bundled builds
+## 2. App skeleton and bundled builds
 The structure in `docs/STACK.md`: `launch_turbokit.py`, `turbokit/core/`, `hud/` and
 `overlay/`, a development environment with PySide6 kept out of Git, and PyInstaller
 builds for Windows, macOS and Linux on GitHub Actions. Measure the bundle sizes.

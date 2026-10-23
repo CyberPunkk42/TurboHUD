@@ -106,8 +106,8 @@ does in `.buildtools/`.
 ## Still to check
 1. The overlay probe on Windows itself (backlog item 1), especially over Fullscreen
    Exclusive.
-2. The Qt overlay probe (`experiments/qt_overlay_probe.py`) over TSU: on the Mac in
-   Fullscreen, and on Windows.
+2. The Qt overlay probe (`experiments/qt_overlay_probe.py`) over TSU on Windows. On the
+   Mac it works (2026-10-24).
 3. The size of a trimmed PyInstaller bundle on each system.
 4. Linux on X11 and XWayland, once there is a Linux machine with TSU to test on.
 5. Reading the player's controls on the Mac from a background app, once a feature needs
