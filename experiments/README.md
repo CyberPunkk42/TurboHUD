@@ -195,7 +195,14 @@ start in move mode (needed on Linux, which has no shortcuts yet).
 
 ### Results
 
-Not tested over TSU yet. A short start on the Mac (2026-10-23, PySide6 6.11.2) shows the
-window at level 1000, registers both shortcuts, and switches into move mode and back
-without errors. PySide6 takes about 335 MB in the development environment on the Mac; a
-bundled app would include only the parts it uses.
+**macOS (2026-10-24, PySide6 6.11.2).** Tested by hand over TSU with **Fullscreen** on, both
+with Fullscreen Exclusive off and on: everything works as planned.
+
+- The HUD shows over the game, and the text is crisp.
+- Locked, clicks pass through; the shortcuts and move mode work.
+- The game runs fine, with no stutter while the map dot moves.
+
+**Qt works for TurboKit's overlay on the Mac,** with the small ctypes part for the window
+level and the shortcuts. Not tested yet: Windows, Linux.
+PySide6 takes about 335 MB in the development environment on the Mac; a bundled app
+would include only the parts it uses.

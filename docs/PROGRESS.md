@@ -19,3 +19,7 @@ its "Recent changes".
   window with move mode and the shortcuts, raised above Fullscreen on the Mac through
   ctypes. Runners set up the pinned PySide6 in `.buildtools/qt-venv`. Starts on the Mac;
   not yet tested over TSU.
+- 2026-10-24: Qt overlay probe tested over TSU on the Mac, in Fullscreen with and
+  without Fullscreen Exclusive: the HUD shows, text is crisp, clicks pass through,
+  shortcuts and move mode work, and the game does not stutter. Qt is confirmed for the
+  Mac overlay; Windows is next.
