@@ -1,8 +1,8 @@
 # TurboKit — notes for AI agents
 
 TurboKit is a new tool for Turbo Sliders Unlimited (TSU): a HUD overlay on top of the
-running game (fuel estimate, minimap, lap times). Stack and entry point are still to be
-decided; findings and suggested features are in `docs/SUGGESTIONS.md` (local only).
+running game (fuel estimate, minimap, lap times). Stack: Python with Qt (PySide6),
+shipped as a bundled app for Windows, macOS and Linux (`docs/STACK.md`); findings and suggested features are in `docs/SUGGESTIONS.md` (local only).
 Sister project: LiveryStudio (`../LiveryStudio`), an offline livery editor (Python 3.12+
 with Tk, standard library only). Reuse its findings about TSU's files where they apply,
 but never import from or write into that folder.

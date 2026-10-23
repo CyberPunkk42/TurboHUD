@@ -10,3 +10,7 @@ its "Recent changes".
   program outside CrossOver, at a window level above full-screen windows. It shows over
   TSU in Fullscreen, lets clicks through, and has the same shortcuts and move mode, with
   no permission needed. The Mac overlay for Fullscreen must therefore be native.
+- 2026-10-23: Stack chosen (`docs/STACK.md`): Python with Qt (PySide6), shipped as a
+  ready-to-run app for Windows, macOS and Linux, so players install nothing else. Chosen
+  for good-looking, customisable HUD graphics drawn once for all systems. Linux limits
+  (Wayland, Steam Deck) noted.

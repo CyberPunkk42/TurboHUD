@@ -1,7 +1,9 @@
 # TurboKit: where things stand
 
 ## Current state
-- No app code yet. Stack and entry point are still open.
+- No app code yet. Stack chosen (`docs/STACK.md`): Python with Qt (PySide6), shipped as a
+  bundled app for Windows, macOS and Linux, with small ctypes parts for what Qt lacks
+  (Mac window level above Fullscreen, global shortcuts).
 - The overlay probe (`experiments/overlay_probe.py`, see `experiments/README.md`) answered
   whether a see-through, click-through, always-on-top window can sit over TSU:
   - macOS (CrossOver): yes when TSU runs windowed or with Fullscreen off; never with TSU's
@@ -22,10 +24,14 @@
 ## Next steps
 See `docs/IMPROVEMENT_BACKLOG.md`. In short:
 1. Run the probe on Windows over TSU in windowed, Fullscreen and Fullscreen Exclusive.
-2. Decide the stack: a native overlay window on each system, and how the shared part
-   talks to it.
+2. A Qt version of the overlay probe, over TSU's Fullscreen on the Mac and on Windows.
+3. The app skeleton and bundled builds for the three systems.
 
 ## Recent changes
+- 2026-10-23: Stack chosen (`docs/STACK.md`): Python with Qt (PySide6), shipped as a
+  ready-to-run app for Windows, macOS and Linux, so players install nothing else. Chosen
+  for good-looking, customisable HUD graphics drawn once for all systems. Linux limits
+  (Wayland, Steam Deck) noted.
 - 2026-10-23: Native Mac overlay probe (`experiments/mac_overlay_probe.py`). A plain Mac
   program outside CrossOver, at a window level above full-screen windows. It shows over
   TSU in Fullscreen, lets clicks through, and has the same shortcuts and move mode, with
