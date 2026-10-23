@@ -6,8 +6,8 @@
   above Fullscreen, global shortcuts).
 - App skeleton in `turbokit/` (see `README.md` and the structure in `docs/STACK.md`): the
   overlay with locked and move mode, Ctrl+Shift+L / Ctrl+Shift+Q, a tray icon, saved
-  placement and theme. The HUD shows only a session clock so far. Start from the source
-  with `run_turbokit.sh` / `run_turbokit.cmd`.
+  placement and theme, tested by hand on the Mac. The HUD shows only a session clock so
+  far. Start from the source with `run_turbokit.sh` / `run_turbokit.cmd`.
 - Builds: `tools/build_app.py` (PyInstaller) makes a Windows ZIP, a Mac app ZIP and a
   Linux `.tar.gz`; `.github/workflows/build.yml` builds and smoke-tests all three on pull
   requests that touch the app, and drafts a GitHub release for a `v*` tag.
@@ -44,7 +44,8 @@ See `docs/IMPROVEMENT_BACKLOG.md`. In short:
   move mode, shortcuts, tray icon, saved placement and theme) with a session clock as the
   first HUD. `tools/build_app.py` builds a ready-to-run app with PyInstaller (Mac: 27 MB
   ZIP); GitHub Actions builds and smoke-tests Windows, macOS and Linux. `README.md`
-  explains install, first start (step by step per system) and use.
+  explains install, first start (step by step per system) and use. Tested by hand on the
+  Mac.
 - 2026-10-24: Qt overlay probe tested over TSU on the Mac, in Fullscreen with and
   without Fullscreen Exclusive: the HUD shows, text is crisp, clicks pass through,
   shortcuts and move mode work, and the game does not stutter. Qt is confirmed for the
