@@ -1,0 +1,2 @@
+# Qt for the Qt overlay probe; the runners install it into .buildtools/qt-venv (gitignored).
+PySide6-Essentials==6.11.2
