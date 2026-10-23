@@ -14,3 +14,8 @@ its "Recent changes".
   ready-to-run app for Windows, macOS and Linux, so players install nothing else. Chosen
   for good-looking, customisable HUD graphics drawn once for all systems. Linux limits
   (Wayland, Steam Deck) noted.
+- 2026-10-23: Qt overlay probe (`experiments/qt_overlay_probe.py`) on the chosen stack:
+  a test HUD (outlined text, clock, bar, small map) in a transparent, click-through Qt
+  window with move mode and the shortcuts, raised above Fullscreen on the Mac through
+  ctypes. Runners set up the pinned PySide6 in `.buildtools/qt-venv`. Starts on the Mac;
+  not yet tested over TSU.

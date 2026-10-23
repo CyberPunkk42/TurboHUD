@@ -51,8 +51,9 @@ cannot enforce this for a private repository, so it is up to you to follow it.
   Keep one task (usually one backlog item) per branch.
 - On the branch: make the change, run the checks below, commit, then push with
   `git push -u origin <branch>`.
-- Open the PR against `main` (`gh pr create --base main` where `gh` exists; on the
-  user's Mac there is no `gh`, so give the pushed-branch URL). In the description, say:
+- Open the PR against `main` with `gh pr create --base main` (on the user's Mac,
+  `/opt/homebrew/bin/gh`, signed in). Where `gh` is missing or not signed in, give the
+  pushed-branch URL instead. In the description, say:
   - what changed and why, naming the backlog item
   - how it was verified
   - anything not verified, or that the user should try by hand

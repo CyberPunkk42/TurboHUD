@@ -8,11 +8,10 @@ Fullscreen Exclusive, and add the results to `experiments/README.md`. Expected: 
 and Fullscreen work; Exclusive may not, and an overlay that injects into the game is out
 of scope.
 
-## 2. Qt overlay probe
-The stack is Python with Qt (PySide6), see `docs/STACK.md`. Before building the app,
-check that a Qt window can do what the two probes do: transparent background,
-click-through, move mode, and on the Mac a window level above TSU's Fullscreen (raised
-through ctypes). Test over TSU on the Mac, and on Windows together with item 1.
+## 2. Test the Qt overlay probe over TSU
+`experiments/qt_overlay_probe.py` (see `experiments/README.md`) is built and starts on
+the Mac. Test it by hand over TSU in Fullscreen on the Mac, and on Windows together with
+item 1: visible, smooth graphics, click-through, shortcuts, move mode, no stutter.
 
 ## 3. App skeleton and bundled builds
 The structure in `docs/STACK.md`: `launch_turbokit.py`, `turbokit/core/`, `hud/` and

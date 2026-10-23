@@ -153,4 +153,49 @@ Other findings:
 - In TSU's in-game menu, the pointer jumps to the Camera button and disappears for good
   once the gamepad is used. This happens without any overlay too: it is TSU's own
   behaviour and has been reported to its developer.
-| Game unaffected | No stutter or lost keyboard input in the game. |
+
+## Qt overlay probe (`qt_overlay_probe.py`)
+
+Question: can a Qt (PySide6) window, TurboKit's chosen stack (`docs/STACK.md`), do what
+the two native probes do, with HUD graphics drawn by Qt?
+
+The probe shows a test HUD: outlined text, a lap-style clock, a bar that empties once a
+minute, and a small map with a dot going round. Qt makes the window transparent,
+click-through and always on top. On the Mac, a few ctypes calls (from the native Mac
+probe) raise it to the screen-saver level on every Space and register the shortcuts; on
+Windows, ctypes registers the shortcuts. Linux has no shortcuts yet.
+
+### Run it
+1. Set TSU to the mode to test (on the Mac: **Fullscreen**) and drive onto a track.
+2. Start the probe. The first run creates `.buildtools/qt-venv` (gitignored) and
+   installs the pinned PySide6 from `experiments/requirements-qt.txt` into it:
+   - Mac or Linux: `sh experiments/run_qt_overlay_probe.sh`
+   - Windows: `experiments\run_qt_overlay_probe.cmd` (needs Python 3.10+ with the `py`
+     launcher)
+3. The HUD starts locked at the top left. **Ctrl+Shift+L** switches to move mode: blue
+   tint, the pointer shows, drag the box, resize it at the bottom-right corner, then
+   **Lock** (or Ctrl+Shift+L). Clicking back into the game also locks it.
+4. Quit with **Ctrl+Shift+Q**, **Close** in move mode, Ctrl+C in the terminal, or wait
+   (10 minutes by default).
+
+Placement is saved in `.buildtools/qt_overlay_probe.json` and the log in
+`.buildtools/qt_overlay_probe.log` (both gitignored). Options: `--x`, `--y`, `--width`,
+`--height`, `--seconds`, `--level` (macOS, as in the native Mac probe) and `--move` to
+start in move mode (needed on Linux, which has no shortcuts yet).
+
+### What to check
+| Check | Pass when |
+| --- | --- |
+| Visible | The HUD shows over TSU (on the Mac in Fullscreen), also after clicking into the game and while driving. |
+| Looks | Text, bar and map are smooth and readable over bright and dark parts of the track. |
+| Click-through | Locked, clicks on the HUD reach the game. |
+| Shortcuts | Ctrl+Shift+L and Ctrl+Shift+Q work while the game has focus. |
+| Move mode | The pointer shows, the box can be dragged and resized, and locking gives the game its focus back. |
+| Game unaffected | No stutter or lost input while the map dot moves 20 times a second. |
+
+### Results
+
+Not tested over TSU yet. A short start on the Mac (2026-10-23, PySide6 6.11.2) shows the
+window at level 1000, registers both shortcuts, and switches into move mode and back
+without errors. PySide6 takes about 335 MB in the development environment on the Mac; a
+bundled app would include only the parts it uses.

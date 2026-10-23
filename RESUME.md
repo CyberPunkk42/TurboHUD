@@ -13,6 +13,8 @@
     permission. So TurboKit's Mac overlay must be native, while reading the game's files
     and the HUD logic can be shared.
   - Windows: not tested yet.
+  - Qt, the chosen stack (`experiments/qt_overlay_probe.py`): built and starts on the
+    Mac at level 1000 with both shortcuts; not tested over TSU yet.
 - Overlay behaviour settled by the probe: a move mode (tinted, draggable, resizable, with
   Lock and Close buttons) and a locked mode (background hidden, click-through, only the
   content shows). Ctrl+Shift+L toggles, Ctrl+Shift+Q quits; no Alt, which Mac keyboards
@@ -24,10 +26,16 @@
 ## Next steps
 See `docs/IMPROVEMENT_BACKLOG.md`. In short:
 1. Run the probe on Windows over TSU in windowed, Fullscreen and Fullscreen Exclusive.
-2. A Qt version of the overlay probe, over TSU's Fullscreen on the Mac and on Windows.
+2. Test the Qt overlay probe (`experiments/qt_overlay_probe.py`) over TSU's Fullscreen
+   on the Mac, and on Windows.
 3. The app skeleton and bundled builds for the three systems.
 
 ## Recent changes
+- 2026-10-23: Qt overlay probe (`experiments/qt_overlay_probe.py`) on the chosen stack:
+  a test HUD (outlined text, clock, bar, small map) in a transparent, click-through Qt
+  window with move mode and the shortcuts, raised above Fullscreen on the Mac through
+  ctypes. Runners set up the pinned PySide6 in `.buildtools/qt-venv`. Starts on the Mac;
+  not yet tested over TSU.
 - 2026-10-23: Stack chosen (`docs/STACK.md`): Python with Qt (PySide6), shipped as a
   ready-to-run app for Windows, macOS and Linux, so players install nothing else. Chosen
   for good-looking, customisable HUD graphics drawn once for all systems. Linux limits
