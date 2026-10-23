@@ -1,9 +1,16 @@
 # TurboKit: where things stand
 
 ## Current state
-- No app code yet. Stack chosen (`docs/STACK.md`): Python with Qt (PySide6), shipped as a
-  bundled app for Windows, macOS and Linux, with small ctypes parts for what Qt lacks
-  (Mac window level above Fullscreen, global shortcuts).
+- Stack (`docs/STACK.md`): Python with Qt (PySide6), shipped as a bundled app for
+  Windows, macOS and Linux, with small ctypes parts for what Qt lacks (Mac window level
+  above Fullscreen, global shortcuts).
+- App skeleton in `turbokit/` (see `README.md` and the structure in `docs/STACK.md`): the
+  overlay with locked and move mode, Ctrl+Shift+L / Ctrl+Shift+Q, a tray icon, saved
+  placement and theme. The HUD shows only a session clock so far. Start from the source
+  with `run_turbokit.sh` / `run_turbokit.cmd`.
+- Builds: `tools/build_app.py` (PyInstaller) makes a Windows ZIP, a Mac app ZIP and a
+  Linux `.tar.gz`; `.github/workflows/build.yml` builds and smoke-tests all three on pull
+  requests that touch the app, and drafts a GitHub release for a `v*` tag.
 - The overlay probe (`experiments/overlay_probe.py`, see `experiments/README.md`) answered
   whether a see-through, click-through, always-on-top window can sit over TSU:
   - macOS (CrossOver): yes when TSU runs windowed or with Fullscreen off; never with TSU's
@@ -26,11 +33,17 @@
 
 ## Next steps
 See `docs/IMPROVEMENT_BACKLOG.md`. In short:
-1. Run the Qt probe and the overlay probe on Windows over TSU in windowed, Fullscreen and
+1. Test TurboKit and the probes on Windows over TSU in windowed, Fullscreen and
    Fullscreen Exclusive.
-2. The app skeleton and bundled builds for the three systems.
+2. The first real HUD data (lap times, fuel estimate or minimap).
+3. A settings window for the look; Linux shortcuts and AppImage.
 
 ## Recent changes
+- 2026-10-24: App skeleton and bundled builds. `turbokit/` holds the overlay (locked and
+  move mode, shortcuts, tray icon, saved placement and theme) with a session clock as the
+  first HUD. `tools/build_app.py` builds a ready-to-run app with PyInstaller (Mac: 27 MB
+  ZIP); GitHub Actions builds and smoke-tests Windows, macOS and Linux. `README.md`
+  explains install and use for players.
 - 2026-10-24: Qt overlay probe tested over TSU on the Mac, in Fullscreen with and
   without Fullscreen Exclusive: the HUD shows, text is crisp, clicks pass through,
   shortcuts and move mode work, and the game does not stutter. Qt is confirmed for the

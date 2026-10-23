@@ -2,18 +2,25 @@
 
 Open items, most valuable first. Finished items move to `docs/PROGRESS.md`.
 
-## 1. Overlay probes on Windows
-Run `experiments/qt_overlay_probe.py` (the chosen stack; `run_qt_overlay_probe.cmd`) and
-`experiments/overlay_probe.py` over TSU on Windows in windowed, Fullscreen and
-Fullscreen Exclusive, and add the results to `experiments/README.md`. Check the Qt
-probe's shortcuts especially: its Windows hotkey code has not run yet. Expected: windowed
-and Fullscreen work; Exclusive may not, and an overlay that injects into the game is out
-of scope.
+## 1. TurboKit and the probes on Windows
+Over TSU on Windows, in windowed, Fullscreen and Fullscreen Exclusive: the built app
+(`TurboKit.exe` from the Windows build of `.github/workflows/build.yml`), the Qt probe
+(`experiments/run_qt_overlay_probe.cmd`) and the original probe. Add the results to
+`experiments/README.md`. Check the shortcuts especially: the Windows hotkey code has only
+run on a build machine. Expected: windowed and Fullscreen work; Exclusive may not, and an
+overlay that injects into the game is out of scope.
 
-## 2. App skeleton and bundled builds
-The structure in `docs/STACK.md`: `launch_turbokit.py`, `turbokit/core/`, `hud/` and
-`overlay/`, a development environment with PySide6 kept out of Git, and PyInstaller
-builds for Windows, macOS and Linux on GitHub Actions. Measure the bundle sizes.
+## 2. First real HUD data
+Pick the first feature (lap times, fuel estimate or minimap), find the game data it
+needs, and show it in place of the session clock. Read the game's files only.
+
+## 3. Customising the look in the app
+A small settings window (from the tray menu) for the theme's colours and scale, instead
+of editing `settings.json` by hand.
+
+## 4. Linux: shortcuts and AppImage
+System-wide shortcuts on X11, and an AppImage instead of the `.tar.gz`. Test on a Linux
+desktop with TSU under Proton.
 
 ## Design notes for the real overlay
 - Move mode is a short, deliberate step: while the overlay takes the mouse, the game gets
