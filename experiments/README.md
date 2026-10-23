@@ -87,3 +87,70 @@ Other findings:
   mode, or there is none.
 
 Not tested yet: Windows; stutter or lost input over a long drive.
+
+## Native Mac overlay probe (`mac_overlay_probe.py`)
+
+Question: can a native macOS window, outside CrossOver, show over TSU when its
+Fullscreen setting is on?
+
+The probe is a plain Mac program: a transparent, click-through window with white text and
+a seconds counter, at a window level above full-screen windows and allowed on every
+Space. It calls macOS through ctypes and needs only Python's standard library.
+
+### Run it
+1. Set TSU to **Fullscreen** and drive onto a track.
+2. In a terminal: `/opt/homebrew/bin/python3.13 -B experiments/mac_overlay_probe.py`
+3. Look for the text at the top left of the screen.
+4. **Ctrl+Shift+L** switches to move mode: the box gets a blue tint, the overlay becomes
+   the active app (so the pointer shows), and you can drag the box. Ctrl+Shift+L again
+   locks it, saves the position and hands the focus back to the game. Going back to the
+   game in another way (clicking into it) locks the box too: the game's mouse handling
+   gets out of step if it is played while the overlay is in move mode.
+5. Quit with **Ctrl+Shift+Q**, with Ctrl+C in the terminal (when the terminal has
+   focus), or wait (10 minutes by default).
+
+Both shortcuts are system-wide hotkeys, which need no permission.
+
+Options: `--x`, `--y` (points from the top left, instead of the saved position),
+`--width`, `--height`, `--seconds`,
+and `--level` (`floating`, `menu`, `status`, `popup`, `screensaver` (default) or
+`shielding`, which is above even a captured display).
+
+The log, also saved to `.buildtools/mac_overlay_probe.log` (gitignored), shows whether
+macOS counts the overlay as visible, and the large windows on screen, front to back, with
+their owner and window level (TSU's shows as `TSU.exe`). Window titles are not read.
+
+### What to check
+| Check | Pass when |
+| --- | --- |
+| Visible | The text shows over TSU in Fullscreen, also after clicking into the game and while driving. |
+| Click-through | Locked, clicks on the text reach the game. |
+| Shortcuts | Ctrl+Shift+L and Ctrl+Shift+Q work while the game has focus. |
+| Move mode | The pointer shows, the box can be dragged, and locking gives the game its focus back. |
+
+### Results
+
+**macOS (2026-10-23).** Tested by hand over TSU with its **Fullscreen** setting on.
+
+- The text is clearly visible over the game the whole time, also while driving and after
+  clicking into the game. No stutter.
+- Locked, clicks pass through to the game.
+- Ctrl+Shift+L and Ctrl+Shift+Q work while TSU has focus.
+- Move mode works: the pointer shows and the box can be dragged. Clicking back into the
+  game locks it.
+
+Why this works where the CrossOver probe did not: in Fullscreen, TSU's window is at macOS
+window level 26 while it is the active app (0 when it is not). A window inside CrossOver
+reaches only level 3 (floating). The native overlay sits at level 1000.
+
+**The overlay for TSU's Fullscreen on the Mac must be a native macOS window.** It works
+outside the bottle and needs no permission (no screen recording, no accessibility).
+
+Other findings:
+- Using the game while the overlay is in move mode (the overlay is then the active app)
+  puts the game's mouse handling out of step. Locking, which activates the game again,
+  repairs it, so move mode now ends as soon as the game becomes active.
+- In TSU's in-game menu, the pointer jumps to the Camera button and disappears for good
+  once the gamepad is used. This happens without any overlay too: it is TSU's own
+  behaviour and has been reported to its developer.
+| Game unaffected | No stutter or lost keyboard input in the game. |
