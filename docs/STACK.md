@@ -107,17 +107,16 @@ tests/                  unit tests on any system
 ```
 
 A tray icon (the menu bar on the Mac) offers Move mode and Quit, which also covers
-Linux until it has shortcuts. The first Mac build is a 27 MB ZIP (75 MB unpacked); the
-Linux build is a `.tar.gz` for now.
+Linux until it has shortcuts. First build sizes: Windows 40 MB ZIP, Mac 28 MB ZIP (75 MB
+unpacked), Linux 74 MB `.tar.gz` (with Qt's X11 libraries packed in).
 
 ## Still to check
 1. The overlay probe on Windows itself (backlog item 1), especially over Fullscreen
    Exclusive.
 2. The Qt overlay probe (`experiments/qt_overlay_probe.py`) over TSU on Windows. On the
    Mac it works in Fullscreen and Fullscreen Exclusive (2026-10-24).
-3. The size of the Windows and Linux bundles (the Mac one is 27 MB zipped).
-4. Linux on X11 and XWayland, once there is a Linux machine with TSU to test on.
-5. Reading the player's controls on the Mac from a background app, once a feature needs
+3. Linux on X11 and XWayland, once there is a Linux machine with TSU to test on.
+4. Reading the player's controls on the Mac from a background app, once a feature needs
    it.
 
 ## Decision
