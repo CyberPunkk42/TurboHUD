@@ -8,11 +8,16 @@ Fullscreen Exclusive, and add the results to `experiments/README.md`. Expected: 
 and Fullscreen work; Exclusive may not, and an overlay that injects into the game is out
 of scope.
 
-## 2. Choose the stack and entry point
-Depends on 1. The Mac overlay must be a native macOS window outside CrossOver (done:
-`experiments/mac_overlay_probe.py` works over TSU's Fullscreen). Decide how the overlay
-window is made on each system, and how the shared part (game files, HUD logic) talks to
-it.
+## 2. Qt overlay probe
+The stack is Python with Qt (PySide6), see `docs/STACK.md`. Before building the app,
+check that a Qt window can do what the two probes do: transparent background,
+click-through, move mode, and on the Mac a window level above TSU's Fullscreen (raised
+through ctypes). Test over TSU on the Mac, and on Windows together with item 1.
+
+## 3. App skeleton and bundled builds
+The structure in `docs/STACK.md`: `launch_turbokit.py`, `turbokit/core/`, `hud/` and
+`overlay/`, a development environment with PySide6 kept out of Git, and PyInstaller
+builds for Windows, macOS and Linux on GitHub Actions. Measure the bundle sizes.
 
 ## Design notes for the real overlay
 - Move mode is a short, deliberate step: while the overlay takes the mouse, the game gets
