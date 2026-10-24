@@ -44,8 +44,9 @@ runs, you see:
 1. Download `TurboKit-<version>-linux-x64.tar.gz` and unpack it:
    `tar -xzf TurboKit-<version>-linux-x64.tar.gz`
 2. Start it: `./TurboKit/TurboKit`
-3. Linux has no shortcuts yet: use the **T** icon's menu for move mode. The overlay needs
-   X11, or XWayland on a Wayland desktop.
+3. Linux has no shortcuts yet: use the **T** icon's menu for move mode.
+4. Known issue: on Wayland desktops (for example Omarchy with Hyprland), TurboKit runs but
+   does not yet stay on top of the game. On X11 it should.
 
 ### Trying a test build from a pull request
 Before a release, every pull request that changes the app builds it for all three

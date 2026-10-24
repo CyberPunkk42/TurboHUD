@@ -16,17 +16,31 @@ and Close buttons. Put it at the bottom of the box, on its own line next to or a
 buttons, so it is easy to read and nothing overlaps; check it at the minimum size and at
 larger theme scales.
 
-## 3. First real HUD data
+## 3. Broken-looking digits on Linux
+On Omarchy Linux the timer's "4" looks fragmented. Likely cause: the outlined text is a
+`QPainterPath`, and some Linux fonts build a glyph from overlapping parts, which the
+path's default fill rule (odd-even) turns into holes, and the outline then traces the
+inner edges too. Try `path.setFillRule(Qt.WindingFill)` or `path.simplified()` before
+stroking and filling, and check the digits 0-9 on Linux, Windows and the Mac.
+
+## 4. First real HUD data
 Pick the first feature (lap times, fuel estimate or minimap), find the game data it
 needs, and show it in place of the session clock. Read the game's files only.
 
-## 4. Customising the look in the app
+## 5. Customising the look in the app
 A small settings window (from the tray menu) for the theme's colours and scale, instead
 of editing `settings.json` by hand.
 
-## 5. Linux: shortcuts and AppImage
-System-wide shortcuts on X11, and an AppImage instead of the `.tar.gz`. Test on a Linux
-desktop with TSU under Proton.
+## 6. Linux: on top of the game, shortcuts and AppImage
+Tested on Omarchy Linux (Hyprland, a Wayland desktop) on 2026-10-24: TurboKit runs, but
+does not stay on top of TSU. Most likely Qt runs as a native Wayland app there, where
+"stay on top" is ignored. Options, to try in this order:
+- Start Qt through XWayland (`QT_QPA_PLATFORM=xcb`), where Qt's on-top hint works, and
+  check over TSU windowed and fullscreen.
+- Hyprland window rules for TurboKit (float, pin, no focus); document them for players.
+- The layer-shell extension (Hyprland, KDE, Sway support it; GNOME does not), which puts
+  a window above fullscreen ones; it needs a library outside PySide6.
+Also: system-wide shortcuts on X11, and an AppImage instead of the `.tar.gz`.
 
 ## Design notes for the real overlay
 - Move mode is a short, deliberate step: while the overlay takes the mouse, the game gets
