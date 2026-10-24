@@ -2,7 +2,10 @@
 
 TurboKit is a new tool for Turbo Sliders Unlimited (TSU): a HUD overlay on top of the
 running game (fuel estimate, minimap, lap times). Stack: Python with Qt (PySide6),
-shipped as a bundled app for Windows, macOS and Linux (`docs/STACK.md`); findings and suggested features are in `docs/SUGGESTIONS.md` (local only).
+shipped as a bundled app for Windows, macOS and Linux (`docs/STACK.md`). The app is in
+`turbokit/` (start: `launch_turbokit.py`, or `run_turbokit.sh` / `run_turbokit.cmd`);
+builds come from `tools/build_app.py` and `.github/workflows/build.yml`. Findings and
+suggested features are in `docs/SUGGESTIONS.md` (local only).
 Sister project: LiveryStudio (`../LiveryStudio`), an offline livery editor (Python 3.12+
 with Tk, standard library only). Reuse its findings about TSU's files where they apply,
 but never import from or write into that folder.

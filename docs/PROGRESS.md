@@ -23,3 +23,9 @@ its "Recent changes".
   without Fullscreen Exclusive: the HUD shows, text is crisp, clicks pass through,
   shortcuts and move mode work, and the game does not stutter. Qt is confirmed for the
   Mac overlay; Windows is next.
+- 2026-10-24: App skeleton and bundled builds. `turbokit/` holds the overlay (locked and
+  move mode, shortcuts, tray icon, saved placement and theme) with a session clock as the
+  first HUD. `tools/build_app.py` builds a ready-to-run app with PyInstaller (Mac: 27 MB
+  ZIP); GitHub Actions builds and smoke-tests Windows, macOS and Linux. `README.md`
+  explains install, first start (step by step per system) and use. Tested by hand on the
+  Mac. On Omarchy Linux it runs but does not stay on top of TSU (backlog).

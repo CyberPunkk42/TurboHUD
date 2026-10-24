@@ -86,31 +86,37 @@ Without paid code signing, each system warns once on first start:
 
 ## Suggested structure
 
+Built on 2026-10-24 as:
+
 ```
-launch_turbokit.py      start file for development; the bundles run the same code
+launch_turbokit.py      start file; the bundles run the same code
+run_turbokit.sh/.cmd    start from the source, setting up PySide6 in .buildtools/venv
+requirements.txt        PySide6, pinned; requirements-build.txt adds PyInstaller
 turbokit/
-  core/                 shared, no Qt: game paths, reading game files, HUD values and
-                        maths, settings and themes
-  hud/                  Qt drawing of the HUD widgets
+  app.py                start-up: settings, log, window, shortcuts, tray icon
+  core/                 shared, no Qt: settings and themes, HUD layout (later: game
+                        paths, reading game files, HUD maths)
+  hud/painter.py        Qt drawing of the HUD
   overlay/
     window.py           Qt window: move mode, locked mode, position and size
-    windows.py          Win32: RegisterHotKey
+    windows.py          Win32: RegisterHotKey, focus hand-back
     macos.py            Cocoa: window level above Fullscreen, all Spaces; Carbon hotkeys
-    linux.py            later: X11 hotkeys
-tests/                  unit tests for core/ on any system
+    linux.py            Qt only for now (later: X11 hotkeys)
+tools/build_app.py      PyInstaller build, archive and smoke test for this system
+tests/                  unit tests on any system
 ```
 
-For development, PySide6 goes into a virtual environment that stays out of Git, as Ruff
-does in `.buildtools/`.
+A tray icon (the menu bar on the Mac) offers Move mode and Quit, which also covers
+Linux until it has shortcuts. First build sizes: Windows 40 MB ZIP, Mac 28 MB ZIP (75 MB
+unpacked), Linux 74 MB `.tar.gz` (with Qt's X11 libraries packed in).
 
 ## Still to check
 1. The overlay probe on Windows itself (backlog item 1), especially over Fullscreen
    Exclusive.
 2. The Qt overlay probe (`experiments/qt_overlay_probe.py`) over TSU on Windows. On the
    Mac it works in Fullscreen and Fullscreen Exclusive (2026-10-24).
-3. The size of a trimmed PyInstaller bundle on each system.
-4. Linux on X11 and XWayland, once there is a Linux machine with TSU to test on.
-5. Reading the player's controls on the Mac from a background app, once a feature needs
+3. Linux on X11 and XWayland, once there is a Linux machine with TSU to test on.
+4. Reading the player's controls on the Mac from a background app, once a feature needs
    it.
 
 ## Decision
