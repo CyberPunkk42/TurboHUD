@@ -1,16 +1,40 @@
-from PySide6.QtCore import QPointF, Qt
+import sys
+from functools import lru_cache
+
+from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor, QFont, QPainterPath, QPen
 
 from turbokit.core.hud import MARGIN
 
+# On Linux the desktop's default font may be a monospace or icon font; prefer a plain
+# sans-serif one. Qt uses the first that is installed. Windows and macOS keep their
+# system font, which draws well.
+LINUX_FAMILIES = ['Noto Sans', 'DejaVu Sans', 'Liberation Sans', 'Cantarell', 'Ubuntu', 'Arial']
 
-def outlined_text(painter, x, y, text, size, color, outline):
-    """Text with a dark outline, readable over any part of the game."""
+
+@lru_cache(maxsize=256)
+def text_path(text, size):
+    """The outline of a line of text, with its baseline at y 0.
+
+    Some fonts build a letter from overlapping parts (the two bars of a plus, the strokes
+    of a 4). Qt fills text paths odd-even, which turns the overlaps into holes, and the
+    outline traces their inner edges, so letters look broken. Filling by winding and
+    simplified() merge the parts into one clean outline.
+    """
     font = QFont()
+    if sys.platform.startswith('linux'):
+        font.setFamilies(LINUX_FAMILIES)
     font.setPixelSize(size)
     font.setBold(True)
     path = QPainterPath()
-    path.addText(QPointF(x, y), font, text)
+    path.addText(0, 0, font, text)
+    path.setFillRule(Qt.WindingFill)
+    return path.simplified()
+
+
+def outlined_text(painter, x, y, text, size, color, outline):
+    """Text with a dark outline, readable over any part of the game."""
+    path = text_path(text, size).translated(x, y)
     width = max(2.0, size / 10)
     painter.strokePath(path, QPen(outline, width, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin))
     painter.fillPath(path, color)

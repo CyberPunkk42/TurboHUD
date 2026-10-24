@@ -14,7 +14,7 @@ from pathlib import Path
 APP_NAME = 'TurboKit'
 SETTINGS_FILE = 'settings.json'
 LOG_FILE = 'turbokit.log'
-DEFAULT_PLACEMENT = (40, 40, 420, 150)  # x, y, width, height
+DEFAULT_PLACEMENT = (40, 40, 420, 190)  # x, y, width, height
 MIN_WIDTH = 240
 MIN_HEIGHT = 100
 MIN_SCALE = 0.5
