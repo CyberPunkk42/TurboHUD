@@ -10,30 +10,15 @@ Over TSU on Windows, in windowed, Fullscreen and Fullscreen Exclusive: the built
 run on a build machine. Expected: windowed and Fullscreen work; Exclusive may not, and an
 overlay that injects into the game is out of scope.
 
-## 2. Move-mode hint overlaps the buttons
-In move mode, the hint ("Drag to move, resize at the corner...") is drawn over the Lock
-and Close buttons. Put it at the bottom of the box, on its own line next to or above the
-buttons, so it is easy to read and nothing overlaps; check it at the minimum size and at
-larger theme scales.
-
-## 3. Broken-looking text on Linux
-On Omarchy Linux the HUD's text looks fragmented and unclear, the timer's "4" most of
-all. Likely cause: the outlined text is a
-`QPainterPath`, and some Linux fonts build a glyph from overlapping parts, which the
-path's default fill rule (odd-even) turns into holes, and the outline then traces the
-inner edges too. Try `path.setFillRule(Qt.WindingFill)` or `path.simplified()` before
-stroking and filling, and check letters and the digits 0-9 on Linux, Windows and the
-Mac. If the font itself is the cause, pick a bundled or known font.
-
-## 4. First real HUD data
+## 2. First real HUD data
 Pick the first feature (lap times, fuel estimate or minimap), find the game data it
 needs, and show it in place of the session clock. Read the game's files only.
 
-## 5. Customising the look in the app
+## 3. Customising the look in the app
 A small settings window (from the tray menu) for the theme's colours and scale, instead
 of editing `settings.json` by hand.
 
-## 6. Linux: on top of the game, shortcuts and AppImage
+## 4. Linux: on top of the game, shortcuts and AppImage
 Tested on Omarchy Linux (Hyprland, a Wayland desktop) on 2026-10-24: TurboKit runs, but
 does not stay on top of TSU. Most likely Qt runs as a native Wayland app there, where
 "stay on top" is ignored. Options, to try in this order:

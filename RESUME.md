@@ -5,9 +5,10 @@
   Windows, macOS and Linux, with small ctypes parts for what Qt lacks (Mac window level
   above Fullscreen, global shortcuts).
 - App skeleton in `turbokit/` (see `README.md` and the structure in `docs/STACK.md`): the
-  overlay with locked and move mode, Ctrl+Shift+L / Ctrl+Shift+Q, a tray icon, saved
-  placement and theme, tested by hand on the Mac. The HUD shows only a session clock so
-  far. Start from the source with `run_turbokit.sh` / `run_turbokit.cmd`.
+  overlay with locked and move mode, Ctrl+Shift+L / Ctrl+Shift+Q, a tray icon (the TSU
+  TurboKit image in `assets/`), saved placement and theme, tested by hand on the Mac.
+  The HUD shows only a session clock so far. Start from the source with
+  `run_turbokit.sh` / `run_turbokit.cmd`.
 - Builds: `tools/build_app.py` (PyInstaller) makes a Windows ZIP, a Mac app ZIP and a
   Linux `.tar.gz`; `.github/workflows/build.yml` builds and smoke-tests all three on pull
   requests that touch the app, and drafts a GitHub release for a `v*` tag.
@@ -35,14 +36,18 @@
 See `docs/IMPROVEMENT_BACKLOG.md`. In short:
 1. Test TurboKit and the probes on Windows over TSU in windowed, Fullscreen and
    Fullscreen Exclusive.
-2. Move the move-mode hint so it no longer overlaps the Lock and Close buttons; fix the
-   fragmented-looking text seen on Linux.
-3. The first real HUD data (lap times, fuel estimate or minimap).
-4. A settings window for the look.
-5. Linux: stay on top of TSU on Wayland desktops such as Omarchy (Hyprland), move mode
+2. The first real HUD data (lap times, fuel estimate or minimap).
+3. A settings window for the look.
+4. Linux: stay on top of TSU on Wayland desktops such as Omarchy (Hyprland), move mode
    that does not end when the mouse moves, shortcuts, AppImage.
 
 ## Recent changes
+- 2026-10-24: HUD text and app icon. The move-mode hint now sits on its own two lines
+  above the Lock and Close buttons, and the box's minimum size grows with the theme's
+  scale so nothing overlaps. Text outlines are filled by winding and merged, which fixes
+  letters built from overlapping parts (a hole in "+", the broken-looking "4" on Linux);
+  Linux prefers a plain sans-serif font. The TSU TurboKit image is the app, window and
+  tray icon (Pillow converts it for Windows and macOS builds).
 - 2026-10-24: App skeleton and bundled builds. `turbokit/` holds the overlay (locked and
   move mode, shortcuts, tray icon, saved placement and theme) with a session clock as the
   first HUD. `tools/build_app.py` builds a ready-to-run app with PyInstaller (Mac: 27 MB

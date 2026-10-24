@@ -31,6 +31,7 @@ BUILD = ROOT / 'build'
 RELEASES = ROOT / 'releases'
 VERSION_FILE = ROOT / 'turbokit' / '_build.py'  # gitignored; written for the build only
 NAME = 'TurboKit'
+ICON = ROOT / 'assets' / 'tsu_turbo_kit_00.png'  # PyInstaller turns it into .ico / .icns with Pillow
 BUNDLE_ID = 'io.github.cyberpunkk42.turbokit'
 SMOKE_SECONDS = 3
 SMOKE_TIMEOUT = 120
@@ -75,6 +76,8 @@ def pyinstaller_args(system=sys.platform):
         '--specpath', str(BUILD),
         '--paths', str(ROOT),
         '--exclude-module', 'tkinter',
+        '--icon', str(ICON),
+        '--add-data', f'{ICON}:assets',  # for the tray and window icon at runtime
     ]  # fmt: skip
     if system == 'darwin':
         args += ['--osx-bundle-identifier', BUNDLE_ID]

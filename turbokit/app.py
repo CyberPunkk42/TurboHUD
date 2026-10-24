@@ -4,6 +4,7 @@ import argparse
 import logging
 import signal
 import sys
+from pathlib import Path
 
 from turbokit import __version__
 from turbokit.core.settings import (
@@ -16,7 +17,15 @@ from turbokit.core.settings import (
 )
 
 FRAME_MS = 100  # redraw interval
+ICON = 'tsu_turbo_kit_00.png'  # in assets/, also the bundled app's icon
 log = logging.getLogger('turbokit')
+
+
+def asset_path(name, bundle=None):
+    """A file from assets/: next to the source, or inside the bundled app, whose folder
+    PyInstaller gives as sys._MEIPASS."""
+    bundle = getattr(sys, '_MEIPASS', None) if bundle is None else bundle
+    return Path(bundle or Path(__file__).resolve().parents[1]) / 'assets' / name
 
 
 def parse_args(argv):
@@ -47,8 +56,8 @@ def setup_log(folder):
 
 def run(args, folder):
     import PySide6
-    from PySide6.QtCore import QRectF, Qt, QTimer
-    from PySide6.QtGui import QAction, QColor, QFont, QGuiApplication, QIcon, QPainter, QPixmap
+    from PySide6.QtCore import Qt, QTimer
+    from PySide6.QtGui import QAction, QGuiApplication, QIcon
     from PySide6.QtWidgets import QApplication, QMenu, QSystemTrayIcon
 
     from turbokit.overlay import HOTKEY_LOCK, HOTKEY_QUIT, native_for
@@ -57,6 +66,10 @@ def run(args, folder):
     app = QApplication([sys.argv[0]])
     app.setApplicationName('TurboKit')
     app.setQuitOnLastWindowClosed(False)
+    icon = QIcon(str(asset_path(ICON)))
+    if icon.isNull():
+        log.warning('icon not found: %s', asset_path(ICON))
+    app.setWindowIcon(icon)
     native = native_for()()
     native.prepare_app()
     path = folder / SETTINGS_FILE
@@ -89,21 +102,7 @@ def run(args, folder):
         overlay.set_locked(not overlay.locked)
 
     # Tray icon (menu bar on the Mac): the way to move mode where there are no shortcuts.
-    pixmap = QPixmap(64, 64)
-    pixmap.fill(Qt.transparent)
-    painter = QPainter(pixmap)
-    painter.setRenderHint(QPainter.Antialiasing)
-    painter.setPen(Qt.NoPen)
-    painter.setBrush(QColor(settings.theme.accent_color))
-    painter.drawRoundedRect(QRectF(4, 4, 56, 56), 14, 14)
-    font = QFont()
-    font.setPixelSize(40)
-    font.setBold(True)
-    painter.setFont(font)
-    painter.setPen(QColor(20, 20, 20))
-    painter.drawText(QRectF(0, 0, 64, 64), Qt.AlignCenter, 'T')
-    painter.end()
-    tray = QSystemTrayIcon(QIcon(pixmap))
+    tray = QSystemTrayIcon(icon)
     tray.setToolTip('TurboKit')
     menu = QMenu()
     move_action = QAction('Move mode', menu, checkable=True)

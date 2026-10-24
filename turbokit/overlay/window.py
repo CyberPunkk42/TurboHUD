@@ -12,8 +12,7 @@ from PySide6.QtCore import QRectF, Qt, Signal
 from PySide6.QtGui import QColor, QPainter, QPen
 from PySide6.QtWidgets import QHBoxLayout, QPushButton, QSizeGrip, QVBoxLayout, QWidget
 
-from turbokit.core.hud import hud_lines
-from turbokit.core.settings import MIN_HEIGHT, MIN_WIDTH
+from turbokit.core.hud import hud_lines, min_size
 from turbokit.hud.painter import draw_hud
 
 TINT = (23, 56, 97, 153)  # move mode's background: red, green, blue, opacity (0-255)
@@ -39,7 +38,6 @@ class OverlayWindow(QWidget):
         self.setWindowTitle('TurboKit')
         self.setAttribute(Qt.WA_TranslucentBackground)
         self.setAttribute(Qt.WA_ShowWithoutActivating)
-        self.setMinimumSize(MIN_WIDTH, MIN_HEIGHT)
         self.setWindowFlag(Qt.WindowTransparentForInput, True)
 
         lock = QPushButton('Lock')
@@ -58,6 +56,9 @@ class OverlayWindow(QWidget):
         self.controls = (lock, close, grip)
         for control in self.controls:
             control.setVisible(False)
+        # Height of the button row at the bottom; the move-mode hint stays above it.
+        self.controls_height = lock.sizeHint().height() + column.contentsMargins().bottom()
+        self.setMinimumSize(*min_size(theme.scale, self.controls_height))
 
     def elapsed(self):
         return time.monotonic() - self.started
@@ -100,6 +101,7 @@ class OverlayWindow(QWidget):
             painter.setPen(QPen(QColor(*BORDER), 2))
             painter.setBrush(QColor(*TINT))
             painter.drawRoundedRect(QRectF(self.rect()).adjusted(1, 1, -1, -1), 10, 10)
-        lines = hud_lines(self.elapsed(), self.locked, self.shortcuts, self.theme.scale)
+        hint_bottom = self.height() - self.controls_height
+        lines = hud_lines(self.elapsed(), self.locked, self.shortcuts, self.theme.scale, hint_bottom)
         draw_hud(painter, lines, self.theme)
         painter.end()

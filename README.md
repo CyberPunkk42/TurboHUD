@@ -16,8 +16,8 @@ it. After that it starts with a double-click.
 **What to expect:** TurboKit opens no window and has no Dock or taskbar button. When it
 runs, you see:
 - the HUD at the top left of the screen ("TurboKit - session time" and a clock)
-- a yellow **T** icon in the menu bar (Mac) or in the taskbar's notification area
-  (Windows; it may be hidden behind the **^** arrow)
+- the TurboKit icon (black, "TSU TurboKit") in the menu bar (Mac) or in the taskbar's
+  notification area (Windows; it may be hidden behind the **^** arrow)
 
 ### macOS (Apple silicon)
 1. Download `TurboKit-<version>-macos-arm64.zip` and double-click it in Downloads. You get
@@ -28,8 +28,8 @@ runs, you see:
 4. Open **System Settings > Privacy & Security** and scroll down to **Security**. Next to
    "TurboKit was blocked", click **Open Anyway**, enter your password, and click **Open
    Anyway** once more.
-5. TurboKit starts: look for the HUD at the top left and the **T** in the menu bar. From
-   now on, a double-click is enough.
+5. TurboKit starts: look for the HUD at the top left and the TurboKit icon in the menu
+   bar. From now on, a double-click is enough.
 
 ### Windows
 1. Download `TurboKit-<version>-windows-x64.zip`.
@@ -37,8 +37,8 @@ runs, you see:
    Starting it from inside the ZIP without extracting does not work.
 3. Open the extracted `TurboKit` folder and double-click `TurboKit.exe`.
 4. If "Windows protected your PC" appears, click **More info**, then **Run anyway**.
-5. TurboKit starts: look for the HUD at the top left and the **T** in the notification
-   area.
+5. TurboKit starts: look for the HUD at the top left and the TurboKit icon in the
+   notification area.
 
 ### Linux
 1. Download `TurboKit-<version>-linux-x64.tar.gz` and unpack it:
@@ -46,7 +46,7 @@ runs, you see:
 2. Start it: double-click `TurboKit` in the unpacked `TurboKit` folder, or in a terminal
    `./TurboKit/TurboKit`.
 3. Linux has no shortcuts yet: Ctrl+Shift+L and Ctrl+Shift+Q do nothing there. Use the
-   **T** icon's menu (in the tray or status bar) instead: **Move mode** shows the blue
+   TurboKit icon's menu (in the tray or status bar) instead: **Move mode** shows the blue
    box with the **Lock** and **Close** buttons, **Quit TurboKit** quits. Where the
    desktop has no tray, TurboKit starts in move mode, so **Close** quits it.
 4. Known issue: on Wayland desktops (for example Omarchy with Hyprland), TurboKit runs but
@@ -66,7 +66,7 @@ your system above with the file inside.
   it at the bottom-right corner, then press **Lock** (or Ctrl+Shift+L again). Clicking
   back into the game also locks it.
 - **Ctrl+Shift+Q** quits.
-- The **T** icon in the taskbar tray or menu bar has the same: **Move mode** and
+- The TurboKit icon in the taskbar tray or menu bar has the same: **Move mode** and
   **Quit**. On Linux the shortcuts are not available yet; use the icon.
 
 The position, size and look are saved in `settings.json`, with a log of the last run in

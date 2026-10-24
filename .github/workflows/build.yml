@@ -11,6 +11,7 @@ on:
   pull_request:
     paths:
       - 'turbokit/**'
+      - 'assets/**'
       - 'launch_turbokit.py'
       - 'requirements*.txt'
       - 'tools/build_app.py'

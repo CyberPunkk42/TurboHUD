@@ -29,3 +29,9 @@ its "Recent changes".
   ZIP); GitHub Actions builds and smoke-tests Windows, macOS and Linux. `README.md`
   explains install, first start (step by step per system) and use. Tested by hand on the
   Mac. On Omarchy Linux it runs but does not stay on top of TSU (backlog).
+- 2026-10-24: HUD text and app icon. The move-mode hint now sits on its own two lines
+  above the Lock and Close buttons, and the box's minimum size grows with the theme's
+  scale so nothing overlaps. Text outlines are filled by winding and merged, which fixes
+  letters built from overlapping parts (a hole in "+", the broken-looking "4" on Linux);
+  Linux prefers a plain sans-serif font. The TSU TurboKit image is the app, window and
+  tray icon (Pillow converts it for Windows and macOS builds).

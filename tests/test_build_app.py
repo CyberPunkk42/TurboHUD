@@ -59,6 +59,12 @@ class NamingTests(unittest.TestCase):
         self.assertNotIn('--osx-bundle-identifier', build_app.pyinstaller_args('win32'))
         self.assertIn('--windowed', build_app.pyinstaller_args('linux'))
 
+    def test_icon_is_the_app_icon_and_ships_inside(self):
+        args = build_app.pyinstaller_args('win32')
+        self.assertEqual(args[args.index('--icon') + 1], str(build_app.ICON))
+        self.assertEqual(args[args.index('--add-data') + 1], f'{build_app.ICON}:assets')
+        self.assertTrue(build_app.ICON.is_file())
+
 
 class PackTests(unittest.TestCase):
     def make_dist(self, folder):
@@ -89,6 +95,15 @@ class PackTests(unittest.TestCase):
             with tarfile.open(archive) as tar:
                 self.assertIn('TurboKit/_internal/lib.dll', tar.getnames())
             self.check_digest(archive)
+
+
+class AssetPathTests(unittest.TestCase):
+    def test_from_the_source_folder(self):
+        self.assertEqual(app.asset_path(app.ICON), ROOT / 'assets' / app.ICON)
+        self.assertTrue(app.asset_path(app.ICON).is_file())
+
+    def test_inside_the_bundle(self):
+        self.assertEqual(app.asset_path(app.ICON, bundle='/b'), Path('/b') / 'assets' / app.ICON)
 
 
 class AppArgsTests(unittest.TestCase):
