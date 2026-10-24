@@ -34,4 +34,5 @@ its "Recent changes".
   scale so nothing overlaps. Text outlines are filled by winding and merged, which fixes
   letters built from overlapping parts (a hole in "+", the broken-looking "4" on Linux);
   Linux prefers a plain sans-serif font. The TSU TurboKit image is the app, window and
-  tray icon (Pillow converts it for Windows and macOS builds).
+  tray icon (Pillow converts it for Windows and macOS builds). Checked by hand on the Mac
+  and on Omarchy Linux.

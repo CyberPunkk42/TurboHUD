@@ -47,7 +47,8 @@ See `docs/IMPROVEMENT_BACKLOG.md`. In short:
   scale so nothing overlaps. Text outlines are filled by winding and merged, which fixes
   letters built from overlapping parts (a hole in "+", the broken-looking "4" on Linux);
   Linux prefers a plain sans-serif font. The TSU TurboKit image is the app, window and
-  tray icon (Pillow converts it for Windows and macOS builds).
+  tray icon (Pillow converts it for Windows and macOS builds). Checked by hand on the Mac
+  and on Omarchy Linux.
 - 2026-10-24: App skeleton and bundled builds. `turbokit/` holds the overlay (locked and
   move mode, shortcuts, tray icon, saved placement and theme) with a session clock as the
   first HUD. `tools/build_app.py` builds a ready-to-run app with PyInstaller (Mac: 27 MB
