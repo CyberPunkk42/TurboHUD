@@ -43,11 +43,12 @@ runs, you see:
 ### Linux
 1. Download `TurboKit-<version>-linux-x64.tar.gz` and unpack it:
    `tar -xzf TurboKit-<version>-linux-x64.tar.gz`
-2. Start it: `./TurboKit/TurboKit`
+2. Start it: double-click `TurboKit` in the unpacked `TurboKit` folder, or in a terminal
+   `./TurboKit/TurboKit`.
 3. Linux has no shortcuts yet: Ctrl+Shift+L and Ctrl+Shift+Q do nothing there. Use the
-   **T** icon's menu (in the tray or status bar) for **Move mode** and **Quit**. Where
-   the desktop has no tray, TurboKit starts in move mode, so **Close** quits it. Ctrl+C
-   in the terminal that started it also quits.
+   **T** icon's menu (in the tray or status bar) instead: **Move mode** shows the blue
+   box with the **Lock** and **Close** buttons, **Quit TurboKit** quits. Where the
+   desktop has no tray, TurboKit starts in move mode, so **Close** quits it.
 4. Known issue: on Wayland desktops (for example Omarchy with Hyprland), TurboKit runs but
    does not yet stay on top of the game. On X11 it should.
 
