@@ -36,11 +36,11 @@ See `docs/IMPROVEMENT_BACKLOG.md`. In short:
 1. Test TurboKit and the probes on Windows over TSU in windowed, Fullscreen and
    Fullscreen Exclusive.
 2. Move the move-mode hint so it no longer overlaps the Lock and Close buttons; fix the
-   fragmented-looking digits seen on Linux.
+   fragmented-looking text seen on Linux.
 3. The first real HUD data (lap times, fuel estimate or minimap).
 4. A settings window for the look.
-5. Linux: stay on top of TSU on Wayland desktops such as Omarchy (Hyprland), shortcuts,
-   AppImage.
+5. Linux: stay on top of TSU on Wayland desktops such as Omarchy (Hyprland), move mode
+   that does not end when the mouse moves, shortcuts, AppImage.
 
 ## Recent changes
 - 2026-10-24: App skeleton and bundled builds. `turbokit/` holds the overlay (locked and

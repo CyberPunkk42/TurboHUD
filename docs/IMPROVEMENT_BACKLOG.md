@@ -16,12 +16,14 @@ and Close buttons. Put it at the bottom of the box, on its own line next to or a
 buttons, so it is easy to read and nothing overlaps; check it at the minimum size and at
 larger theme scales.
 
-## 3. Broken-looking digits on Linux
-On Omarchy Linux the timer's "4" looks fragmented. Likely cause: the outlined text is a
+## 3. Broken-looking text on Linux
+On Omarchy Linux the HUD's text looks fragmented and unclear, the timer's "4" most of
+all. Likely cause: the outlined text is a
 `QPainterPath`, and some Linux fonts build a glyph from overlapping parts, which the
 path's default fill rule (odd-even) turns into holes, and the outline then traces the
 inner edges too. Try `path.setFillRule(Qt.WindingFill)` or `path.simplified()` before
-stroking and filling, and check the digits 0-9 on Linux, Windows and the Mac.
+stroking and filling, and check letters and the digits 0-9 on Linux, Windows and the
+Mac. If the font itself is the cause, pick a bundled or known font.
 
 ## 4. First real HUD data
 Pick the first feature (lap times, fuel estimate or minimap), find the game data it
@@ -40,6 +42,13 @@ does not stay on top of TSU. Most likely Qt runs as a native Wayland app there, 
 - Hyprland window rules for TurboKit (float, pin, no focus); document them for players.
 - The layer-shell extension (Hyprland, KDE, Sway support it; GNOME does not), which puts
   a window above fullscreen ones; it needs a library outside PySide6.
+Move mode ends at once: on Omarchy, choosing Move mode from the tray icon tints the box,
+but the first mouse movement locks it again. Hyprland gives focus to the window under the
+mouse, so moving the pointer off the box makes the game active, and TurboKit's auto-lock
+(added for the Mac, where playing during move mode upset TSU's mouse handling) ends move
+mode. Fix: on desktops where focus follows the mouse, lock only on a click into another
+window, or not automatically at all; keep the Mac behaviour.
+
 Shortcuts: Linux has none yet (Ctrl+Shift+L and Ctrl+Shift+Q do nothing there), and on
 Omarchy it was not clear how to switch move mode or quit. Options: X11 key grabs under
 XWayland; on Wayland, the desktop's own key bindings starting a command such as
