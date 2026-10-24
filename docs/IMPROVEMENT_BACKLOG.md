@@ -40,7 +40,13 @@ does not stay on top of TSU. Most likely Qt runs as a native Wayland app there, 
 - Hyprland window rules for TurboKit (float, pin, no focus); document them for players.
 - The layer-shell extension (Hyprland, KDE, Sway support it; GNOME does not), which puts
   a window above fullscreen ones; it needs a library outside PySide6.
-Also: system-wide shortcuts on X11, and an AppImage instead of the `.tar.gz`.
+Shortcuts: Linux has none yet (Ctrl+Shift+L and Ctrl+Shift+Q do nothing there), and on
+Omarchy it was not clear how to switch move mode or quit. Options: X11 key grabs under
+XWayland; on Wayland, the desktop's own key bindings starting a command such as
+`TurboKit --toggle` that tells the running TurboKit what to do (for Hyprland, a `bind`
+line in `hyprland.conf`), or the GlobalShortcuts portal where the desktop has it. Until
+then, say clearly on screen how to unlock and quit without shortcuts.
+Also: an AppImage instead of the `.tar.gz`.
 
 ## Design notes for the real overlay
 - Move mode is a short, deliberate step: while the overlay takes the mouse, the game gets
