@@ -22,6 +22,17 @@ class FakeHypr:
         self.focused.append(address)
         return True
 
+    def geometries(self, addresses):
+        return {address: self.where for address in addresses}
+
+    def move(self, address, x, y):
+        self.moved = (address, x, y)
+        return True
+
+    def place(self, address, x, y, width, height, focusable=False):
+        self.placed = (address, x, y, width, height, focusable)
+        return True
+
 
 class FakeWidget:
     visible = True
@@ -72,3 +83,16 @@ class LinuxNativeTests(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+    def test_group_moves_on_hyprland(self):
+        hypr = FakeHypr()
+        native = self.native(hypr)
+        widget = FakeWidget()
+        widget.locked = False
+        native.addresses[id(widget)] = '0xaaa'
+        self.assertEqual(native.placements([widget]), {id(widget): (300, 200, 450, 220)})
+        native.move_window(widget, (350, 220, 450, 220))
+        self.assertEqual(hypr.moved, ('0xaaa', 350, 220))
+        self.assertEqual(native.placement(FakeWidget()), None)  # unknown window: nothing
+        native.move_window(widget, (350, 220, 450, 220), settle=True)
+        self.assertEqual(hypr.placed, ('0xaaa', 350, 220, 450, 220, True))  # still movable

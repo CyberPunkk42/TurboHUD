@@ -171,3 +171,11 @@ its "Recent changes".
   a new order only once it has lasted 0.3 s (race.Standings), so cars passing each
   other or a checkpoint written late do not make names jump back and forth; the gaps
   stay live.
+- 2026-11-01: Section groups. In the move-mode panel each section can join group A, B,
+  C or D (saved per section); dragging one section of a group moves the others by the
+  same amount. TurboHUD looks where the sections are five times a second in move mode
+  while groups exist (one hyprctl request for all of them on Hyprland), moves the rest
+  with a single move request each, and once the drag stops places them fully again
+  (workspace and pin, for a move to another monitor). Logic in hud.GroupMover. Ruff
+  installed for the checks in its own tools environment, `.buildtools/ruff-venv`
+  (ruff 0.17.3); new findings in the changed files fixed, older ones left.

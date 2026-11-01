@@ -34,6 +34,9 @@
   active again.
 - Tests: `/opt/homebrew/bin/python3.13 -B -m unittest discover -s tests` (Windows:
   `py -3 -B -m unittest discover -s tests`).
+- Lint and format: `.buildtools/ruff-venv/bin/ruff check turbohud tests` (Linux; a
+  separate tools environment, never part of the app). An older backlog of findings and
+  unformatted files remains for a chore branch.
 
 ## Next steps
 0. Linux: check by hand that TurboHUD stays on top of TSU in a race and lets clicks
@@ -49,6 +52,14 @@ See `docs/IMPROVEMENT_BACKLOG.md`. In short:
    Hyprland.
 
 ## Recent changes
+- 2026-11-01: Section groups. In the move-mode panel each section can join group A, B,
+  C or D (saved per section); dragging one section of a group moves the others by the
+  same amount. TurboHUD looks where the sections are five times a second in move mode
+  while groups exist (one hyprctl request for all of them on Hyprland), moves the rest
+  with a single move request each, and once the drag stops places them fully again
+  (workspace and pin, for a move to another monitor). Logic in hud.GroupMover. Ruff
+  installed for the checks in its own tools environment, `.buildtools/ruff-venv`
+  (ruff 0.17.3); new findings in the changed files fixed, older ones left.
 - 2026-11-01: Light tint option, blue flag outline, steady player list (Linux). "Light
   tint behind the sections" (tray menu and move-mode panel, saved as backdrop, off by
   default): a faint dark box behind each section's text, only as large as the text (the

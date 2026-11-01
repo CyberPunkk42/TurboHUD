@@ -88,6 +88,8 @@ Clear the launch option to start TSU without the probe. The probe writes what it
   seconds behind: faint at 2 s, fully visible from 0.5 s, gone once it has passed.
 - **Light tint behind the sections** (TurboHUD icon's menu, or the move-mode panel) puts
   a faint dark box behind each section's text, for reading it on bright tracks.
+- **Groups:** in the move-mode panel, put sections in the same group (A to D). Dragging
+  one of them then moves the whole group; the others follow a moment later.
 - **Ctrl+Shift+L** (or **Move mode** in the TurboHUD icon's menu) switches to **move
   mode**: every section gets a blue tint and its name. Drag a section anywhere, for
   example to the edges of a wide screen. At its bottom-right corner, making it taller or

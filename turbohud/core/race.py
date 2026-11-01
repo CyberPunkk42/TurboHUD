@@ -526,7 +526,7 @@ class LapReader:
 
     def _players(self, state):
         """Every player of the race (PlayerState); empty where the game has no list."""
-        il, memory = self.il, self.il.memory
+        il = self.il
         try:
             players = il.list_items(self._ref('state', state, 'players'))
         except (NotFound, OSError):
@@ -633,7 +633,7 @@ class LapReader:
     def _position_and_gates(self, player):
         """The car's (x, z) and the track's checkpoint lines, for the live delta; (None,
         ()) where the game does not have them."""
-        il, memory = self.il, self.il.memory
+        memory = self.il.memory
         try:
             vehicle = self._ref('player', player, 'm_vehicle')
             x, _y, z = struct.unpack('<3f', memory.read(vehicle + self._offset('vehicle', vehicle, 'm_statsNewPosition'), 12))

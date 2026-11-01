@@ -1,11 +1,11 @@
 """Starting TurboHUD: settings, log, the overlay window, shortcuts and the tray icon."""
 
 import argparse
-from dataclasses import replace
 import logging
 import signal
 import sys
 import time
+from dataclasses import replace
 from pathlib import Path
 
 from turbohud import __version__
@@ -21,6 +21,7 @@ from turbohud.core.settings import (
 
 FRAME_MS = 50  # redraw interval: 20 times a second, as often as the race is read
 PLACEMENT_EVERY = 1.0  # seconds between position checks in move mode
+GROUP_EVERY = 0.2  # seconds between position checks in move mode while sections are grouped
 ICON = 'tsu_turbo_hud_00.png'  # in assets/, also the bundled app's icon
 log = logging.getLogger('turbohud')
 
@@ -77,10 +78,10 @@ def run(args, folder):
     from PySide6.QtGui import QAction, QGuiApplication, QIcon
     from PySide6.QtWidgets import QApplication, QMenu, QSystemTrayIcon
 
-    from turbohud.overlay import HOTKEY_LOCK, HOTKEY_QUIT, native_for
     from turbohud.core.hud import (
         CLOCK_SECTIONS,
         RACE_SECTIONS,
+        GroupMover,
         below,
         first_launch,
         local_time_rows,
@@ -88,6 +89,7 @@ def run(args, folder):
         session_rows,
         top_centre,
     )
+    from turbohud.overlay import HOTKEY_LOCK, HOTKEY_QUIT, native_for
     from turbohud.overlay.window import MovePanel, SectionWindow
 
     app = QApplication([sys.argv[0]])
@@ -160,6 +162,7 @@ def run(args, folder):
         window.backdrop = settings.backdrop
         window.show_on_top()
         window.set_wanted(saved.visible if saved else True)
+        window.group = saved.group if saved else ''
         log.info('section %s at %s%s', name, place, '' if window.wanted else ' (hidden)')
     shortcuts = False
     panel = None  # made once the shortcuts are known
@@ -170,7 +173,7 @@ def run(args, folder):
         places = {}
         for name, window in windows.items():
             x, y, width, height = window.placement()
-            places[name] = SectionPlace(x, y, width, height, window.wanted)
+            places[name] = SectionPlace(x, y, width, height, window.wanted, window.group)
         settings = replace(settings, sections=places)
         try:
             save_settings(path, settings)
@@ -202,6 +205,8 @@ def run(args, folder):
             save()
             log.info('locked')
         else:
+            mover.known.clear()  # compare from where the sections are now
+            mover.pending.clear()
             native.take_focus()
             panel.show_at(*panel_spot())
             log.info('move mode')
@@ -224,6 +229,43 @@ def run(args, folder):
             window.update()
         save()
         log.info('tint behind the sections %s', 'on' if backdrop else 'off')
+
+    mover = GroupMover()
+    group_moving = False  # a group followed a drag at the last look
+
+    def set_group(name, group):
+        windows[name].group = group
+        mover.known.clear()  # start comparing afresh
+        save()
+        log.info('section %s in group %s', name, group or '(none)')
+
+    def placements():
+        batch = getattr(native, 'placements', None)
+        if batch is not None:
+            found = batch(list(windows.values()))
+            return {name: found[id(w)] for name, w in windows.items() if id(w) in found}
+        return {name: w.placement() for name, w in windows.items()}
+
+    def move_window(window, place, settle):
+        native_move = getattr(native, 'move_window', None)
+        if native_move is not None:
+            native_move(window, place, settle)
+        else:
+            window.move(*place[:2])
+
+    def follow_groups(now):
+        """Move mode: move the rest of a group along with the section being dragged; once
+        the drag is over, settle the moved ones (workspace and pin on Hyprland)."""
+        nonlocal group_moving
+        groups = {name: w.group for name, w in windows.items()}
+        moves = mover.follow(placements(), groups, now)
+        for name, place in moves.items():
+            move_window(windows[name], place, settle=False)
+        if group_moving and not moves:
+            for name, window in windows.items():
+                if window.group and name in mover.known:
+                    move_window(window, mover.known[name], settle=True)
+        group_moving = bool(moves)
 
     def set_wanted(name, wanted):
         windows[name].set_wanted(wanted)
@@ -273,6 +315,9 @@ def run(args, folder):
     panel.lock_requested.connect(lambda: set_locked(True))
     panel.quit_requested.connect(app.quit)
     panel.wanted_changed.connect(set_wanted)
+    panel.group_changed.connect(set_group)
+    for name, window in windows.items():
+        panel.set_group(name, window.group)
 
     was_active = False  # in move mode: whether TurboHUD has been the active app yet
 
@@ -307,12 +352,17 @@ def run(args, folder):
             window.pedals = current.get('pedals')
             window.opacity = current.get('blue')
             window.update()
-        if not locked and time.monotonic() - last_seen >= PLACEMENT_EVERY:
+        grouped = any(w.group for w in windows.values())
+        every = GROUP_EVERY if grouped else PLACEMENT_EVERY
+        if not locked and time.monotonic() - last_seen >= every:
             # In move mode, note where the sections are: on Wayland only the desktop
-            # knows, and it may no longer say once TurboHUD is quitting.
+            # knows, and it may no longer say once TurboHUD is quitting. Grouped
+            # sections follow the one being dragged.
             last_seen = time.monotonic()
-            for window in windows.values():
-                window.placement()
+            if grouped:
+                follow_groups(last_seen)
+            else:
+                placements()
         if args.seconds is not None and time.monotonic() - started >= args.seconds:
             log.info('time is up')
             app.quit()

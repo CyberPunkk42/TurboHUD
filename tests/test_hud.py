@@ -194,3 +194,54 @@ class CoreIsQtFreeTests(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+MOVER_GROUPS = {'lap': 'A', 'delta': 'A', 'speed': 'A', 'fuel': 'B', 'tires': ''}
+
+
+class GroupMoverTests(unittest.TestCase):
+
+    def look(self, mover, seen, now):
+        return mover.follow(dict(seen), MOVER_GROUPS, now)
+
+    def start(self):
+        mover = hud.GroupMover()
+        seen = {'lap': (10, 10, 100, 40), 'delta': (10, 60, 100, 30), 'speed': (10, 100, 100, 30),
+                'fuel': (300, 10, 100, 30), 'tires': (300, 60, 100, 30)}
+        self.assertEqual(self.look(mover, seen, 0.0), {})  # first look: nothing to compare
+        return mover, seen
+
+    def test_dragging_one_moves_its_group_only(self):
+        mover, seen = self.start()
+        seen['delta'] = (60, 80, 100, 30)  # dragged 50 right, 20 down
+        moves = self.look(mover, seen, 0.2)
+        self.assertEqual(moves, {'lap': (60, 30, 100, 40), 'speed': (60, 120, 100, 30)})
+
+    def test_the_followers_arriving_is_not_taken_for_a_drag(self):
+        mover, seen = self.start()
+        seen['delta'] = (60, 80, 100, 30)
+        self.look(mover, seen, 0.2)
+        seen.update(lap=(60, 30, 100, 40), speed=(61, 120, 100, 30))  # arrived (within a pixel)
+        self.assertEqual(self.look(mover, seen, 0.4), {})
+        self.assertEqual(mover.pending, {})
+
+    def test_a_follower_on_its_way_is_not_a_drag_and_the_drag_goes_on(self):
+        mover, seen = self.start()
+        seen['delta'] = (60, 80, 100, 30)
+        self.look(mover, seen, 0.2)
+        seen['delta'] = (70, 80, 100, 30)  # still dragging; the others have not arrived yet
+        moves = self.look(mover, seen, 0.4)
+        self.assertEqual(moves, {'lap': (70, 30, 100, 40), 'speed': (70, 120, 100, 30)})
+
+    def test_a_follower_that_never_arrives_is_taken_where_it_is(self):
+        mover, seen = self.start()
+        seen['delta'] = (60, 80, 100, 30)
+        self.look(mover, seen, 0.2)
+        self.assertEqual(self.look(mover, seen, 2.0), {})  # lap and speed stayed: no pull back
+        self.assertEqual(mover.known['lap'], (10, 10, 100, 40))
+
+    def test_resizing_or_ungrouped_moves_nobody(self):
+        mover, seen = self.start()
+        seen['lap'] = (10, 10, 200, 80)  # resized at its corner
+        seen['tires'] = (400, 400, 100, 30)  # no group
+        self.assertEqual(self.look(mover, seen, 0.2), {})

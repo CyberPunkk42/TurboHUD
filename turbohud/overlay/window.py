@@ -11,9 +11,29 @@ import sys
 
 from PySide6.QtCore import QRectF, Qt, Signal
 from PySide6.QtGui import QColor, QPainter, QPen
-from PySide6.QtWidgets import QCheckBox, QHBoxLayout, QLabel, QPushButton, QSizeGrip, QVBoxLayout, QWidget
+from PySide6.QtWidgets import (
+    QCheckBox,
+    QComboBox,
+    QGridLayout,
+    QHBoxLayout,
+    QLabel,
+    QPushButton,
+    QSizeGrip,
+    QVBoxLayout,
+    QWidget,
+)
 
-from turbohud.core.hud import MARGIN, base_size, content_size, help_lines, hud_lines, pedal_bars, pedal_space, section_scale
+from turbohud.core.hud import (
+    MARGIN,
+    base_size,
+    content_size,
+    help_lines,
+    hud_lines,
+    pedal_bars,
+    pedal_space,
+    section_scale,
+)
+from turbohud.core.settings import GROUPS
 from turbohud.hud.painter import draw_bars, draw_hud, text_width
 
 TINT = (23, 56, 97, 153)  # move mode's background: red, green, blue, opacity (0-255)
@@ -62,6 +82,7 @@ class SectionWindow(QWidget):
         self.backdrop = False  # a light tint behind the text while locked (option)
         self.locked = True
         self.wanted = True  # the player wants it shown
+        self.group = ''  # sections of the same group move together (move mode)
         self.setWindowTitle(f'TurboHUD - {section.label}')
         self.setAttribute(Qt.WA_TranslucentBackground)
         self.setAttribute(Qt.WA_ShowWithoutActivating)
@@ -200,11 +221,13 @@ class SectionWindow(QWidget):
 
 
 class MovePanel(QWidget):
-    """Shown in move mode: what to do, a tick box per section, Lock and Quit."""
+    """Shown in move mode: what to do, a tick box and a group per section, the options,
+    Lock and Quit. Sections in the same group move together."""
 
     lock_requested = Signal()
     quit_requested = Signal()
     wanted_changed = Signal(str, bool)  # section name, shown
+    group_changed = Signal(str, str)  # section name, group ('' for none)
     mph_changed = Signal(bool)
     backdrop_changed = Signal(bool)
 
@@ -223,11 +246,22 @@ class MovePanel(QWidget):
         for line in help_lines(shortcuts):
             column.addWidget(QLabel(line))
         self.boxes = {}
-        for section in sections:
+        self.groups = {}
+        grid = QGridLayout()
+        grid.addWidget(QLabel('Group (moves together):'), 0, 1)
+        for row, section in enumerate(sections, start=1):
             box = QCheckBox(f'Show {section.label.lower()}')
             box.toggled.connect(lambda checked, name=section.name: self.wanted_changed.emit(name, checked))
-            column.addWidget(box)
+            grid.addWidget(box, row, 0)
             self.boxes[section.name] = box
+            group = QComboBox()
+            group.addItems(['-', *GROUPS])
+            group.currentTextChanged.connect(
+                lambda text, name=section.name: self.group_changed.emit(name, '' if text == '-' else text)
+            )
+            grid.addWidget(group, row, 1)
+            self.groups[section.name] = group
+        column.addLayout(grid)
         self.mph = QCheckBox('Speed in mph')
         self.mph.setChecked(mph)
         self.mph.toggled.connect(self.mph_changed)
@@ -253,6 +287,14 @@ class MovePanel(QWidget):
             box.blockSignals(True)
             box.setChecked(wanted)
             box.blockSignals(False)
+
+    def set_group(self, name, group):
+        combo = self.groups.get(name)
+        text = group or '-'
+        if combo is not None and combo.currentText() != text:
+            combo.blockSignals(True)
+            combo.setCurrentText(text)
+            combo.blockSignals(False)
 
     def set_mph(self, mph):
         if self.mph.isChecked() != mph:

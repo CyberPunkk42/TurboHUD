@@ -32,6 +32,9 @@ class Theme:
     scale: float = 1.0  # size of everything the HUD draws
 
 
+GROUPS = ('A', 'B', 'C', 'D')  # section groups; '' is none
+
+
 @dataclass(frozen=True)
 class SectionPlace:
     """Where one HUD section sits and whether it shows."""
@@ -41,6 +44,7 @@ class SectionPlace:
     width: int
     height: int
     visible: bool = True
+    group: str = ''  # sections with the same group (one of GROUPS) move together
 
 
 @dataclass(frozen=True)
@@ -125,7 +129,9 @@ def _sections(data):
             continue
         if width < MIN_SECTION_SIZE or height < MIN_SECTION_SIZE:
             continue
-        places[str(name)] = SectionPlace(x, y, width, height, entry.get('visible', True) is not False)
+        group = entry.get('group', '')
+        group = group if group in GROUPS else ''
+        places[str(name)] = SectionPlace(x, y, width, height, entry.get('visible', True) is not False, group)
     return places
 
 
@@ -161,7 +167,14 @@ def save_settings(path, settings):
         'speed_unit': settings.speed_unit,
         'backdrop': settings.backdrop,
         'sections': {
-            name: {'x': place.x, 'y': place.y, 'width': place.width, 'height': place.height, 'visible': place.visible}
+            name: {
+                'x': place.x,
+                'y': place.y,
+                'width': place.width,
+                'height': place.height,
+                'visible': place.visible,
+                'group': place.group,
+            }
             for name, place in settings.sections.items()
         },
     }

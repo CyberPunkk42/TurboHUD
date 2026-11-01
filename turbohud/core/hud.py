@@ -1,6 +1,6 @@
 """What the HUD shows and where, as plain data that turbohud.hud draws."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 MARGIN = 14  # space between the box's edge and the text, before scaling
 MIN_WIDTH = 380  # the last and best lap line fits at scale 1
@@ -286,3 +286,56 @@ def top_centre(size, screen, margin=LAYOUT_MARGIN):
     width, height = size
     x, y, screen_width, _screen_height = screen
     return (x + (screen_width - width) // 2, y + margin, width, height)
+
+
+GROUP_TOLERANCE = 3  # pixels: a window this close to where TurboHUD moved it has arrived
+GROUP_PENDING = 1.0  # seconds a move TurboHUD asked for may take to arrive
+
+
+@dataclass
+class GroupMover:
+    """Moves a group's sections along when the player drags one of them (move mode).
+
+    The desktop moves the dragged window; TurboHUD only sees where windows are when it
+    looks (on Wayland only the desktop knows). So `follow` compares each look with the
+    one before: if exactly one section of a group has moved, the others are moved by
+    the same amount. Their own arrival is then expected, not taken for a drag.
+    """
+
+    known: dict = field(default_factory=dict)  # name -> (x, y, width, height) last seen or set
+    pending: dict = field(default_factory=dict)  # name -> ((x, y), until) moves asked for
+
+    def follow(self, seen, groups, now):
+        """{name: (x, y, width, height)} to move group mates to, for `seen` {name:
+        place} at monotonic time `now`; `groups` is {name: group or ''}."""
+        moved = {}
+        for name, place in seen.items():
+            before = self.known.get(name)
+            target = self.pending.get(name)
+            if target is not None:
+                (tx, ty), until = target
+                arrived = abs(place[0] - tx) <= GROUP_TOLERANCE and abs(place[1] - ty) <= GROUP_TOLERANCE
+                if arrived or now > until:
+                    # There (or it never got there): this is its place, not a drag.
+                    del self.pending[name]
+                    self.known[name] = place
+                continue  # else still on its way: neither a drag nor its new place
+            if before is not None and tuple(place[:2]) != tuple(before[:2]):
+                moved[name] = (place[0] - before[0], place[1] - before[1])
+            self.known[name] = place
+        moves = {}
+        for group in {g for g in groups.values() if g}:
+            members = [name for name in seen if groups.get(name) == group]
+            movers = [name for name in members if name in moved]
+            if len(movers) != 1:
+                continue  # nobody dragged, or several moved (not by one drag)
+            dx, dy = moved[movers[0]]
+            for name in members:
+                if name == movers[0] or name not in self.known:
+                    continue
+                x, y, width, height = self.known[name]
+                moves[name] = (x + dx, y + dy, width, height)
+        for name, place in moves.items():
+            self.known[name] = place
+            self.pending[name] = (place[:2], now + GROUP_PENDING)
+        return moves
