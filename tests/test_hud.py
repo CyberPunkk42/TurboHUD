@@ -15,75 +15,73 @@ class ClockTests(unittest.TestCase):
         self.assertEqual(hud.clock(600), '10:00')
 
 
-class HelpLinesTests(unittest.TestCase):
-    def test_nothing_while_locked(self):
-        self.assertEqual(hud.help_lines(locked=True, shortcuts=True), [])
-        self.assertEqual(hud.help_lines(locked=True, shortcuts=False), [])
+def measure(text, size):
+    """A stand-in for Qt's text width: every letter 0.6 of the font size wide."""
+    return len(text) * size * 0.6
 
+
+class HelpLinesTests(unittest.TestCase):
     def test_move_mode_says_how_to_finish(self):
-        self.assertIn('Ctrl+Shift+L', hud.help_lines(locked=False, shortcuts=True)[-1])
-        without = ' '.join(hud.help_lines(locked=False, shortcuts=False))
+        self.assertIn('Ctrl+Shift+L', hud.help_lines(shortcuts=True)[-1])
+        without = ' '.join(hud.help_lines(shortcuts=False))
         self.assertIn('Lock', without)
         self.assertNotIn('Ctrl', without)
 
 
 class HudLinesTests(unittest.TestCase):
-    controls = 44  # height of the Lock and Close row
-
-    def test_locked_shows_title_and_clock(self):
-        lines = hud.hud_lines(hud.session_rows(65), locked=True, shortcuts=True)
+    def test_session_rows(self):
+        lines = hud.hud_lines(hud.session_rows(65))
         self.assertEqual([line.color for line in lines], ['text', 'accent'])
         self.assertEqual(lines[1].text, '1:05')
 
-    def test_hint_sits_just_above_the_buttons(self):
-        height = 300
-        lines = hud.hud_lines(hud.session_rows(0), locked=False, shortcuts=True, hint_bottom=height - self.controls)
-        hint = lines[2:]
-        self.assertEqual(len(hint), 2)
-        self.assertLess(hint[-1].baseline, height - self.controls)
-        self.assertGreater(hint[-1].baseline, height - self.controls - 2 * hint[-1].size)
-
-    def test_nothing_overlaps_at_the_minimum_size(self):
-        for scale in (0.5, 1, 1.5, 2, 3):
-            with self.subTest(scale=scale):
-                _, height = hud.min_size(scale, self.controls)
-                bottom = height - self.controls
-                lines = hud.hud_lines(hud.session_rows(0), locked=False, shortcuts=True, scale=scale, hint_bottom=bottom)
-                clock_line, first_hint = lines[1], lines[2]
-                # The hint's first line starts below the clock's baseline.
-                self.assertGreaterEqual(first_hint.baseline - first_hint.size, clock_line.baseline)
-                self.assertLessEqual(lines[-1].baseline, bottom)
-
-    def test_the_tallest_content_fits_at_the_minimum_size(self):
-        for scale in (0.5, 1, 2, 3):
-            with self.subTest(scale=scale):
-                _, height = hud.min_size(scale, self.controls)
-                bottom = height - self.controls
-                lines = hud.hud_lines(list(hud.TALLEST), locked=False, shortcuts=True, scale=scale, hint_bottom=bottom)
-                content, first_hint = lines[len(hud.TALLEST) - 1], lines[len(hud.TALLEST)]
-                self.assertGreaterEqual(first_hint.baseline - first_hint.size, content.baseline)
-
     def test_rows_use_their_style_and_colour(self):
-        lines = hud.hud_lines([hud.Row('a', 'title'), hud.Row('b', 'medium', 'accent')], locked=True, shortcuts=True)
+        lines = hud.hud_lines([hud.Row('a', 'title'), hud.Row('b', 'medium', 'accent')])
         sizes = hud.Sizes.for_scale(1)
         self.assertEqual([(line.size, line.color) for line in lines], [(sizes.title, 'text'), (sizes.medium, 'accent')])
 
-    def test_without_a_bottom_the_hint_follows_the_clock(self):
-        lines = hud.hud_lines(hud.session_rows(0), locked=False, shortcuts=True)
-        baselines = [line.baseline for line in lines]
-        self.assertEqual(baselines, sorted(baselines))
-
-    def test_scale_grows_sizes_and_spacing(self):
-        normal = hud.hud_lines(hud.session_rows(0), locked=False, shortcuts=True)
-        double = hud.hud_lines(hud.session_rows(0), locked=False, shortcuts=True, scale=2)
+    def test_lines_go_down_and_grow_with_the_scale(self):
+        normal = hud.hud_lines(hud.session_rows(0))
+        double = hud.hud_lines(hud.session_rows(0), scale=2)
+        self.assertLess(normal[0].baseline, normal[1].baseline)
         for one, two in zip(normal, double, strict=True):
             self.assertAlmostEqual(two.size, 2 * one.size, delta=1)
             self.assertAlmostEqual(two.baseline, 2 * one.baseline, delta=2)
 
-    def test_minimum_width_grows_with_the_scale(self):
-        self.assertEqual(hud.min_size(1, self.controls)[0], hud.MIN_WIDTH)
-        self.assertEqual(hud.min_size(0.5, self.controls)[0], hud.MIN_WIDTH)
-        self.assertEqual(hud.min_size(2, self.controls)[0], 2 * hud.MIN_WIDTH)
+
+class SectionTests(unittest.TestCase):
+    def test_race_sections_have_distinct_names(self):
+        names = [section.name for section in hud.RACE_SECTIONS]
+        self.assertEqual(names, ['lap', 'current', 'delta', 'times'])
+
+    def test_content_size_fits_the_text(self):
+        width, height = hud.content_size([hud.Row('0:00.0', 'big')], 1, measure)
+        sizes = hud.Sizes.for_scale(1)
+        self.assertEqual(width, round(6 * 40 * 0.6 + 2 * sizes.margin))
+        self.assertGreater(height, sizes.big)
+
+    def test_base_size_is_as_wide_as_the_usual_content_and_as_tall_as_the_tallest(self):
+        lap = hud.RACE_SECTIONS[0]
+        width, height = hud.base_size(lap, 1, measure)
+        self.assertEqual(width, hud.content_size(lap.samples[0], 1, measure)[0])
+        self.assertEqual(height, max(hud.content_size(rows, 1, measure)[1] for rows in lap.samples))
+
+    def test_the_height_sets_the_text_size(self):
+        self.assertEqual(hud.section_scale((500, 50), 50), 1.0)
+        self.assertEqual(hud.section_scale((500, 150), 50), 3.0)
+        # Wider alone changes nothing.
+        self.assertEqual(hud.section_scale((900, 50), 50), 1.0)
+
+    def test_text_shrinks_only_when_the_box_is_too_narrow_for_it(self):
+        self.assertEqual(hud.section_scale((300, 100), 50, needed_width=100), 2.0)  # fits
+        self.assertEqual(hud.section_scale((150, 100), 50, needed_width=100), 1.5)  # too narrow
+        self.assertEqual(hud.section_scale((10, 5), 50), 0.3)  # never below 0.3
+
+    def test_first_start_stacks_the_sections_where_the_hud_was(self):
+        sizes = {'lap': (200, 40), 'current': (150, 60), 'delta': (180, 30), 'times': (300, 30)}
+        places = hud.stacked(hud.RACE_SECTIONS, 40, 40, sizes, gap=8)
+        self.assertEqual(places['lap'], (40, 40, 200, 40))
+        self.assertEqual(places['current'], (40, 88, 150, 60))
+        self.assertEqual(places['times'][1], 40 + 40 + 8 + 60 + 8 + 30 + 8)
 
 
 class CoreIsQtFreeTests(unittest.TestCase):

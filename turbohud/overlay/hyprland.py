@@ -44,13 +44,14 @@ def _run(args):
     return result.stdout.strip()
 
 
-def place_commands(window, x, y, width, height, workspace=None):
+def place_commands(window, x, y, width, height, workspace=None, focusable=False):
     """(lua, classic) command pairs that float, size, place and pin `window`
     ('address:0x...'), put it in front and keep the keyboard focus away from it.
 
     A window opens on the monitor that has the focus, and a pinned window only shows
     on its own monitor; so it first moves, without following, to `workspace`: the one
-    shown on the monitor that holds (x, y)."""
+    shown on the monitor that holds (x, y). A `focusable` window (one with buttons) keeps
+    the keyboard focus it is given."""
     to_workspace = []
     if workspace is not None:
         to_workspace = [
@@ -72,6 +73,7 @@ def place_commands(window, x, y, width, height, workspace=None):
     ] + [
         (f"hl.dsp.window.set_prop({{ prop = '{prop}', value = '{value}', window = '{window}' }})", f'setprop {window} {old} {value}')
         for prop, old, value in WINDOW_PROPS
+        if not (focusable and prop == 'no_focus')
     ]
 
 
@@ -135,11 +137,21 @@ class Hyprland:
                 return monitor.get('activeWorkspace', {}).get('id')
         return None
 
-    def place(self, address, x, y, width, height):
+    def place(self, address, x, y, width, height, focusable=False):
         """Float, place and pin the window; True if every command was taken."""
         window = f'address:{address}'
-        commands = place_commands(window, x, y, width, height, self.workspace_at(x, y))
+        commands = place_commands(window, x, y, width, height, self.workspace_at(x, y), focusable)
         return all([self.dispatch(command) for command in commands])
+
+    def set_focusable(self, address, focusable):
+        """Let the window take the mouse and focus (move mode) or not (locked). Hyprland's
+        no_focus keeps the mouse away too, so a window with it cannot be dragged."""
+        window = f'address:{address}'
+        value = '0' if focusable else '1'
+        return self.dispatch((
+            f"hl.dsp.window.set_prop({{ prop = 'no_focus', value = '{value}', window = '{window}' }})",
+            f'setprop {window} nofocus {value}',
+        ))
 
     def focus(self, address):
         return self.dispatch(focus_command(f'address:{address}'))

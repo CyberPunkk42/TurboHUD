@@ -74,16 +74,21 @@ Clear the launch option to start TSU without the probe. The probe writes what it
 
 ## Use
 
-- The HUD starts at the top left, **locked**: clicks go through it to the game.
-- **Ctrl+Shift+L** switches to **move mode**: the box gets a blue tint; drag it, resize
-  it at the bottom-right corner, then press **Lock** (or Ctrl+Shift+L again). Clicking
-  back into the game also locks it (not on Hyprland, where the focus follows the mouse:
-  there use **Lock** or the icon's menu).
-- **Ctrl+Shift+Q** quits.
-- The TurboHUD icon in the taskbar tray or menu bar has the same: **Move mode** and
-  **Quit**. On Linux the shortcuts are not available yet; use the icon.
+- The HUD is made of sections, each in its own small box: lap and time left, the running
+  lap, the delta to your best lap, and last and best lap (on Windows and macOS for now
+  one: the session clock). They start one below the other at the top left, **locked**:
+  clicks go through them to the game.
+- **Ctrl+Shift+L** (or **Move mode** in the TurboHUD icon's menu) switches to **move
+  mode**: every section gets a blue tint and its name. Drag a section anywhere, for
+  example to the edges of a wide screen. At its bottom-right corner, making it taller or
+  shorter makes its text bigger or smaller; making it wider gives the text room (text
+  only shrinks when the box is too narrow for it). A panel lets you show or hide each section, and **Lock** (or
+  Ctrl+Shift+L again) ends move mode. On the Mac, clicking back into the game also locks.
+- **Ctrl+Shift+Q** quits; the panel and the icon's menu have **Quit** as well. On Linux
+  the shortcuts are not available yet; use the icon.
 
-The position, size and look are saved in `settings.json`, with a log of the last run in
+Where each section sits, its size, whether it shows, and the look are saved in
+`settings.json`, with a log of the last run in
 `turbohud.log`:
 - Windows: `%APPDATA%\TurboHUD`
 - macOS: `~/Library/Application Support/TurboHUD`

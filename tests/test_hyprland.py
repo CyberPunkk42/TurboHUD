@@ -110,6 +110,14 @@ class HyprlandTests(unittest.TestCase):
         self.assertIn('pin address:0xaaa', fake.dispatched())
         self.assertIn('focuswindow address:0xgame', fake.dispatched())
 
+    def test_move_mode_lets_the_mouse_in(self):
+        fake = FakeHyprctl()
+        hypr = hyprland.Hyprland(fake)
+        hypr.set_focusable('0xaaa', True)
+        hypr.set_focusable('0xaaa', False)
+        self.assertIn("prop = 'no_focus', value = '0', window = 'address:0xaaa'", fake.dispatched()[0])
+        self.assertIn("value = '1'", fake.dispatched()[1])
+
     def test_a_missing_hyprctl_is_not_an_error(self):
         def broken(_args):
             raise subprocess.TimeoutExpired('hyprctl', 2)

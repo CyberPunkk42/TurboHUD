@@ -335,6 +335,30 @@ class LiveDeltaTests(unittest.TestCase):
         # the line, finish at 30 s); this lap is at 26 s.
         self.assertEqual(state.delta_to_best, 10_000)
 
+    def test_lines_passed_together_count_as_one_stretch(self):
+        # Lines 0 and 1 get the same time when the lap starts (as in TSU); the car is
+        # really between line 0 (z 0) and line 1 (z 100). Line 2 at z 200.
+        gates = STRAIGHT
+        laps = (
+            (0, 0, 200_000),
+            (400_000, 400_000, 600_000),  # best: 20 s from the line to line 2
+            (700_000, 700_000),  # this lap: just started
+        )
+        state = race.LapState(
+            clock=750_000, time_limit=0, laps_completed=2, laps_to_finish=13,
+            lap_starts=[lap[0] for lap in laps], checkpoints=laps, position=(0.0, 50.0), gates=gates,
+        )
+        # A quarter of the way from line 0 to line 2: the best lap was there at 5 s; this
+        # lap is at 5 s too. Taking line 1 as passed would have said +5 s.
+        self.assertEqual(state.delta_to_best, 0)
+
+    def test_gate_share_follows_the_path_in_a_bend(self):
+        # A right-angle bend: line A across x at z 0, line B across z at x 100. Their
+        # extensions cross at (0, 0)... the projection stays sensible on the path.
+        a = ((-10.0, 0.0), (10.0, 0.0))
+        b = ((100.0, 90.0), (100.0, 110.0))
+        self.assertAlmostEqual(race.gate_share(a, b, (50.0, 50.0)), 0.5)
+
     def test_without_position_it_falls_back_to_checkpoints(self):
         state = race.LapState(
             clock=860_000, time_limit=0, laps_completed=2, laps_to_finish=13,
@@ -411,6 +435,22 @@ class RowsTests(unittest.TestCase):
         behind = race.LapState(0, 0, 1, 13, [0, 900_000], checkpoints=((0, 300_000), (900_000, 1_202_340)))
         row = race.race_rows(racing(behind), 0)[2]
         self.assertEqual((row.text, row.color), ('+0.234 vs best', 'behind'))
+
+    def test_a_delta_too_small_to_show_is_even(self):
+        self.assertEqual(race.format_delta(-3), '0.000')
+        self.assertEqual(race.format_delta(5), '+0.001')
+        even = race.LapState(0, 0, 1, 13, [0, 900_000], checkpoints=((0, 300_000), (900_000, 1_199_997)))
+        row = race.race_rows(racing(even), 0)[2]
+        self.assertEqual((row.text, row.color), ('0.000 vs best', 'text'))
+
+    def test_waiting_texts_fit_the_lap_section(self):
+        from turbohud.core.hud import RACE_SECTIONS
+
+        widest = max(len(rows[0].text) for rows in RACE_SECTIONS[0].samples)
+        for status in (race.WAITING_FOR_GAME, race.WAITING_FOR_RACE):
+            with self.subTest(status=status):
+                text = race.race_sections(race.Snapshot(status), 0)['lap'][0].text
+                self.assertLessEqual(len(text), widest)
 
     def test_waiting(self):
         game = race.race_rows(race.Snapshot(race.WAITING_FOR_GAME), 0)

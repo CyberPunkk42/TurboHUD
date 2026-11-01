@@ -11,6 +11,8 @@ from turbohud import __version__
 from turbohud.core.settings import (
     LOG_FILE,
     SETTINGS_FILE,
+    SectionPlace,
+    Settings,
     fit_on_screens,
     load_settings,
     save_settings,
@@ -76,7 +78,8 @@ def run(args, folder):
     from PySide6.QtWidgets import QApplication, QMenu, QSystemTrayIcon
 
     from turbohud.overlay import HOTKEY_LOCK, HOTKEY_QUIT, native_for
-    from turbohud.overlay.window import OverlayWindow
+    from turbohud.core.hud import CLOCK_SECTIONS, RACE_SECTIONS, session_rows, stacked
+    from turbohud.overlay.window import MovePanel, SectionWindow
 
     app = QApplication([sys.argv[0]])
     app.setApplicationName('TurboHUD')
@@ -99,35 +102,83 @@ def run(args, folder):
     log.info('Qt platform: %s', QGuiApplication.platformName())
 
     live = start_live_race()
-    content = None
     if live is not None:
-        from turbohud.core.race import race_rows
+        from turbohud.core.race import race_sections
 
-        content = lambda: race_rows(live.snapshot(), time.monotonic())  # noqa: E731
-    overlay = OverlayWindow(native, settings.theme, content)
+        layout = RACE_SECTIONS
+        contents = lambda: race_sections(live.snapshot(), time.monotonic())  # noqa: E731
+    else:
+        layout = CLOCK_SECTIONS
+        contents = lambda: {'clock': session_rows(time.monotonic() - started)}  # noqa: E731
+    started = time.monotonic()
     screens = [screen.geometry().getRect() for screen in QGuiApplication.screens()]
-    placement = fit_on_screens(settings.placement, screens)
-    overlay.setGeometry(*placement)
-    overlay.show_on_top()
-    log.info('overlay at %s', placement)
+    windows = {section.name: SectionWindow(native, settings.theme, section) for section in layout}
+    first = {name: window.base for name, window in windows.items()}
+    defaults = stacked(layout, settings.placement[0], settings.placement[1], first)
+    for name, window in windows.items():
+        saved = settings.sections.get(name)
+        place = (saved.x, saved.y, saved.width, saved.height) if saved else defaults[name]
+        place = fit_on_screens(place, screens)
+        window.setGeometry(*place)
+        window.wanted = saved.visible if saved else True
+        if window.wanted:
+            window.show_on_top()
+        log.info('section %s at %s%s', name, place, '' if window.wanted else ' (hidden)')
+    shortcuts = False
+    panel = None  # made once the shortcuts are known
+    locked = True
 
     def save():
         nonlocal settings
-        settings = type(settings)(placement=overlay.placement(), theme=settings.theme)
+        places = {}
+        for name, window in windows.items():
+            x, y, width, height = window.placement()
+            places[name] = SectionPlace(x, y, width, height, window.wanted)
+        settings = Settings(placement=settings.placement, theme=settings.theme, sections=places)
         try:
             save_settings(path, settings)
         except OSError as error:
             log.warning('could not save the settings: %s', error)
 
-    def toggle():
-        overlay.set_locked(not overlay.locked)
+    def panel_spot():
+        """Where the move-mode panel goes: a third down the screen that holds the first
+        shown section, in the middle."""
+        shown = [w for w in windows.values() if w.wanted] or list(windows.values())
+        x, y = shown[0].placement()[:2]
+        for sx, sy, sw, sh in screens:
+            if sx <= x < sx + sw and sy <= y < sy + sh:
+                return sx + (sw - panel.width()) // 2, sy + sh // 3
+        return x + 40, y + 40
+
+    def set_locked(value):
+        nonlocal locked, was_active
+        if value == locked:
+            return
+        locked = value
+        for window in windows.values():
+            window.set_locked(value)
+        move_action.setChecked(not value)
+        was_active = False
+        if value:
+            panel.hide()
+            native.give_focus_back()
+            save()
+            log.info('locked')
+        else:
+            native.take_focus()
+            panel.show_at(*panel_spot())
+            log.info('move mode')
+
+    def set_wanted(name, wanted):
+        windows[name].set_wanted(wanted)
+        log.info('section %s %s', name, 'shown' if wanted else 'hidden')
 
     # Tray icon (menu bar on the Mac): the way to move mode where there are no shortcuts.
     tray = QSystemTrayIcon(icon)
     tray.setToolTip('TurboHUD')
     menu = QMenu()
     move_action = QAction('Move mode', menu, checkable=True)
-    move_action.triggered.connect(lambda checked: overlay.set_locked(not checked))
+    move_action.triggered.connect(lambda checked: set_locked(not checked))
     quit_action = QAction('Quit TurboHUD', menu)
     quit_action.triggered.connect(app.quit)
     menu.addAction(move_action)
@@ -143,29 +194,25 @@ def run(args, folder):
         # Leave the system's callback first, then act.
         if number == HOTKEY_LOCK:
             log.info('Ctrl+Shift+L pressed')
-            QTimer.singleShot(0, toggle)
+            QTimer.singleShot(0, lambda: set_locked(not locked))
         elif number == HOTKEY_QUIT:
             log.info('Ctrl+Shift+Q pressed')
             QTimer.singleShot(0, app.quit)
 
-    overlay.shortcuts = native.register_hotkeys(on_hotkey)
-    log.info('Ctrl+Shift+L and Ctrl+Shift+Q registered' if overlay.shortcuts else 'no system-wide shortcuts')
+    shortcuts = native.register_hotkeys(on_hotkey)
+    log.info('Ctrl+Shift+L and Ctrl+Shift+Q registered' if shortcuts else 'no system-wide shortcuts')
+    panel = MovePanel(native, layout, shortcuts)
+    for name, window in windows.items():
+        panel.set_wanted(name, window.wanted)
+    panel.lock_requested.connect(lambda: set_locked(True))
+    panel.quit_requested.connect(app.quit)
+    panel.wanted_changed.connect(set_wanted)
 
     was_active = False  # in move mode: whether TurboHUD has been the active app yet
 
-    def on_locked(locked):
-        nonlocal was_active
-        move_action.setChecked(not locked)
-        was_active = False
-        if locked:
-            save()
-
-    overlay.locked_changed.connect(on_locked)
-    overlay.close_requested.connect(app.quit)
-
     def on_state(state):
         nonlocal was_active
-        if overlay.locked or not getattr(native, 'auto_lock', True):
+        if locked or not getattr(native, 'auto_lock', True):
             return
         if state == Qt.ApplicationActive:
             was_active = True
@@ -173,7 +220,7 @@ def run(args, folder):
             # Another app (the game, usually) became active: move mode is over. Playing
             # while the overlay is the active app upsets the game's mouse handling.
             log.info('another app became active; locking')
-            overlay.set_locked(True)
+            set_locked(True)
 
     app.applicationStateChanged.connect(on_state)
 
@@ -181,13 +228,17 @@ def run(args, folder):
 
     def tick():
         nonlocal last_seen
-        overlay.update()
-        if not overlay.locked and time.monotonic() - last_seen >= PLACEMENT_EVERY:
-            # In move mode, note where the box is: on Wayland only the desktop knows,
-            # and it may no longer say once TurboHUD is quitting.
+        current = contents()
+        for name, window in windows.items():
+            window.rows = current.get(name, [])
+            window.update()
+        if not locked and time.monotonic() - last_seen >= PLACEMENT_EVERY:
+            # In move mode, note where the sections are: on Wayland only the desktop
+            # knows, and it may no longer say once TurboHUD is quitting.
             last_seen = time.monotonic()
-            overlay.placement()
-        if args.seconds is not None and overlay.elapsed() >= args.seconds:
+            for window in windows.values():
+                window.placement()
+        if args.seconds is not None and time.monotonic() - started >= args.seconds:
             log.info('time is up')
             app.quit()
 
@@ -195,11 +246,11 @@ def run(args, folder):
     timer.timeout.connect(tick)
     timer.start(FRAME_MS)  # also lets Python see Ctrl+C between frames
     signal.signal(signal.SIGINT, lambda *_: app.quit())
-    if args.move or not overlay.shortcuts and not tray.isVisible():
-        overlay.set_locked(False)  # without shortcuts or tray, locked could not be undone
+    if args.move or not shortcuts and not tray.isVisible():
+        set_locked(False)  # without shortcuts or tray, locked could not be undone
     app.exec()
-    if not overlay.locked:
-        overlay.set_locked(True)  # saves and hands the focus back
+    if not locked:
+        set_locked(True)  # saves and hands the focus back
     else:
         save()
     if live is not None:
