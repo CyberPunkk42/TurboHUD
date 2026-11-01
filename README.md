@@ -51,8 +51,10 @@ runs, you see:
    TurboHUD icon's menu (in the tray or status bar) instead: **Move mode** shows the blue
    box with the **Lock** and **Close** buttons, **Quit TurboHUD** quits. Where the
    desktop has no tray, TurboHUD starts in move mode, so **Close** quits it.
-4. Known issue: on Wayland desktops (for example Omarchy with Hyprland), TurboHUD runs but
-   does not yet stay on top of the game. On X11 it should.
+4. On Hyprland (for example Omarchy), TurboHUD asks Hyprland to float and pin its own
+   window above the game, without a frame and without taking the keyboard focus; your
+   Hyprland settings are not changed. On X11 Qt keeps it on top. Other Wayland desktops
+   (GNOME, KDE) do not keep it on top yet.
 
 ### Live lap times on Linux
 Linux lets a program read another program's memory only if it started that program.
@@ -74,7 +76,8 @@ Clear the launch option to start TSU without the probe. The probe writes what it
 - The HUD starts at the top left, **locked**: clicks go through it to the game.
 - **Ctrl+Shift+L** switches to **move mode**: the box gets a blue tint; drag it, resize
   it at the bottom-right corner, then press **Lock** (or Ctrl+Shift+L again). Clicking
-  back into the game also locks it.
+  back into the game also locks it (not on Hyprland, where the focus follows the mouse:
+  there use **Lock** or the icon's menu).
 - **Ctrl+Shift+Q** quits.
 - The TurboHUD icon in the taskbar tray or menu bar has the same: **Move mode** and
   **Quit**. On Linux the shortcuts are not available yet; use the icon.

@@ -20,21 +20,12 @@ with an event to join: the lap data as a guest on someone else's server.
 A small settings window (from the tray menu) for the theme's colours and scale, instead
 of editing `settings.json` by hand.
 
-## 4. Linux: on top of the game, shortcuts and AppImage
-Tested on Omarchy Linux (Hyprland, a Wayland desktop) on 2026-10-24: TurboHUD runs, but
-does not stay on top of TSU. Most likely Qt runs as a native Wayland app there, where
-"stay on top" is ignored. Options, to try in this order:
-- Start Qt through XWayland (`QT_QPA_PLATFORM=xcb`), where Qt's on-top hint works, and
-  check over TSU windowed and fullscreen.
-- Hyprland window rules for TurboHUD (float, pin, no focus); document them for players.
-- The layer-shell extension (Hyprland, KDE, Sway support it; GNOME does not), which puts
-  a window above fullscreen ones; it needs a library outside PySide6.
-Move mode ends at once: on Omarchy, choosing Move mode from the tray icon tints the box,
-but the first mouse movement locks it again. Hyprland gives focus to the window under the
-mouse, so moving the pointer off the box makes the game active, and TurboHUD's auto-lock
-(added for the Mac, where playing during move mode upset TSU's mouse handling) ends move
-mode. Fix: on desktops where focus follows the mouse, lock only on a click into another
-window, or not automatically at all; keep the Mac behaviour.
+## 4. Linux: shortcuts, AppImage, other Wayland desktops
+On top of the game on Hyprland is done (2026-11-01: runtime requests for TurboHUD's own
+window; move mode no longer ends when the mouse moves there). Still to check by hand:
+over TSU in a race, and that clicks go through while locked. Other Wayland desktops
+(KDE, GNOME) still ignore Qt's on-top hint: the layer-shell extension (KDE, Sway; not
+GNOME) would need a library outside PySide6.
 
 Shortcuts: Linux has none yet (Ctrl+Shift+L and Ctrl+Shift+Q do nothing there), and on
 Omarchy it was not clear how to switch move mode or quit. Options: X11 key grabs under
