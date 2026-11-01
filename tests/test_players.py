@@ -329,3 +329,42 @@ class HealthRowTests(unittest.TestCase):
         self.assertEqual((row.color, row.tail), ('lift', '  less downforce'))
         row = race.car_sections(self.car(0.6))['health'][0]
         self.assertEqual((row.color, row.tail), ('behind', '  slowed'))
+
+
+# A straight track of four lines, 10 apart along z (line i at z = 10 * i).
+LINES = tuple(((-5.0, 10.0 * i), (5.0, 10.0 * i)) for i in range(4))
+
+
+def driving(name, times, z, local=False):
+    return race.PlayerState(name, GERMANY, 0, (tuple(times),), local=local, position=(0.0, z))
+
+
+class LiveGapTests(unittest.TestCase):
+    def test_live_between_checkpoints_like_the_delta(self):
+        leader = driving('Leader', (0, 10_000, 20_000), z=25.0)  # passed lines 0-2 at 0, 1, 2 s
+        me = driving('Me', (5_000, 15_000), z=15.0, local=True)  # halfway from line 1 to line 2
+        # The leader was halfway (z = 15) at 1.5 s; the clock says 2.05 s: 0.55 s behind.
+        self.assertEqual(race.gap(leader, me, clock=20_500, gates=LINES), ('time', -5_500))
+        # It runs on with the clock and my place, not only at checkpoints.
+        later = driving('Me', (5_000, 15_000), z=18.0, local=True)
+        self.assertEqual(race.gap(leader, later, clock=21_000, gates=LINES), ('time', -3_000))
+
+    def test_a_car_behind_is_live_too(self):
+        me = driving('Me', (0, 10_000, 20_000), z=25.0, local=True)
+        chaser = driving('Chaser', (5_000, 15_000), z=12.0)
+        # I was at z = 12 at 1.2 s; the clock says 2.0 s: it is 0.8 s behind.
+        self.assertEqual(race.gap(chaser, me, clock=20_000, gates=LINES), ('time', 8_000))
+
+    def test_without_positions_the_gap_is_at_the_last_common_checkpoint(self):
+        leader = race.PlayerState('Leader', GERMANY, 0, ((0, 10_000, 20_000),))
+        me = race.PlayerState('Me', GERMANY, 0, ((5_000, 15_000),), local=True)
+        self.assertEqual(race.gap(leader, me, clock=20_500, gates=LINES), ('time', -5_000))
+        self.assertEqual(race.gap(leader, me), ('time', -5_000))
+
+    def test_lines_written_together_do_not_jump(self):
+        # Lines 1 and 2 at the same spot (same time for the leader): my place counts
+        # against line 3, the next line with a time of its own.
+        lines = (LINES[0], LINES[1], LINES[1], ((-5.0, 30.0), (5.0, 30.0)))
+        leader = driving('Leader', (0, 10_000, 10_000, 30_000), z=35.0)
+        me = driving('Me', (5_000, 15_000), z=20.0, local=True)  # passed line 1, not yet written 2
+        self.assertEqual(race.gap(leader, me, clock=30_000, gates=lines), ('time', -10_000))

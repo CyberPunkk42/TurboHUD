@@ -237,3 +237,9 @@ its "Recent changes".
   went away while others still raced. Now the lap sections show the finish and the rest
   stays until the race is over (the clock stops: lobby); the delta goes, with no lap to
   compare.
+- 2026-11-01: Live gaps in the player list, like the delta to the best lap. Where the
+  cars' positions are known (offline, hotlap, hosted online races with other players),
+  the car behind's place between two checkpoints gives the moment the car ahead was
+  there (race.live_gap, with the delta's handling of lines written together), and the
+  gap is the race clock since then. Without positions (online races with only AI: the
+  game is a client) it stays at the last checkpoint both passed. Not yet seen in a race.

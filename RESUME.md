@@ -52,6 +52,12 @@ See `docs/IMPROVEMENT_BACKLOG.md`. In short:
    Hyprland.
 
 ## Recent changes
+- 2026-11-01: Live gaps in the player list, like the delta to the best lap. Where the
+  cars' positions are known (offline, hotlap, hosted online races with other players),
+  the car behind's place between two checkpoints gives the moment the car ahead was
+  there (race.live_gap, with the delta's handling of lines written together), and the
+  gap is the race clock since then. Without positions (online races with only AI: the
+  game is a client) it stays at the last checkpoint both passed. Not yet seen in a race.
 - 2026-11-01: The HUD stays after the local player finishes. It used to switch to the
   three finish sections only (laps, best lap, last lap), so the player list and the rest
   went away while others still raced. Now the lap sections show the finish and the rest

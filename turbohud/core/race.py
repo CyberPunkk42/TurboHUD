@@ -878,7 +878,7 @@ def race_sections(snapshot, now, speed_unit='kmh', standings=None, radar=None):
     sections.update(car_sections(state.car, state.laps_to_go, speed_unit))
     if state.players:
         order = standings.order(state.players, now) if standings is not None else None
-        sections['players'] = players_rows(state.players, order)
+        sections['players'] = players_rows(state.players, order, state.clock, state.gates)
         opacity = blue_flag_opacity(blue_flag(state.players, clock_now(snapshot, now)))
         if opacity is not None:
             sections['blue'] = opacity
@@ -982,10 +982,46 @@ def ranked(players):
     return sorted(players, key=key)
 
 
-def gap(player, me):
-    """`player` against `me`: ('time', 0.1 ms) at the last checkpoint both passed
-    (negative: they got there first, ahead), or ('laps', n) a lap or more apart (negative:
-    ahead), or None before a comparison."""
+def live_gap(ahead, behind, clock, gates):
+    """How far (0.1 ms) `behind` is behind `ahead` right now, live like the delta to
+    the best lap: how far `behind` is from its last checkpoint to the next (by its
+    position and the checkpoint lines `gates`) gives the moment `ahead` was at the same
+    place, which is that long before `clock`. None without position or lines, or when
+    `ahead` has not passed that place's next checkpoint yet."""
+    if behind.position is None or not gates:
+        return None
+    lines = len(gates)
+    first, second = ahead.passed, behind.passed
+    k = len(second) - 1
+    if k < 0 or len(first) <= k + 1:
+        return None
+    # As in LapState.stretch: a run of lines passed together starts the stretch, and a
+    # line at the same spot as the one passed (same time for the car ahead) is skipped.
+    start = k
+    while start > 0 and second[start] == second[start - 1]:
+        start -= 1
+    following = k + 1
+    while following < len(first) and first[following] == first[k]:
+        following += 1
+    if following >= len(first) or NO_CHECKPOINT in (first[start], first[following]):
+        return None
+    end = following
+    while end + 1 < len(first) and first[end + 1] == first[following]:
+        end += 1
+    share = gate_share(
+        [gates[i % lines] for i in range(start, k + 1)],
+        [gates[i % lines] for i in range(following, end + 1)],
+        behind.position,
+    )
+    there = first[start] + share * (first[following] - first[start])
+    return max(round(clock - there), 0)
+
+
+def gap(player, me, clock=None, gates=()):
+    """`player` against `me`: ('time', 0.1 ms; negative: they are ahead), or ('laps',
+    n) a lap or more apart (negative: ahead), or None before a comparison. Live (see
+    live_gap) with the race `clock` and the checkpoint lines `gates` where the cars'
+    positions are known; otherwise at the last checkpoint both passed."""
     theirs, mine = player.passed, me.passed
     lap_length = len(me.checkpoints[0]) if me.checkpoints and len(me.checkpoints) > 1 else 0
     difference = len(theirs) - len(mine)
@@ -995,6 +1031,11 @@ def gap(player, me):
     common = min(len(theirs), len(mine)) - 1
     if common < 1:
         return None
+    if clock is not None:
+        they_lead = difference > 0 or difference == 0 and theirs[-1] < mine[-1]
+        live = live_gap(player, me, clock, gates) if they_lead else live_gap(me, player, clock, gates)
+        if live is not None:
+            return ('time', -live if they_lead else live)
     return ('time', theirs[common] - mine[common])
 
 
@@ -1055,15 +1096,16 @@ def shown_players(players, max_rows=MAX_PLAYER_ROWS, order=None):
     return [order[0]] + order[first:first + around]
 
 
-def players_rows(players, order=None):
-    """The player list: position, flag, name, PIT, and the gap to the local player."""
+def players_rows(players, order=None, clock=None, gates=()):
+    """The player list: position, flag, name, PIT, and the gap to the local player
+    (live with the race `clock` and the checkpoint lines `gates`, see gap)."""
     me = next((p for p in players if p.local), None)
     rows = []
     for position, player in shown_players(players, order=order):
         name = player.name or '?'
         if len(name) > MAX_NAME_SHOWN:
             name = name[: MAX_NAME_SHOWN - 1] + '…'
-        found = gap(player, me) if me is not None and not player.local else None
+        found = gap(player, me, clock, gates) if me is not None and not player.local else None
         color = 'text' if found is None or found[1] == 0 else ('behind' if found[1] < 0 else 'ahead')
         rows.append(Row(
             f'{position}. {name}', 'small', 'accent' if player.local else 'text',
