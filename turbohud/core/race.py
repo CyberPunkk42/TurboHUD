@@ -53,6 +53,7 @@ class LapState:
     checkpoints: tuple = ()  # per started lap, when each checkpoint was passed, 0.1 ms
     position: tuple | None = None  # the car's (x, z)
     gates: tuple = ()  # the checkpoint lines, ((x1, z1), (x2, z2)), in checkpoint order
+    car: 'CarState | None' = None  # fuel, tires and speed, where the game has them
 
     @property
     def lap_times(self):
@@ -109,13 +110,26 @@ class LapState:
             start -= 1
         if not (_passed(current, start) and _passed(best, start)):
             return None
-        if k + 1 == len(best):
+        # The next line with a time of its own: a line at the same spot as the one just
+        # passed (lines 7, 13, 24 ... on the tracks seen) gets the same time but is only
+        # written when the car reaches the line after it.
+        following_line = k + 1
+        while following_line < len(best) and best[following_line] == best[k]:
+            following_line += 1
+        if following_line == len(best):
             following = self.lap_starts[best_index + 1]  # the next line is the finish
-        elif _passed(best, k + 1):
-            following = best[k + 1]
+        elif _passed(best, following_line):
+            following = best[following_line]
         else:
             return None
-        share = gate_share(self.gates[start], self.gates[(k + 1) % len(self.gates)], self.position)
+        # A checkpoint can be several line pieces with the same time (a wide track split
+        # in two, or one line twice): the nearest piece counts.
+        behind = [self.gates[i] for i in range(start, k + 1)]
+        end = following_line
+        while end + 1 < len(best) and best[end + 1] == best[following_line]:
+            end += 1
+        ahead = [self.gates[i % len(self.gates)] for i in range(following_line, end + 1)]
+        share = gate_share(behind, ahead, self.position)
         best_here = best[start] + share * (following - best[start]) - best[0]
         elapsed = self.clock - current[0]
         return round(elapsed - best_here) if elapsed > 0 else None
@@ -129,26 +143,93 @@ class LapState:
         return min(self.laps_completed + 1, self.laps_to_finish) if self.laps_to_finish else self.laps_completed + 1
 
 
-def _middle(gate):
+def _segment_distance(gate, point):
+    """How far `point` is from a checkpoint line piece (not the endless line through it)."""
     (x1, z1), (x2, z2) = gate
-    return (x1 + x2) / 2, (z1 + z2) / 2
-
-
-def gate_share(gate, next_gate, point):
-    """How far `point` is from one checkpoint line to the next, 0 to 1: the car projected
-    onto the path between the lines' middles (robust in tight bends, where the lines
-    themselves, extended, may cross)."""
-    (ax, az), (bx, bz) = _middle(gate), _middle(next_gate)
-    dx, dz = bx - ax, bz - az
+    dx, dz = x2 - x1, z2 - z1
     length = dx * dx + dz * dz
-    if not length:
-        return 0.0
-    share = ((point[0] - ax) * dx + (point[1] - az) * dz) / length
-    return min(max(share, 0.0), 1.0)
+    along = 0.0 if not length else min(max(((point[0] - x1) * dx + (point[1] - z1) * dz) / length, 0.0), 1.0)
+    return math.hypot(point[0] - (x1 + along * dx), point[1] - (z1 + along * dz))
+
+
+def gate_share(behind, ahead, point):
+    """How far `point` is from one checkpoint to the next, 0 to 1, by its distance to
+    each: the line pieces just passed (`behind`) and those to come (`ahead`), a gate or
+    a list of them, the nearest piece counting."""
+    if behind and isinstance(behind[0][0], (int, float)):
+        behind = [behind]
+    if ahead and isinstance(ahead[0][0], (int, float)):
+        ahead = [ahead]
+    before = min(_segment_distance(gate, point) for gate in behind)
+    after = min(_segment_distance(gate, point) for gate in ahead)
+    return before / (before + after) if before + after else 0.0
 
 
 def _passed(times, k):
     return times[k] != NO_CHECKPOINT and times[k] >= times[0]
+
+
+MAX_TIRE_WEAR = 5_760_000  # TS.TireWearSettings.MaxTireWear (a constant): worn out
+SPEED_TO_KMH = 3.6  # m_forwardSpeed is taken as metres per second (not yet compared in game)
+PER_LAP_LAPS = 3  # laps averaged for fuel and tire use per lap
+
+
+@dataclass(frozen=True)
+class CarState:
+    """The local car: what it has used up and how fast it goes."""
+
+    fuel_on: bool
+    fuel_used: int  # TS.VehicleState.fuelConsumption: 150 a second at full throttle
+    fuel_tank: int  # a full tank in the same units (the event's fuel settings)
+    tires_on: bool
+    tire_wear: int  # TS.VehicleState.tireWear, worn out at MAX_TIRE_WEAR
+    speed: float  # forward speed, game units (metres) a second
+    fuel_per_lap: float | None = None  # average of the last laps, same units
+    wear_per_lap: float | None = None
+
+    @property
+    def fuel_left(self):
+        """0 to 1, or None without fuel."""
+        if not self.fuel_on or self.fuel_tank <= 0:
+            return None
+        return min(max(1 - self.fuel_used / self.fuel_tank, 0.0), 1.0)
+
+    @property
+    def tires_left(self):
+        if not self.tires_on:
+            return None
+        return min(max(1 - self.tire_wear / MAX_TIRE_WEAR, 0.0), 1.0)
+
+    @property
+    def fuel_laps(self):
+        """How many laps the fuel lasts at the recent use, or None."""
+        if self.fuel_left is None or not self.fuel_per_lap:
+            return None
+        return (self.fuel_tank - self.fuel_used) / self.fuel_per_lap
+
+    @property
+    def tire_laps(self):
+        if self.tires_left is None or not self.wear_per_lap:
+            return None
+        return (MAX_TIRE_WEAR - self.tire_wear) / self.wear_per_lap
+
+    @property
+    def kmh(self):
+        return abs(self.speed) * SPEED_TO_KMH
+
+
+def per_lap(history, laps=PER_LAP_LAPS):
+    """Average use per lap from `history`, the used amounts at the start of each lap
+    (oldest first), over the last `laps` laps; None before a whole lap. A drop (a pit
+    stop that refilled or changed tires) starts the average afresh."""
+    start = 0
+    for index in range(1, len(history)):
+        if history[index] < history[index - 1]:
+            start = index
+    recent = history[start:][-(laps + 1):]
+    if len(recent) < 2:
+        return None
+    return (recent[-1] - recent[0]) / (len(recent) - 1)
 
 
 class LapReader:
@@ -164,6 +245,8 @@ class LapReader:
         self._player = None
         self._laps = {}  # finished lap object -> its checkpoint times
         self._gates = None  # checkpoint lines, ((x1, z1), (x2, z2)) each
+        self._fuel_history = {}  # lap index -> fuel used when it started
+        self._wear_history = {}  # lap index -> tire wear when it started
 
     def event_state(self):
         services = self.il.static_ref(self.services_class, 'sm_instance')
@@ -205,6 +288,7 @@ class LapReader:
         if state != self._state:
             # A new event (or the first read): start the caches afresh.
             self._state, self._offsets, self._laps, self._gates = state, {}, {}, None
+            self._fuel_history, self._wear_history = {}, {}
             self._player = self.local_player()[1]
         player = self._player
         times = state + self._offset('state', state, 'times')
@@ -230,6 +314,7 @@ class LapReader:
             if passed:
                 checkpoints.append(passed)
         position, gates = self._position_and_gates(player)
+        car = self._car(player, len(checkpoints) - 1)
         return LapState(
             clock=clock,
             time_limit=time_limit,
@@ -240,6 +325,33 @@ class LapReader:
             checkpoints=tuple(checkpoints),
             position=position,
             gates=gates,
+            car=car,
+        )
+
+    def _car(self, player, lap):
+        """Fuel, tires and speed of the local car, or None where the game lacks them."""
+        memory = self.il.memory
+        try:
+            vehicle = self._ref('player', player, 'm_vehicle')
+            state = self._ref('vehicle', vehicle, 'm_state')
+            updater = self._ref('vehicle', vehicle, 'm_stateUpdater')
+            fuel_used = memory.i32(state + self._offset('vstate', state, 'fuelConsumption'))
+            tire_wear = memory.i32(state + self._offset('vstate', state, 'tireWear'))
+            fuel_on = bool(memory.u8(updater + self._offset('updater', updater, 'm_fuelEnabled')))
+            tires_on = bool(memory.u8(updater + self._offset('updater', updater, 'm_tireWearEnabled')))
+            speed = memory.f32(updater + self._offset('updater', updater, 'm_forwardSpeed'))
+            settings = self._ref('updater', updater, 'm_fuelSettings')
+            tank = memory.i32(settings + self._offset('fuel', settings, 'maxFuelConsumptionInEvent'))
+        except NotFound:
+            return None
+        if lap >= 0:
+            self._fuel_history.setdefault(lap, fuel_used)
+            self._wear_history.setdefault(lap, tire_wear)
+        fuel_starts = [self._fuel_history[i] for i in sorted(self._fuel_history)]
+        wear_starts = [self._wear_history[i] for i in sorted(self._wear_history)]
+        return CarState(
+            fuel_on=fuel_on, fuel_used=fuel_used, fuel_tank=tank, tires_on=tires_on, tire_wear=tire_wear,
+            speed=speed, fuel_per_lap=per_lap(fuel_starts), wear_per_lap=per_lap(wear_starts),
         )
 
     def _read_gates(self, player):
@@ -354,15 +466,34 @@ def race_sections(snapshot, now):
     else:
         color = 'text' if abs(delta) < EVEN else 'ahead' if delta < 0 else 'behind'
         delta_row = Row(f'{format_delta(delta)} vs best', 'medium', color)
-    return {
+    sections = {
         'lap': [Row(title, 'title')],
         'current': [Row(format_tenths(current_lap_now(snapshot, now)), 'big', 'accent')],
         'delta': [delta_row],
         'times': [Row(f'Last {format_time(state.last_lap)}   Best {format_time(state.best_lap)}', 'medium')],
     }
+    sections.update(car_sections(state.car))
+    return sections
+
+
+def _laps_text(laps):
+    return f'  ~{laps:.1f} laps' if laps is not None else ''
+
+
+def car_sections(car):
+    """{section: rows} for fuel, tires and speed; empty where the event has none."""
+    if car is None:
+        return {}
+    sections = {'speed': [Row(f'{car.kmh:.0f} km/h', 'medium')]}
+    if car.fuel_left is not None:
+        sections['fuel'] = [Row(f'Fuel {car.fuel_left * 100:.0f}%{_laps_text(car.fuel_laps)}', 'medium')]
+    if car.tires_left is not None:
+        sections['tires'] = [Row(f'Tires {car.tires_left * 100:.0f}%{_laps_text(car.tire_laps)}', 'medium')]
+    return sections
 
 
 def race_rows(snapshot, now):
     """All sections' rows in one list, top to bottom (for the terminal and tests)."""
     sections = race_sections(snapshot, now)
-    return [row for name in ('lap', 'current', 'delta', 'times') for row in sections.get(name, [])]
+    order = ('lap', 'current', 'delta', 'times', 'fuel', 'tires', 'speed')
+    return [row for name in order for row in sections.get(name, [])]

@@ -308,3 +308,15 @@ The car's position is `TS.Vehicle.m_statsNewPosition` (Vector3), updated every t
 Checked by geometry: with 35 checkpoint times in the current lap, the car sat between
 lines 34 and 35, so time i belongs to line i. Lines 1 and 119 record the same time as
 their neighbours 0 and 118 (they are close to them); that does no harm.
+
+### Fuel, tires and speed: confirmed in a drive (2026-11-01)
+With fuel and tire wear on, `TS.VehicleState.fuelConsumption` and `.tireWear` count what
+is used up, from 0. Per lap (about 1:22) they grew by about 10,100 and 151,000; the
+player saw about 6 % fuel and 2.5 % tires per lap. Constants from the metadata's default
+values: `TireWearSettings.MaxTireWear` = 5,760,000 (so 2.6 % a lap),
+`FuelSettings.MaxFuelConsumptionPerSecond` = 150 (3 a tick at full throttle); the tank is
+the event's `FuelSettings.maxFuelConsumptionInEvent` (reached through
+`CarStateUpdater.m_fuelSettings`), not yet read live. `CarStateUpdater.m_forwardSpeed`
+peaked at about 57, taken as metres a second (205 km/h), not yet compared in game.
+Some checkpoints are two lines at the same spot (6/7, 12/13, 23/24, 28/29 on the track
+driven) or one line in two pieces (109/110, 111/112), with the same time.
