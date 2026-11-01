@@ -25,6 +25,11 @@ class FakeGame:
         self.put(self.static_type + il.TYPE_ATTRS, struct.pack('<H', il.FIELD_ATTRIBUTE_STATIC))
         self.instance_type = self.alloc_heap(16)
         self.put(self.instance_type + il.TYPE_ATTRS, struct.pack('<H', 0))
+        self.typed = {}
+        for code in (0x08, 0x0C):  # int, float
+            record = self.alloc_heap(16)
+            self.put(record + il.TYPE_ATTRS, struct.pack('<HB', 0, code))
+            self.typed[code] = record
 
     def string(self, text):
         index = self.strings.find(b'\0' + text.encode() + b'\0')
@@ -58,10 +63,10 @@ class FakeGame:
         self.q(klass + il.CLASS_PARENT, parent)
         entries = self.alloc_heap(il.FIELD_INFO_SIZE * (len(fields) + 1))
         self.q(klass + il.CLASS_FIELDS, entries)
-        for i, (field_name, offset, is_static) in enumerate(fields):
+        for i, (field_name, offset, is_static, *code) in enumerate(fields):
             entry = entries + il.FIELD_INFO_SIZE * i
             self.q(entry, self.string(field_name))
-            self.q(entry + 8, self.static_type if is_static else self.instance_type)
+            self.q(entry + 8, self.static_type if is_static else self.typed[code[0]] if code else self.instance_type)
             self.q(entry + 16, klass)
             self.put(entry + 24, struct.pack('<iI', offset, 0x04000001))
         if statics is not None:
@@ -91,7 +96,7 @@ class FakeGame:
         return il.Memory(self.read, regions)
 
 
-def build(lap_starts, laps_completed, clock, limit, local_index=0, finished=False, car=None, gates=()):
+def build(lap_starts, laps_completed, clock, limit, local_index=0, finished=False, car=None, gates=(), pedals=None):
     """A fake race; `car` is the car's (x, z) and `gates` the checkpoint lines, both
     optional like in a game without them."""
     g = FakeGame()
@@ -154,9 +159,25 @@ def build(lap_starts, laps_completed, clock, limit, local_index=0, finished=Fals
         g.put(state + 0x48, struct.pack('<i', 576_000))
         g.q(vehicle + 0x30, state)
         updater = g.alloc_obj(g.klass('TS', 'CarStateUpdater', [
-            ('m_fuelSettings', 0x18, False), ('m_fuelEnabled', 0x50, False), ('m_tireWearEnabled', 0x51, False),
+            ('m_fuelSettings', 0x18, False), ('m_controls', 0x28, False), ('m_fuelEnabled', 0x50, False),
+            ('m_tireWearEnabled', 0x51, False),
             ('m_forwardSpeed', 0x60, False)]))
         g.put(updater + 0x50, bytes([1, 1]))
+        g.q(updater + 0x28, 0)  # no controls object unless given
+        if pedals is not None:
+            if all(isinstance(value, float) for value in pedals):
+                controls_class = g.klass('TS', 'CarControls', [('gas', 0x10, False, 0x0C), ('brake', 0x14, False, 0x0C)])
+                fmt = '<2f'
+            else:
+                controls_class = g.klass('TS', 'CarControls', [
+                    ('gasInThirds', 0x18, False, 0x08), ('gas', 0x10, False, 0x08),
+                    ('brakeInThirds', 0x1C, False, 0x08), ('brake', 0x14, False, 0x08)])
+                fmt = '<2i'
+            controls = g.alloc_obj(controls_class)
+            g.put(controls + 0x10, struct.pack(fmt, *pedals))
+            if fmt == '<2i':
+                g.put(controls + 0x18, struct.pack('<2i', *pedals))
+            g.q(updater + 0x28, controls)
         g.put(updater + 0x60, struct.pack('<f', 50.0))
         g.q(vehicle + 0x38, updater)
         fuel = g.alloc_obj(g.klass('TS', 'FuelSettings', [('maxFuelConsumptionInEvent', 0x14, False)]))
@@ -440,7 +461,7 @@ class CarTests(unittest.TestCase):
         car = self.car(fuel_on=False, tires_on=False)
         self.assertIsNone(car.fuel_left)
         self.assertIsNone(car.tire_laps)
-        self.assertEqual(set(race.car_sections(car)), {'speed'})
+        self.assertEqual(set(race.car_sections(car)), {'speed', 'pedals'})
 
     def test_per_lap_averages_the_last_laps_and_restarts_after_a_pit_stop(self):
         self.assertIsNone(race.per_lap([0]))
@@ -494,6 +515,33 @@ class CarTests(unittest.TestCase):
         self.assertTrue(car.fuel_on and car.tires_on)
         self.assertAlmostEqual(car.speed, 50.0)
         self.assertIsNone(car.fuel_per_lap)  # one lap start seen so far
+
+    def test_speed_is_yellow_while_lifting(self):
+        def colour(throttle, brake, kmh=150):
+            car = self.car(speed=kmh / 3.6, throttle=throttle, brake=brake)
+            return race.car_sections(car)['speed'][0].color
+        self.assertEqual(colour(0.0, 0.0), 'lift')
+        self.assertEqual(colour(1.0, 0.0), 'text')  # on the throttle
+        self.assertEqual(colour(0.0, 1.0), 'text')  # braking
+        self.assertEqual(colour(0.0, 0.0, kmh=2), 'text')  # standing
+        self.assertEqual(colour(None, None), 'text')  # inputs unknown
+
+    def test_reader_reads_throttle_and_brake(self):
+        reader = build([10_000], laps_completed=0, clock=20_000, limit=0, car=(0.0, 0.0), gates=STRAIGHT, pedals=(1.0, 0.0))
+        car = reader.read().car
+        self.assertEqual((car.throttle, car.brake), (1.0, 0.0))
+        self.assertEqual(race.car_sections(car)['pedals'], (1.0, 0.0))
+
+    def test_whole_number_pedals_are_read_as_thirds(self):
+        reader = build([10_000], laps_completed=0, clock=20_000, limit=0, car=(0.0, 0.0), gates=STRAIGHT, pedals=(2, 3))
+        car = reader.read().car
+        self.assertAlmostEqual(car.throttle, 2 / 3)
+        self.assertEqual(car.brake, 1.0)
+
+    def test_without_controls_the_pedals_are_unknown(self):
+        reader = build([10_000], laps_completed=0, clock=20_000, limit=0, car=(0.0, 0.0), gates=STRAIGHT)
+        car = reader.read().car
+        self.assertEqual((car.throttle, car.brake), (None, None))
 
     def test_without_car_data_there_are_no_car_sections(self):
         reader = build([10_000], laps_completed=0, clock=20_000, limit=0)

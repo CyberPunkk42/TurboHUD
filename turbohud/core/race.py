@@ -25,7 +25,7 @@ import struct
 from dataclasses import dataclass
 
 from turbohud.core.hud import Row, clock
-from turbohud.core.il2cpp import ARRAY_DATA, LIST_ITEMS, NotFound
+from turbohud.core.il2cpp import ARRAY_DATA, LIST_ITEMS, SIMPLE_TYPES, NotFound, ReadError
 
 UNITS_PER_SECOND = 10_000
 # EventState.times: ticks, time, ..., time limit (int32 each).
@@ -172,6 +172,7 @@ def _passed(times, k):
 MAX_TIRE_WEAR = 5_760_000  # TS.TireWearSettings.MaxTireWear (a constant): worn out
 SPEED_TO_KMH = 3.6  # m_forwardSpeed is taken as metres per second (not yet compared in game)
 PER_LAP_LAPS = 3  # laps averaged for fuel and tire use per lap
+LIFT_MIN_KMH = 5  # slower than this is standing, not lifting
 EVEN_FUEL = 0.01  # a fuel trend under 1 % of a lap's use is neither saving nor not
 MIN_TREND_CHECKPOINT = 2  # too early in a lap to compare before this checkpoint
 
@@ -213,6 +214,8 @@ class CarState:
     fuel_per_lap: float | None = None  # average of the last laps, same units
     wear_per_lap: float | None = None
     fuel_trend: float | None = None  # this lap's use so far minus the recent laps' at the same checkpoint
+    throttle: float | None = None  # 0 to 1, None where unknown
+    brake: float | None = None
 
     @property
     def saving(self):
@@ -252,6 +255,13 @@ class CarState:
     def kmh(self):
         return abs(self.speed) * SPEED_TO_KMH
 
+    @property
+    def lifting(self):
+        """Rolling on without throttle or brake (coasting); False when not known."""
+        if self.throttle is None or self.brake is None:
+            return False
+        return self.throttle == 0 and self.brake == 0 and self.kmh >= LIFT_MIN_KMH
+
 
 def per_lap(history, laps=PER_LAP_LAPS):
     """Average use per lap from `history`, the used amounts at the start of each lap
@@ -283,6 +293,7 @@ class LapReader:
         self._fuel_history = {}  # lap index -> fuel used when it started
         self._wear_history = {}  # lap index -> tire wear when it started
         self._fuel_marks = {}  # lap index -> {checkpoint: fuel used when passed}
+        self._types = {}  # (role, field) -> (offset, type code)
 
     def event_state(self):
         services = self.il.static_ref(self.services_class, 'sm_instance')
@@ -324,7 +335,7 @@ class LapReader:
         if state != self._state:
             # A new event (or the first read): start the caches afresh.
             self._state, self._offsets, self._laps, self._gates = state, {}, {}, None
-            self._fuel_history, self._wear_history, self._fuel_marks = {}, {}, {}
+            self._fuel_history, self._wear_history, self._fuel_marks, self._types = {}, {}, {}, {}
             self._player = self.local_player()[1]
         player = self._player
         times = state + self._offset('state', state, 'times')
@@ -380,6 +391,7 @@ class LapReader:
             tank = memory.i32(settings + self._offset('fuel', settings, 'maxFuelConsumptionInEvent'))
         except NotFound:
             return None
+        throttle, brake = self._pedals(updater)
         trend = None
         if lap >= 0:
             self._fuel_history.setdefault(lap, fuel_used)
@@ -391,7 +403,36 @@ class LapReader:
         return CarState(
             fuel_on=fuel_on, fuel_used=fuel_used, fuel_tank=tank, tires_on=tires_on, tire_wear=tire_wear,
             speed=speed, fuel_per_lap=per_lap(fuel_starts), wear_per_lap=per_lap(wear_starts), fuel_trend=trend,
+            throttle=throttle, brake=brake,
         )
+
+    def _number(self, role, obj, name):
+        """A simple field read by the type the game gives it (int, float, ...)."""
+        key = (role, name)
+        if key not in self._types:
+            found = {n: (offset, code) for n, offset, static, code in self.il.field_list(self.il.memory.u64(obj)) if not static}
+            if name not in found or found[name][1] not in SIMPLE_TYPES:
+                raise NotFound(f'no simple field {name}')
+            self._types[key] = found[name]
+        offset, code = self._types[key]
+        fmt = SIMPLE_TYPES[code][1]
+        return struct.unpack(fmt, self.il.memory.read(obj + offset, struct.calcsize(fmt)))[0]
+
+    def _pedals(self, updater):
+        """(throttle, brake), 0 to 1, from TS.CarControls (CarStateUpdater.m_controls):
+        `gas` and `brake` where they are fractions, else the whole thirds TSU also keeps."""
+        try:
+            controls = self._ref('updater', updater, 'm_controls')
+            values = []
+            for name in ('gas', 'brake'):
+                value = self._number('controls', controls, name)
+                if isinstance(value, float):
+                    values.append(min(max(value, 0.0), 1.0))
+                else:
+                    values.append(min(max(self._number('controls', controls, f'{name}InThirds') / 3, 0.0), 1.0))
+            return tuple(values)
+        except (NotFound, ReadError):
+            return None, None  # optional: the rest of the race reads on without it
 
     def _read_gates(self, player):
         """The track's checkpoint lines, in a few batched reads (120 checkpoints, each
@@ -532,7 +573,8 @@ def car_sections(car):
     """{section: rows} for fuel, tires and speed; empty where the event has none."""
     if car is None:
         return {}
-    sections = {'speed': [Row(f'{car.kmh:.0f} km/h', 'medium')]}
+    speed_color = 'lift' if car.lifting else 'text'
+    sections = {'speed': [Row(f'{car.kmh:.0f} km/h', 'medium', speed_color)], 'pedals': (car.throttle, car.brake)}
     if car.fuel_left is not None:
         color = {True: 'ahead', False: 'behind', None: 'text'}[car.saving]
         tail = _laps_text(car.fuel_laps) + _balance_text(car)

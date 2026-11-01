@@ -22,7 +22,7 @@ class Row:
 
     text: str
     style: str  # 'title', 'big', 'medium' or 'small': a font size from Sizes
-    color: str = 'text'  # 'text', 'accent', 'ahead' (green) or 'behind' (red)
+    color: str = 'text'  # 'text', 'accent', 'ahead' (green), 'behind' (red) or 'lift' (yellow)
     tail: str = ''  # more text right after it, in its own colour
     tail_color: str = 'text'
 
@@ -101,6 +101,7 @@ class Section:
     name: str  # its key in settings.json
     label: str  # how menus and move mode name it
     samples: tuple  # row lists it may show; the widest and tallest sets its size
+    pedals: bool = False  # a throttle bar on its left and a brake bar on its right
 
 
 RACE_SECTIONS = (
@@ -113,7 +114,7 @@ RACE_SECTIONS = (
     Section('times', 'Last and best lap', ((Row('Last 0:00.000   Best 0:00.000', 'medium'),),)),
     Section('fuel', 'Fuel', ((Row('Fuel 100.0%', 'medium', tail='  ~10.0 laps  +0.00%'),),)),
     Section('tires', 'Tires', ((Row('Tires 100%  ~10.0 laps', 'medium'),),)),
-    Section('speed', 'Speed', ((Row('000 km/h', 'medium'),),)),
+    Section('speed', 'Speed', ((Row('000 km/h', 'medium'),),), pedals=True),
     Section('localtime', 'Local time', ((Row('00:00', 'medium'),),)),
 )
 CLOCK_SECTIONS = (
@@ -124,9 +125,45 @@ CLOCK_SECTIONS = (
 
 def base_size(section, scale, measure):
     """(width, height) of a section at scale 1 of its own: as wide as its usual content
-    (the first sample) and as tall as its tallest."""
+    (the first sample, and its pedal bars) and as tall as its tallest."""
     sizes = [content_size(rows, scale, measure) for rows in section.samples]
-    return sizes[0][0], max(h for _w, h in sizes)
+    extra = pedal_space(scale) if section.pedals else 0
+    return sizes[0][0] + extra, max(h for _w, h in sizes)
+
+
+PEDAL_WIDTH = 10  # a pedal bar's width at scale 1
+PEDAL_GAP = 4  # between a bar and the text
+
+
+def pedal_space(scale):
+    """The width both pedal bars take, with their gaps to the text."""
+    return 2 * round((PEDAL_WIDTH + PEDAL_GAP) * scale)
+
+
+@dataclass(frozen=True)
+class Bar:
+    x: int
+    y: int
+    width: int
+    height: int
+    fill: float  # 0 to 1: how much of it lights up, from the bottom
+    color: str  # 'ahead' (green) or 'behind' (red) where lit
+
+
+def pedal_bars(width, height, scale, throttle, brake, inset=4):
+    """The throttle bar (left edge, green) and brake bar (right edge, red) of a section
+    `width` x `height`, as tall as the section. `throttle` and `brake` are 0 to 1, or
+    None when unknown (then grey, like no input)."""
+    bar = max(2, round(PEDAL_WIDTH * scale))
+    top, tall = inset, max(1, height - 2 * inset)
+
+    def amount(value):
+        return min(max(value or 0.0, 0.0), 1.0)
+
+    return [
+        Bar(inset, top, bar, tall, amount(throttle), 'ahead'),
+        Bar(width - inset - bar, top, bar, tall, amount(brake), 'behind'),
+    ]
 
 
 def section_scale(size, base_height, needed_width=None, low=0.3, high=8.0):

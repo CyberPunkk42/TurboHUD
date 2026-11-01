@@ -13,8 +13,8 @@ from PySide6.QtCore import QRectF, Qt, Signal
 from PySide6.QtGui import QColor, QPainter, QPen
 from PySide6.QtWidgets import QCheckBox, QHBoxLayout, QLabel, QPushButton, QSizeGrip, QVBoxLayout, QWidget
 
-from turbohud.core.hud import base_size, content_size, help_lines, hud_lines, section_scale
-from turbohud.hud.painter import draw_hud, text_width
+from turbohud.core.hud import base_size, content_size, help_lines, hud_lines, pedal_bars, pedal_space, section_scale
+from turbohud.hud.painter import draw_bars, draw_hud, text_width
 
 TINT = (23, 56, 97, 153)  # move mode's background: red, green, blue, opacity (0-255)
 BORDER = (120, 170, 230)
@@ -51,6 +51,7 @@ class SectionWindow(QWidget):
         self.theme = theme
         self.section = section
         self.rows = []
+        self.pedals = None  # (throttle, brake), 0 to 1, for a section with pedal bars
         self.locked = True
         self.wanted = True  # the player wants it shown
         self.setWindowTitle(f'TurboHUD - {section.label}')
@@ -125,9 +126,15 @@ class SectionWindow(QWidget):
             painter.setBrush(QColor(*TINT))
             painter.drawRoundedRect(QRectF(self.rect()).adjusted(1, 1, -1, -1), 8, 8)
             rows = rows or list(self.section.samples[0])  # something to place, also before a race
-        needed = content_size(rows, self.theme.scale, text_width)[0] if rows else None
+        bars = pedal_space(self.theme.scale) if self.section.pedals else 0
+        needed = content_size(rows, self.theme.scale, text_width)[0] + bars if rows else None
         scale = self.theme.scale * section_scale((self.width(), self.height()), self.base[1], needed)
-        draw_hud(painter, hud_lines(rows, scale), self.theme, scale)
+        left = 0
+        if self.section.pedals:
+            throttle, brake = self.pedals or (None, None)
+            draw_bars(painter, pedal_bars(self.width(), self.height(), scale, throttle, brake))
+            left = pedal_space(scale) // 2
+        draw_hud(painter, hud_lines(rows, scale), self.theme, scale, left)
         if not self.locked:
             painter.setPen(QColor(*LABEL_COLOR))
             font = painter.font()
