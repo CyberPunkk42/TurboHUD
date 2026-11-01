@@ -83,11 +83,11 @@ def run(args, folder):
         RACE_SECTIONS,
         GroupMover,
         below,
+        drawing_place,
         first_launch,
         local_time_rows,
         main_screen,
         session_rows,
-        drawing_place,
     )
     from turbohud.overlay import HOTKEY_LOCK, HOTKEY_QUIT, native_for
     from turbohud.overlay.window import MovePanel, SectionWindow
