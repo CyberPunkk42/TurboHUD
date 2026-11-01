@@ -195,5 +195,21 @@ class ReaderTests(unittest.TestCase):
             reader.il.find_class('TS', 'NoSuchClass')
 
 
+class ConnectTests(unittest.TestCase):
+    def test_without_the_probe_connect_fails_cleanly(self):
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as folder:
+            with self.assertRaises(OSError):
+                lr.connect(Path(folder, 'missing.sock'))
+
+    def test_a_refused_read_is_a_read_error_and_an_os_error(self):
+        self.assertTrue(issubclass(lr.ReadError, OSError))
+
+    def test_state_line(self):
+        state = lr.LapState(clock=50_000, time_limit=0, laps_completed=0, laps_to_finish=13, lap_starts=[10_000])
+        self.assertEqual(lr.format_state(state), 'lap 1/13  current 0:04.000  last -  best -  time left -')
+
+
 if __name__ == '__main__':
     unittest.main()

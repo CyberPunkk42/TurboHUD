@@ -272,7 +272,7 @@ def serve(pid, path, log_file):
                     request, _ = receive_message(conn)
                     try:
                         header, payload = handle(pid, request)
-                    except (OSError, KeyError, ValueError) as error:
+                    except Exception as error:  # A bad request must never end the service.
                         header, payload = {'ok': False, 'error': str(error)}, b''
                     send_message(conn, header, payload)
             except (ConnectionError, struct.error):

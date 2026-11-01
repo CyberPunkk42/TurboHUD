@@ -24,6 +24,7 @@ TSU started through the probe. Run it while driving:
     python3 -B experiments/tsu_lap_reader.py
 """
 
+import socket
 import struct
 import sys
 import time
@@ -47,6 +48,10 @@ ARRAY_LENGTH = 0x18
 ARRAY_DATA = 0x20
 # EventState.times: ticks, time, ..., time limit (int32 each).
 TIMES_TICKS, TIMES_NOW, TIMES_LIMIT = 0, 4, 20
+
+
+class ReadError(OSError):
+    """The game refused a read: the address is not mapped (a stale pointer)."""
 
 
 class NotFound(Exception):
@@ -245,41 +250,70 @@ def format_time(units):
     return f'{sign}{minutes}:{rest / UNITS_PER_SECOND:06.3f}'
 
 
-def connect():
-    """A LapReader on TSU through the memory probe's socket."""
+def connect(path=None):
+    """A LapReader on TSU through the memory probe's socket. Raises OSError if TSU is
+    not running through the probe."""
     sys.path.insert(0, str(Path(__file__).resolve().parent))
-    import tsu_memory_scan as scan
+    import tsu_memory_probe as probe
 
-    client = scan.Client()
+    conn = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    conn.connect(str(path or probe.socket_path()))
+
+    def ask(request):
+        probe.send_message(conn, request)
+        header, data = probe.receive_message(conn)
+        if not header.get('ok'):
+            raise ReadError(header.get('error'))
+        return header, data
 
     def read(address, size):
-        scan.probe.send_message(client.conn, {'op': 'read', 'address': address, 'size': size})
-        header, data = scan.probe.receive_message(client.conn)
-        if not header.get('ok'):
-            raise OSError(header.get('error'))
-        return data
+        return ask({'op': 'read', 'address': address, 'size': size})[1]
 
-    regions = client.ask(op='maps')[0]['regions']
+    regions = ask({'op': 'maps'})[0]['regions']
     metadata_path = next(path for *_rest, path in regions if path.endswith('global-metadata.dat'))
     metadata_base = next(start for start, _end, _p, offset, path in regions if path == metadata_path and offset == 0)
     memory = Memory(read, regions)
     return LapReader(Il2Cpp(memory, Path(metadata_path).read_bytes(), metadata_base))
 
 
-def main():
-    reader = connect()
+NOT_CONNECTED = 'TSU is not running through TurboHUD. Start TSU from Steam (with the launch option).'
+NO_RACE = 'TSU is running, but no race is on yet (menu or loading). Waiting...'
+
+
+def format_state(state):
+    return (
+        f'lap {min(state.laps_completed + 1, state.laps_to_finish)}/{state.laps_to_finish}  '
+        f'current {format_time(state.current_lap)}  last {format_time(state.last_lap)}  '
+        f'best {format_time(state.best_lap)}  time left {format_time(state.time_left)}'
+    )
+
+
+def main(interval=0.5):
+    reader, status = None, None
+
+    def say(text, detail=''):
+        nonlocal status
+        if text != status:
+            print(text + (f' ({detail})' if detail else ''), flush=True)
+            status = text
+
     while True:
         try:
+            if reader is None:
+                reader = connect()
             state = reader.read()
-            print(
-                f'lap {min(state.laps_completed + 1, state.laps_to_finish)}/{state.laps_to_finish}  '
-                f'current {format_time(state.current_lap)}  last {format_time(state.last_lap)}  '
-                f'best {format_time(state.best_lap)}  time left {format_time(state.time_left)}',
-                flush=True,
-            )
-        except (NotFound, OSError) as error:
-            print(f'waiting ({error})', flush=True)
-        time.sleep(0.5)
+            print(format_state(state), flush=True)
+            status = None
+        except NotFound as error:
+            say(NO_RACE, str(error))
+        except ReadError as error:
+            # A pointer led nowhere: the game was between states. Try again.
+            say(NO_RACE, str(error))
+        except (OSError, ConnectionError, StopIteration):
+            # Not started, or TSU quit (the socket closed): reconnect on the next round.
+            reader = None
+            say(NOT_CONNECTED)
+        time.sleep(interval)
 
 
 if __name__ == '__main__':
