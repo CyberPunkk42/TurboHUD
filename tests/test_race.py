@@ -450,9 +450,42 @@ class CarTests(unittest.TestCase):
 
     def test_section_texts(self):
         sections = race.car_sections(self.car(fuel_per_lap=10_500))
-        self.assertEqual(sections['fuel'][0].text, 'Fuel 75%  ~12.0 laps')
+        fuel = sections['fuel'][0]
+        self.assertEqual((fuel.text, fuel.tail, fuel.tail_color), ('Fuel 75.0%', '  ~12.0 laps', 'text'))
         self.assertEqual(sections['tires'][0].text, 'Tires 90%')  # no lap measured yet
         self.assertEqual(sections['speed'][0].text, '180 km/h')
+
+    def test_the_fuel_saved_or_burnt_this_lap(self):
+        saved = race.car_sections(self.car(fuel_per_lap=10_000, fuel_trend=-300))['fuel'][0]
+        burnt = race.car_sections(self.car(fuel_per_lap=10_000, fuel_trend=210))['fuel'][0]
+        unknown = race.car_sections(self.car(fuel_per_lap=10_000))['fuel'][0]
+        self.assertEqual(saved.tail, '  ~12.6 laps  +0.18%')  # 300 of a 168,000 tank
+        self.assertEqual(burnt.tail, '  ~12.6 laps  -0.12%')
+        self.assertEqual(unknown.tail, '  ~12.6 laps')
+
+    def test_one_decimal(self):
+        self.assertEqual(race.car_sections(self.car(fuel_used=39_312))['fuel'][0].text, 'Fuel 76.6%')
+
+    def test_laps_are_green_when_saving_and_red_when_not(self):
+        saving = race.car_sections(self.car(fuel_per_lap=10_000, fuel_trend=-300))['fuel'][0]
+        wasting = race.car_sections(self.car(fuel_per_lap=10_000, fuel_trend=300))['fuel'][0]
+        even = race.car_sections(self.car(fuel_per_lap=10_000, fuel_trend=50))['fuel'][0]
+        self.assertEqual([saving.tail_color, wasting.tail_color, even.tail_color], ['ahead', 'behind', 'text'])
+
+    def test_fuel_trend_compares_the_same_checkpoint_in_recent_laps(self):
+        starts = {0: 0, 1: 10_000, 2: 20_000}
+        marks = {0: {10: 1_000}, 1: {10: 11_200}, 2: {}}
+        # Lap 2 used 900 by checkpoint 10; laps 0 and 1 used 1,000 and 1,200: saving 200.
+        self.assertEqual(race.fuel_trend(marks, starts, 2, 10, 20_900), -200)
+        # A checkpoint missed in a read: the one before counts.
+        self.assertEqual(race.fuel_trend({0: {9: 1_000}, 1: {10: 11_000}}, starts, 2, 10, 21_100), 100)
+
+    def test_no_fuel_trend_early_first_lap_or_across_a_pit_stop(self):
+        starts = {0: 0, 1: 10_000, 2: 3_000}  # refuelled during lap 1
+        marks = {0: {10: 1_000}, 1: {10: 11_000}}
+        self.assertIsNone(race.fuel_trend(marks, starts, 2, 10, 4_000))
+        self.assertIsNone(race.fuel_trend(marks, {0: 0, 1: 10_000}, 1, 1, 10_100))  # too early
+        self.assertIsNone(race.fuel_trend({}, {0: 0}, 0, 10, 1_000))  # nothing to compare
 
     def test_reader_reads_the_car_and_the_use_per_lap(self):
         reader = build([10_000, 944_595], laps_completed=1, clock=1_000_000, limit=0, car=(0.0, 0.0), gates=STRAIGHT)

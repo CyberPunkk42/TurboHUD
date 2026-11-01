@@ -12,6 +12,8 @@ class Line:
     size: int  # font size in pixels
     color: str  # 'text' or 'accent', a colour from the theme
     baseline: int  # y of the text's baseline, from the box's top
+    tail: str = ''  # more text right after it, in its own colour
+    tail_color: str = 'text'
 
 
 @dataclass(frozen=True)
@@ -21,6 +23,8 @@ class Row:
     text: str
     style: str  # 'title', 'big', 'medium' or 'small': a font size from Sizes
     color: str = 'text'  # 'text', 'accent', 'ahead' (green) or 'behind' (red)
+    tail: str = ''  # more text right after it, in its own colour
+    tail_color: str = 'text'
 
 
 @dataclass(frozen=True)
@@ -71,7 +75,7 @@ def _content(rows, sizes):
     for index, row in enumerate(rows):
         size = getattr(sizes, row.style)
         baseline += (sizes.gap if index else 0) + size
-        lines.append(Line(row.text, size, row.color, baseline))
+        lines.append(Line(row.text, size, row.color, baseline, row.tail, row.tail_color))
     return lines, baseline
 
 
@@ -85,7 +89,7 @@ def content_size(rows, scale, measure):
     a text's width in pixels (Qt knows the font)."""
     sizes = Sizes.for_scale(scale)
     lines, bottom = _content(rows, sizes)
-    width = max((measure(line.text, line.size) for line in lines), default=0)
+    width = max((measure(line.text + line.tail, line.size) for line in lines), default=0)
     # Below the last baseline: room for letters such as g and p, then the margin.
     return round(width + 2 * sizes.margin), round(bottom + sizes.margin)
 
@@ -107,7 +111,7 @@ RACE_SECTIONS = (
     Section('current', 'Running lap', ((Row('0:00.0', 'big'),), (Row('10:00.000', 'big'),))),
     Section('delta', 'Delta to best', ((Row('+00.000 vs best', 'medium'),),)),
     Section('times', 'Last and best lap', ((Row('Last 0:00.000   Best 0:00.000', 'medium'),),)),
-    Section('fuel', 'Fuel', ((Row('Fuel 100%  ~10.0 laps', 'medium'),),)),
+    Section('fuel', 'Fuel', ((Row('Fuel 100.0%', 'medium', tail='  ~10.0 laps  +0.00%'),),)),
     Section('tires', 'Tires', ((Row('Tires 100%  ~10.0 laps', 'medium'),),)),
     Section('speed', 'Speed', ((Row('000 km/h', 'medium'),),)),
     Section('localtime', 'Local time', ((Row('00:00', 'medium'),),)),

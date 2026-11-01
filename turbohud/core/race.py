@@ -172,6 +172,32 @@ def _passed(times, k):
 MAX_TIRE_WEAR = 5_760_000  # TS.TireWearSettings.MaxTireWear (a constant): worn out
 SPEED_TO_KMH = 3.6  # m_forwardSpeed is taken as metres per second (not yet compared in game)
 PER_LAP_LAPS = 3  # laps averaged for fuel and tire use per lap
+EVEN_FUEL = 0.01  # a fuel trend under 1 % of a lap's use is neither saving nor not
+MIN_TREND_CHECKPOINT = 2  # too early in a lap to compare before this checkpoint
+
+
+def fuel_trend(marks, starts, lap, checkpoint, used, laps=PER_LAP_LAPS):
+    """This lap's fuel use so far minus the average of the last `laps` laps' use up to
+    the same checkpoint. `marks` is {lap: {checkpoint: fuel used when it was passed}},
+    `starts` {lap: fuel used when it began}. None too early in a lap, without earlier
+    laps to compare, or across a pit stop (fuel used went down)."""
+    if checkpoint < MIN_TREND_CHECKPOINT or lap not in starts or used < starts[lap]:
+        return None
+    references = []
+    for earlier in range(lap - 1, -1, -1):
+        if len(references) == laps or earlier not in starts:
+            break
+        following = starts.get(earlier + 1)
+        if following is None or following < starts[earlier]:
+            break  # refuelled since then
+        mark = marks.get(earlier, {})
+        passed = mark.get(checkpoint, mark.get(checkpoint - 1))
+        if passed is None or passed < starts[earlier]:
+            continue
+        references.append(passed - starts[earlier])
+    if not references:
+        return None
+    return (used - starts[lap]) - sum(references) / len(references)
 
 
 @dataclass(frozen=True)
@@ -186,6 +212,15 @@ class CarState:
     speed: float  # forward speed, game units (metres) a second
     fuel_per_lap: float | None = None  # average of the last laps, same units
     wear_per_lap: float | None = None
+    fuel_trend: float | None = None  # this lap's use so far minus the recent laps' at the same checkpoint
+
+    @property
+    def saving(self):
+        """True when this lap uses less fuel than the recent ones so far, False when more,
+        None when about the same or not known yet."""
+        if self.fuel_trend is None or not self.fuel_per_lap or abs(self.fuel_trend) < EVEN_FUEL * self.fuel_per_lap:
+            return None
+        return self.fuel_trend < 0
 
     @property
     def fuel_left(self):
@@ -247,6 +282,7 @@ class LapReader:
         self._gates = None  # checkpoint lines, ((x1, z1), (x2, z2)) each
         self._fuel_history = {}  # lap index -> fuel used when it started
         self._wear_history = {}  # lap index -> tire wear when it started
+        self._fuel_marks = {}  # lap index -> {checkpoint: fuel used when passed}
 
     def event_state(self):
         services = self.il.static_ref(self.services_class, 'sm_instance')
@@ -288,7 +324,7 @@ class LapReader:
         if state != self._state:
             # A new event (or the first read): start the caches afresh.
             self._state, self._offsets, self._laps, self._gates = state, {}, {}, None
-            self._fuel_history, self._wear_history = {}, {}
+            self._fuel_history, self._wear_history, self._fuel_marks = {}, {}, {}
             self._player = self.local_player()[1]
         player = self._player
         times = state + self._offset('state', state, 'times')
@@ -314,7 +350,7 @@ class LapReader:
             if passed:
                 checkpoints.append(passed)
         position, gates = self._position_and_gates(player)
-        car = self._car(player, len(checkpoints) - 1)
+        car = self._car(player, len(checkpoints) - 1, len(checkpoints[-1]) - 1 if checkpoints else -1)
         return LapState(
             clock=clock,
             time_limit=time_limit,
@@ -328,7 +364,7 @@ class LapReader:
             car=car,
         )
 
-    def _car(self, player, lap):
+    def _car(self, player, lap, checkpoint):
         """Fuel, tires and speed of the local car, or None where the game lacks them."""
         memory = self.il.memory
         try:
@@ -344,14 +380,17 @@ class LapReader:
             tank = memory.i32(settings + self._offset('fuel', settings, 'maxFuelConsumptionInEvent'))
         except NotFound:
             return None
+        trend = None
         if lap >= 0:
             self._fuel_history.setdefault(lap, fuel_used)
             self._wear_history.setdefault(lap, tire_wear)
+            self._fuel_marks.setdefault(lap, {}).setdefault(checkpoint, fuel_used)
+            trend = fuel_trend(self._fuel_marks, self._fuel_history, lap, checkpoint, fuel_used)
         fuel_starts = [self._fuel_history[i] for i in sorted(self._fuel_history)]
         wear_starts = [self._wear_history[i] for i in sorted(self._wear_history)]
         return CarState(
             fuel_on=fuel_on, fuel_used=fuel_used, fuel_tank=tank, tires_on=tires_on, tire_wear=tire_wear,
-            speed=speed, fuel_per_lap=per_lap(fuel_starts), wear_per_lap=per_lap(wear_starts),
+            speed=speed, fuel_per_lap=per_lap(fuel_starts), wear_per_lap=per_lap(wear_starts), fuel_trend=trend,
         )
 
     def _read_gates(self, player):
@@ -480,13 +519,24 @@ def _laps_text(laps):
     return f'  ~{laps:.1f} laps' if laps is not None else ''
 
 
+def _balance_text(car):
+    """'  +0.18%': fuel saved this lap so far against the recent laps, in % of the tank
+    (minus: burnt more); empty without a comparison."""
+    if car.fuel_trend is None or car.fuel_tank <= 0:
+        return ''
+    balance = -car.fuel_trend / car.fuel_tank * 100
+    return f'  {"+" if balance >= 0 else "-"}{abs(balance):.2f}%'
+
+
 def car_sections(car):
     """{section: rows} for fuel, tires and speed; empty where the event has none."""
     if car is None:
         return {}
     sections = {'speed': [Row(f'{car.kmh:.0f} km/h', 'medium')]}
     if car.fuel_left is not None:
-        sections['fuel'] = [Row(f'Fuel {car.fuel_left * 100:.0f}%{_laps_text(car.fuel_laps)}', 'medium')]
+        color = {True: 'ahead', False: 'behind', None: 'text'}[car.saving]
+        tail = _laps_text(car.fuel_laps) + _balance_text(car)
+        sections['fuel'] = [Row(f'Fuel {car.fuel_left * 100:.1f}%', 'medium', tail=tail, tail_color=color)]
     if car.tires_left is not None:
         sections['tires'] = [Row(f'Tires {car.tires_left * 100:.0f}%{_laps_text(car.tire_laps)}', 'medium')]
     return sections
