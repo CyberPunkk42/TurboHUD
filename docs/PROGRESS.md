@@ -243,3 +243,5 @@ its "Recent changes".
   there (race.live_gap, with the delta's handling of lines written together), and the
   gap is the race clock since then. Without positions (online races with only AI: the
   game is a client) it stays at the last checkpoint both passed. Not yet seen in a race.
+- 2026-11-01: Health is rounded up as in the game: 126 of 500 hit points showed 25 %
+  where TSU says 26 % (checked live). The colours keep the exact value.

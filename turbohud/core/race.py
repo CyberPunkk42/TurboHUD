@@ -954,7 +954,9 @@ def car_sections(car, laps_to_go=None, speed_unit='kmh'):
         effect = car.damage_effect
         color = {'slowed': 'behind', 'downforce': 'lift', None: 'text'}[effect]
         tail = {'slowed': '  slowed', 'downforce': '  less downforce', None: ''}[effect]
-        sections['health'] = [Row(f'Health {car.health * 100:.0f}%', 'medium', color, tail=tail, tail_color=color)]
+        # Rounded up as the game shows it (126 of 500 is 26 %): 0 % only when wrecked.
+        shown = math.ceil(round(car.health * 100, 6))
+        sections['health'] = [Row(f'Health {shown}%', 'medium', color, tail=tail, tail_color=color)]
     return sections
 
 

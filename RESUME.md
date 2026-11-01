@@ -52,6 +52,8 @@ See `docs/IMPROVEMENT_BACKLOG.md`. In short:
    Hyprland.
 
 ## Recent changes
+- 2026-11-01: Health is rounded up as in the game: 126 of 500 hit points showed 25 %
+  where TSU says 26 % (checked live). The colours keep the exact value.
 - 2026-11-01: Live gaps in the player list, like the delta to the best lap. Where the
   cars' positions are known (offline, hotlap, hosted online races with other players),
   the car behind's place between two checkpoints gives the moment the car ahead was

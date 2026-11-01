@@ -324,6 +324,9 @@ class HealthRowTests(unittest.TestCase):
 
     def test_colours_follow_the_damage_effect(self):
         self.assertEqual(race.car_sections(self.car(0.99))['health'][0].text, 'Health 99%')
+        self.assertEqual(race.car_sections(self.car(126 / 500))['health'][0].text, 'Health 26%')  # as in game
+        self.assertEqual(race.car_sections(self.car(1.0))['health'][0].text, 'Health 100%')
+        self.assertEqual(race.car_sections(self.car(0.0))['health'][0].text, 'Health 0%')
         self.assertEqual(race.car_sections(self.car(0.99))['health'][0].color, 'text')
         row = race.car_sections(self.car(0.85))['health'][0]
         self.assertEqual((row.color, row.tail), ('lift', '  less downforce'))
