@@ -256,3 +256,22 @@ open; it goes away when the game quits. TSU keeps lap times as whole numbers in 
   - Also found: a list of times 0.1025 s apart, probably the replay recording.
   - Still open: a stable way to find these places at each start (through the game's
     type information), and a smoother clock.
+
+### Live lap data by name (`tsu_lap_reader.py`)
+The addresses above change on every start. The game's IL2CPP type information is mapped
+into its memory (`global-metadata.dat`), and every loaded class has a runtime record
+pointing to its name, its fields (name and position) and its static fields. So the
+reader finds everything by name, in about 0.1 s, with no stored addresses:
+`TS.Services.sm_instance.m_activeServer.m_eventListener.m_eventState`, then
+`times` (race clock, 50 ticks a second, and the event's time limit) and the local
+`players[i]` (`m_localHumanIndex >= 0`) `.m_stats` (`TS.PlayerRaceStats`:
+`m_lapsCompleted`, `m_lapsToFinish`, and per lap `m_checkpointTimesForLaps[lap].m_times`,
+120 checkpoint times whose first is the lap's start).
+
+`python3 -B experiments/tsu_lap_reader.py` prints lap, current, last and best lap and the
+time left twice a second.
+
+- 2026-11-01, Omarchy Linux, hosting a session alone: works live, e.g.
+  `lap 3/13  current 0:36.545  last 1:24.095  best 1:24.095  time left 17:25.900`.
+  Not yet compared with the game's own lap display; not yet tried as a client on
+  someone else's server (the event controller is then another class).

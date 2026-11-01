@@ -46,3 +46,7 @@ its "Recent changes".
   system change. It checks one read of the game's code and logs the result to
   `~/.config/TurboHUD/memory_probe.log`. Self-test passes on Omarchy; not yet tried with
   TSU.
+- 2026-11-01: Live lap data from TSU's memory, found by name at every start
+  (`experiments/tsu_lap_reader.py`): race clock, time left, lap count, current, last and
+  best lap, through the game's own type information, with no stored addresses. Works
+  live on Omarchy Linux while hosting alone.
