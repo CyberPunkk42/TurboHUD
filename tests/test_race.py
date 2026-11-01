@@ -26,7 +26,7 @@ class FakeGame:
         self.instance_type = self.alloc_heap(16)
         self.put(self.instance_type + il.TYPE_ATTRS, struct.pack('<H', 0))
         self.typed = {}
-        for code in (0x08, 0x0C):  # int, float
+        for code in (0x02, 0x08, 0x0C):  # bool, int, float
             record = self.alloc_heap(16)
             self.put(record + il.TYPE_ATTRS, struct.pack('<HB', 0, code))
             self.typed[code] = record
@@ -102,7 +102,7 @@ class FakeGame:
 
 
 def build(lap_starts, laps_completed, clock, limit, local_index=0, finished=False, car=None, gates=(), pedals=None,
-          name=None, online=False, clock_fn=None):
+          name=None, online=False, clock_fn=None, health=None, pit_area=False):
     """A fake race; `car` is the car's (x, z) and `gates` the checkpoint lines, both
     optional like in a game without them."""
     g = FakeGame()
@@ -179,14 +179,23 @@ def build(lap_starts, laps_completed, clock, limit, local_index=0, finished=Fals
         vehicle = g.alloc_obj(g.klass('TS', 'Vehicle', [
             ('m_state', 0x30, False), ('m_stateUpdater', 0x38, False), ('m_statsNewPosition', 0x64, False)]))
         g.put(vehicle + 0x64, struct.pack('<3f', car[0], 10.0, car[1]))
-        state = g.alloc_obj(g.klass('TS', 'VehicleState', [('fuelConsumption', 0x40, False), ('tireWear', 0x48, False)]))
+        state = g.alloc_obj(g.klass('TS', 'VehicleState', [
+            ('fuelConsumption', 0x40, False), ('tireWear', 0x48, False),
+            ('maxHitPoints', 0x50, False, 0x08), ('hitPoints', 0x54, False, 0x08), ('inPitArea', 0x58, False, 0x02)]))
         g.put(state + 0x40, struct.pack('<i', 42_000))
+        g.put(state + 0x50, struct.pack('<ii', 500, health if health is not None else 500))
+        g.put(state + 0x58, bytes([pit_area]))
         g.put(state + 0x48, struct.pack('<i', 576_000))
         g.q(vehicle + 0x30, state)
         updater = g.alloc_obj(g.klass('TS', 'CarStateUpdater', [
             ('m_fuelSettings', 0x18, False), ('m_controls', 0x28, False), ('m_fuelEnabled', 0x50, False),
             ('m_tireWearEnabled', 0x51, False),
-            ('m_forwardSpeed', 0x60, False)]))
+            ('m_forwardSpeed', 0x60, False),
+            ('m_gradualDamageEnabled', 0x70, False, 0x02),
+            ('m_hitPointsToRelativeHealthMultiplierForDownforceLoss', 0x74, False, 0x0C),
+            ('m_hitPointsToRelativeHealthMultiplierForAcceleration', 0x78, False, 0x0C)]))
+        g.put(updater + 0x70, bytes([health is not None]))
+        g.put(updater + 0x74, struct.pack('<2f', 1 / 450, 1 / 375))
         g.put(updater + 0x50, bytes([1, 1]))
         g.q(updater + 0x28, 0)  # no controls object unless given
         if pedals is not None:
@@ -605,6 +614,25 @@ class CarTests(unittest.TestCase):
         state = reader.read()
         self.assertIsNone(state.position)
         self.assertIsNone(next(p for p in state.players if p.local).position)
+
+    def test_reader_reads_health_with_the_games_limits(self):
+        reader = build([10_000], laps_completed=0, clock=20_000, limit=0, car=(1.0, 2.0), gates=STRAIGHT, health=420)
+        car = reader.read().car
+        self.assertAlmostEqual(car.health, 0.84)
+        self.assertAlmostEqual(car.downforce_from, 0.9)
+        self.assertAlmostEqual(car.slowed_from, 0.75)
+        self.assertEqual(car.damage_effect, 'downforce')
+
+    def test_without_damage_there_is_no_health(self):
+        reader = build([10_000], laps_completed=0, clock=20_000, limit=0, car=(1.0, 2.0), gates=STRAIGHT)
+        self.assertIsNone(reader.read().car.health)
+        self.assertNotIn('health', race.car_sections(reader.read().car))
+
+    def test_pit_shows_in_the_whole_pit_area(self):
+        reader = build([10_000], laps_completed=0, clock=20_000, limit=0, car=(1.0, 2.0), gates=STRAIGHT, name='A',
+                       pit_area=True)
+        me = next(p for p in reader.read().players if p.local)
+        self.assertTrue(me.in_pit)
 
     def test_reader_reads_each_cars_position_for_the_radar(self):
         reader = build([10_000], laps_completed=0, clock=20_000, limit=0, car=(12.5, -3.0), gates=STRAIGHT, name='A')

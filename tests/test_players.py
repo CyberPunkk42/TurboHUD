@@ -316,3 +316,16 @@ class BlueFlagAfterPassingTests(unittest.TestCase):
         me = player('Me', [lap(0), lap(400_000, 10_000, 3)], local=True)
         lapper = player('Lapper', [lap(0, 40_000), lap(160_000, 40_000), (405_000, 411_000, 421_000)], laps=2)
         self.assertAlmostEqual(race.blue_flag([me, lapper], now=421_500), 0.1)
+
+
+class HealthRowTests(unittest.TestCase):
+    def car(self, health):
+        return race.CarState(False, 0, 0, False, 0, 30.0, health=health, downforce_from=0.9, slowed_from=0.75)
+
+    def test_colours_follow_the_damage_effect(self):
+        self.assertEqual(race.car_sections(self.car(0.99))['health'][0].text, 'Health 99%')
+        self.assertEqual(race.car_sections(self.car(0.99))['health'][0].color, 'text')
+        row = race.car_sections(self.car(0.85))['health'][0]
+        self.assertEqual((row.color, row.tail), ('lift', '  less downforce'))
+        row = race.car_sections(self.car(0.6))['health'][0]
+        self.assertEqual((row.color, row.tail), ('behind', '  slowed'))

@@ -224,3 +224,11 @@ its "Recent changes".
   about to pass" (flag at full) until it passed the next one (17 switches in 15 s). At
   the same count the one who got to the checkpoint first is now ahead; checked live
   afterwards: no flag, no switches.
+- 2026-11-01: Health section and PIT for the whole pit area (Linux). The last online
+  event (3 laps, Laguna Seca, 3 players) had fuel, tire wear and collision damage on.
+  New "Health" section: TS.VehicleState.hitPoints of maxHitPoints (read live: 497 of
+  500), shown in events with damage (CarStateUpdater.m_gradualDamageEnabled); yellow
+  "less downforce" and red "slowed" below the game's own limits (1 / the updater's hit
+  points to relative health multipliers: 90 % and 75 % in that event, as in its settings).
+  The player list's PIT now also shows while a car is anywhere in the pit area
+  (VehicleState.inPitArea), not only in the pit box (inPit); not yet seen in the pits.

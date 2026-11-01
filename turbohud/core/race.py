@@ -291,6 +291,20 @@ class CarState:
     fuel_trend: float | None = None  # this lap's use so far minus the recent laps' at the same checkpoint
     throttle: float | None = None  # 0 to 1, None where unknown
     brake: float | None = None
+    health: float | None = None  # 0 to 1 (hit points of the most), None without damage
+    downforce_from: float | None = None  # health under which the car loses downforce
+    slowed_from: float | None = None  # health under which it is slower
+
+    @property
+    def damage_effect(self):
+        """'slowed', 'downforce' or None: what the damage does to the car now."""
+        if self.health is None:
+            return None
+        if self.slowed_from is not None and self.health < self.slowed_from:
+            return 'slowed'
+        if self.downforce_from is not None and self.health < self.downforce_from:
+            return 'downforce'
+        return None
 
     @property
     def saving(self):
@@ -552,6 +566,7 @@ class LapReader:
         except NotFound:
             return None
         throttle, brake = self._pedals(updater)
+        health, downforce_from, slowed_from = self._health(state, updater)
         trend = None
         if lap >= 0:
             self._fuel_history.setdefault(lap, fuel_used)
@@ -563,7 +578,34 @@ class LapReader:
         return CarState(
             fuel_on=fuel_on, fuel_used=fuel_used, fuel_tank=tank, tires_on=tires_on, tire_wear=tire_wear,
             speed=speed, fuel_per_lap=per_lap(fuel_starts), wear_per_lap=per_lap(wear_starts), fuel_trend=trend,
-            throttle=throttle, brake=brake,
+            throttle=throttle, brake=brake, health=health, downforce_from=downforce_from, slowed_from=slowed_from,
+        )
+
+    def _health(self, state, updater):
+        """(health, downforce_from, slowed_from), each 0 to 1, or Nones in an event without
+        damage. Health is TS.VehicleState.hitPoints of maxHitPoints; the limits are the
+        game's own (CarStateUpdater: hit points to relative health multipliers, which are
+        1 / the hit points where the effect starts)."""
+        try:
+            most = self._number('vstate', state, 'maxHitPoints')
+            points = self._number('vstate', state, 'hitPoints')
+            enabled = self._number('updater', updater, 'm_gradualDamageEnabled')
+        except (NotFound, ReadError):
+            return None, None, None
+        if most <= 0 or not (enabled or points < most):
+            return None, None, None
+
+        def limit(name):
+            try:
+                multiplier = self._number('updater', updater, name)
+            except (NotFound, ReadError):
+                return None
+            return min(1 / multiplier / most, 1.0) if multiplier > 0 else None
+
+        return (
+            min(max(points / most, 0.0), 1.0),
+            limit('m_hitPointsToRelativeHealthMultiplierForDownforceLoss'),
+            limit('m_hitPointsToRelativeHealthMultiplierForAcceleration'),
         )
 
     def _string(self, address):
@@ -628,6 +670,12 @@ class LapReader:
             try:
                 updater = self._ref('vehicle', vehicle, 'm_stateUpdater')
                 in_pit = bool(memory.u8(updater + self._offset('updater', updater, 'inPit')))
+            except (NotFound, ReadError):
+                pass
+            try:
+                # The whole pit area, from its entrance to its exit, not only the pit box.
+                state = self._ref('vehicle', vehicle, 'm_state')
+                in_pit = in_pit or bool(memory.u8(state + self._offset('vstate', state, 'inPitArea')))
             except (NotFound, ReadError):
                 pass
             if updater is not None:
@@ -893,6 +941,11 @@ def car_sections(car, laps_to_go=None, speed_unit='kmh'):
             sections['fuelfinish'] = [Row(f'Finish {margin:+.1f} laps', 'medium', 'ahead' if margin >= 0 else 'behind')]
     if car.tires_left is not None:
         sections['tires'] = [Row(f'Tires {car.tires_left * 100:.0f}%{_laps_text(car.tire_laps)}', 'medium')]
+    if car.health is not None:
+        effect = car.damage_effect
+        color = {'slowed': 'behind', 'downforce': 'lift', None: 'text'}[effect]
+        tail = {'slowed': '  slowed', 'downforce': '  less downforce', None: ''}[effect]
+        sections['health'] = [Row(f'Health {car.health * 100:.0f}%', 'medium', color, tail=tail, tail_color=color)]
     return sections
 
 
@@ -1258,5 +1311,5 @@ class Radar:
 def race_rows(snapshot, now):
     """All sections' rows in one list, top to bottom (for the terminal and tests)."""
     sections = race_sections(snapshot, now)
-    order = ('lap', 'current', 'delta', 'times', 'fuel', 'fuelfinish', 'tires', 'speed', 'players')
+    order = ('lap', 'current', 'delta', 'times', 'fuel', 'fuelfinish', 'tires', 'health', 'speed', 'players')
     return [row for name in order for row in sections.get(name, [])]
