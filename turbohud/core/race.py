@@ -39,6 +39,7 @@ NO_CHECKPOINT = 0xFFFF_FFFF  # how a missed checkpoint may be marked
 
 WAITING_FOR_GAME = 'waiting for game'
 WAITING_FOR_RACE = 'waiting for race'
+STARTING = 'race starting'  # a session is on and its race is being set up (loading, grid)
 RACING = 'racing'
 
 
@@ -527,6 +528,18 @@ def race_sections(snapshot, now):
     section with nothing to show has no rows."""
     if snapshot.status == WAITING_FOR_GAME:
         return {'lap': [Row('Waiting for TSU (launch option)', 'title')]}
+    if snapshot.status == STARTING:
+        # Everything shows, with placeholders, so the HUD is in place for the start.
+        return {
+            'lap': [Row('Race starting...', 'title')],
+            'current': [Row(format_tenths(None), 'big', 'accent')],
+            'delta': [Row('vs best  -', 'medium')],
+            'times': [Row('Last -   Best -', 'medium')],
+            'fuel': [Row('Fuel -', 'medium')],
+            'tires': [Row('Tires -', 'medium')],
+            'speed': [Row('- km/h', 'medium')],
+            'pedals': (None, None),
+        }
     if snapshot.status != RACING or snapshot.state is None:
         return {'lap': [Row('Waiting for a race...', 'title')]}
     state = snapshot.state
