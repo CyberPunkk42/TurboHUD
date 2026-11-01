@@ -7,6 +7,7 @@ overlay never waits for the game. Everything here only reads.
 
 import logging
 import socket
+import struct
 import threading
 import time
 from pathlib import Path
@@ -54,6 +55,11 @@ class ProbeConnection:
     def maps(self):
         return self.ask({'op': 'maps'})[0]['regions']
 
+    def find_pointers(self, value):
+        """Addresses in the game's data that hold the 64-bit `value` (8-aligned), searched
+        inside the probe: for finding a class's objects by their class pointer."""
+        return self.ask({'op': 'search', 'patterns': [struct.pack('<Q', value).hex()], 'align': 8})[0]['hits']
+
     def close(self):
         self.conn.close()
 
@@ -67,7 +73,8 @@ def connect(path=None):
         metadata = next((r for r in regions if r[4].endswith('global-metadata.dat') and r[3] == 0), None)
         if metadata is None:
             raise NotFound('the game metadata is not mapped yet')
-        il2cpp = Il2Cpp(Memory(conn.read, regions, conn.read_many), Path(metadata[4]).read_bytes(), metadata[0])
+        memory = Memory(conn.read, regions, conn.read_many, conn.find_pointers)
+        il2cpp = Il2Cpp(memory, Path(metadata[4]).read_bytes(), metadata[0])
         return LapReader(il2cpp), conn
     except BaseException:
         conn.close()

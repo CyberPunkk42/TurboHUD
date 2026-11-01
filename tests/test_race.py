@@ -91,13 +91,18 @@ class FakeGame:
             raise OSError(14, 'Bad address')
         return bytes(self.mem.get(address + i, 0) for i in range(size))
 
+    def find_pointers(self, value):
+        self.searches = getattr(self, 'searches', 0) + 1
+        pattern = struct.pack('<Q', value)
+        return sorted(a for a in self.mem if a % 8 == 0 and self.read(a, 8) == pattern)
+
     def memory(self):
         regions = [(*HEAP, 'rw-p', 0, '[heap]'), (*MANAGED, 'rw-p', 0, '')]
-        return il.Memory(self.read, regions)
+        return il.Memory(self.read, regions, find_pointers=self.find_pointers)
 
 
 def build(lap_starts, laps_completed, clock, limit, local_index=0, finished=False, car=None, gates=(), pedals=None,
-          name=None):
+          name=None, online=False, clock_fn=None):
     """A fake race; `car` is the car's (x, z) and `gates` the checkpoint lines, both
     optional like in a game without them."""
     g = FakeGame()
@@ -132,6 +137,13 @@ def build(lap_starts, laps_completed, clock, limit, local_index=0, finished=Fals
     g.q(services + 0x10, server)
     controller = g.alloc_obj(controller_class)
     g.q(server + 0x18, controller)
+    if online:
+        # An online race: no active server; the race is in a TS.ClientEventController.
+        g.q(services + 0x10, 0)
+        client_class = g.klass('TS', 'ClientEventController', [('m_client', 0x60, False)], parent=base_controller)
+        g.alloc_obj(client_class)  # a stale one, of an earlier race: no event state
+        controller = g.alloc_obj(client_class)
+        g.client_controller = controller
     state = g.alloc_obj(state_class)
     g.q(controller + 0x48, state)
     g.put(state + 0x58, struct.pack('<6i', clock // 200, clock, 10000, 10000, 10000, limit))
@@ -214,7 +226,7 @@ def build(lap_starts, laps_completed, clock, limit, local_index=0, finished=Fals
     g.laps = laps
 
     runtime = il.Il2Cpp(g.memory(), g.strings, METADATA_BASE)
-    reader = race.LapReader(runtime)
+    reader = race.LapReader(runtime) if clock_fn is None else race.LapReader(runtime, clock=clock_fn)
     reader.game = g
     return reader
 
@@ -563,6 +575,36 @@ class CarTests(unittest.TestCase):
         self.assertEqual((me.name, me.flag, me.laps_completed), ('Fahrer Ö', 75, 1))
         self.assertEqual(me.checkpoints[0][0], 10_000)
         self.assertEqual(len(players), 1)  # the other one has no statistics: left out
+
+    def test_an_online_race_is_found_through_its_client_controller(self):
+        reader = build([10_000, 944_595], laps_completed=1, clock=1_000_000, limit=0, name='Host', online=True)
+        state = reader.read()
+        self.assertEqual(state.laps_completed, 1)
+        self.assertEqual([p.name for p in state.players], ['Host'])
+        searches = reader.game.searches
+        reader.read()
+        self.assertEqual(reader.game.searches, searches)  # found once, then kept
+
+    def test_without_an_online_race_the_search_waits_between_tries(self):
+        now = [100.0]
+        reader = build([10_000], laps_completed=0, clock=20_000, limit=0, online=True, clock_fn=lambda: now[0])
+        g = reader.game
+        g.q(g.client_controller + 0x48, 0)  # no race in it (menu, lobby)
+        with self.assertRaises(race.NotFound):
+            reader.read()
+        with self.assertRaises(race.NotFound):
+            reader.read()
+        self.assertEqual(g.searches, 1)  # not again before CLIENT_SEARCH_EVERY
+        now[0] += race.CLIENT_SEARCH_EVERY
+        with self.assertRaises(race.NotFound):
+            reader.read()
+        self.assertEqual(g.searches, 2)
+
+    def test_online_the_unkept_position_counts_as_unknown(self):
+        reader = build([10_000], laps_completed=0, clock=20_000, limit=0, car=(0.0, 0.0), gates=STRAIGHT, name='A')
+        state = reader.read()
+        self.assertIsNone(state.position)
+        self.assertIsNone(next(p for p in state.players if p.local).position)
 
     def test_reader_reads_each_cars_position_for_the_radar(self):
         reader = build([10_000], laps_completed=0, clock=20_000, limit=0, car=(12.5, -3.0), gates=STRAIGHT, name='A')

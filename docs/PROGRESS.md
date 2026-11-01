@@ -199,3 +199,13 @@ its "Recent changes".
 - 2026-11-01: Light tint fixes. The speed section's tint now reaches from the throttle
   bar to the brake bar however wide the section is (the brake bar sat outside it), and
   the tint is lighter (black at 16 % instead of 25 %).
+- 2026-11-01: Online races (Linux), including ones the player hosts. Checked in a
+  self-hosted online race with 13 AI drivers: there TS.Services.m_activeServer is null
+  and the game is a client; the race is in a TS.ClientEventController, which no static
+  field leads to. The reader now finds it by its class (one probe search, about 1.7 s,
+  at most every 10 s while there is no race), keeps it while it lasts and reads on as
+  before: lap times, delta, players (names, flags, order), speed, pedals, blue flag all
+  read. The car positions stay (0, 0) online, so they count as unknown: the delta falls
+  back to checkpoint steps and the radar does not show online yet (positions are only
+  in Unity's own transform, still to find). Fuel and tires were empty in that event
+  (maybe off there).

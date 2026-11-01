@@ -352,6 +352,7 @@ def per_lap(history, laps=PER_LAP_LAPS):
     return (recent[-1] - recent[0]) / (len(recent) - 1)
 
 
+CLIENT_SEARCH_EVERY = 10.0  # seconds between searches for an online race while there is none
 STRING_LENGTH, STRING_CHARS = 0x10, 0x14  # System.String: length, then UTF-16 text
 MAX_NAME = 64
 
@@ -387,9 +388,13 @@ class LapReader:
     player, finished laps, the track's checkpoint lines) is kept between reads, so a read
     asks the game only for what moves: about twenty small reads."""
 
-    def __init__(self, il2cpp):
+    def __init__(self, il2cpp, clock=time.monotonic):
         self.il = il2cpp
         self.services_class = il2cpp.find_class('TS', 'Services')
+        self._clock = clock
+        self._client_class = None  # TS.ClientEventController, once looked up
+        self._controller = None  # the online race's event controller, once found
+        self._next_search = 0.0  # when to look for it again
         self._state = None  # the TS.EventState the caches below belong to
         self._offsets = {}  # (role, field) -> offset
         self._player = None
@@ -401,8 +406,50 @@ class LapReader:
         self._types = {}  # (role, field) -> (offset, type code)
 
     def event_state(self):
+        """The race's TS.EventState. A race the game runs itself (offline, hotlap) is
+        under TS.Services.m_activeServer. In an online race, also one the player hosts,
+        the game is a client: the race is then in a TS.ClientEventController that no
+        static field leads to, so it is found by its class (see _online_event_state)."""
         services = self.il.static_ref(self.services_class, 'sm_instance')
-        return self.il.ref(services, 'm_activeServer', 'm_eventListener', 'm_eventState')
+        try:
+            return self.il.ref(services, 'm_activeServer', 'm_eventListener', 'm_eventState')
+        except NotFound as error:
+            if 'm_activeServer is null' not in str(error):
+                raise
+            return self._online_event_state(error)
+
+    def _online_event_state(self, error):
+        """The online race's event state, from the controller found before while it is
+        still that controller; else, at most every CLIENT_SEARCH_EVERY seconds, from a
+        search of the game's data for objects of class TS.ClientEventController (one
+        request the probe answers in about 1.5 s). Raises `error` when there is none."""
+        il, memory = self.il, self.il.memory
+        if self._controller is not None:
+            try:
+                if memory.u64(self._controller) == self._client_class:
+                    state = il.ref(self._controller, 'm_eventState')
+                    if il.list_items(il.ref(state, 'players')):
+                        return state
+            except (NotFound, OSError):
+                pass
+            self._controller = None
+            self._next_search = 0.0  # gone (race over): look again at once
+        find = memory.find_pointers
+        if find is None or self._clock() < self._next_search:
+            raise error
+        self._next_search = self._clock() + CLIENT_SEARCH_EVERY
+        if self._client_class is None:
+            self._client_class = il.find_class('TS', 'ClientEventController')
+        for candidate in find(self._client_class):
+            try:
+                state = il.ref(candidate, 'm_eventState')
+                for player in il.list_items(il.ref(state, 'players')):
+                    if player and memory.i32(player + il.offset(player, 'm_localHumanIndex')) >= 0:
+                        self._controller = candidate
+                        return state
+            except (NotFound, OSError):
+                continue  # a freed controller of an earlier race
+        raise error
 
     def local_player(self):
         """(event state, local TS.EventPlayer); raises NotFound outside a race."""
@@ -583,8 +630,7 @@ class LapReader:
             try:
                 where = vehicle + self._offset('vehicle', vehicle, 'm_statsNewPosition')
                 x, _y, z = struct.unpack('<3f', memory.read(where, 12))
-                if math.isfinite(x) and math.isfinite(z):
-                    position = (x, z)
+                position = _known_position(x, z)
             except (NotFound, ReadError):
                 pass
         return PlayerState(name, flag, laps_completed, tuple(checkpoints), finished, in_pit, local, position)
@@ -652,9 +698,17 @@ class LapReader:
             x, _y, z = struct.unpack('<3f', memory.read(vehicle + self._offset('vehicle', vehicle, 'm_statsNewPosition'), 12))
             if self._gates is None:
                 self._gates = self._read_gates(player)
-            return (x, z), self._gates
+            return _known_position(x, z), self._gates
         except NotFound:
             return None, ()
+
+
+def _known_position(x, z):
+    """(x, z), or None where the game does not keep it: in online races the position
+    field stays at (0, 0), and the HUD then works without it."""
+    if not (math.isfinite(x) and math.isfinite(z)) or (x == 0.0 and z == 0.0):
+        return None
+    return (x, z)
 
 
 def format_time(units):
