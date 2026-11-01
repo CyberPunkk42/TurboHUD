@@ -17,7 +17,7 @@ from turbohud.core.settings import (
     settings_dir,
 )
 
-FRAME_MS = 100  # redraw interval
+FRAME_MS = 50  # redraw interval: 20 times a second, as often as the race is read
 PLACEMENT_EVERY = 1.0  # seconds between position checks in move mode
 ICON = 'tsu_turbo_hud_00.png'  # in assets/, also the bundled app's icon
 log = logging.getLogger('turbohud')

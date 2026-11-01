@@ -71,3 +71,11 @@ its "Recent changes".
   far ahead (green, `-0.412 vs best`) or behind (red, `+0.230`) the current lap is
   against the best lap, at the last checkpoint passed (TSU keeps every checkpoint time,
   about 120 a lap, so it updates every second or less). Nothing on the first lap.
+- 2026-11-01: Live delta to the best lap. Between checkpoints the delta now moves with
+  the car: from its position (`TS.Vehicle.m_statsNewPosition`) and the track's checkpoint
+  lines (local player `m_statsUpdater.m_checkpoints`, each line's two ends), TurboHUD
+  works out how far the car is from one line to the next and when the best lap was at
+  the same place. Reads are much faster: the reader keeps what does not change during a
+  race, field lists and checkpoint lines come in batched reads, and the probe no longer
+  loads the C library for every read (4 µs instead of about 1.6 ms; takes effect when
+  TSU is next started). The race is read and the HUD drawn 20 times a second.

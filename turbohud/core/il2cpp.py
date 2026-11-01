@@ -19,6 +19,8 @@ CLASS_PARENT = 0x58
 CLASS_FIELDS = 0x80
 CLASS_STATIC_FIELDS = 0xB8
 FIELD_INFO_SIZE = 32  # name, type, parent, offset (int32), token
+FIELD_BLOCK = 32  # FieldInfo records read at once
+NAME_LIMIT = 96  # bytes read for a field's name
 TYPE_ATTRS = 8  # in Il2CppType, after its data pointer
 TYPE_CODE = 10  # in Il2CppType: the type's kind (Il2CppTypeEnum), after the attributes
 # Il2CppTypeEnum values of the simple types, with their struct format.
@@ -47,9 +49,23 @@ class Memory:
     """Reads the game's memory through a `read(address, size) -> bytes` callable.
     `regions` are (start, end, permissions, offset, path) from the game's memory map."""
 
-    def __init__(self, read, regions):
+    def __init__(self, read, regions, read_many=None):
         self.read = read
         self.regions = regions
+        self._read_many = read_many
+
+    def read_many(self, addresses, size):
+        """The same number of bytes at many addresses, in one request where the reader
+        can (the probe can); None for an address that cannot be read."""
+        if self._read_many is not None:
+            return self._read_many(list(addresses), size)
+        values = []
+        for address in addresses:
+            try:
+                values.append(self.read(address, size))
+            except OSError:
+                values.append(None)
+        return values
 
     def u64(self, address):
         return struct.unpack('<Q', self.read(address, 8))[0]
@@ -120,42 +136,53 @@ class Il2Cpp:
                 return klass
         raise NotFound(f'class {namespace}.{name} is not loaded')
 
-    def fields(self, klass):
-        """{name: (offset, is_static)} of `klass` and its parents."""
-        if klass in self._fields:
-            return self._fields[klass]
-        found = {}
-        current = klass
-        while current:
-            entry = self.memory.u64(current + CLASS_FIELDS)
-            while entry:
-                name, type_, parent = struct.unpack('<QQQ', self.memory.read(entry, 24))
-                if parent != current:
+    def own_fields(self, klass):
+        """[(name, offset, is_static, type_code)] declared by `klass` itself, read in a
+        few batched requests: its FieldInfo records in blocks, then all names and types
+        at once. type_code is the field's Il2CppTypeEnum value."""
+        entry = self.memory.u64(klass + CLASS_FIELDS)
+        records = []
+        while entry:
+            block = self.memory.read(entry, FIELD_INFO_SIZE * FIELD_BLOCK)
+            more = False
+            for index in range(FIELD_BLOCK):
+                name, type_, parent, offset = struct.unpack_from('<QQQi', block, index * FIELD_INFO_SIZE)
+                if parent != klass:
                     break
-                offset = self.memory.i32(entry + 24)
-                attrs = struct.unpack('<H', self.memory.read(type_ + TYPE_ATTRS, 2))[0]
-                found.setdefault(self.memory.cstring(name), (offset, bool(attrs & FIELD_ATTRIBUTE_STATIC)))
-                entry += FIELD_INFO_SIZE
-            current = self.memory.u64(current + CLASS_PARENT)
-        self._fields[klass] = found
+                records.append((name, type_, offset))
+            else:
+                more = True
+            entry = entry + FIELD_INFO_SIZE * FIELD_BLOCK if more else 0
+        if not records:
+            return []
+        names = self.memory.read_many([name for name, _type, _offset in records], NAME_LIMIT)
+        types = self.memory.read_many([type_ + TYPE_ATTRS for _name, type_, _offset in records], 3)
+        found = []
+        for (_name, _type, offset), name, kind in zip(records, names, types):
+            if name is None or kind is None:
+                raise ReadError('field record not readable')
+            attrs, code = struct.unpack('<HB', kind)
+            text = name.split(b'\0', 1)[0].decode('utf-8', 'replace')
+            found.append((text, offset, bool(attrs & FIELD_ATTRIBUTE_STATIC), code))
         return found
 
     def field_list(self, klass):
-        """[(name, offset, is_static, type_code)] of `klass` and its parents, for looking
-        around in a class; type_code is the field's Il2CppTypeEnum value."""
+        """[(name, offset, is_static, type_code)] of `klass` and its parents."""
         found = []
-        current = klass
-        while current:
-            entry = self.memory.u64(current + CLASS_FIELDS)
-            while entry:
-                name, type_, parent = struct.unpack('<QQQ', self.memory.read(entry, 24))
-                if parent != current:
-                    break
-                attrs, code = struct.unpack('<HB', self.memory.read(type_ + TYPE_ATTRS, 3))
-                found.append((self.memory.cstring(name), self.memory.i32(entry + 24), bool(attrs & FIELD_ATTRIBUTE_STATIC), code))
-                entry += FIELD_INFO_SIZE
-            current = self.memory.u64(current + CLASS_PARENT)
+        while klass:
+            found.extend(self.own_fields(klass))
+            klass = self.memory.u64(klass + CLASS_PARENT)
         return found
+
+    def fields(self, klass):
+        """{name: (offset, is_static)} of `klass` and its parents; a field of the class
+        itself wins over a parent's of the same name."""
+        if klass not in self._fields:
+            found = {}
+            for name, offset, is_static, _code in self.field_list(klass):
+                found.setdefault(name, (offset, is_static))
+            self._fields[klass] = found
+        return self._fields[klass]
 
     def class_name(self, obj):
         klass = self.memory.u64(obj)

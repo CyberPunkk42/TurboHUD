@@ -91,7 +91,9 @@ class FakeGame:
         return il.Memory(self.read, regions)
 
 
-def build(lap_starts, laps_completed, clock, limit, local_index=0, finished=False):
+def build(lap_starts, laps_completed, clock, limit, local_index=0, finished=False, car=None, gates=()):
+    """A fake race; `car` is the car's (x, z) and `gates` the checkpoint lines, both
+    optional like in a game without them."""
     g = FakeGame()
     g.list_class = g.klass('System.Collections.Generic', 'List`1', [])
     statics = g.alloc_heap(16)
@@ -100,7 +102,10 @@ def build(lap_starts, laps_completed, clock, limit, local_index=0, finished=Fals
     base_controller = g.klass('TS', 'EventController', [('m_eventState', 0x48, False)])
     controller_class = g.klass('TS', 'HostEventController', [('m_server', 0x60, False)], parent=base_controller)
     state_class = g.klass('TS', 'EventState', [('players', 0x28, False), ('times', 0x58, False)])
-    player_class = g.klass('TS', 'EventPlayer', [('m_stats', 0x30, False), ('m_localHumanIndex', 0x50, False)])
+    player_fields = [('m_stats', 0x30, False), ('m_localHumanIndex', 0x50, False)]
+    if car is not None:
+        player_fields += [('m_vehicle', 0x20, False), ('m_statsUpdater', 0x38, False)]
+    player_class = g.klass('TS', 'EventPlayer', player_fields)
     stats_class = g.klass(
         'TS',
         'PlayerRaceStats',
@@ -140,9 +145,30 @@ def build(lap_starts, laps_completed, clock, limit, local_index=0, finished=Fals
     g.put(local + 0x50, struct.pack('<i', local_index))
     g.q(local + 0x30, stats)
     g.q(state + 0x28, g.list_of([remote, local]))
+    if car is not None:
+        vehicle = g.alloc_obj(g.klass('TS', 'Vehicle', [('m_statsNewPosition', 0x64, False)]))
+        g.put(vehicle + 0x64, struct.pack('<3f', car[0], 10.0, car[1]))
+        g.q(local + 0x20, vehicle)
+        updater = g.alloc_obj(g.klass('TS', 'PlayerRaceStatsUpdater', [('m_checkpoints', 0x18, False)]))
+        g.q(local + 0x38, updater)
+        track = g.alloc_obj(g.klass('TS', 'Checkpoints', [('m_checkpoints', 0x10, False)]))
+        g.q(updater + 0x18, track)
+        point_class = g.klass('TS', 'Checkpoint', [('m_properties', 0x20, False)])
+        properties_class = g.klass('TS', 'CheckpointProperties', [('position1', 0x10, False), ('position2', 0x1C, False)])
+        items = []
+        for (x1, z1), (x2, z2) in gates:
+            properties = g.alloc_obj(properties_class)
+            g.put(properties + 0x10, struct.pack('<6f', x1, 0.0, z1, x2, 0.0, z2))
+            checkpoint = g.alloc_obj(point_class)
+            g.q(checkpoint + 0x20, properties)
+            items.append(checkpoint)
+        g.q(track + 0x10, g.list_of(items))
+    g.laps = laps
 
     runtime = il.Il2Cpp(g.memory(), g.strings, METADATA_BASE)
-    return race.LapReader(runtime)
+    reader = race.LapReader(runtime)
+    reader.game = g
+    return reader
 
 
 class LapStateTests(unittest.TestCase):
@@ -265,6 +291,73 @@ class DeltaTests(unittest.TestCase):
         state = reader.read()
         self.assertEqual(state.checkpoints[0], (10_000, 10_000, 15_000))
         self.assertEqual(state.lap_starts, [10_000, 944_595])
+
+
+# A straight track along z: checkpoint lines across it every 100 units.
+STRAIGHT = tuple(((-10.0, 100.0 * i), (10.0, 100.0 * i)) for i in range(3))
+
+
+class LiveDeltaTests(unittest.TestCase):
+    # Three checkpoints a lap. Best lap (the second): 10 s to the first line, 20 s to the
+    # second, finish at 30 s. The current lap passed its first line after 11 s.
+    LAPS = ((0, 110_000, 220_000), (400_000, 500_000, 600_000), (700_000, 810_000))
+
+    def state(self, clock, z, laps=LAPS):
+        return race.LapState(
+            clock=clock, time_limit=0, laps_completed=2, laps_to_finish=13,
+            lap_starts=[lap[0] for lap in laps], checkpoints=laps, position=(0.0, z), gates=STRAIGHT,
+        )
+
+    def test_gate_share(self):
+        self.assertAlmostEqual(race.gate_share(STRAIGHT[1], STRAIGHT[2], (5.0, 125.0)), 0.25)
+        self.assertEqual(race.gate_share(STRAIGHT[0], STRAIGHT[1], (0.0, 0.0)), 0.0)
+
+    def test_at_a_line_it_matches_the_checkpoint_delta(self):
+        self.assertEqual(self.state(clock=810_000, z=100.0).delta_to_best, 10_000)
+
+    def test_between_lines_it_moves_with_the_car(self):
+        # Halfway to the second line: the best lap was there at 15 s. This lap is at 16 s.
+        self.assertEqual(self.state(clock=860_000, z=150.0).delta_to_best, 10_000)
+        # Still at the halfway point a second later: one more second lost.
+        self.assertEqual(self.state(clock=870_000, z=150.0).delta_to_best, 20_000)
+        # Gained on the best lap: there at 16 s, but already 3/4 of the way.
+        self.assertEqual(self.state(clock=860_000, z=175.0).delta_to_best, -15_000)
+
+    def test_the_last_stretch_runs_to_the_finish(self):
+        # The start and finish line (checkpoint 0) at z 300, lines 1 and 2 at z 100 and 200.
+        loop = (((-10.0, 300.0), (10.0, 300.0)), STRAIGHT[1], STRAIGHT[2])
+        laps = self.LAPS[:2] + ((700_000, 810_000, 910_000),)
+        state = race.LapState(
+            clock=960_000, time_limit=0, laps_completed=2, laps_to_finish=13,
+            lap_starts=[lap[0] for lap in laps], checkpoints=laps, position=(0.0, 250.0), gates=loop,
+        )
+        # Halfway from the last line to the finish: the best lap was there at 25 s (20 s at
+        # the line, finish at 30 s); this lap is at 26 s.
+        self.assertEqual(state.delta_to_best, 10_000)
+
+    def test_without_position_it_falls_back_to_checkpoints(self):
+        state = race.LapState(
+            clock=860_000, time_limit=0, laps_completed=2, laps_to_finish=13,
+            lap_starts=[lap[0] for lap in self.LAPS], checkpoints=self.LAPS,
+        )
+        self.assertEqual(state.delta_to_best, 10_000)
+
+
+class CachingReaderTests(unittest.TestCase):
+    def test_reads_the_car_and_the_track(self):
+        reader = build([10_000, 944_595], laps_completed=1, clock=1_000_000, limit=0, car=(1.0, 2.0), gates=STRAIGHT)
+        state = reader.read()
+        self.assertEqual(state.position, (1.0, 2.0))
+        self.assertEqual(state.gates, STRAIGHT)
+
+    def test_finished_laps_are_read_once(self):
+        reader = build([10_000, 944_595, 1_785_545], laps_completed=2, clock=2_000_000, limit=0)
+        first = reader.read()
+        # Change what the game holds for a finished lap: the reader keeps what it read.
+        times = reader.il.memory.u64(reader.game.laps[0] + 0x10)
+        array = reader.il.memory.u64(times + il.LIST_ITEMS)
+        reader.game.put(array + il.ARRAY_DATA, struct.pack('<I', 1))
+        self.assertEqual(reader.read().checkpoints[0], first.checkpoints[0])
 
 
 class RowsTests(unittest.TestCase):
