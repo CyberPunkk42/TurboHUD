@@ -47,7 +47,7 @@ See `docs/IMPROVEMENT_BACKLOG.md`. In short:
 - 2026-11-01: Live lap data from TSU's memory, found by name at every start
   (`experiments/tsu_lap_reader.py`): race clock, time left, lap count, current, last and
   best lap, through the game's own type information, with no stored addresses. Works
-  live on Omarchy Linux while hosting alone.
+  live on Omarchy Linux while hosting alone; the lap times match the game's exactly.
 - 2026-11-01: Memory probe for Linux (`experiments/tsu_memory_probe.py`). Steam starts
   TSU through it, so it may read TSU's memory and nothing else's, with no sudo, setcap or
   system change. It checks one read of the game's code and logs the result to

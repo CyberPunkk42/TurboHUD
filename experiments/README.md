@@ -273,5 +273,6 @@ time left twice a second.
 
 - 2026-11-01, Omarchy Linux, hosting a session alone: works live, e.g.
   `lap 3/13  current 0:36.545  last 1:24.095  best 1:24.095  time left 17:25.900`.
-  Not yet compared with the game's own lap display; not yet tried as a client on
-  someone else's server (the event controller is then another class).
+  Compared with the game's own lap times by the user: they match exactly. Not yet
+  tried as a client on someone else's server (the event controller is then another
+  class).
