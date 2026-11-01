@@ -335,6 +335,30 @@ class LiveDeltaTests(unittest.TestCase):
         # the line, finish at 30 s); this lap is at 26 s.
         self.assertEqual(state.delta_to_best, 10_000)
 
+    def test_lines_passed_together_count_as_one_stretch(self):
+        # Lines 0 and 1 get the same time when the lap starts (as in TSU); the car is
+        # really between line 0 (z 0) and line 1 (z 100). Line 2 at z 200.
+        gates = STRAIGHT
+        laps = (
+            (0, 0, 200_000),
+            (400_000, 400_000, 600_000),  # best: 20 s from the line to line 2
+            (700_000, 700_000),  # this lap: just started
+        )
+        state = race.LapState(
+            clock=750_000, time_limit=0, laps_completed=2, laps_to_finish=13,
+            lap_starts=[lap[0] for lap in laps], checkpoints=laps, position=(0.0, 50.0), gates=gates,
+        )
+        # A quarter of the way from line 0 to line 2: the best lap was there at 5 s; this
+        # lap is at 5 s too. Taking line 1 as passed would have said +5 s.
+        self.assertEqual(state.delta_to_best, 0)
+
+    def test_gate_share_follows_the_path_in_a_bend(self):
+        # A right-angle bend: line A across x at z 0, line B across z at x 100. Their
+        # extensions cross at (0, 0)... the projection stays sensible on the path.
+        a = ((-10.0, 0.0), (10.0, 0.0))
+        b = ((100.0, 90.0), (100.0, 110.0))
+        self.assertAlmostEqual(race.gate_share(a, b, (50.0, 50.0)), 0.5)
+
     def test_without_position_it_falls_back_to_checkpoints(self):
         state = race.LapState(
             clock=860_000, time_limit=0, laps_completed=2, laps_to_finish=13,

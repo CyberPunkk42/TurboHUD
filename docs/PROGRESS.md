@@ -86,3 +86,9 @@ its "Recent changes".
   Each section's place, size and visibility are saved (`sections` in `settings.json`);
   on the first start they stack where the old HUD was. On Hyprland every section and the
   panel are floated and pinned on their own (the panel takes clicks).
+- 2026-11-01: Section boxes fit their content: a box's height sets the text size, and
+  text only shrinks when the box is too narrow for it, so the edge shows the real size.
+  Live delta: lines that TSU counts passed together (1 with 0 at the start, 119 with 118)
+  now form one stretch, which removes the wrong positive deltas just after the line and
+  before the finish; the car is projected onto the path between the lines' middles,
+  which also holds in tight bends.

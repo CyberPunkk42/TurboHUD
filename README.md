@@ -80,8 +80,9 @@ Clear the launch option to start TSU without the probe. The probe writes what it
   clicks go through them to the game.
 - **Ctrl+Shift+L** (or **Move mode** in the TurboHUD icon's menu) switches to **move
   mode**: every section gets a blue tint and its name. Drag a section anywhere, for
-  example to the edges of a wide screen; resize it at its bottom-right corner to make its
-  text bigger or smaller. A panel lets you show or hide each section, and **Lock** (or
+  example to the edges of a wide screen. At its bottom-right corner, making it taller or
+  shorter makes its text bigger or smaller; making it wider gives the text room (text
+  only shrinks when the box is too narrow for it). A panel lets you show or hide each section, and **Lock** (or
   Ctrl+Shift+L again) ends move mode. On the Mac, clicking back into the game also locks.
 - **Ctrl+Shift+Q** quits; the panel and the icon's menu have **Quit** as well. On Linux
   the shortcuts are not available yet; use the icon.

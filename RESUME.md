@@ -49,6 +49,12 @@ See `docs/IMPROVEMENT_BACKLOG.md`. In short:
    Hyprland.
 
 ## Recent changes
+- 2026-11-01: Section boxes fit their content: a box's height sets the text size, and
+  text only shrinks when the box is too narrow for it, so the edge shows the real size.
+  Live delta: lines that TSU counts passed together (1 with 0 at the start, 119 with 118)
+  now form one stretch, which removes the wrong positive deltas just after the line and
+  before the finish; the car is projected onto the path between the lines' middles,
+  which also holds in tight bends.
 - 2026-11-01: HUD sections. The HUD is now four separate boxes (lap and time left,
   running lap, delta to best, last and best lap), each in its own window, so they can sit
   anywhere on a wide screen. Move mode unlocks them all: drag to place, resize at the

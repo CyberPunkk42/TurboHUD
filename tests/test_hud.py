@@ -59,16 +59,22 @@ class SectionTests(unittest.TestCase):
         self.assertEqual(width, round(6 * 40 * 0.6 + 2 * sizes.margin))
         self.assertGreater(height, sizes.big)
 
-    def test_base_size_fits_every_sample(self):
+    def test_base_size_is_as_wide_as_the_usual_content_and_as_tall_as_the_tallest(self):
         lap = hud.RACE_SECTIONS[0]
-        width, _ = hud.base_size(lap, 1, measure)
-        for rows in lap.samples:
-            self.assertGreaterEqual(width, hud.content_size(rows, 1, measure)[0])
+        width, height = hud.base_size(lap, 1, measure)
+        self.assertEqual(width, hud.content_size(lap.samples[0], 1, measure)[0])
+        self.assertEqual(height, max(hud.content_size(rows, 1, measure)[1] for rows in lap.samples))
 
-    def test_resizing_scales_the_content_and_keeps_its_shape(self):
-        self.assertEqual(hud.section_scale((200, 50), (100, 50)), 1.0)
-        self.assertEqual(hud.section_scale((300, 150), (100, 50)), 3.0)
-        self.assertEqual(hud.section_scale((10, 5), (100, 50)), 0.5)  # never below half
+    def test_the_height_sets_the_text_size(self):
+        self.assertEqual(hud.section_scale((500, 50), 50), 1.0)
+        self.assertEqual(hud.section_scale((500, 150), 50), 3.0)
+        # Wider alone changes nothing.
+        self.assertEqual(hud.section_scale((900, 50), 50), 1.0)
+
+    def test_text_shrinks_only_when_the_box_is_too_narrow_for_it(self):
+        self.assertEqual(hud.section_scale((300, 100), 50, needed_width=100), 2.0)  # fits
+        self.assertEqual(hud.section_scale((150, 100), 50, needed_width=100), 1.5)  # too narrow
+        self.assertEqual(hud.section_scale((10, 5), 50), 0.3)  # never below 0.3
 
     def test_first_start_stacks_the_sections_where_the_hud_was(self):
         sizes = {'lap': (200, 40), 'current': (150, 60), 'delta': (180, 30), 'times': (300, 30)}

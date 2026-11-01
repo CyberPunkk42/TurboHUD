@@ -100,7 +100,13 @@ class LapState:
         k = len(current) - 1  # the last line passed in this lap
         if self.position is None or len(self.gates) != len(best) or k >= len(best):
             return None
-        if not (_passed(current, k) and _passed(best, k)):
+        # Some lines record the same time as the one before (lines 1 and 119 on the tracks
+        # seen): TSU counts them passed together, before the car is really there. The
+        # stretch then starts at the first line of such a run.
+        start = k
+        while start > 0 and current[start] == current[start - 1]:
+            start -= 1
+        if not (_passed(current, start) and _passed(best, start)):
             return None
         if k + 1 == len(best):
             following = self.lap_starts[best_index + 1]  # the next line is the finish
@@ -108,8 +114,8 @@ class LapState:
             following = best[k + 1]
         else:
             return None
-        share = gate_share(self.gates[k], self.gates[(k + 1) % len(self.gates)], self.position)
-        best_here = best[k] + share * (following - best[k]) - best[0]
+        share = gate_share(self.gates[start], self.gates[(k + 1) % len(self.gates)], self.position)
+        best_here = best[start] + share * (following - best[start]) - best[0]
         elapsed = self.clock - current[0]
         return round(elapsed - best_here) if elapsed > 0 else None
 
@@ -122,19 +128,22 @@ class LapState:
         return min(self.laps_completed + 1, self.laps_to_finish) if self.laps_to_finish else self.laps_completed + 1
 
 
-def _line_distance(gate, point):
+def _middle(gate):
     (x1, z1), (x2, z2) = gate
-    length = math.hypot(x2 - x1, z2 - z1)
-    if not length:
-        return math.hypot(point[0] - x1, point[1] - z1)
-    return abs((x2 - x1) * (point[1] - z1) - (z2 - z1) * (point[0] - x1)) / length
+    return (x1 + x2) / 2, (z1 + z2) / 2
 
 
 def gate_share(gate, next_gate, point):
-    """How far `point` is from one checkpoint line to the next, 0 to 1, by its distance
-    to each line."""
-    before, after = _line_distance(gate, point), _line_distance(next_gate, point)
-    return before / (before + after) if before + after else 0.0
+    """How far `point` is from one checkpoint line to the next, 0 to 1: the car projected
+    onto the path between the lines' middles (robust in tight bends, where the lines
+    themselves, extended, may cross)."""
+    (ax, az), (bx, bz) = _middle(gate), _middle(next_gate)
+    dx, dz = bx - ax, bz - az
+    length = dx * dx + dz * dz
+    if not length:
+        return 0.0
+    share = ((point[0] - ax) * dx + (point[1] - az) * dz) / length
+    return min(max(share, 0.0), 1.0)
 
 
 def _passed(times, k):

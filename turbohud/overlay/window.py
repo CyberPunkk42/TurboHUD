@@ -13,13 +13,14 @@ from PySide6.QtCore import QRectF, Qt, Signal
 from PySide6.QtGui import QColor, QPainter, QPen
 from PySide6.QtWidgets import QCheckBox, QHBoxLayout, QLabel, QPushButton, QSizeGrip, QVBoxLayout, QWidget
 
-from turbohud.core.hud import base_size, help_lines, hud_lines, section_scale
+from turbohud.core.hud import base_size, content_size, help_lines, hud_lines, section_scale
 from turbohud.hud.painter import draw_hud, text_width
 
 TINT = (23, 56, 97, 153)  # move mode's background: red, green, blue, opacity (0-255)
 BORDER = (120, 170, 230)
 LABEL_COLOR = (200, 220, 245)
 LABEL_SPACE = 14  # room below the content for the section's name in move mode, at scale 1
+MIN_WIDTH = 40
 
 log = logging.getLogger(__name__)
 
@@ -64,8 +65,7 @@ class SectionWindow(QWidget):
         layout.addStretch()
         layout.addWidget(self.grip, 0, Qt.AlignBottom | Qt.AlignRight)
         self.grip.setVisible(False)
-        low = section_scale((0, 0), self.base)
-        self.setMinimumSize(round(self.base[0] * low), round(self.base[1] * low))
+        self.setMinimumSize(MIN_WIDTH, round(self.base[1] * 0.3))
 
     def placement(self):
         # On Wayland only the desktop knows where the window is; ask it where possible.
@@ -111,13 +111,14 @@ class SectionWindow(QWidget):
     def paintEvent(self, _event):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing)
-        scale = self.theme.scale * section_scale((self.width(), self.height()), self.base)
         rows = self.rows
         if not self.locked:
             painter.setPen(QPen(QColor(*BORDER), 2))
             painter.setBrush(QColor(*TINT))
             painter.drawRoundedRect(QRectF(self.rect()).adjusted(1, 1, -1, -1), 8, 8)
             rows = rows or list(self.section.samples[0])  # something to place, also before a race
+        needed = content_size(rows, self.theme.scale, text_width)[0] if rows else None
+        scale = self.theme.scale * section_scale((self.width(), self.height()), self.base[1], needed)
         draw_hud(painter, hud_lines(rows, scale), self.theme, scale)
         if not self.locked:
             painter.setPen(QColor(*LABEL_COLOR))

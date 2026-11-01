@@ -57,7 +57,7 @@ def session_rows(seconds):
 def help_lines(shortcuts):
     """The move-mode hint, as lines, for the move-mode panel."""
     finish = 'Ctrl+Shift+L or Lock finishes.' if shortcuts else 'Lock finishes.'
-    return ['Drag a section to move it; resize it at its corner to scale it.', finish]
+    return ['Drag a section to move it. At its corner: taller or shorter scales', 'the text, wider makes room for it.', finish]
 
 
 def _content(rows, sizes):
@@ -107,16 +107,22 @@ CLOCK_SECTIONS = (Section('clock', 'Session time', ((Row('TurboHUD - session tim
 
 
 def base_size(section, scale, measure):
-    """(width, height) of a section at scale 1 of its own: fits all its samples."""
+    """(width, height) of a section at scale 1 of its own: as wide as its usual content
+    (the first sample) and as tall as its tallest."""
     sizes = [content_size(rows, scale, measure) for rows in section.samples]
-    return max(w for w, _h in sizes), max(h for _w, h in sizes)
+    return sizes[0][0], max(h for _w, h in sizes)
 
 
-def section_scale(size, base, low=0.5, high=8.0):
-    """How much a section resized to `size` scales its content, against its `base`
-    size; the content keeps its shape and fits."""
-    (width, height), (base_width, base_height) = size, base
-    return min(max(min(width / base_width, height / base_height), low), high)
+def section_scale(size, base_height, needed_width=None, low=0.3, high=8.0):
+    """How much a section of `size` scales its content: the box's height sets it, so
+    resizing taller or shorter makes the text bigger or smaller. `needed_width` is how
+    wide the content is at scale 1; it only shrinks further if the box is too narrow
+    for it, so the text never sticks out."""
+    width, height = size
+    scale = min(max(height / base_height, low), high)
+    if needed_width and needed_width * scale > width:
+        scale = max(width / needed_width, low)
+    return scale
 
 
 def stacked(sections, x, y, sizes, gap=8):
