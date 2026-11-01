@@ -436,6 +436,13 @@ class RowsTests(unittest.TestCase):
         row = race.race_rows(racing(behind), 0)[2]
         self.assertEqual((row.text, row.color), ('+0.234 vs best', 'behind'))
 
+    def test_a_delta_too_small_to_show_is_even(self):
+        self.assertEqual(race.format_delta(-3), '0.000')
+        self.assertEqual(race.format_delta(5), '+0.001')
+        even = race.LapState(0, 0, 1, 13, [0, 900_000], checkpoints=((0, 300_000), (900_000, 1_199_997)))
+        row = race.race_rows(racing(even), 0)[2]
+        self.assertEqual((row.text, row.color), ('0.000 vs best', 'text'))
+
     def test_waiting_texts_fit_the_lap_section(self):
         from turbohud.core.hud import RACE_SECTIONS
 

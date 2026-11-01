@@ -34,6 +34,7 @@ TIMES_TICKS, TIMES_NOW, TIMES_LIMIT = 0, 4, 20
 MAX_EXTRAPOLATION = 1.0  # seconds
 
 # What the live reader is doing, for Snapshot.status.
+EVEN = 5  # under half a millisecond: shown as 0.000, neither ahead nor behind
 NO_CHECKPOINT = 0xFFFF_FFFF  # how a missed checkpoint may be marked
 
 WAITING_FOR_GAME = 'waiting for game'
@@ -291,7 +292,9 @@ def format_time(units):
 
 
 def format_delta(units):
-    """'-0.412' ahead, '+1.230' behind."""
+    """'-0.412' ahead, '+1.230' behind, '0.000' when too small to show."""
+    if abs(units) < EVEN:
+        return '0.000'
     return f'{"-" if units < 0 else "+"}{abs(units) / UNITS_PER_SECOND:.3f}'
 
 
@@ -349,7 +352,8 @@ def race_sections(snapshot, now):
     if delta is None:
         delta_row = Row('vs best  -', 'medium')
     else:
-        delta_row = Row(f'{format_delta(delta)} vs best', 'medium', 'ahead' if delta < 0 else 'behind')
+        color = 'text' if abs(delta) < EVEN else 'ahead' if delta < 0 else 'behind'
+        delta_row = Row(f'{format_delta(delta)} vs best', 'medium', color)
     return {
         'lap': [Row(title, 'title')],
         'current': [Row(format_tenths(current_lap_now(snapshot, now)), 'big', 'accent')],
