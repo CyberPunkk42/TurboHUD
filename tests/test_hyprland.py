@@ -62,7 +62,17 @@ class CommandTests(unittest.TestCase):
         for lua, classic in hyprland.place_commands('address:0xaaa', 1, 2, 3, 4) + [hyprland.focus_command('address:0xaaa')]:
             with self.subTest(lua=lua):
                 self.assertIn("window = 'address:0xaaa'", lua)
-                self.assertIn('address:0xaaa', classic)
+                if classic is not None:
+                    self.assertIn('address:0xaaa', classic)
+
+    def test_fullscreen_is_ended_for_this_window_only_and_never_with_classic_commands(self):
+        commands = hyprland.place_commands('address:0xaaa', 1, 2, 3, 4)
+        lua, classic = commands[0]
+        self.assertIn("fullscreen({ action = 'unset', window = 'address:0xaaa' })", lua)
+        self.assertIsNone(classic)  # classic fullscreen commands act on the active window
+        fake = FakeHyprctl(lua=False)
+        hyprland.Hyprland(fake).place('0xaaa', 1, 2, 3, 4)
+        self.assertFalse(any('fullscreen' in text and not text.startswith('hl.') for text in fake.dispatched()))
 
     def test_place_floats_sizes_moves_pins_and_keeps_focus_away(self):
         lua = ' '.join(command for command, _ in hyprland.place_commands('address:0xaaa', 40, 50, 420, 194))
@@ -88,8 +98,8 @@ class HyprlandTests(unittest.TestCase):
         fake = FakeHyprctl()
         hyprland.Hyprland(fake).place('0xaaa', 40, 40, 420, 194)
         sent = fake.dispatched()
-        self.assertIn('workspace = 1, follow = false', sent[1])
-        self.assertLess(1, next(i for i, text in enumerate(sent) if 'x = 40, y = 40' in text))
+        to_workspace = next(i for i, text in enumerate(sent) if 'workspace = 1, follow = false' in text)
+        self.assertLess(to_workspace, next(i for i, text in enumerate(sent) if 'x = 40, y = 40' in text))
 
     def test_workspace_at(self):
         hypr = hyprland.Hyprland(FakeHyprctl())

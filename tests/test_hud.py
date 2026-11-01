@@ -41,6 +41,19 @@ class NewSectionsAtTheBottomTests(unittest.TestCase):
         self.assertEqual(places['speed'], (1762, 76, 121, 63))
 
 
+class NewSectionsWithOthersOnAnotherMonitorTests(unittest.TestCase):
+    def test_sections_on_another_monitor_do_not_count(self):
+        # As the player had it: tires and speed on the upper monitor (y -1400).
+        placed = {
+            'lap': (1093, 5, 583, 120), 'fuel': (1445, 1357, 309, 79),
+            'tires': (1320, -1400, 242, 63), 'speed': (1320, -1400, 121, 63),
+        }
+        screens = [(1280, -1440, 2560, 1440), (0, 0, 5120, 1440)]
+        clock = [s for s in hud.RACE_SECTIONS if s.name == 'localtime']
+        place = hud.below(clock, placed, {'localtime': (81, 62)}, screens=screens)['localtime']
+        self.assertEqual(place, (1762, 5, 81, 62))  # main monitor, right of the others
+
+
 class HelpLinesTests(unittest.TestCase):
     def test_move_mode_says_how_to_finish(self):
         self.assertIn('Ctrl+Shift+L', hud.help_lines(shortcuts=True)[-1])

@@ -158,9 +158,15 @@ def below(sections, placed, sizes, screens=(), gap=8):
     run off the bottom of that screen, they start a new column to the right of the placed
     sections instead, from the top of the highest one."""
     first = next(iter(placed.values()))
+    screen = next((s for s in screens if s[0] <= first[0] < s[0] + s[2] and s[1] <= first[1] < s[1] + s[3]), None)
+    if screen is not None:
+        # Only the sections on that screen count (some may sit on another monitor).
+        placed = {
+            name: place for name, place in placed.items()
+            if screen[0] <= place[0] < screen[0] + screen[2] and screen[1] <= place[1] < screen[1] + screen[3]
+        }
     bottom = max(y + height for _x, y, _w, height in placed.values())
     places = stacked(sections, first[0], bottom + gap, sizes, gap)
-    screen = next((s for s in screens if s[0] <= first[0] < s[0] + s[2] and s[1] <= first[1] < s[1] + s[3]), None)
     if screen is None or all(y + h <= screen[1] + screen[3] for _x, y, _w, h in places.values()):
         return places
     right = max(x + width for x, _y, width, _h in placed.values())
