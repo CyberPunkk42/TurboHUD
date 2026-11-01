@@ -301,3 +301,18 @@ class RadarSteadyTests(unittest.TestCase):
         radar = race.Radar()
         view = radar.update([moving('Me', (0.0, 0.0), (0.0, 40.0), local=True), moving('B', (3.0, 0.0), (0.0, 40.0))], 0.0)
         self.assertEqual(view.opacity, 1.0)
+
+
+class BlueFlagAfterPassingTests(unittest.TestCase):
+    def test_a_lapper_just_ahead_at_the_same_checkpoint_is_no_flag(self):
+        # Seen online: the leader, a lap ahead, drives just in front. Each time the local
+        # player reaches the checkpoint it passed a moment before, both are exactly a lap
+        # apart in count; it got there first, so it is past: no blue flag (it blinked).
+        me = player('Me', [lap(0), lap(400_000, 10_000, 3)], local=True)  # last at 42.0 s
+        leader = player('Leader', [lap(0, 40_000), lap(160_000, 40_000), (405_000, 411_000, 419_500)], laps=2)
+        self.assertIsNone(race.blue_flag([me, leader], now=422_000))
+
+    def test_same_count_but_it_got_there_later_is_still_a_flag(self):
+        me = player('Me', [lap(0), lap(400_000, 10_000, 3)], local=True)
+        lapper = player('Lapper', [lap(0, 40_000), lap(160_000, 40_000), (405_000, 411_000, 421_000)], laps=2)
+        self.assertAlmostEqual(race.blue_flag([me, lapper], now=421_500), 0.1)

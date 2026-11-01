@@ -218,3 +218,9 @@ its "Recent changes".
   on along the velocity between updates, and the radar shows at once but stays 0.4 s and
   fades when no car counts any more. Online races with only AI drivers (the game is a
   client there) still have no positions.
+- 2026-11-01: Blue flag no longer blinks behind a lapper. Seen online: the leader, a
+  lap ahead, drove just in front; each time the local player reached the checkpoint it
+  had just passed, both were exactly a lap apart in count, which was taken as "behind,
+  about to pass" (flag at full) until it passed the next one (17 switches in 15 s). At
+  the same count the one who got to the checkpoint first is now ahead; checked live
+  afterwards: no flag, no switches.

@@ -1024,7 +1024,8 @@ def blue_flag(players, now):
     A car is about to lap the local player when it is ahead in the race but behind on
     the track: it has passed more checkpoints, and the difference, taken round a lap, is
     more than half a lap (so it is nearer behind than ahead). Exactly whole laps ahead,
-    it stands at the local player's last checkpoint and has not passed them yet. Any
+    it stands at the local player's last checkpoint: behind if it got there after the
+    local player, else already past (driving just ahead), which is no flag. Any
     car counts, not only the leader. The gap is how much later it passed the checkpoint
     it last passed than the local player did; once the local player has passed the next
     one and it has not, the gap is at least the time since then, so the flag fades as it
@@ -1049,9 +1050,13 @@ def blue_flag(players, now):
         if same < 0 or NO_CHECKPOINT in (theirs[-1], mine[same]):
             continue
         units = theirs[-1] - mine[same]
+        if units < 0:
+            # It got to that checkpoint before the local player: it is already past,
+            # driving just ahead (a whole lap ahead in count, but in front on the track).
+            continue
         if same + 1 < len(mine) and mine[same + 1] != NO_CHECKPOINT:
             units = max(units, now - mine[same + 1])
-        seconds = max(units, 0) / UNITS_PER_SECOND
+        seconds = units / UNITS_PER_SECOND
         if seconds <= BLUE_FROM and (nearest is None or seconds < nearest):
             nearest = seconds
     return nearest
