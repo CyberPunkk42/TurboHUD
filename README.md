@@ -5,7 +5,7 @@ lets every click through, and shows information while you race. It works with TS
 Fullscreen mode too.
 
 Early version. On Linux the HUD shows live lap times (lap and time left, the running
-lap, last and best lap) when TSU is started through TurboHUD's memory probe, see
+lap, the delta to your best lap, last and best lap) when TSU is started through TurboHUD's memory probe, see
 [Live lap times on Linux](#live-lap-times-on-linux). On Windows and macOS it shows a
 session clock for now. Fuel estimate, speed and minimap are planned.
 
@@ -66,7 +66,8 @@ game.
    `python3 /home/<user>/Work/workspace/tsu_repositories/TurboHUD/experiments/tsu_memory_probe.py %command%`
 2. Start TSU from Steam, and start TurboHUD (before or after; it finds the game).
 3. Until a race is on, the HUD says what it is waiting for. In a race it shows the lap
-   and time left, the running lap time, and the last and best lap.
+   and time left, the running lap time, how far ahead (green) or behind (red) your best
+   lap you are at the last checkpoint, and the last and best lap.
 
 Clear the launch option to start TSU without the probe. The probe writes what it did to
 `~/.config/TurboHUD/memory_probe.log`.

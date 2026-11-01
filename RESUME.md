@@ -8,7 +8,8 @@
   overlay with locked and move mode, Ctrl+Shift+L / Ctrl+Shift+Q, a tray icon (the TSU
   TurboHUD image in `assets/`), saved placement and theme, tested by hand on the Mac.
   On Linux, with TSU started through the memory probe (see Next steps), the HUD shows
-  live lap times: lap and time left, running lap, last and best lap. On Windows and
+  live lap times: lap and time left, running lap, delta to the best lap, last and best
+  lap. On Windows and
   macOS it still shows a session clock. Start from the source with
   `run_turbohud.sh` / `run_turbohud.cmd`.
 - Builds: `tools/build_app.py` (PyInstaller) makes a Windows ZIP, a Mac app ZIP and a
@@ -48,6 +49,18 @@ See `docs/IMPROVEMENT_BACKLOG.md`. In short:
    Hyprland.
 
 ## Recent changes
+- 2026-11-01: Live delta to the best lap. Between checkpoints the delta now moves with
+  the car: from its position (`TS.Vehicle.m_statsNewPosition`) and the track's checkpoint
+  lines (local player `m_statsUpdater.m_checkpoints`, each line's two ends), TurboHUD
+  works out how far the car is from one line to the next and when the best lap was at
+  the same place. Reads are much faster: the reader keeps what does not change during a
+  race, field lists and checkpoint lines come in batched reads, and the probe no longer
+  loads the C library for every read (4 µs instead of about 1.6 ms; takes effect when
+  TSU is next started). The race is read and the HUD drawn 20 times a second.
+- 2026-11-01: Delta to the best lap (Linux). Under the running lap time the HUD shows how
+  far ahead (green, `-0.412 vs best`) or behind (red, `+0.230`) the current lap is
+  against the best lap, at the last checkpoint passed (TSU keeps every checkpoint time,
+  about 120 a lap, so it updates every second or less). Nothing on the first lap.
 - 2026-11-01: TurboHUD stays on top of TSU on Hyprland (Omarchy). On Wayland Qt cannot
   keep a window on top, and Hyprland tiled TurboHUD like any window. Now TurboHUD asks
   Hyprland at runtime, for its own window only, to float, place and pin it, give it no

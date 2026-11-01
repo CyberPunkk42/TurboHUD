@@ -298,3 +298,13 @@ field positions are only known at runtime):
 `python3 -B experiments/tsu_vehicle_dump.py` lists every simple field of these objects
 with its value once; `--watch` prints the likely ones twice a second while driving.
 Not yet run in a race.
+
+### Live delta: car position and checkpoint lines
+Found live on 2026-11-01: the local player's `m_statsUpdater` (`TS.PlayerRaceStatsUpdater`)
+has `m_checkpoints` (`TS.Checkpoints`), whose `m_checkpoints` list holds the 120
+`TS.Checkpoint` objects; each has `m_properties` (`TS.CheckpointProperties`) with the two
+ends of its line, `position1` and `position2` (Vector3; x and z are the ground plane).
+The car's position is `TS.Vehicle.m_statsNewPosition` (Vector3), updated every tick.
+Checked by geometry: with 35 checkpoint times in the current lap, the car sat between
+lines 34 and 35, so time i belongs to line i. Lines 1 and 119 record the same time as
+their neighbours 0 and 118 (they are close to them); that does no harm.

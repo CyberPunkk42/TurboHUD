@@ -15,7 +15,7 @@ from turbohud.core.il2cpp import Il2Cpp, Memory, NotFound, ReadError
 from turbohud.core.race import RACING, WAITING_FOR_GAME, WAITING_FOR_RACE, LapReader, Snapshot
 from turbohud.tsu.probe import receive_message, send_message, socket_path
 
-READ_INTERVAL = 0.2  # seconds between reads in a race
+READ_INTERVAL = 0.05  # seconds between reads in a race: the live delta updates 20 times a second
 WAIT_INTERVAL = 1.0  # seconds between tries while TSU or a race is not there
 TIMEOUT = 5.0  # seconds before a silent probe counts as gone
 
@@ -44,6 +44,10 @@ class ProbeConnection:
     def read(self, address, size):
         return self.ask({'op': 'read', 'address': address, 'size': size})[1]
 
+    def read_many(self, addresses, size):
+        values = self.ask({'op': 'read_many', 'addresses': addresses, 'size': size})[0]['values']
+        return [bytes.fromhex(value) if value is not None else None for value in values]
+
     def maps(self):
         return self.ask({'op': 'maps'})[0]['regions']
 
@@ -60,7 +64,7 @@ def connect(path=None):
         metadata = next((r for r in regions if r[4].endswith('global-metadata.dat') and r[3] == 0), None)
         if metadata is None:
             raise NotFound('the game metadata is not mapped yet')
-        il2cpp = Il2Cpp(Memory(conn.read, regions), Path(metadata[4]).read_bytes(), metadata[0])
+        il2cpp = Il2Cpp(Memory(conn.read, regions, conn.read_many), Path(metadata[4]).read_bytes(), metadata[0])
         return LapReader(il2cpp), conn
     except BaseException:
         conn.close()

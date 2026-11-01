@@ -31,6 +31,7 @@ refused, showing the system's protection is untouched).
 
 import ctypes
 import ctypes.util
+import functools
 import json
 import os
 import signal
@@ -52,7 +53,9 @@ class IoVec(ctypes.Structure):
     _fields_ = [('iov_base', ctypes.c_void_p), ('iov_len', ctypes.c_size_t)]
 
 
+@functools.lru_cache(maxsize=None)
 def _libc():
+    """libc with process_vm_readv set up, loaded once (finding it takes a while)."""
     libc = ctypes.CDLL(ctypes.util.find_library('c') or 'libc.so.6', use_errno=True)
     libc.process_vm_readv.argtypes = [
         ctypes.c_int,
