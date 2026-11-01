@@ -516,6 +516,16 @@ class CarTests(unittest.TestCase):
         self.assertAlmostEqual(car.speed, 50.0)
         self.assertIsNone(car.fuel_per_lap)  # one lap start seen so far
 
+    def test_speed_is_yellow_while_lifting(self):
+        def colour(throttle, brake, kmh=150):
+            car = self.car(speed=kmh / 3.6, throttle=throttle, brake=brake)
+            return race.car_sections(car)['speed'][0].color
+        self.assertEqual(colour(0.0, 0.0), 'lift')
+        self.assertEqual(colour(1.0, 0.0), 'text')  # on the throttle
+        self.assertEqual(colour(0.0, 1.0), 'text')  # braking
+        self.assertEqual(colour(0.0, 0.0, kmh=2), 'text')  # standing
+        self.assertEqual(colour(None, None), 'text')  # inputs unknown
+
     def test_reader_reads_throttle_and_brake(self):
         reader = build([10_000], laps_completed=0, clock=20_000, limit=0, car=(0.0, 0.0), gates=STRAIGHT, pedals=(1.0, 0.0))
         car = reader.read().car

@@ -120,3 +120,5 @@ its "Recent changes".
   green) and a brake bar on its right (red), as tall as the section, grey without input,
   filled in part for part pressure. Read from TS.CarControls (CarStateUpdater.m_controls,
   `gas` and `brake`, or the thirds TSU keeps); not yet checked in a drive.
+- 2026-11-01: The speed turns yellow while lifting: no throttle and no brake, above
+  5 km/h (coasting).

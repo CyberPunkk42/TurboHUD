@@ -49,6 +49,8 @@ See `docs/IMPROVEMENT_BACKLOG.md`. In short:
    Hyprland.
 
 ## Recent changes
+- 2026-11-01: The speed turns yellow while lifting: no throttle and no brake, above
+  5 km/h (coasting).
 - 2026-11-01: Pedal bars in the speed section: a throttle bar on its left (lights up
   green) and a brake bar on its right (red), as tall as the section, grey without input,
   filled in part for part pressure. Read from TS.CarControls (CarStateUpdater.m_controls,

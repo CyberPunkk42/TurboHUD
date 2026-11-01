@@ -11,6 +11,7 @@ from turbohud.core.hud import MARGIN
 # system font, which draws well.
 AHEAD_COLOR = '#5ee07a'  # the delta when faster than the best lap
 BAR_OFF = (110, 110, 110, 170)  # a pedal bar with no input: grey
+LIFT_COLOR = '#ffe14d'  # the speed while lifting (no throttle, no brake)
 BEHIND_COLOR = '#ff6b6b'  # and when slower
 LINUX_FAMILIES = ['Noto Sans', 'DejaVu Sans', 'Liberation Sans', 'Cantarell', 'Ubuntu', 'Arial']
 
@@ -80,6 +81,7 @@ def draw_hud(painter, lines, theme, scale=None, left=0):
         'accent': QColor(theme.accent_color),
         'ahead': QColor(AHEAD_COLOR),
         'behind': QColor(BEHIND_COLOR),
+        'lift': QColor(LIFT_COLOR),
     }
     outline = _rgba(theme.outline_color)
     x = left + round(MARGIN * (theme.scale if scale is None else scale))

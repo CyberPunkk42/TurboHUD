@@ -22,7 +22,7 @@ class Row:
 
     text: str
     style: str  # 'title', 'big', 'medium' or 'small': a font size from Sizes
-    color: str = 'text'  # 'text', 'accent', 'ahead' (green) or 'behind' (red)
+    color: str = 'text'  # 'text', 'accent', 'ahead' (green), 'behind' (red) or 'lift' (yellow)
     tail: str = ''  # more text right after it, in its own colour
     tail_color: str = 'text'
 

@@ -172,6 +172,7 @@ def _passed(times, k):
 MAX_TIRE_WEAR = 5_760_000  # TS.TireWearSettings.MaxTireWear (a constant): worn out
 SPEED_TO_KMH = 3.6  # m_forwardSpeed is taken as metres per second (not yet compared in game)
 PER_LAP_LAPS = 3  # laps averaged for fuel and tire use per lap
+LIFT_MIN_KMH = 5  # slower than this is standing, not lifting
 EVEN_FUEL = 0.01  # a fuel trend under 1 % of a lap's use is neither saving nor not
 MIN_TREND_CHECKPOINT = 2  # too early in a lap to compare before this checkpoint
 
@@ -253,6 +254,13 @@ class CarState:
     @property
     def kmh(self):
         return abs(self.speed) * SPEED_TO_KMH
+
+    @property
+    def lifting(self):
+        """Rolling on without throttle or brake (coasting); False when not known."""
+        if self.throttle is None or self.brake is None:
+            return False
+        return self.throttle == 0 and self.brake == 0 and self.kmh >= LIFT_MIN_KMH
 
 
 def per_lap(history, laps=PER_LAP_LAPS):
@@ -565,7 +573,8 @@ def car_sections(car):
     """{section: rows} for fuel, tires and speed; empty where the event has none."""
     if car is None:
         return {}
-    sections = {'speed': [Row(f'{car.kmh:.0f} km/h', 'medium')], 'pedals': (car.throttle, car.brake)}
+    speed_color = 'lift' if car.lifting else 'text'
+    sections = {'speed': [Row(f'{car.kmh:.0f} km/h', 'medium', speed_color)], 'pedals': (car.throttle, car.brake)}
     if car.fuel_left is not None:
         color = {True: 'ahead', False: 'behind', None: 'text'}[car.saving]
         tail = _laps_text(car.fuel_laps) + _balance_text(car)
