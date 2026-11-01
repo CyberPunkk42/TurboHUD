@@ -192,6 +192,15 @@ class Il2Cpp:
         data = self.memory.read(array + ARRAY_DATA, 8 * size)
         return list(struct.unpack(f'<{size}Q', data))
 
+    def u32_list(self, lst):
+        """All values of a List<uint>."""
+        array, size = self.memory.u64(lst + LIST_ITEMS), self.memory.i32(lst + LIST_SIZE)
+        if not 0 <= size <= 4096:
+            raise NotFound('implausible list size')
+        if not size:
+            return ()
+        return struct.unpack(f'<{size}I', self.memory.read(array + ARRAY_DATA, 4 * size))
+
     def first_u32(self, lst):
         """First uint32 of a List<uint>."""
         if self.memory.i32(lst + LIST_SIZE) < 1:

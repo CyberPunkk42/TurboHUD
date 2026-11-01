@@ -10,10 +10,13 @@ The reader follows the game's own objects by name (see turbohud.core.il2cpp):
                                                m_localHumanIndex >= 0
               .m_stats                         TS.PlayerRaceStats
                   .m_lapsCompleted, .m_lapsToFinish, .m_finished
-                  .m_checkpointTimesForLaps[lap].m_times[0]   when that lap started
+                  .m_checkpointTimesForLaps[lap].m_times      when each checkpoint of
+                                               that lap was passed; [0] is the lap's start
 
 All times are whole numbers in steps of 0.1 ms. A lap's time is the start of the next
-lap minus its own start; the current lap is the race clock minus its start. Checked
+lap minus its own start; the current lap is the race clock minus its start. A lap has a
+fixed number of checkpoints (120 on the tracks seen); the current lap's list grows as
+they are passed, so comparing the same checkpoint with the best lap gives the delta. Checked
 against the game's own lap times on 2026-11-01: they match exactly.
 """
 
@@ -30,6 +33,8 @@ TIMES_TICKS, TIMES_NOW, TIMES_LIMIT = 0, 4, 20
 MAX_EXTRAPOLATION = 1.0  # seconds
 
 # What the live reader is doing, for Snapshot.status.
+NO_CHECKPOINT = 0xFFFF_FFFF  # how a missed checkpoint may be marked
+
 WAITING_FOR_GAME = 'waiting for game'
 WAITING_FOR_RACE = 'waiting for race'
 RACING = 'racing'
@@ -43,6 +48,7 @@ class LapState:
     laps_to_finish: int
     lap_starts: list  # when each started lap began, 0.1 ms
     finished: bool = False
+    checkpoints: tuple = ()  # per started lap, when each checkpoint was passed, 0.1 ms
 
     @property
     def lap_times(self):
@@ -61,12 +67,35 @@ class LapState:
         return min(self.lap_times) if self.lap_times else None
 
     @property
+    def best_lap_index(self):
+        times = self.lap_times
+        return times.index(min(times)) if times else None
+
+    @property
+    def delta_to_best(self):
+        """This lap against the best lap at the last checkpoint both passed: negative is
+        ahead, positive behind; None on the first lap or before the first checkpoint."""
+        best_index = self.best_lap_index
+        if best_index is None or len(self.checkpoints) < 2 or best_index >= len(self.checkpoints) - 1:
+            return None
+        current, best = self.checkpoints[-1], self.checkpoints[best_index]
+        for k in range(min(len(current), len(best)) - 1, 0, -1):
+            if _passed(current, k) and _passed(best, k):
+                elapsed = current[k] - current[0]
+                return elapsed - (best[k] - best[0]) if elapsed > 0 else None
+        return None
+
+    @property
     def time_left(self):
         return self.time_limit - self.clock if self.time_limit > 0 else None
 
     @property
     def lap_number(self):
         return min(self.laps_completed + 1, self.laps_to_finish) if self.laps_to_finish else self.laps_completed + 1
+
+
+def _passed(times, k):
+    return times[k] != NO_CHECKPOINT and times[k] >= times[0]
 
 
 class LapReader:
@@ -89,10 +118,12 @@ class LapReader:
         state, player = self.local_player()
         times = state + il.offset(state, 'times')
         stats = il.ref(player, 'm_stats')
-        starts = []
+        checkpoints = []
         for lap in il.list_items(il.ref(stats, 'm_checkpointTimesForLaps')):
             if lap:
-                starts.append(il.first_u32(il.ref(lap, 'm_times')))
+                passed = il.u32_list(il.ref(lap, 'm_times'))
+                if passed:
+                    checkpoints.append(passed)
         try:
             finished = bool(memory.u8(stats + il.offset(stats, 'm_finished')))
         except NotFound:
@@ -102,8 +133,9 @@ class LapReader:
             time_limit=memory.i32(times + TIMES_LIMIT),
             laps_completed=memory.u16(stats + il.offset(stats, 'm_lapsCompleted')),
             laps_to_finish=memory.u16(stats + il.offset(stats, 'm_lapsToFinish')),
-            lap_starts=starts,
+            lap_starts=[passed[0] for passed in checkpoints],
             finished=finished,
+            checkpoints=tuple(checkpoints),
         )
 
 
@@ -114,6 +146,11 @@ def format_time(units):
     sign, units = ('-' if units < 0 else ''), abs(units)
     minutes, rest = divmod(units, 60 * UNITS_PER_SECOND)
     return f'{sign}{minutes}:{rest / UNITS_PER_SECOND:06.3f}'
+
+
+def format_delta(units):
+    """'-0.412' ahead, '+1.230' behind."""
+    return f'{"-" if units < 0 else "+"}{abs(units) / UNITS_PER_SECOND:.3f}'
 
 
 def format_tenths(units):
@@ -166,8 +203,14 @@ def race_rows(snapshot, now):
     left = state.time_left
     if left is not None:
         title += f'  -  {clock(math.ceil(left / UNITS_PER_SECOND))} left' if left > 0 else '  -  time is up'
+    delta = state.delta_to_best
+    if delta is None:
+        delta_row = Row('vs best  -', 'medium')
+    else:
+        delta_row = Row(f'{format_delta(delta)} vs best', 'medium', 'ahead' if delta < 0 else 'behind')
     return [
         Row(title, 'title'),
         Row(format_tenths(current_lap_now(snapshot, now)), 'big', 'accent'),
+        delta_row,
         Row(times, 'medium'),
     ]

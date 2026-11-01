@@ -20,7 +20,7 @@ class Row:
 
     text: str
     style: str  # 'title', 'big', 'medium' or 'small': a font size from Sizes
-    color: str = 'text'  # 'text' or 'accent'
+    color: str = 'text'  # 'text', 'accent', 'ahead' (green) or 'behind' (red)
 
 
 @dataclass(frozen=True)
@@ -43,9 +43,9 @@ class Sizes:
         return cls(scaled(MARGIN), scaled(16), scaled(40), scaled(20), scaled(13), scaled(8), scaled(6))
 
 
-# The tallest content the HUD shows (a race: title, current lap, last and best); the
-# box's minimum size leaves room for it.
-TALLEST = (Row('Lap', 'title'), Row('0:00.0', 'big'), Row('Last', 'medium'))
+# The tallest content the HUD shows (a race: title, current lap, delta to the best lap,
+# last and best); the box's minimum size leaves room for it.
+TALLEST = (Row('Lap', 'title'), Row('0:00.0', 'big'), Row('+0.000', 'medium'), Row('Last', 'medium'))
 
 
 def clock(seconds):

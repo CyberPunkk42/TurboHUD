@@ -9,6 +9,8 @@ from turbohud.core.hud import MARGIN
 # On Linux the desktop's default font may be a monospace or icon font; prefer a plain
 # sans-serif one. Qt uses the first that is installed. Windows and macOS keep their
 # system font, which draws well.
+AHEAD_COLOR = '#5ee07a'  # the delta when faster than the best lap
+BEHIND_COLOR = '#ff6b6b'  # and when slower
 LINUX_FAMILIES = ['Noto Sans', 'DejaVu Sans', 'Liberation Sans', 'Cantarell', 'Ubuntu', 'Arial']
 
 
@@ -42,7 +44,12 @@ def outlined_text(painter, x, y, text, size, color, outline):
 
 def draw_hud(painter, lines, theme):
     """Draw the lines from turbohud.core.hud.hud_lines with the theme's colours."""
-    colors = {'text': QColor(theme.text_color), 'accent': QColor(theme.accent_color)}
+    colors = {
+        'text': QColor(theme.text_color),
+        'accent': QColor(theme.accent_color),
+        'ahead': QColor(AHEAD_COLOR),
+        'behind': QColor(BEHIND_COLOR),
+    }
     outline = _rgba(theme.outline_color)
     x = round(MARGIN * theme.scale)
     for line in lines:

@@ -67,3 +67,7 @@ its "Recent changes".
   re-creates the window, move mode no longer ends when the mouse moves, and the moved
   position is saved (only Hyprland knows it on Wayland). Checked on Hyprland 0.56 over a
   fullscreen test window; not yet over TSU itself.
+- 2026-11-01: Delta to the best lap (Linux). Under the running lap time the HUD shows how
+  far ahead (green, `-0.412 vs best`) or behind (red, `+0.230`) the current lap is
+  against the best lap, at the last checkpoint passed (TSU keeps every checkpoint time,
+  about 120 a lap, so it updates every second or less). Nothing on the first lap.

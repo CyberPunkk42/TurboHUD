@@ -225,6 +225,48 @@ MID_RACE = race.LapState(
 )
 
 
+class DeltaTests(unittest.TestCase):
+    # Two finished laps (the second, 80 s, is the best) and the current lap.
+    LAPS = (
+        (0, 0, 300_000, 600_000),
+        (900_000, 900_000, 1_150_000, 1_400_000),
+        (1_700_000, 1_700_000, 1_960_000),
+    )
+
+    def state(self, checkpoints=LAPS, laps_completed=2):
+        return race.LapState(
+            clock=1_980_000, time_limit=0, laps_completed=laps_completed, laps_to_finish=13,
+            lap_starts=[lap[0] for lap in checkpoints], checkpoints=checkpoints,
+        )
+
+    def test_compares_the_last_checkpoint_passed_with_the_best_lap(self):
+        state = self.state()
+        self.assertEqual(state.best_lap_index, 1)
+        # This lap 26.0 s at checkpoint 2, the best lap 25.0 s there: 1 s behind.
+        self.assertEqual(state.delta_to_best, 10_000)
+
+    def test_ahead_is_negative(self):
+        laps = self.LAPS[:2] + ((1_700_000, 1_700_000, 1_940_000),)
+        self.assertEqual(self.state(laps).delta_to_best, -10_000)
+
+    def test_none_on_the_first_lap_and_at_the_start_of_a_lap(self):
+        self.assertIsNone(self.state(((0, 0, 300_000),), laps_completed=0).delta_to_best)
+        laps = self.LAPS[:2] + ((1_700_000, 1_700_000),)
+        self.assertIsNone(self.state(laps).delta_to_best)
+
+    def test_a_missed_checkpoint_is_skipped(self):
+        laps = (self.LAPS[0], (900_000, 900_000, race.NO_CHECKPOINT, 1_400_000), (1_700_000, 1_700_000, 1_960_000))
+        state = self.state(laps)
+        # Checkpoint 2 is missing in the best lap: compare checkpoint 1 (both 0 s in): none.
+        self.assertIsNone(state.delta_to_best)
+
+    def test_reader_reads_every_checkpoint(self):
+        reader = build([10_000, 944_595], laps_completed=1, clock=1_000_000, limit=0)
+        state = reader.read()
+        self.assertEqual(state.checkpoints[0], (10_000, 10_000, 15_000))
+        self.assertEqual(state.lap_starts, [10_000, 944_595])
+
+
 class RowsTests(unittest.TestCase):
     def test_format_tenths_cuts_off(self):
         self.assertEqual(race.format_tenths(365_459), '0:36.5')
@@ -238,6 +280,7 @@ class RowsTests(unittest.TestCase):
         self.assertEqual([row.text for row in rows], [
             'Lap 3/13  -  17:41 left',
             '0:21.4',
+            'vs best  -',
             'Last 1:24.095   Best 1:24.095',
         ])
         self.assertEqual(rows[1].color, 'accent')
@@ -267,6 +310,14 @@ class RowsTests(unittest.TestCase):
         rows = race.race_rows(racing(state), 0)
         self.assertTrue(rows[0].text.startswith('Finished'))
         self.assertEqual(rows[1].text, '1:20.000')
+
+    def test_delta_row_is_green_ahead_and_red_behind(self):
+        ahead = race.LapState(0, 0, 1, 13, [0, 900_000], checkpoints=((0, 300_000), (900_000, 1_199_000)))
+        row = race.race_rows(racing(ahead), 0)[2]
+        self.assertEqual((row.text, row.color), ('-0.100 vs best', 'ahead'))
+        behind = race.LapState(0, 0, 1, 13, [0, 900_000], checkpoints=((0, 300_000), (900_000, 1_202_340)))
+        row = race.race_rows(racing(behind), 0)[2]
+        self.assertEqual((row.text, row.color), ('+0.234 vs best', 'behind'))
 
     def test_waiting(self):
         game = race.race_rows(race.Snapshot(race.WAITING_FOR_GAME), 0)
