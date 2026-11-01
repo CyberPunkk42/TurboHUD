@@ -20,6 +20,7 @@ they are passed, so comparing the same checkpoint with the best lap gives the de
 against the game's own lap times on 2026-11-01: they match exactly.
 """
 
+import dataclasses
 import math
 import struct
 from dataclasses import dataclass
@@ -99,7 +100,16 @@ class LapState:
                 return elapsed - (best[k] - best[0]) if elapsed > 0 else None
         return None
 
-    def _live_delta(self, current, best, best_index):
+    def stretch(self):
+        """Where the car is in the current lap, for live comparisons with the best lap:
+        (first line of the run just passed, line passed last, next line with a time of
+        its own, last line of that run, share of the way from one to the next), or None
+        without position, track or a best lap. The next line is len(best) for the finish.
+        """
+        best_index = self.best_lap_index
+        if best_index is None or len(self.checkpoints) < 2 or best_index >= len(self.checkpoints) - 1:
+            return None
+        current, best = self.checkpoints[-1], self.checkpoints[best_index]
         k = len(current) - 1  # the last line passed in this lap
         if self.position is None or len(self.gates) != len(best) or k >= len(best):
             return None
@@ -109,31 +119,91 @@ class LapState:
         start = k
         while start > 0 and current[start] == current[start - 1]:
             start -= 1
-        if not (_passed(current, start) and _passed(best, start)):
-            return None
         # The next line with a time of its own: a line at the same spot as the one just
         # passed (lines 7, 13, 24 ... on the tracks seen) gets the same time but is only
         # written when the car reaches the line after it.
-        following_line = k + 1
-        while following_line < len(best) and best[following_line] == best[k]:
-            following_line += 1
+        following = k + 1
+        while following < len(best) and best[following] == best[k]:
+            following += 1
+        end = following
+        while end + 1 < len(best) and best[end + 1] == best[following]:
+            end += 1
+        # A checkpoint can be several line pieces with the same time (a wide track split
+        # in two, or one line twice): the nearest piece counts.
+        behind = [self.gates[i] for i in range(start, k + 1)]
+        ahead = [self.gates[i % len(self.gates)] for i in range(following, end + 1)]
+        return start, k, following, end, gate_share(behind, ahead, self.position)
+
+    def _live_delta(self, current, best, best_index):
+        place = self.stretch()
+        if place is None:
+            return None
+        start, _k, following_line, _end, share = place
+        if not (_passed(current, start) and _passed(best, start)):
+            return None
         if following_line == len(best):
             following = self.lap_starts[best_index + 1]  # the next line is the finish
         elif _passed(best, following_line):
             following = best[following_line]
         else:
             return None
-        # A checkpoint can be several line pieces with the same time (a wide track split
-        # in two, or one line twice): the nearest piece counts.
-        behind = [self.gates[i] for i in range(start, k + 1)]
-        end = following_line
-        while end + 1 < len(best) and best[end + 1] == best[following_line]:
-            end += 1
-        ahead = [self.gates[i % len(self.gates)] for i in range(following_line, end + 1)]
-        share = gate_share(behind, ahead, self.position)
         best_here = best[start] + share * (following - best[start]) - best[0]
         elapsed = self.clock - current[0]
         return round(elapsed - best_here) if elapsed > 0 else None
+
+    def live_fuel_trend(self, marks, starts, laps=None):
+        """Like fuel_trend, but the recent laps' use is taken at the car's place between
+        two checkpoints (as for the live delta), not at the last checkpoint: otherwise
+        this lap's use, which keeps growing, is held against a fixed number until the
+        next line, and the balance swings at every checkpoint. None where the place is
+        not known (then fuel_trend, by checkpoint, serves)."""
+        car, place = self.car, self.stretch()
+        if car is None or place is None:
+            return None
+        laps = laps or PER_LAP_LAPS
+        start, k, following, end, share = place
+        lap = len(self.checkpoints) - 1
+        lap_length = len(self.checkpoints[self.best_lap_index])
+        if k < MIN_TREND_CHECKPOINT or lap not in starts or car.fuel_used < starts[lap]:
+            return None
+        references = []
+        for earlier in range(lap - 1, -1, -1):
+            if len(references) == laps or earlier not in starts:
+                break
+            next_start = starts.get(earlier + 1)
+            if next_start is None or next_start < starts[earlier]:
+                break  # refuelled since then
+            mark = marks.get(earlier, {})
+            # Lines passed together have one mark, under whichever of them was seen.
+            before = next((mark[i] for i in range(start, k + 1) if i in mark), None)
+            if following == lap_length:
+                after = next_start  # the next line is the finish
+            else:
+                after = next((mark[i] for i in range(following, end + 1) if i in mark), None)
+            if before is None or after is None or not starts[earlier] <= before <= after:
+                continue
+            references.append(before + share * (after - before) - starts[earlier])
+        if not references:
+            return None
+        return (car.fuel_used - starts[lap]) - sum(references) / len(references)
+
+    @property
+    def laps_to_go(self):
+        """Laps still to drive, the current one's rest included: by the lap limit, and
+        by the time limit at the recent lap times (the lap in which time runs out is
+        finished); the smaller. None without a limit or a lap time to go by."""
+        times = self.lap_times[-PER_LAP_LAPS:]
+        if not times or self.current_lap is None:
+            return None
+        lap_time = sum(times) / len(times)
+        progress = min(max(self.current_lap / lap_time, 0.0), 0.99)
+        options = []
+        if self.laps_to_finish:
+            options.append(self.laps_to_finish - self.laps_completed - progress)
+        if self.time_limit > 0:
+            left = max(self.time_limit - self.clock, 0)
+            options.append(math.ceil(progress + left / lap_time) - progress)
+        return max(min(options), 0.0) if options else None
 
     @property
     def time_left(self):
@@ -363,7 +433,7 @@ class LapReader:
                 checkpoints.append(passed)
         position, gates = self._position_and_gates(player)
         car = self._car(player, len(checkpoints) - 1, len(checkpoints[-1]) - 1 if checkpoints else -1)
-        return LapState(
+        state = LapState(
             clock=clock,
             time_limit=time_limit,
             laps_completed=laps_completed,
@@ -375,6 +445,10 @@ class LapReader:
             gates=gates,
             car=car,
         )
+        live = state.live_fuel_trend(self._fuel_marks, self._fuel_history)
+        if live is not None:
+            state = dataclasses.replace(state, car=dataclasses.replace(car, fuel_trend=live))
+        return state
 
     def _car(self, player, lap, checkpoint):
         """Fuel, tires and speed of the local car, or None where the game lacks them."""
@@ -536,6 +610,7 @@ def race_sections(snapshot, now):
             'delta': [Row('vs best  -', 'medium')],
             'times': [Row('Last -   Best -', 'medium')],
             'fuel': [Row('Fuel -', 'medium')],
+            'fuelfinish': [Row('Finish -', 'medium')],
             'tires': [Row('Tires -', 'medium')],
             'speed': [Row('- km/h', 'medium')],
             'pedals': (None, None),
@@ -565,12 +640,20 @@ def race_sections(snapshot, now):
         'delta': [delta_row],
         'times': [Row(f'Last {format_time(state.last_lap)}   Best {format_time(state.best_lap)}', 'medium')],
     }
-    sections.update(car_sections(state.car))
+    sections.update(car_sections(state.car, state.laps_to_go))
     return sections
 
 
 def _laps_text(laps):
     return f'  ~{laps:.1f} laps' if laps is not None else ''
+
+
+def fuel_margin(car, laps_to_go):
+    """Laps of fuel beyond what the rest of the race needs at the recent use: plus is
+    to spare, minus is short (save or stop for fuel). None when not known yet."""
+    if car is None or car.fuel_laps is None or laps_to_go is None:
+        return None
+    return car.fuel_laps - laps_to_go
 
 
 def _balance_text(car):
@@ -582,8 +665,9 @@ def _balance_text(car):
     return f'  {"+" if balance >= 0 else "-"}{abs(balance):.2f}%'
 
 
-def car_sections(car):
-    """{section: rows} for fuel, tires and speed; empty where the event has none."""
+def car_sections(car, laps_to_go=None):
+    """{section: rows} for fuel, tires and speed; empty where the event has none.
+    `laps_to_go` (LapState.laps_to_go) gives the fuel margin to the finish."""
     if car is None:
         return {}
     speed_color = 'lift' if car.lifting else 'text'
@@ -592,6 +676,12 @@ def car_sections(car):
         color = {True: 'ahead', False: 'behind', None: 'text'}[car.saving]
         tail = _laps_text(car.fuel_laps) + _balance_text(car)
         sections['fuel'] = [Row(f'Fuel {car.fuel_left * 100:.1f}%', 'medium', tail=tail, tail_color=color)]
+    if car.fuel_left is not None:
+        margin = fuel_margin(car, laps_to_go)
+        if margin is None:
+            sections['fuelfinish'] = [Row('Finish -', 'medium')]
+        else:
+            sections['fuelfinish'] = [Row(f'Finish {margin:+.1f} laps', 'medium', 'ahead' if margin >= 0 else 'behind')]
     if car.tires_left is not None:
         sections['tires'] = [Row(f'Tires {car.tires_left * 100:.0f}%{_laps_text(car.tire_laps)}', 'medium')]
     return sections
@@ -600,5 +690,5 @@ def car_sections(car):
 def race_rows(snapshot, now):
     """All sections' rows in one list, top to bottom (for the terminal and tests)."""
     sections = race_sections(snapshot, now)
-    order = ('lap', 'current', 'delta', 'times', 'fuel', 'tires', 'speed')
+    order = ('lap', 'current', 'delta', 'times', 'fuel', 'fuelfinish', 'tires', 'speed')
     return [row for name in order for row in sections.get(name, [])]

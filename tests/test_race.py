@@ -461,7 +461,7 @@ class CarTests(unittest.TestCase):
         car = self.car(fuel_on=False, tires_on=False)
         self.assertIsNone(car.fuel_left)
         self.assertIsNone(car.tire_laps)
-        self.assertEqual(set(race.car_sections(car)), {'speed', 'pedals'})
+        self.assertEqual(set(race.car_sections(car)), {'speed', 'pedals'})  # no fuel, no tires
 
     def test_per_lap_averages_the_last_laps_and_restarts_after_a_pit_stop(self):
         self.assertIsNone(race.per_lap([0]))
@@ -546,6 +546,67 @@ class CarTests(unittest.TestCase):
     def test_without_car_data_there_are_no_car_sections(self):
         reader = build([10_000], laps_completed=0, clock=20_000, limit=0)
         self.assertIsNone(reader.read().car)
+
+
+class LiveFuelTests(unittest.TestCase):
+    # Start and finish at z 300, lines 1 and 2 at z 100 and 200. The second lap (index 1)
+    # is the best; this lap has passed line 2 and drives on to the finish.
+    GATES = (((-10.0, 300.0), (10.0, 300.0)), STRAIGHT[1], STRAIGHT[2])
+    LAPS = ((0, 110_000, 220_000), (400_000, 500_000, 600_000), (700_000, 810_000, 910_000))
+
+    def state(self, z, used, laps=LAPS):
+        car = race.CarState(True, used, 168_000, True, 0, 0.0, fuel_per_lap=3_000)
+        return race.LapState(
+            clock=960_000, time_limit=0, laps_completed=2, laps_to_finish=13,
+            lap_starts=[lap[0] for lap in laps], checkpoints=laps, position=(0.0, z), gates=self.GATES, car=car,
+        )
+
+    def test_the_recent_laps_are_taken_at_the_same_place_between_lines(self):
+        starts = {0: 0, 1: 3_000, 2: 6_000}
+        marks = {0: {2: 2_000}, 1: {2: 5_000}}  # both used 2,000 by line 2, 3,000 per lap
+        # Halfway from line 2 to the finish: the recent laps had used 2,500 there.
+        self.assertEqual(self.state(250.0, 6_000 + 2_500).live_fuel_trend(marks, starts), 0)
+        self.assertEqual(self.state(250.0, 6_000 + 2_300).live_fuel_trend(marks, starts), -200)
+
+    def test_no_swing_while_driving_a_stretch_at_the_usual_use(self):
+        starts = {0: 0, 1: 3_000, 2: 6_000}
+        marks = {0: {2: 2_000}, 1: {2: 5_000}}
+        trends = [self.state(z, 6_000 + 2_000 + round((z - 200) * 10)).live_fuel_trend(marks, starts) for z in (200.0, 225.0, 275.0)]
+        self.assertEqual(trends, [0, 0, 0])
+
+    def test_a_pit_stop_ends_the_comparison(self):
+        starts = {0: 0, 1: 3_000, 2: 500}  # refuelled
+        marks = {0: {2: 2_000}, 1: {2: 5_000}}
+        self.assertIsNone(self.state(250.0, 3_000).live_fuel_trend(marks, starts))
+
+
+class FuelFinishTests(unittest.TestCase):
+    def state(self, laps_completed, current_lap, laps_to_finish=13, time_limit=0, clock=0):
+        lap_starts = [i * 800_000 for i in range(laps_completed + 1)]
+        clock = clock or lap_starts[-1] + current_lap
+        return race.LapState(clock, time_limit, laps_completed, laps_to_finish, lap_starts)
+
+    def test_laps_to_go_by_the_lap_limit(self):
+        # 4 of 13 done, a quarter into the fifth (80 s laps): 8.75 to go.
+        self.assertAlmostEqual(self.state(4, 200_000).laps_to_go, 8.75)
+
+    def test_laps_to_go_by_the_time_limit(self):
+        # 5 minutes left at 80 s laps: 3.75 laps fit; the lap in which time runs out is
+        # finished, so 4 more laps from the start of this one, a quarter of it driven.
+        state = self.state(4, 200_000, laps_to_finish=99, time_limit=4 * 800_000 + 200_000 + 3_000_000)
+        self.assertAlmostEqual(state.laps_to_go, 3.75)
+
+    def test_unknown_before_a_lap_time(self):
+        self.assertIsNone(self.state(0, 100_000).laps_to_go)
+
+    def test_margin_and_section(self):
+        car = race.CarState(True, 42_000, 168_000, True, 0, 0.0, fuel_per_lap=10_000)  # 12.6 laps of fuel
+        self.assertAlmostEqual(race.fuel_margin(car, 8.6), 4.0)
+        spare = race.car_sections(car, 8.6)['fuelfinish'][0]
+        short = race.car_sections(car, 14.0)['fuelfinish'][0]
+        self.assertEqual((spare.text, spare.color), ('Finish +4.0 laps', 'ahead'))
+        self.assertEqual((short.text, short.color), ('Finish -1.4 laps', 'behind'))
+        self.assertEqual(race.car_sections(car)['fuelfinish'][0].text, 'Finish -')
 
 
 class RowsTests(unittest.TestCase):
