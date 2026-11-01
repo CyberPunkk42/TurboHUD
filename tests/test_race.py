@@ -749,6 +749,21 @@ class RowsTests(unittest.TestCase):
         self.assertTrue(rows[0].text.startswith('Finished'))
         self.assertEqual(rows[1].text, '1:20.000')
 
+    def test_after_the_finish_the_rest_of_the_hud_stays_while_others_race(self):
+        me = race.PlayerState('Me', 0, 2, ((0,), (900_000,), (1_700_000,)), finished=True, local=True)
+        other = race.PlayerState('Other', 0, 1, ((0,), (950_000,)))
+        car = race.CarState(True, 50_000, 168_000, False, 0, 20.0)
+        state = race.LapState(
+            clock=1_800_000, time_limit=0, laps_completed=2, laps_to_finish=2, lap_starts=[0, 900_000, 1_700_000],
+            finished=True, car=car, players=(me, other),
+        )
+        sections = race.race_sections(racing(state), 0)
+        self.assertTrue(sections['lap'][0].text.startswith('Finished'))
+        self.assertIn('players', sections)
+        self.assertIn('fuel', sections)
+        self.assertIn('speed', sections)
+        self.assertNotIn('delta', sections)  # no lap to compare any more
+
     def test_delta_row_is_green_ahead_and_red_behind(self):
         ahead = race.LapState(1, 0, 1, 13, [0, 900_000], checkpoints=((0, 300_000), (900_000, 1_199_000)))
         row = race.race_rows(racing(ahead), 0)[2]

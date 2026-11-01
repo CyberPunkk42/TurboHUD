@@ -232,3 +232,8 @@ its "Recent changes".
   points to relative health multipliers: 90 % and 75 % in that event, as in its settings).
   The player list's PIT now also shows while a car is anywhere in the pit area
   (VehicleState.inPitArea), not only in the pit box (inPit); not yet seen in the pits.
+- 2026-11-01: The HUD stays after the local player finishes. It used to switch to the
+  three finish sections only (laps, best lap, last lap), so the player list and the rest
+  went away while others still raced. Now the lap sections show the finish and the rest
+  stays until the race is over (the clock stops: lobby); the delta goes, with no lap to
+  compare.

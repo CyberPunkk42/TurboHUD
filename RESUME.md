@@ -52,6 +52,11 @@ See `docs/IMPROVEMENT_BACKLOG.md`. In short:
    Hyprland.
 
 ## Recent changes
+- 2026-11-01: The HUD stays after the local player finishes. It used to switch to the
+  three finish sections only (laps, best lap, last lap), so the player list and the rest
+  went away while others still raced. Now the lap sections show the finish and the rest
+  stays until the race is over (the clock stops: lobby); the delta goes, with no lap to
+  compare.
 - 2026-11-01: Health section and PIT for the whole pit area (Linux). The last online
   event (3 laps, Laguna Seca, 3 players) had fuel, tire wear and collision damage on.
   New "Health" section: TS.VehicleState.hitPoints of maxHitPoints (read live: 497 of

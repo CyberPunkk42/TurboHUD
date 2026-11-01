@@ -866,27 +866,15 @@ def race_sections(snapshot, now, speed_unit='kmh', standings=None, radar=None):
         return {}
     state = snapshot.state
     if state.finished or state.laps_to_finish and state.laps_completed >= state.laps_to_finish:
-        return {
+        # Finished: the lap sections say so, and the rest stays (the player list above
+        # all) while the others race on, until the race is over and the clock stops.
+        sections = {
             'lap': [Row(f'Finished - {state.laps_completed} laps', 'title')],
             'current': [Row(format_time(state.best_lap), 'big', 'accent')],
             'times': [Row(f'Best lap   Last {format_time(state.last_lap)}', 'medium')],
         }
-    title = f'Lap {state.lap_number}/{state.laps_to_finish}' if state.laps_to_finish else f'Lap {state.lap_number}'
-    left = state.time_left
-    if left is not None:
-        title += f'  -  {clock(math.ceil(left / UNITS_PER_SECOND))} left' if left > 0 else '  -  time is up'
-    delta = state.delta_to_best
-    if delta is None:
-        delta_row = Row('vs best  -', 'medium')
     else:
-        color = 'text' if abs(delta) < EVEN else 'ahead' if delta < 0 else 'behind'
-        delta_row = Row(f'{format_delta(delta)} vs best', 'medium', color)
-    sections = {
-        'lap': [Row(title, 'title')],
-        'current': [Row(format_tenths(current_lap_now(snapshot, now)), 'big', 'accent')],
-        'delta': [delta_row],
-        'times': [Row(f'Last {format_time(state.last_lap)}   Best {format_time(state.best_lap)}', 'medium')],
-    }
+        sections = _racing_sections(snapshot, now)
     sections.update(car_sections(state.car, state.laps_to_go, speed_unit))
     if state.players:
         order = standings.order(state.players, now) if standings is not None else None
@@ -898,6 +886,27 @@ def race_sections(snapshot, now, speed_unit='kmh', standings=None, radar=None):
         if view is not None:
             sections['radar'] = view
     return sections
+
+
+def _racing_sections(snapshot, now):
+    """The lap sections while the local player races."""
+    state = snapshot.state
+    title = f'Lap {state.lap_number}/{state.laps_to_finish}' if state.laps_to_finish else f'Lap {state.lap_number}'
+    left = state.time_left
+    if left is not None:
+        title += f'  -  {clock(math.ceil(left / UNITS_PER_SECOND))} left' if left > 0 else '  -  time is up'
+    delta = state.delta_to_best
+    if delta is None:
+        delta_row = Row('vs best  -', 'medium')
+    else:
+        color = 'text' if abs(delta) < EVEN else 'ahead' if delta < 0 else 'behind'
+        delta_row = Row(f'{format_delta(delta)} vs best', 'medium', color)
+    return {
+        'lap': [Row(title, 'title')],
+        'current': [Row(format_tenths(current_lap_now(snapshot, now)), 'big', 'accent')],
+        'delta': [delta_row],
+        'times': [Row(f'Last {format_time(state.last_lap)}   Best {format_time(state.best_lap)}', 'medium')],
+    }
 
 
 def _laps_text(laps):
