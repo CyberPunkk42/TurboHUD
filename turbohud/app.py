@@ -18,6 +18,7 @@ from turbohud.core.settings import (
 )
 
 FRAME_MS = 100  # redraw interval
+PLACEMENT_EVERY = 1.0  # seconds between position checks in move mode
 ICON = 'tsu_turbo_hud_00.png'  # in assets/, also the bundled app's icon
 log = logging.getLogger('turbohud')
 
@@ -164,7 +165,7 @@ def run(args, folder):
 
     def on_state(state):
         nonlocal was_active
-        if overlay.locked:
+        if overlay.locked or not getattr(native, 'auto_lock', True):
             return
         if state == Qt.ApplicationActive:
             was_active = True
@@ -176,8 +177,16 @@ def run(args, folder):
 
     app.applicationStateChanged.connect(on_state)
 
+    last_seen = 0.0
+
     def tick():
+        nonlocal last_seen
         overlay.update()
+        if not overlay.locked and time.monotonic() - last_seen >= PLACEMENT_EVERY:
+            # In move mode, note where the box is: on Wayland only the desktop knows,
+            # and it may no longer say once TurboHUD is quitting.
+            last_seen = time.monotonic()
+            overlay.placement()
         if args.seconds is not None and overlay.elapsed() >= args.seconds:
             log.info('time is up')
             app.quit()

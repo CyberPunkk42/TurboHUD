@@ -67,7 +67,9 @@ class OverlayWindow(QWidget):
         return time.monotonic() - self.started
 
     def placement(self):
-        return (self.x(), self.y(), self.width(), self.height())
+        # On Wayland only the desktop knows where the window is; ask it where possible.
+        native = getattr(self.native, 'placement', None)
+        return (native and native(self)) or (self.x(), self.y(), self.width(), self.height())
 
     def show_on_top(self):
         self.show()
@@ -77,18 +79,26 @@ class OverlayWindow(QWidget):
         if locked == self.locked:
             return
         self.locked = locked
-        self.setWindowFlag(Qt.WindowTransparentForInput, locked)
+        in_place = getattr(self.native, 'input_in_place', False) and self.windowHandle() is not None
+        if in_place:
+            # Wayland: change click-through on the shown window. Re-creating it would
+            # make the desktop treat it as a new window (Hyprland would tile it again).
+            self.windowHandle().setFlag(Qt.WindowTransparentForInput, locked)
+        else:
+            self.setWindowFlag(Qt.WindowTransparentForInput, locked)
         for control in self.controls:
             control.setVisible(not locked)
         self.setCursor(Qt.ArrowCursor if locked else Qt.OpenHandCursor)
-        self.show_on_top()  # changing a window flag hides the window
+        if not in_place:
+            self.show_on_top()  # changing a window flag hides the window
         if locked:
             self.native.give_focus_back()
             log.info('locked at %s', self.placement())
         else:
             self.native.take_focus()
-            self.activateWindow()
-            self.raise_()
+            if not in_place:
+                self.activateWindow()
+                self.raise_()
             log.info('move mode')
         self.update()
         self.locked_changed.emit(locked)

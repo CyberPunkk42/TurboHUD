@@ -58,3 +58,12 @@ its "Recent changes".
   `turbohud/core/race.py`. The probe moved into the app (`turbohud/tsu/probe.py`);
   `experiments/tsu_memory_probe.py` only starts it, so the Steam launch option is
   unchanged. Windows and macOS keep the session clock.
+- 2026-11-01: TurboHUD stays on top of TSU on Hyprland (Omarchy). On Wayland Qt cannot
+  keep a window on top, and Hyprland tiled TurboHUD like any window. Now TurboHUD asks
+  Hyprland at runtime, for its own window only, to float, place and pin it, give it no
+  keyboard focus, frame, shadow or blur, and hands the focus back
+  (`turbohud/overlay/hyprland.py`; Lua commands on Hyprland 0.55+, classic ones before).
+  No Hyprland or Omarchy configuration is read or changed. Switching move mode no longer
+  re-creates the window, move mode no longer ends when the mouse moves, and the moved
+  position is saved (only Hyprland knows it on Wayland). Checked on Hyprland 0.56 over a
+  fullscreen test window; not yet over TSU itself.

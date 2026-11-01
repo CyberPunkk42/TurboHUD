@@ -35,7 +35,8 @@
   `py -3 -B -m unittest discover -s tests`).
 
 ## Next steps
-0. Linux: keep TurboHUD on top of TSU on Hyprland; then fuel and speed from memory.
+0. Linux: check by hand that TurboHUD stays on top of TSU in a race and lets clicks
+   through; then fuel and speed from memory.
    Later, when there is an event to join: check the lap data as a guest on someone
    else's server (the event controller is then another class).
 See `docs/IMPROVEMENT_BACKLOG.md`. In short:
@@ -43,10 +44,19 @@ See `docs/IMPROVEMENT_BACKLOG.md`. In short:
    Fullscreen Exclusive.
 2. The first real HUD data (lap times, fuel estimate or minimap).
 3. A settings window for the look.
-4. Linux: stay on top of TSU on Wayland desktops such as Omarchy (Hyprland), move mode
-   that does not end when the mouse moves, shortcuts, AppImage.
+4. Linux: shortcuts, AppImage, and staying on top on Wayland desktops other than
+   Hyprland.
 
 ## Recent changes
+- 2026-11-01: TurboHUD stays on top of TSU on Hyprland (Omarchy). On Wayland Qt cannot
+  keep a window on top, and Hyprland tiled TurboHUD like any window. Now TurboHUD asks
+  Hyprland at runtime, for its own window only, to float, place and pin it, give it no
+  keyboard focus, frame, shadow or blur, and hands the focus back
+  (`turbohud/overlay/hyprland.py`; Lua commands on Hyprland 0.55+, classic ones before).
+  No Hyprland or Omarchy configuration is read or changed. Switching move mode no longer
+  re-creates the window, move mode no longer ends when the mouse moves, and the moved
+  position is saved (only Hyprland knows it on Wayland). Checked on Hyprland 0.56 over a
+  fullscreen test window; not yet over TSU itself.
 - 2026-11-01: Live lap times in the overlay (Linux). With TSU started from Steam through
   the memory probe, the HUD shows the lap (3/13) and time left, the running lap time,
   and the last and best lap; at the finish, the best lap. Before that it says what it is
