@@ -17,6 +17,11 @@ disk starts with. It only reads, never writes, and never pauses the game. The re
 goes to ~/.config/TurboHUD/memory_probe.log. If anything goes wrong, the game still
 starts and runs as usual.
 
+While the game runs, the probe also answers read-only requests on a local socket that
+only this user can open (`$XDG_RUNTIME_DIR/turbohud/tsu-memory.sock`): the memory
+map, reading bytes, and searching for byte patterns, all in TSU only. The search tool
+`experiments/tsu_memory_scan.py` uses it. The socket goes away when the game quits.
+
 Without Steam: `python3 experiments/tsu_memory_probe.py --self-test` starts a small
 program, reads its memory (should work) and tries to read the terminal's (should be
 refused, showing the system's protection is untouched).
@@ -24,10 +29,14 @@ refused, showing the system's protection is untouched).
 
 import ctypes
 import ctypes.util
+import json
 import os
 import signal
+import socket
+import struct
 import subprocess
 import sys
+import threading
 import time
 from pathlib import Path
 
@@ -142,6 +151,145 @@ def check_read(pid, module):
     return f'FAIL: unexpected bytes {data[:4]!r} at the start of {module}'
 
 
+CHUNK = 16 * 1024 * 1024
+MAX_READ = 64 * 1024 * 1024
+MAX_HITS = 200_000
+
+
+def searchable(region):
+    """Writable private memory, where the game keeps its data; no device mappings."""
+    _start, _end, perms, _offset, path = region
+    return perms.startswith('rw') and perms.endswith('p') and not path.startswith(('/dev/', '['))
+
+
+def search(pid, regions, patterns, align=4):
+    """Addresses in `regions` of `pid` where any of `patterns` (bytes) starts."""
+    hits = []
+    longest = max(len(pattern) for pattern in patterns)
+    for start, end, *_ in regions:
+        address = start
+        while address < end:
+            size = min(CHUNK + longest - 1, end - address)
+            try:
+                data = read_memory(pid, address, size)
+            except OSError:
+                address += CHUNK
+                continue
+            for pattern in patterns:
+                index = data.find(pattern)
+                while index != -1:
+                    if index < CHUNK and (address + index) % align == 0:
+                        hits.append(address + index)
+                        if len(hits) >= MAX_HITS:
+                            return sorted(hits)
+                    index = data.find(pattern, index + 1)
+            address += CHUNK
+    return sorted(hits)
+
+
+def handle(pid, request):
+    """Answer one request; returns (json_header, payload_bytes)."""
+    op = request.get('op')
+    if op == 'maps':
+        regions = parse_maps(Path(f'/proc/{pid}/maps').read_text())
+        return {'ok': True, 'regions': regions}, b''
+    if op == 'read':
+        size = int(request['size'])
+        if not 0 < size <= MAX_READ:
+            return {'ok': False, 'error': 'size out of range'}, b''
+        data = read_memory(pid, int(request['address']), size)
+        return {'ok': True, 'size': len(data)}, data
+    if op == 'read_many':
+        size = int(request['size'])
+        if not 0 < size <= 4096:
+            return {'ok': False, 'error': 'size out of range'}, b''
+        values = []
+        for address in request['addresses'][:MAX_HITS]:
+            try:
+                values.append(read_memory(pid, int(address), size).hex())
+            except OSError:
+                values.append(None)
+        return {'ok': True, 'values': values}, b''
+    if op == 'search':
+        patterns = [bytes.fromhex(pattern) for pattern in request['patterns']]
+        if not patterns or not all(patterns):
+            return {'ok': False, 'error': 'no patterns'}, b''
+        regions = [r for r in parse_maps(Path(f'/proc/{pid}/maps').read_text()) if searchable(r)]
+        hits = search(pid, regions, patterns, int(request.get('align', 4)))
+        return {'ok': True, 'hits': hits, 'capped': len(hits) >= MAX_HITS}, b''
+    return {'ok': False, 'error': f'unknown op {op!r}'}, b''
+
+
+def socket_path():
+    base = os.environ.get('XDG_RUNTIME_DIR') or f'/tmp/turbohud-{os.getuid()}'
+    return Path(base) / 'turbohud' / 'tsu-memory.sock'
+
+
+def send_message(conn, header, payload=b''):
+    body = json.dumps(header).encode()
+    conn.sendall(struct.pack('<II', len(body), len(payload)) + body + payload)
+
+
+def receive_exact(conn, size):
+    chunks = []
+    while size:
+        chunk = conn.recv(min(size, 1 << 20))
+        if not chunk:
+            raise ConnectionError('closed')
+        chunks.append(chunk)
+        size -= len(chunk)
+    return b''.join(chunks)
+
+
+def receive_message(conn):
+    body_size, payload_size = struct.unpack('<II', receive_exact(conn, 8))
+    return json.loads(receive_exact(conn, body_size)), receive_exact(conn, payload_size)
+
+
+def serve(pid, path, log_file):
+    """Answer requests for process `pid` until the game quits. Only this user may connect."""
+    path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+    os.chmod(path.parent, 0o700)
+    if path.exists():
+        path.unlink()
+    server = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    old_mask = os.umask(0o177)
+    try:
+        server.bind(str(path))
+    finally:
+        os.umask(old_mask)
+    server.listen(4)
+    log([f'Serving read-only requests on {path}'], log_file)
+
+    def client(conn):
+        with conn:
+            # Only processes of the same user, never anyone else.
+            _pid, uid, _gid = struct.unpack('3i', conn.getsockopt(socket.SOL_SOCKET, socket.SO_PEERCRED, 12))
+            if uid != os.getuid():
+                return
+            try:
+                while True:
+                    request, _ = receive_message(conn)
+                    try:
+                        header, payload = handle(pid, request)
+                    except (OSError, KeyError, ValueError) as error:
+                        header, payload = {'ok': False, 'error': str(error)}, b''
+                    send_message(conn, header, payload)
+            except (ConnectionError, struct.error):
+                pass
+
+    def accept_loop():
+        while True:
+            try:
+                conn, _ = server.accept()
+            except OSError:
+                return
+            threading.Thread(target=client, args=(conn,), daemon=True).start()
+
+    threading.Thread(target=accept_loop, daemon=True).start()
+    return server
+
+
 def log_path():
     base = Path(os.environ.get('XDG_CONFIG_HOME') or Path.home() / '.config')
     return base / 'TurboHUD' / 'memory_probe.log'
@@ -161,6 +309,7 @@ def run_game(command):
     for sig in (signal.SIGTERM, signal.SIGINT, signal.SIGHUP):
         signal.signal(sig, lambda number, _frame: game.send_signal(number))
     path = log_path()
+    server = None
     try:
         log([f'Started: {" ".join(command)}'], path)
         pid = find_game(game.pid)
@@ -170,13 +319,24 @@ def run_game(command):
             log([f'Found {GAME_EXE} as process {pid}'], path)
             # Give the game a moment to load its code.
             time.sleep(5.0)
-            log([check_read(pid, GAME_CODE)], path)
+            result = check_read(pid, GAME_CODE)
+            log([result], path)
+            if result.startswith('OK'):
+                server = serve(pid, socket_path(), path)
     except Exception as error:  # The game must keep running whatever happens here.
         try:
             log([f'FAIL: probe error {error!r}'], path)
         except OSError:
             pass
-    return game.wait()
+    code = game.wait()
+    if server is not None:
+        server.close()
+        try:
+            socket_path().unlink()
+        except OSError:
+            pass
+        log(['Game quit; socket closed'], path)
+    return code
 
 
 def self_test():

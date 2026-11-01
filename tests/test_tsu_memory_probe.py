@@ -1,3 +1,4 @@
+import struct
 import subprocess
 import sys
 import tempfile
@@ -74,6 +75,61 @@ class LiveReadTests(unittest.TestCase):
         time.sleep(0.3)
         exe = Path(f'/proc/{child.pid}/exe').resolve().name
         self.assertTrue(probe.check_read(child.pid, exe).startswith('OK'))
+
+
+class LapTimeTests(unittest.TestCase):
+    def setUp(self):
+        import tsu_memory_scan as scan
+
+        self.scan = scan
+
+    def test_three_decimals_cover_ten_values(self):
+        self.assertEqual(self.scan.parse_lap_time('1:35.421'), range(954210, 954220))
+
+    def test_four_decimals_are_exact(self):
+        self.assertEqual(self.scan.parse_lap_time('1:35.4216'), range(954216, 954217))
+
+    def test_seconds_only(self):
+        self.assertEqual(self.scan.parse_lap_time('59.5'), range(595000, 596000))
+
+    def test_rejects_other_text(self):
+        with self.assertRaises(ValueError):
+            self.scan.parse_lap_time('fast')
+
+    def test_keep_matching_drops_unreadable_and_other_values(self):
+        values = [struct.pack('<i', 954216).hex(), None, struct.pack('<i', 5).hex()]
+        self.assertEqual(self.scan.keep_matching([1, 2, 3], values, range(954210, 954220)), [1])
+
+
+@unittest.skipUnless(sys.platform.startswith('linux'), 'Linux only')
+class ServerTests(unittest.TestCase):
+    """The socket service against a stand-in game: a child holding a known lap time."""
+
+    def test_search_finds_a_value_held_by_the_child(self):
+        import tsu_memory_scan as scan
+
+        code = (
+            'import array, sys, time\n'
+            'held = array.array("i", [954216] * 4)\n'
+            'print(hex(held.buffer_info()[0]), flush=True)\n'
+            'time.sleep(20)\n'
+        )
+        child = subprocess.Popen([sys.executable, '-c', code], stdout=subprocess.PIPE, text=True)
+        self.addCleanup(child.wait)
+        self.addCleanup(child.kill)
+        address = int(child.stdout.readline(), 16)
+        folder = tempfile.TemporaryDirectory()
+        self.addCleanup(folder.cleanup)
+        path = Path(folder.name, 'run', 'tsu-memory.sock')
+        server = probe.serve(child.pid, path, Path(folder.name, 'probe.log'))
+        self.addCleanup(server.close)
+        self.assertEqual(path.stat().st_mode & 0o777, 0o600)
+        client = scan.Client(path)
+        header, _ = client.ask(op='search', patterns=scan.int32_patterns([954216]))
+        self.assertIn(address, header['hits'])
+        header, data = client.ask(op='read', address=address, size=4)
+        self.assertEqual(struct.unpack('<i', data)[0], 954216)
+        client.conn.close()
 
 
 if __name__ == '__main__':

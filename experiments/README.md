@@ -228,6 +228,17 @@ and never pauses the game. If the probe fails, the game still runs.
    means it works.
 5. Clear the launch option again to start TSU without the probe.
 
+### Finding the lap time (`tsu_memory_scan.py`)
+While TSU runs through the probe, the probe answers read-only requests (memory map,
+read, search) on `$XDG_RUNTIME_DIR/turbohud/tsu-memory.sock`, which only this user can
+open; it goes away when the game quits. TSU keeps lap times as whole numbers in steps of
+0.1 ms (`lapTimeIn100us` in its code), so a lap of 1:35.421 is one of 954210-954219.
+1. Drive a lap alone (hotlap) and note the lap time the game shows.
+2. `python3 -B experiments/tsu_memory_scan.py find 1:35.421`
+3. Drive another lap, then `python3 -B experiments/tsu_memory_scan.py refine <new time>`.
+4. Repeat until a few places remain; `show` lists them.
+
 ### Results
 - 2026-11-01, Omarchy Linux: self-test passes (own child readable, terminal refused).
-  Not yet tried with TSU.
+- 2026-11-01, Omarchy Linux, over TSU started from Steam: the probe found `TSU.x64`
+  and read the start of `GameAssembly.so` (OK).
