@@ -49,6 +49,10 @@ See `docs/IMPROVEMENT_BACKLOG.md`. In short:
    Hyprland.
 
 ## Recent changes
+- 2026-11-01: Fuel with one decimal (76.6%), and the laps it lasts in green when the
+  current lap uses less fuel than the recent laps did up to the same checkpoint (lifting,
+  saving fuel), red when more, white when within 1 % of a lap's use. HUD lines can now
+  end in a second colour.
 - 2026-11-01: Local time section ('HH:MM', 24 hours), on every system and outside races
   too. Sections new to a player go below the placed ones, or in a new column to their
   right when there is no room below (before, they could fall off the screen and end up

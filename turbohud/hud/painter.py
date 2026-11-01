@@ -2,7 +2,7 @@ import sys
 from functools import lru_cache
 
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QColor, QFont, QPainterPath, QPen
+from PySide6.QtGui import QColor, QFont, QFontMetricsF, QPainterPath, QPen
 
 from turbohud.core.hud import MARGIN
 
@@ -14,6 +14,21 @@ BEHIND_COLOR = '#ff6b6b'  # and when slower
 LINUX_FAMILIES = ['Noto Sans', 'DejaVu Sans', 'Liberation Sans', 'Cantarell', 'Ubuntu', 'Arial']
 
 
+@lru_cache(maxsize=32)
+def hud_font(size):
+    font = QFont()
+    if sys.platform.startswith('linux'):
+        font.setFamilies(LINUX_FAMILIES)
+    font.setPixelSize(size)
+    font.setBold(True)
+    return font
+
+
+def text_advance(text, size):
+    """How far the pen moves for `text`, spaces included (where the next text starts)."""
+    return QFontMetricsF(hud_font(size)).horizontalAdvance(text)
+
+
 @lru_cache(maxsize=256)
 def text_path(text, size):
     """The outline of a line of text, with its baseline at y 0.
@@ -23,13 +38,8 @@ def text_path(text, size):
     outline traces their inner edges, so letters look broken. Filling by winding and
     simplified() merge the parts into one clean outline.
     """
-    font = QFont()
-    if sys.platform.startswith('linux'):
-        font.setFamilies(LINUX_FAMILIES)
-    font.setPixelSize(size)
-    font.setBold(True)
     path = QPainterPath()
-    path.addText(0, 0, font, text)
+    path.addText(0, 0, hud_font(size), text)
     path.setFillRule(Qt.WindingFill)
     return path.simplified()
 
@@ -60,6 +70,9 @@ def draw_hud(painter, lines, theme, scale=None):
     x = round(MARGIN * (theme.scale if scale is None else scale))
     for line in lines:
         outlined_text(painter, x, line.baseline, line.text, line.size, colors[line.color], outline)
+        if line.tail:
+            tail_x = x + text_advance(line.text, line.size)
+            outlined_text(painter, tail_x, line.baseline, line.tail, line.size, colors[line.tail_color], outline)
 
 
 def _rgba(text):
