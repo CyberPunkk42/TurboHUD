@@ -134,7 +134,7 @@ class SectionWindow(QWidget):
             throttle, brake = self.pedals or (None, None)
             draw_bars(painter, pedal_bars(self.width(), self.height(), scale, throttle, brake))
             left = pedal_space(scale) // 2
-        draw_hud(painter, hud_lines(rows, scale), self.theme, scale, left)
+        draw_hud(painter, hud_lines(rows, scale), self.theme, scale, left, self.width() - left)
         if not self.locked:
             painter.setPen(QColor(*LABEL_COLOR))
             font = painter.font()
@@ -150,10 +150,11 @@ class MovePanel(QWidget):
     lock_requested = Signal()
     quit_requested = Signal()
     wanted_changed = Signal(str, bool)  # section name, shown
+    mph_changed = Signal(bool)
 
     focusable = True  # it takes clicks on its tick boxes and buttons
 
-    def __init__(self, native, sections, shortcuts):
+    def __init__(self, native, sections, shortcuts, mph=False):
         super().__init__(None, _flags())
         self.native = native
         self.setWindowTitle('TurboHUD - move mode')
@@ -171,6 +172,10 @@ class MovePanel(QWidget):
             box.toggled.connect(lambda checked, name=section.name: self.wanted_changed.emit(name, checked))
             column.addWidget(box)
             self.boxes[section.name] = box
+        self.mph = QCheckBox('Speed in mph')
+        self.mph.setChecked(mph)
+        self.mph.toggled.connect(self.mph_changed)
+        column.addWidget(self.mph)
         row = QHBoxLayout()
         lock = QPushButton('Lock')
         quit_ = QPushButton('Quit TurboHUD')
@@ -188,6 +193,12 @@ class MovePanel(QWidget):
             box.blockSignals(True)
             box.setChecked(wanted)
             box.blockSignals(False)
+
+    def set_mph(self, mph):
+        if self.mph.isChecked() != mph:
+            self.mph.blockSignals(True)
+            self.mph.setChecked(mph)
+            self.mph.blockSignals(False)
 
     def show_at(self, x, y):
         self.move(x, y)

@@ -148,3 +148,11 @@ its "Recent changes".
   in the menus, the lobby or while a race loads (no placeholders, no waiting texts), and
   not while the clock stands (a finished race lingering in the lobby, or a pause). What
   TurboHUD waits for is in the tray icon's tooltip. The local time shows while TSU runs.
+- 2026-11-01: Player list and mph (Linux). New "Players" section: position, flag (as a
+  colour emoji where such a font is installed, else the country code), name, PIT, and the
+  gap to the local player at the last checkpoint both passed (red ahead, green behind,
+  "+1 L" a lap or more apart); with more than 8 players the leader and those around the
+  local one. Read per player: m_playerInfo.m_profile (m_name, flag: TS.Flag, mapped to
+  ISO codes in turbohud/core/flags.py), m_stats, m_vehicle.m_stateUpdater.inPit. Speed
+  in km/h or mph (tray menu and move-mode panel, saved as speed_unit). Not yet checked
+  with other players in a race.

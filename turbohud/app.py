@@ -1,6 +1,7 @@
 """Starting TurboHUD: settings, log, the overlay window, shortcuts and the tray icon."""
 
 import argparse
+from dataclasses import replace
 import logging
 import signal
 import sys
@@ -114,7 +115,7 @@ def run(args, folder):
 
         def contents():
             snapshot = live.snapshot()
-            current = race_sections(snapshot, time.monotonic())
+            current = race_sections(snapshot, time.monotonic(), settings.speed_unit)
             if 'pedals' in current:
                 current['pedals'] = combined(current['pedals'], pad.pedals())
             return with_local_time(current, snapshot, time.localtime())
@@ -157,7 +158,9 @@ def run(args, folder):
         for name, window in windows.items():
             x, y, width, height = window.placement()
             places[name] = SectionPlace(x, y, width, height, window.wanted)
-        settings = Settings(placement=settings.placement, theme=settings.theme, sections=places)
+        settings = Settings(
+            placement=settings.placement, theme=settings.theme, sections=places, speed_unit=settings.speed_unit
+        )
         try:
             save_settings(path, settings)
         except OSError as error:
@@ -192,6 +195,14 @@ def run(args, folder):
             panel.show_at(*panel_spot())
             log.info('move mode')
 
+    def set_mph(mph):
+        nonlocal settings
+        settings = replace(settings, speed_unit='mph' if mph else 'kmh')
+        mph_action.setChecked(mph)
+        panel.set_mph(mph)
+        save()
+        log.info('speed in %s', settings.speed_unit)
+
     def set_wanted(name, wanted):
         windows[name].set_wanted(wanted)
         log.info('section %s %s', name, 'shown' if wanted else 'hidden')
@@ -205,6 +216,10 @@ def run(args, folder):
     quit_action = QAction('Quit TurboHUD', menu)
     quit_action.triggered.connect(app.quit)
     menu.addAction(move_action)
+    mph_action = QAction('Speed in mph', menu, checkable=True)
+    mph_action.setChecked(settings.speed_unit == 'mph')
+    mph_action.triggered.connect(lambda checked: set_mph(checked))
+    menu.addAction(mph_action)
     menu.addSeparator()
     menu.addAction(quit_action)
     tray.setContextMenu(menu)
@@ -224,7 +239,8 @@ def run(args, folder):
 
     shortcuts = native.register_hotkeys(on_hotkey)
     log.info('Ctrl+Shift+L and Ctrl+Shift+Q registered' if shortcuts else 'no system-wide shortcuts')
-    panel = MovePanel(native, layout, shortcuts)
+    panel = MovePanel(native, layout, shortcuts, settings.speed_unit == 'mph')
+    panel.mph_changed.connect(set_mph)
     for name, window in windows.items():
         panel.set_wanted(name, window.wanted)
     panel.lock_requested.connect(lambda: set_locked(True))

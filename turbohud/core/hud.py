@@ -14,6 +14,9 @@ class Line:
     baseline: int  # y of the text's baseline, from the box's top
     tail: str = ''  # more text right after it, in its own colour
     tail_color: str = 'text'
+    flag: str = ''  # an ISO country code drawn as a flag before the text
+    right: str = ''  # text at the right edge of the box (a column that lines up)
+    right_color: str = 'text'
 
 
 @dataclass(frozen=True)
@@ -25,6 +28,13 @@ class Row:
     color: str = 'text'  # 'text', 'accent', 'ahead' (green), 'behind' (red) or 'lift' (yellow)
     tail: str = ''  # more text right after it, in its own colour
     tail_color: str = 'text'
+    flag: str = ''  # an ISO country code drawn as a flag before the text
+    right: str = ''  # text at the right edge of the box (a column that lines up)
+    right_color: str = 'text'
+
+
+FLAG_WIDTH = 1.5  # a flag's room before the text, in font sizes
+COLUMN_GAP = 1.0  # least room between the text and the right column, in font sizes
 
 
 @dataclass(frozen=True)
@@ -75,7 +85,7 @@ def _content(rows, sizes):
     for index, row in enumerate(rows):
         size = getattr(sizes, row.style)
         baseline += (sizes.gap if index else 0) + size
-        lines.append(Line(row.text, size, row.color, baseline, row.tail, row.tail_color))
+        lines.append(Line(row.text, size, row.color, baseline, row.tail, row.tail_color, row.flag, row.right, row.right_color))
     return lines, baseline
 
 
@@ -84,12 +94,22 @@ def hud_lines(rows, scale=1.0):
     return _content(rows, Sizes.for_scale(scale))[0]
 
 
+def line_width(line, measure):
+    """How wide a line is with its flag and its right column."""
+    width = measure(line.text + line.tail, line.size)
+    if line.flag:
+        width += FLAG_WIDTH * line.size
+    if line.right:
+        width += COLUMN_GAP * line.size + measure(line.right, line.size)
+    return width
+
+
 def content_size(rows, scale, measure):
     """(width, height) a section needs for `rows` at `scale`. `measure(text, size)` gives
     a text's width in pixels (Qt knows the font)."""
     sizes = Sizes.for_scale(scale)
     lines, bottom = _content(rows, sizes)
-    width = max((measure(line.text + line.tail, line.size) for line in lines), default=0)
+    width = max((line_width(line, measure) for line in lines), default=0)
     # Below the last baseline: room for letters such as g and p, then the margin.
     return round(width + 2 * sizes.margin), round(bottom + sizes.margin)
 
@@ -117,6 +137,9 @@ RACE_SECTIONS = (
     Section('tires', 'Tires', ((Row('Tires 100%  ~10.0 laps', 'medium'),),)),
     Section('speed', 'Speed', ((Row('000 km/h', 'medium'),),), pedals=True),
     Section('localtime', 'Local time', ((Row('00:00', 'medium'),),)),
+    Section('players', 'Players', (tuple(
+        Row(f'{n}. Playername1234567', 'small', tail='  PIT', flag='DE', right='+00.000') for n in range(10, 10 + 8)
+    ),)),
 )
 CLOCK_SECTIONS = (
     Section('clock', 'Session time', ((Row('TurboHUD - session time', 'title'), Row('00:00', 'big')),)),

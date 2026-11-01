@@ -96,7 +96,8 @@ class FakeGame:
         return il.Memory(self.read, regions)
 
 
-def build(lap_starts, laps_completed, clock, limit, local_index=0, finished=False, car=None, gates=(), pedals=None):
+def build(lap_starts, laps_completed, clock, limit, local_index=0, finished=False, car=None, gates=(), pedals=None,
+          name=None):
     """A fake race; `car` is the car's (x, z) and `gates` the checkpoint lines, both
     optional like in a game without them."""
     g = FakeGame()
@@ -108,6 +109,8 @@ def build(lap_starts, laps_completed, clock, limit, local_index=0, finished=Fals
     controller_class = g.klass('TS', 'HostEventController', [('m_server', 0x60, False)], parent=base_controller)
     state_class = g.klass('TS', 'EventState', [('players', 0x28, False), ('times', 0x58, False)])
     player_fields = [('m_stats', 0x30, False), ('m_localHumanIndex', 0x50, False)]
+    if name is not None:
+        player_fields.append(('m_playerInfo', 0x40, False))
     if car is not None:
         player_fields += [('m_vehicle', 0x20, False), ('m_statsUpdater', 0x38, False)]
     player_class = g.klass('TS', 'EventPlayer', player_fields)
@@ -150,6 +153,16 @@ def build(lap_starts, laps_completed, clock, limit, local_index=0, finished=Fals
     g.put(local + 0x50, struct.pack('<i', local_index))
     g.q(local + 0x30, stats)
     g.q(state + 0x28, g.list_of([remote, local]))
+    if name is not None:
+        info = g.alloc_obj(g.klass('TS', 'EventPlayerInfo', [('m_profile', 0x10, False)]))
+        profile = g.alloc_obj(g.klass('TS', 'PlayerProfile', [('m_name', 0x10, False), ('flag', 0x40, False)]))
+        text = g.alloc_obj(0, 0x14 + 2 * len(name) + 2)
+        g.put(text + 0x10, struct.pack('<i', len(name)) + name.encode('utf-16-le'))
+        g.q(profile + 0x10, text)
+        g.put(profile + 0x40, struct.pack('<i', 75))  # Germany
+        g.q(info + 0x10, profile)
+        g.q(local + 0x40, info)
+        g.q(remote + 0x40, 0)
     if car is not None:
         vehicle = g.alloc_obj(g.klass('TS', 'Vehicle', [
             ('m_state', 0x30, False), ('m_stateUpdater', 0x38, False), ('m_statsNewPosition', 0x64, False)]))
@@ -542,6 +555,14 @@ class CarTests(unittest.TestCase):
         reader = build([10_000], laps_completed=0, clock=20_000, limit=0, car=(0.0, 0.0), gates=STRAIGHT)
         car = reader.read().car
         self.assertEqual((car.throttle, car.brake), (None, None))
+
+    def test_reader_reads_the_players(self):
+        reader = build([10_000, 944_595], laps_completed=1, clock=1_000_000, limit=0, name='Fahrer Ö')
+        players = reader.read().players
+        me = next(p for p in players if p.local)
+        self.assertEqual((me.name, me.flag, me.laps_completed), ('Fahrer Ö', 75, 1))
+        self.assertEqual(me.checkpoints[0][0], 10_000)
+        self.assertEqual(len(players), 1)  # the other one has no statistics: left out
 
     def test_without_car_data_there_are_no_car_sections(self):
         reader = build([10_000], laps_completed=0, clock=20_000, limit=0)

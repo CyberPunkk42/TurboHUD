@@ -26,6 +26,7 @@ import struct
 import time
 from dataclasses import dataclass
 
+from turbohud.core.flags import flag_code, flag_text
 from turbohud.core.hud import Row, clock, local_time_rows
 from turbohud.core.il2cpp import ARRAY_DATA, LIST_ITEMS, SIMPLE_TYPES, NotFound, ReadError
 
@@ -57,6 +58,7 @@ class LapState:
     position: tuple | None = None  # the car's (x, z)
     gates: tuple = ()  # the checkpoint lines, ((x1, z1), (x2, z2)), in checkpoint order
     car: 'CarState | None' = None  # fuel, tires and speed, where the game has them
+    players: tuple = ()  # every player in the race (PlayerState), the local one included
 
     @property
     def lap_times(self):
@@ -242,6 +244,7 @@ def _passed(times, k):
 
 
 MAX_TIRE_WEAR = 5_760_000  # TS.TireWearSettings.MaxTireWear (a constant): worn out
+KMH_PER_MPH = 1.609344
 SPEED_TO_KMH = 3.6  # m_forwardSpeed is taken as metres per second (not yet compared in game)
 PER_LAP_LAPS = 3  # laps averaged for fuel and tire use per lap
 LIFT_MIN_KMH = 5  # slower than this is standing, not lifting
@@ -349,6 +352,35 @@ def per_lap(history, laps=PER_LAP_LAPS):
     return (recent[-1] - recent[0]) / (len(recent) - 1)
 
 
+STRING_LENGTH, STRING_CHARS = 0x10, 0x14  # System.String: length, then UTF-16 text
+MAX_NAME = 64
+
+
+@dataclass(frozen=True)
+class PlayerState:
+    """One player in the race, for the player list."""
+
+    name: str
+    flag: int  # TS.Flag value (turbohud.core.flags), 0 for none
+    laps_completed: int
+    checkpoints: tuple  # per started lap, when each checkpoint was passed, 0.1 ms
+    finished: bool = False
+    in_pit: bool = False
+    local: bool = False
+
+    @property
+    def passed(self):
+        """Every checkpoint time of the race in one row (laps one after another)."""
+        return tuple(time for lap in self.checkpoints for time in lap)
+
+    @property
+    def finish_time(self):
+        """When the last lap ended (the next lap's start), for a finished player."""
+        if not self.finished or len(self.checkpoints) <= self.laps_completed:
+            return None
+        return self.checkpoints[self.laps_completed][0]
+
+
 class LapReader:
     """Reads the race. What does not change during a race (field positions, the local
     player, finished laps, the track's checkpoint lines) is kept between reads, so a read
@@ -410,6 +442,7 @@ class LapReader:
             self._fuel_history, self._wear_history, self._fuel_marks, self._types = {}, {}, {}, {}
             self._player = self.local_player()[1]
         player = self._player
+        state_object = state
         times = state + self._offset('state', state, 'times')
         span = struct.unpack('<5i', memory.read(times + TIMES_NOW, TIMES_LIMIT - TIMES_NOW + 4))
         clock, time_limit = span[0], span[-1]  # one read for the clock and the time limit
@@ -446,6 +479,7 @@ class LapReader:
             gates=gates,
             car=car,
         )
+        state = dataclasses.replace(state, players=self._players(state_object))
         live = state.live_fuel_trend(self._fuel_marks, self._fuel_history)
         if live is not None:
             state = dataclasses.replace(state, car=dataclasses.replace(car, fuel_trend=live))
@@ -481,6 +515,66 @@ class LapReader:
             speed=speed, fuel_per_lap=per_lap(fuel_starts), wear_per_lap=per_lap(wear_starts), fuel_trend=trend,
             throttle=throttle, brake=brake,
         )
+
+    def _string(self, address):
+        if not address:
+            return ''
+        length = self.il.memory.i32(address + STRING_LENGTH)
+        if not 0 <= length <= MAX_NAME:
+            return ''
+        return self.il.memory.read(address + STRING_CHARS, 2 * length).decode('utf-16-le', 'replace')
+
+    def _players(self, state):
+        """Every player of the race (PlayerState); empty where the game has no list."""
+        il, memory = self.il, self.il.memory
+        try:
+            players = il.list_items(self._ref('state', state, 'players'))
+        except (NotFound, OSError):
+            return ()
+        found = []
+        for player in players:
+            if not player:
+                continue
+            try:
+                found.append(self._player_state(player))
+            except (NotFound, OSError):
+                continue  # one unreadable player must not hide the others
+        return tuple(found)
+
+    def _player_state(self, player):
+        il, memory = self.il, self.il.memory
+        local = memory.i32(player + self._offset('player', player, 'm_localHumanIndex')) >= 0
+        name, flag = '', 0
+        try:
+            profile = il.ref(self._ref('player', player, 'm_playerInfo'), 'm_profile')
+            name = self._string(memory.u64(profile + self._offset('profile', profile, 'm_name')))
+            flag = memory.i32(profile + self._offset('profile', profile, 'flag'))
+        except NotFound:
+            pass
+        stats = self._ref('player', player, 'm_stats')
+        laps_completed = memory.u16(stats + self._offset('stats', stats, 'm_lapsCompleted'))
+        try:
+            finished = bool(memory.u8(stats + self._offset('stats', stats, 'm_finished')))
+        except NotFound:
+            finished = False
+        checkpoints = []
+        for index, lap in enumerate(il.list_items(self._ref('stats', stats, 'm_checkpointTimesForLaps'))):
+            if not lap:
+                continue
+            passed = self._laps.get(lap)
+            if passed is None:
+                passed = self._u32_list(self._ref('lap', lap, 'm_times'))
+                if index < laps_completed:
+                    self._laps[lap] = passed
+            if passed:
+                checkpoints.append(passed)
+        in_pit = False
+        try:
+            updater = self._ref('vehicle', self._ref('player', player, 'm_vehicle'), 'm_stateUpdater')
+            in_pit = bool(memory.u8(updater + self._offset('updater', updater, 'inPit')))
+        except (NotFound, ReadError):
+            pass
+        return PlayerState(name, flag, laps_completed, tuple(checkpoints), finished, in_pit, local)
 
     def _number(self, role, obj, name):
         """A simple field read by the type the game gives it (int, float, ...)."""
@@ -624,7 +718,7 @@ def status_text(snapshot):
     return 'waiting for a race'
 
 
-def race_sections(snapshot, now):
+def race_sections(snapshot, now, speed_unit='kmh'):
     """{section name: rows} for a live-reader snapshot (see core.hud.RACE_SECTIONS); a
     section with nothing to show has no rows. Nothing before the grid: in the menus, the
     lobby and while a race loads the HUD keeps out of the way (status_text says why)."""
@@ -653,7 +747,9 @@ def race_sections(snapshot, now):
         'delta': [delta_row],
         'times': [Row(f'Last {format_time(state.last_lap)}   Best {format_time(state.best_lap)}', 'medium')],
     }
-    sections.update(car_sections(state.car, state.laps_to_go))
+    sections.update(car_sections(state.car, state.laps_to_go, speed_unit))
+    if state.players:
+        sections['players'] = players_rows(state.players)
     return sections
 
 
@@ -678,13 +774,14 @@ def _balance_text(car):
     return f'  {"+" if balance >= 0 else "-"}{abs(balance):.2f}%'
 
 
-def car_sections(car, laps_to_go=None):
+def car_sections(car, laps_to_go=None, speed_unit='kmh'):
     """{section: rows} for fuel, tires and speed; empty where the event has none.
     `laps_to_go` (LapState.laps_to_go) gives the fuel margin to the finish."""
     if car is None:
         return {}
     speed_color = 'lift' if car.lifting else 'text'
-    sections = {'speed': [Row(f'{car.kmh:.0f} km/h', 'medium', speed_color)], 'pedals': (car.throttle, car.brake)}
+    speed = f'{car.kmh / KMH_PER_MPH:.0f} mph' if speed_unit == 'mph' else f'{car.kmh:.0f} km/h'
+    sections = {'speed': [Row(speed, 'medium', speed_color)], 'pedals': (car.throttle, car.brake)}
     if car.fuel_left is not None:
         color = {True: 'ahead', False: 'behind', None: 'text'}[car.saving]
         tail = _laps_text(car.fuel_laps) + _balance_text(car)
@@ -708,8 +805,80 @@ def with_local_time(sections, snapshot, now_struct):
     return {**sections, 'localtime': local_time_rows(now_struct)}
 
 
+MAX_PLAYER_ROWS = 8  # more players: the leader and those around the local player
+MAX_NAME_SHOWN = 18
+
+
+def ranked(players):
+    """Players in race order: finished ones by when they finished, then the others by
+    how many checkpoints they passed, and at the same checkpoint by who got there first."""
+    def key(player):
+        if player.finish_time is not None:
+            return (0, player.finish_time, 0)
+        passed = player.passed
+        return (1, -len(passed), passed[-1] if passed else 0)
+
+    return sorted(players, key=key)
+
+
+def gap(player, me):
+    """`player` against `me`: ('time', 0.1 ms) at the last checkpoint both passed
+    (negative: they got there first, ahead), or ('laps', n) a lap or more apart (negative:
+    ahead), or None before a comparison."""
+    theirs, mine = player.passed, me.passed
+    lap_length = len(me.checkpoints[0]) if me.checkpoints and len(me.checkpoints) > 1 else 0
+    difference = len(theirs) - len(mine)
+    if lap_length and abs(difference) >= lap_length:
+        laps = abs(difference) // lap_length
+        return ('laps', -laps if difference > 0 else laps)
+    common = min(len(theirs), len(mine)) - 1
+    if common < 1:
+        return None
+    return ('time', theirs[common] - mine[common])
+
+
+def gap_text(found):
+    if found is None:
+        return ''
+    kind, value = found
+    if kind == 'laps':
+        return f'{value:+d} L'
+    return format_delta(value)
+
+
+def shown_players(players, max_rows=MAX_PLAYER_ROWS):
+    """(position, player) for the rows: everyone, or with more than `max_rows` the
+    leader and the players around the local one."""
+    order = list(enumerate(ranked(players), start=1))
+    if len(order) <= max_rows:
+        return order
+    me = next((i for i, (_pos, p) in enumerate(order) if p.local), 0)
+    around = max_rows - 1
+    first = min(max(me - around // 2, 1), len(order) - around)
+    return [order[0]] + order[first:first + around]
+
+
+def players_rows(players):
+    """The player list: position, flag, name, PIT, and the gap to the local player."""
+    me = next((p for p in players if p.local), None)
+    rows = []
+    for position, player in shown_players(players):
+        name = player.name or '?'
+        if len(name) > MAX_NAME_SHOWN:
+            name = name[: MAX_NAME_SHOWN - 1] + '…'
+        found = gap(player, me) if me is not None and not player.local else None
+        color = 'text' if found is None or found[1] == 0 else ('behind' if found[1] < 0 else 'ahead')
+        rows.append(Row(
+            f'{position}. {name}', 'small', 'accent' if player.local else 'text',
+            tail='  PIT' if player.in_pit else '', tail_color='lift',
+            flag=flag_code(player.flag) or flag_text(player.flag),
+            right=gap_text(found), right_color=color,
+        ))
+    return rows
+
+
 def race_rows(snapshot, now):
     """All sections' rows in one list, top to bottom (for the terminal and tests)."""
     sections = race_sections(snapshot, now)
-    order = ('lap', 'current', 'delta', 'times', 'fuel', 'fuelfinish', 'tires', 'speed')
+    order = ('lap', 'current', 'delta', 'times', 'fuel', 'fuelfinish', 'tires', 'speed', 'players')
     return [row for name in order for row in sections.get(name, [])]

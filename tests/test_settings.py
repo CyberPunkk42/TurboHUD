@@ -104,6 +104,16 @@ class SectionPlaceTests(unittest.TestCase):
             self.assertEqual(list(s.load_settings(path).sections), ['lap'])
 
 
+class SpeedUnitSettingTests(unittest.TestCase):
+    def test_kept_and_checked(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / 'settings.json'
+            s.save_settings(path, s.Settings(speed_unit='mph'))
+            self.assertEqual(s.load_settings(path).speed_unit, 'mph')
+            path.write_text(json.dumps({'speed_unit': 'knots'}))
+            self.assertEqual(s.load_settings(path).speed_unit, 'kmh')
+
+
 class FitOnScreensTests(unittest.TestCase):
     screens = ((0, 0, 1920, 1080), (1920, 0, 1280, 1024))
 

@@ -18,6 +18,7 @@ DEFAULT_PLACEMENT = (40, 40, 420, 190)  # x, y, width, height
 MIN_WIDTH = 240
 MIN_HEIGHT = 100
 MIN_SECTION_SIZE = 8  # a saved section smaller than this is broken
+SPEED_UNITS = ('kmh', 'mph')
 MIN_SCALE = 0.5
 MAX_SCALE = 3.0
 _COLOR = re.compile(r'#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?')
@@ -47,6 +48,7 @@ class Settings:
     placement: tuple = DEFAULT_PLACEMENT  # the whole HUD before it had sections; new sections start here
     theme: Theme = field(default_factory=Theme)
     sections: dict = field(default_factory=dict)  # section name -> SectionPlace
+    speed_unit: str = 'kmh'  # 'kmh' or 'mph'
 
 
 def settings_dir(platform=sys.platform, environ=None, home=None):
@@ -137,6 +139,7 @@ def load_settings(path):
         placement=_placement(data.get('placement')),
         theme=_theme(data.get('theme')),
         sections=_sections(data.get('sections')),
+        speed_unit=data.get('speed_unit') if data.get('speed_unit') in SPEED_UNITS else 'kmh',
     )
 
 
@@ -153,6 +156,7 @@ def save_settings(path, settings):
             'outline_color': settings.theme.outline_color,
             'scale': settings.theme.scale,
         },
+        'speed_unit': settings.speed_unit,
         'sections': {
             name: {'x': place.x, 'y': place.y, 'width': place.width, 'height': place.height, 'visible': place.visible}
             for name, place in settings.sections.items()

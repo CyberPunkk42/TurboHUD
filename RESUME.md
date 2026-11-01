@@ -49,6 +49,14 @@ See `docs/IMPROVEMENT_BACKLOG.md`. In short:
    Hyprland.
 
 ## Recent changes
+- 2026-11-01: Player list and mph (Linux). New "Players" section: position, flag (as a
+  colour emoji where such a font is installed, else the country code), name, PIT, and the
+  gap to the local player at the last checkpoint both passed (red ahead, green behind,
+  "+1 L" a lap or more apart); with more than 8 players the leader and those around the
+  local one. Read per player: m_playerInfo.m_profile (m_name, flag: TS.Flag, mapped to
+  ISO codes in turbohud/core/flags.py), m_stats, m_vehicle.m_stateUpdater.inPit. Speed
+  in km/h or mph (tray menu and move-mode panel, saved as speed_unit). Not yet checked
+  with other players in a race.
 - 2026-11-01: The race sections show from the grid on: once the race exists and its
   clock runs (it starts when the grid is set, before the lights). Not while TSU starts,
   in the menus, the lobby or while a race loads (no placeholders, no waiting texts), and
