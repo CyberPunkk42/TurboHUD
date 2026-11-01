@@ -455,6 +455,14 @@ class CarTests(unittest.TestCase):
         self.assertEqual(sections['tires'][0].text, 'Tires 90%')  # no lap measured yet
         self.assertEqual(sections['speed'][0].text, '180 km/h')
 
+    def test_the_fuel_saved_or_burnt_this_lap(self):
+        saved = race.car_sections(self.car(fuel_per_lap=10_000, fuel_trend=-300))['fuel'][0]
+        burnt = race.car_sections(self.car(fuel_per_lap=10_000, fuel_trend=210))['fuel'][0]
+        unknown = race.car_sections(self.car(fuel_per_lap=10_000))['fuel'][0]
+        self.assertEqual(saved.tail, '  ~12.6 laps  +0.18%')  # 300 of a 168,000 tank
+        self.assertEqual(burnt.tail, '  ~12.6 laps  -0.12%')
+        self.assertEqual(unknown.tail, '  ~12.6 laps')
+
     def test_one_decimal(self):
         self.assertEqual(race.car_sections(self.car(fuel_used=39_312))['fuel'][0].text, 'Fuel 76.6%')
 

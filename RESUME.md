@@ -49,6 +49,8 @@ See `docs/IMPROVEMENT_BACKLOG.md`. In short:
    Hyprland.
 
 ## Recent changes
+- 2026-11-01: The fuel line also shows how much fuel this lap has saved (+0.18%, green)
+  or burnt (-0.12%, red) so far against the recent laps, in % of the tank.
 - 2026-11-01: Fuel with one decimal (76.6%), and the laps it lasts in green when the
   current lap uses less fuel than the recent laps did up to the same checkpoint (lifting,
   saving fuel), red when more, white when within 1 % of a lap's use. HUD lines can now

@@ -519,6 +519,15 @@ def _laps_text(laps):
     return f'  ~{laps:.1f} laps' if laps is not None else ''
 
 
+def _balance_text(car):
+    """'  +0.18%': fuel saved this lap so far against the recent laps, in % of the tank
+    (minus: burnt more); empty without a comparison."""
+    if car.fuel_trend is None or car.fuel_tank <= 0:
+        return ''
+    balance = -car.fuel_trend / car.fuel_tank * 100
+    return f'  {"+" if balance >= 0 else "-"}{abs(balance):.2f}%'
+
+
 def car_sections(car):
     """{section: rows} for fuel, tires and speed; empty where the event has none."""
     if car is None:
@@ -526,7 +535,8 @@ def car_sections(car):
     sections = {'speed': [Row(f'{car.kmh:.0f} km/h', 'medium')]}
     if car.fuel_left is not None:
         color = {True: 'ahead', False: 'behind', None: 'text'}[car.saving]
-        sections['fuel'] = [Row(f'Fuel {car.fuel_left * 100:.1f}%', 'medium', tail=_laps_text(car.fuel_laps), tail_color=color)]
+        tail = _laps_text(car.fuel_laps) + _balance_text(car)
+        sections['fuel'] = [Row(f'Fuel {car.fuel_left * 100:.1f}%', 'medium', tail=tail, tail_color=color)]
     if car.tires_left is not None:
         sections['tires'] = [Row(f'Tires {car.tires_left * 100:.0f}%{_laps_text(car.tire_laps)}', 'medium')]
     return sections
