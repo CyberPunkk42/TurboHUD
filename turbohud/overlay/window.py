@@ -47,7 +47,7 @@ BLUE_FLAG = (0, 0, 128)  # navy
 BLUE_FLAG_EDGE = (0, 0, 64)  # its outline, a darker blue
 BLUE_FLAG_EDGE_WIDTH = 2
 PEDAL_INSET = 4  # pedal_bars' default inset
-BACKDROP = (0, 0, 0, 64)  # the light tint behind a section's text (option), RGBA
+BACKDROP = (0, 0, 0, 40)  # the light tint behind a section's text (option), RGBA
 BLUE_SAMPLE = 0.6  # the bar's opacity in move mode, to place it
 RADAR_CAR_AT = 0.4  # the local car's height in the radar, from the top
 RADAR_BACK = (10, 14, 22, 150)  # RGBA
@@ -208,10 +208,13 @@ class SectionWindow(QWidget):
             width = self.width()
         else:
             width = min(width + (bars or 0), self.width())
-        top, tall = pad, min(height, self.height()) - 2 * pad
+        left, top, tall = pad, pad, min(height, self.height()) - 2 * pad
         if self.section.pedals:
-            top, tall = PEDAL_INSET, self.height() - 2 * PEDAL_INSET  # as tall as the pedal bars
-        rect = QRectF(pad, top, max(width - 2 * pad, 1), max(tall, 1))
+            # From the throttle bar to the brake bar, as tall as they are: the bars sit
+            # at the window's edges, however wide it is.
+            left, top, tall = PEDAL_INSET, PEDAL_INSET, self.height() - 2 * PEDAL_INSET
+            width = self.width()
+        rect = QRectF(left, top, max(width - 2 * left, 1), max(tall, 1))
         painter.setPen(Qt.NoPen)
         painter.setBrush(QColor(*BACKDROP))
         painter.drawRoundedRect(rect, 6, 6)

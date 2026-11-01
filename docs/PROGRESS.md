@@ -196,3 +196,6 @@ its "Recent changes".
 - 2026-11-01: Centre buttons for the blue flag and the radar. In the move-mode panel,
   "Centre ↔" centres the section across the screen it is on and "Centre ↕" down it
   (hud.centred); its size stays and its group stays where it is.
+- 2026-11-01: Light tint fixes. The speed section's tint now reaches from the throttle
+  bar to the brake bar however wide the section is (the brake bar sat outside it), and
+  the tint is lighter (black at 16 % instead of 25 %).
