@@ -49,6 +49,10 @@ See `docs/IMPROVEMENT_BACKLOG.md`. In short:
    Hyprland.
 
 ## Recent changes
+- 2026-11-01: Local time section ('HH:MM', 24 hours), on every system and outside races
+  too. Sections new to a player go below the placed ones, or in a new column to their
+  right when there is no room below (before, they could fall off the screen and end up
+  on another monitor).
 - 2026-11-01: Smoother live delta and fuel, tires and speed (Linux). A recorded drive
   showed where the delta jumped (up to 1.5 s): some checkpoints are two lines at the
   same spot or one line split in two pieces with the same time, and TSU writes the second

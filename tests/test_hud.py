@@ -30,6 +30,17 @@ class NewSectionPlaceTests(unittest.TestCase):
         self.assertEqual(places['tires'], (2000, 1006, 230, 30))
 
 
+class NewSectionsAtTheBottomTests(unittest.TestCase):
+    def test_a_new_column_when_there_is_no_room_below(self):
+        # As on the player's screen: the lowest section ends at y 1436 of a 1440 high screen.
+        placed = {'lap': (1093, 5, 583, 120), 'fuel': (1445, 1357, 309, 79)}
+        sizes = {'tires': (242, 63), 'speed': (121, 63)}
+        new = [s for s in hud.RACE_SECTIONS if s.name in sizes]
+        places = hud.below(new, placed, sizes, screens=[(0, 0, 5120, 1440)], gap=8)
+        self.assertEqual(places['tires'], (1762, 5, 242, 63))
+        self.assertEqual(places['speed'], (1762, 76, 121, 63))
+
+
 class HelpLinesTests(unittest.TestCase):
     def test_move_mode_says_how_to_finish(self):
         self.assertIn('Ctrl+Shift+L', hud.help_lines(shortcuts=True)[-1])
@@ -58,10 +69,22 @@ class HudLinesTests(unittest.TestCase):
             self.assertAlmostEqual(two.baseline, 2 * one.baseline, delta=2)
 
 
+class LocalTimeTests(unittest.TestCase):
+    def test_hours_and_minutes_in_24_hours(self):
+        import time
+
+        self.assertEqual(hud.local_time_rows(time.struct_time((2026, 11, 1, 17, 5, 59, 6, 305, 0)))[0].text, '17:05')
+        self.assertEqual(hud.local_time_rows(time.struct_time((2026, 11, 1, 0, 0, 0, 6, 305, 0)))[0].text, '00:00')
+
+    def test_on_every_system(self):
+        for layout in (hud.RACE_SECTIONS, hud.CLOCK_SECTIONS):
+            self.assertIn('localtime', [section.name for section in layout])
+
+
 class SectionTests(unittest.TestCase):
     def test_race_sections_have_distinct_names(self):
         names = [section.name for section in hud.RACE_SECTIONS]
-        self.assertEqual(names, ['lap', 'current', 'delta', 'times', 'fuel', 'tires', 'speed'])
+        self.assertEqual(names, ['lap', 'current', 'delta', 'times', 'fuel', 'tires', 'speed', 'localtime'])
         self.assertEqual(len(set(names)), len(names))
 
     def test_content_size_fits_the_text(self):

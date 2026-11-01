@@ -49,6 +49,11 @@ def clock(seconds):
     return f'{minutes}:{seconds:02d}'
 
 
+def local_time_rows(now):
+    """The local time of day, 'HH:MM' (24 hours), from a time.struct_time."""
+    return [Row(f'{now.tm_hour:02d}:{now.tm_min:02d}', 'medium')]
+
+
 def session_rows(seconds):
     """The content without game data: how long TurboHUD has been running."""
     return [Row('TurboHUD - session time', 'title'), Row(clock(seconds), 'big', 'accent')]
@@ -105,8 +110,12 @@ RACE_SECTIONS = (
     Section('fuel', 'Fuel', ((Row('Fuel 100%  ~10.0 laps', 'medium'),),)),
     Section('tires', 'Tires', ((Row('Tires 100%  ~10.0 laps', 'medium'),),)),
     Section('speed', 'Speed', ((Row('000 km/h', 'medium'),),)),
+    Section('localtime', 'Local time', ((Row('00:00', 'medium'),),)),
 )
-CLOCK_SECTIONS = (Section('clock', 'Session time', ((Row('TurboHUD - session time', 'title'), Row('00:00', 'big')),)),)
+CLOCK_SECTIONS = (
+    Section('clock', 'Session time', ((Row('TurboHUD - session time', 'title'), Row('00:00', 'big')),)),
+    Section('localtime', 'Local time', ((Row('00:00', 'medium'),),)),
+)
 
 
 def base_size(section, scale, measure):
@@ -139,9 +148,17 @@ def stacked(sections, x, y, sizes, gap=8):
     return places
 
 
-def below(sections, placed, sizes, gap=8):
+def below(sections, placed, sizes, screens=(), gap=8):
     """{name: place} for sections new to a player who has placed others: stacked one
-    below the other under the lowest placed one, lined up with the first."""
+    below the other under the lowest placed one, lined up with the first. If they would
+    run off the bottom of that screen, they start a new column to the right of the placed
+    sections instead, from the top of the highest one."""
     first = next(iter(placed.values()))
     bottom = max(y + height for _x, y, _w, height in placed.values())
-    return stacked(sections, first[0], bottom + gap, sizes, gap)
+    places = stacked(sections, first[0], bottom + gap, sizes, gap)
+    screen = next((s for s in screens if s[0] <= first[0] < s[0] + s[2] and s[1] <= first[1] < s[1] + s[3]), None)
+    if screen is None or all(y + h <= screen[1] + screen[3] for _x, y, _w, h in places.values()):
+        return places
+    right = max(x + width for x, _y, width, _h in placed.values())
+    top = min(y for _x, y, _w, _h in placed.values())
+    return stacked(sections, right + gap, top, sizes, gap)

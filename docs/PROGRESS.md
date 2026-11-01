@@ -101,3 +101,7 @@ its "Recent changes".
   95 % of readings within 6 ms of the smooth curve (was 59 ms). New sections: fuel and
   tires left in % with the laps they last (average of the last 3 laps, restarting after
   a pit stop), and speed in km/h. New sections go below the ones already placed.
+- 2026-11-01: Local time section ('HH:MM', 24 hours), on every system and outside races
+  too. Sections new to a player go below the placed ones, or in a new column to their
+  right when there is no room below (before, they could fall off the screen and end up
+  on another monitor).
