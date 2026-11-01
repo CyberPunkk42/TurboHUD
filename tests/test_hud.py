@@ -54,6 +54,34 @@ class NewSectionsWithOthersOnAnotherMonitorTests(unittest.TestCase):
         self.assertEqual(place, (1762, 5, 81, 62))  # main monitor, right of the others
 
 
+class FirstLaunchTests(unittest.TestCase):
+    SIZES = {s.name: (300, 70) for s in hud.RACE_SECTIONS}
+
+    def test_one_column_at_the_left_centred_in_1080_without_overlap(self):
+        places = hud.first_launch(hud.RACE_SECTIONS, self.SIZES)
+        boxes = [places[s.name] for s in hud.RACE_SECTIONS]
+        self.assertTrue(all(x == 40 for x, *_ in boxes))
+        for (_, y1, _, h1), (_, y2, _, _) in zip(boxes, boxes[1:]):
+            self.assertGreaterEqual(y2, y1 + h1)  # below, not overlapping
+        top, bottom = boxes[0][1], boxes[-1][1] + boxes[-1][3]
+        self.assertAlmostEqual(top - 40, 1040 - bottom, delta=1)  # centred
+        self.assertLessEqual(bottom, 1080 - 40)
+
+    def test_on_the_main_screen_from_its_corner(self):
+        screens = [(1280, -1440, 2560, 1440), (0, 0, 5120, 1440)]  # the player's two monitors
+        self.assertEqual(hud.main_screen(screens), (0, 0, 5120, 1440))
+        moved = hud.first_launch(hud.RACE_SECTIONS, self.SIZES, origin=(1000, 200))
+        plain = hud.first_launch(hud.RACE_SECTIONS, self.SIZES)
+        self.assertEqual(moved['lap'][:2], (plain['lap'][0] + 1000, plain['lap'][1] + 200))
+
+    def test_too_tall_for_one_column_starts_another(self):
+        tall = {s.name: (300, 200) for s in hud.RACE_SECTIONS}
+        places = hud.first_launch(hud.RACE_SECTIONS, tall)
+        xs = sorted({x for x, *_ in places.values()})
+        self.assertEqual(xs[:2], [40, 40 + 300 + 8])
+        self.assertTrue(all(y + h <= 1040 for _x, y, _w, h in places.values()))
+
+
 class HelpLinesTests(unittest.TestCase):
     def test_move_mode_says_how_to_finish(self):
         self.assertIn('Ctrl+Shift+L', hud.help_lines(shortcuts=True)[-1])

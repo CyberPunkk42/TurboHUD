@@ -78,7 +78,7 @@ def run(args, folder):
     from PySide6.QtWidgets import QApplication, QMenu, QSystemTrayIcon
 
     from turbohud.overlay import HOTKEY_LOCK, HOTKEY_QUIT, native_for
-    from turbohud.core.hud import CLOCK_SECTIONS, RACE_SECTIONS, below, local_time_rows, session_rows, stacked
+    from turbohud.core.hud import CLOCK_SECTIONS, RACE_SECTIONS, below, first_launch, local_time_rows, main_screen, session_rows
     from turbohud.overlay.window import MovePanel, SectionWindow
 
     app = QApplication([sys.argv[0]])
@@ -128,7 +128,8 @@ def run(args, folder):
     screens = [screen.geometry().getRect() for screen in QGuiApplication.screens()]
     windows = {section.name: SectionWindow(native, settings.theme, section) for section in layout}
     first = {name: window.base for name, window in windows.items()}
-    defaults = stacked(layout, settings.placement[0], settings.placement[1], first)
+    screen = main_screen(screens)
+    defaults = first_launch(layout, first, screen[:2] if screen else (0, 0))
     saved_places = {
         name: (place.x, place.y, place.width, place.height)
         for name, place in settings.sections.items()

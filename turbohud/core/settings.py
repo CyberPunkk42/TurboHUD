@@ -67,8 +67,8 @@ def clamped_size(width, height):
 
 
 def fit_on_screens(placement, screens):
-    """The placement, moved to the default spot on the first screen if no part of its top
-    edge is on any screen (for example after a monitor was unplugged). `screens` are
+    """The placement, moved to the default spot on the largest screen if no part of its
+    top edge is on any screen (for example after a monitor was unplugged). `screens` are
     (x, y, width, height) boxes; with none known, the placement is kept."""
     x, y, width, height = placement
     for sx, sy, sw, sh in screens:
@@ -76,7 +76,7 @@ def fit_on_screens(placement, screens):
             return placement
     if not screens:
         return placement
-    sx, sy = screens[0][:2]
+    sx, sy = max(screens, key=lambda s: s[2] * s[3])[:2]
     return (sx + DEFAULT_PLACEMENT[0], sy + DEFAULT_PLACEMENT[1], width, height)
 
 
