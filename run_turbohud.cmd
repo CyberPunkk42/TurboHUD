@@ -1,7 +1,7 @@
 @echo off
-rem Start TurboKit from the source folder on Windows. The first run sets up PySide6 in a
+rem Start TurboHUD from the source folder on Windows. The first run sets up PySide6 in a
 rem virtual environment in .buildtools\venv (gitignored); later runs reuse it.
-rem   run_turbokit.cmd [--move]
+rem   run_turbohud.cmd [--move]
 rem Needs Python 3.10 or later with the py launcher (python.org installer).
 setlocal
 set "REPO=%~dp0."
@@ -17,4 +17,4 @@ if errorlevel 1 (
     "%VENV%\Scripts\python.exe" -m pip install --quiet --disable-pip-version-check -r "%REQUIREMENTS%" || exit /b 1
     copy /y "%REQUIREMENTS%" "%VENV%\requirements.txt" >nul
 )
-"%VENV%\Scripts\python.exe" -B "%REPO%\launch_turbokit.py" %*
+"%VENV%\Scripts\python.exe" -B "%REPO%\launch_turbohud.py" %*

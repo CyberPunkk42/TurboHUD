@@ -23,7 +23,7 @@ its "Recent changes".
   without Fullscreen Exclusive: the HUD shows, text is crisp, clicks pass through,
   shortcuts and move mode work, and the game does not stutter. Qt is confirmed for the
   Mac overlay; Windows is next.
-- 2026-10-24: App skeleton and bundled builds. `turbokit/` holds the overlay (locked and
+- 2026-10-24: App skeleton and bundled builds. `turbohud/` holds the overlay (locked and
   move mode, shortcuts, tray icon, saved placement and theme) with a session clock as the
   first HUD. `tools/build_app.py` builds a ready-to-run app with PyInstaller (Mac: 27 MB
   ZIP); GitHub Actions builds and smoke-tests Windows, macOS and Linux. `README.md`
@@ -33,6 +33,11 @@ its "Recent changes".
   above the Lock and Close buttons, and the box's minimum size grows with the theme's
   scale so nothing overlaps. Text outlines are filled by winding and merged, which fixes
   letters built from overlapping parts (a hole in "+", the broken-looking "4" on Linux);
-  Linux prefers a plain sans-serif font. The TSU TurboKit image is the app, window and
+  Linux prefers a plain sans-serif font. The TSU TurboHUD image is the app, window and
   tray icon (Pillow converts it for Windows and macOS builds). Checked by hand on the Mac
   and on Omarchy Linux.
+- 2026-11-01: Renamed TurboKit to TurboHUD (package `turbohud/`, `launch_turbohud.py`,
+  `run_turbohud.sh` / `.cmd`, settings folder `TurboHUD`). The project is now local only:
+  nothing is pushed to GitHub (the remote's push URL is disabled), changes are approved by
+  a local merge, and the folder will be shared over the local network later. The icon
+  image still reads "TurboKit" and needs a new version.

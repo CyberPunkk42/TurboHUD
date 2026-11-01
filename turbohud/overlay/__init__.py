@@ -16,9 +16,9 @@ HOTKEY_QUIT = 2
 def native_for(platform=sys.platform):
     """The Native class for a system (sys.platform value)."""
     if platform == 'darwin':
-        from turbokit.overlay.macos import Native
+        from turbohud.overlay.macos import Native
     elif platform == 'win32':
-        from turbokit.overlay.windows import Native
+        from turbohud.overlay.windows import Native
     else:
-        from turbokit.overlay.linux import Native
+        from turbohud.overlay.linux import Native
     return Native

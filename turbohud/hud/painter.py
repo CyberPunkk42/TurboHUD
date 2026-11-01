@@ -4,7 +4,7 @@ from functools import lru_cache
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor, QFont, QPainterPath, QPen
 
-from turbokit.core.hud import MARGIN
+from turbohud.core.hud import MARGIN
 
 # On Linux the desktop's default font may be a monospace or icon font; prefer a plain
 # sans-serif one. Qt uses the first that is installed. Windows and macOS keep their
@@ -41,7 +41,7 @@ def outlined_text(painter, x, y, text, size, color, outline):
 
 
 def draw_hud(painter, lines, theme):
-    """Draw the lines from turbokit.core.hud.hud_lines with the theme's colours."""
+    """Draw the lines from turbohud.core.hud.hud_lines with the theme's colours."""
     colors = {'text': QColor(theme.text_color), 'accent': QColor(theme.accent_color)}
     outline = _rgba(theme.outline_color)
     x = round(MARGIN * theme.scale)

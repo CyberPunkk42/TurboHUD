@@ -1,13 +1,13 @@
-"""Build TurboKit as a ready-to-run app for this system with PyInstaller, and pack it.
+"""Build TurboHUD as a ready-to-run app for this system with PyInstaller, and pack it.
 
     python tools/build_app.py [--version 2026.10.24] [--smoke]
 
 Needs the packages in requirements-build.txt. PyInstaller builds only for the system it
 runs on, so GitHub Actions runs this once per system (.github/workflows/build.yml).
 
-- Windows: releases/TurboKit-<version>-windows-x64.zip, holding TurboKit/TurboKit.exe
-- macOS:   releases/TurboKit-<version>-macos-arm64.zip, holding TurboKit.app
-- Linux:   releases/TurboKit-<version>-linux-x64.tar.gz, holding TurboKit/TurboKit
+- Windows: releases/TurboHUD-<version>-windows-x64.zip, holding TurboHUD/TurboHUD.exe
+- macOS:   releases/TurboHUD-<version>-macos-arm64.zip, holding TurboHUD.app
+- Linux:   releases/TurboHUD-<version>-linux-x64.tar.gz, holding TurboHUD/TurboHUD
 
 Each archive gets a .sha256 file next to it. --smoke then starts the built app for a few
 seconds and fails if it does not quit cleanly.
@@ -29,17 +29,17 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 BUILD = ROOT / 'build'
 RELEASES = ROOT / 'releases'
-VERSION_FILE = ROOT / 'turbokit' / '_build.py'  # gitignored; written for the build only
-NAME = 'TurboKit'
-ICON = ROOT / 'assets' / 'tsu_turbo_kit_00.png'  # PyInstaller turns it into .ico / .icns with Pillow
-BUNDLE_ID = 'io.github.cyberpunkk42.turbokit'
+VERSION_FILE = ROOT / 'turbohud' / '_build.py'  # gitignored; written for the build only
+NAME = 'TurboHUD'
+ICON = ROOT / 'assets' / 'tsu_turbo_hud_00.png'  # PyInstaller turns it into .ico / .icns with Pillow
+BUNDLE_ID = 'io.github.cyberpunkk42.turbohud'
 SMOKE_SECONDS = 3
 SMOKE_TIMEOUT = 120
 _VERSION = re.compile(r'dev|\d{4}\.\d{2}\.\d{2}')
 
 
 def parse_args(argv):
-    parser = argparse.ArgumentParser(description='Build the TurboKit app for this system.')
+    parser = argparse.ArgumentParser(description='Build the TurboHUD app for this system.')
     parser.add_argument('--version', default='dev', help='dev, or a release date like 2026.10.24')
     parser.add_argument('--smoke', action='store_true', help='start the built app briefly to check it')
     args = parser.parse_args(argv)
@@ -66,7 +66,7 @@ def archive_name(version, tag):
 
 def pyinstaller_args(system=sys.platform):
     args = [
-        str(ROOT / 'launch_turbokit.py'),
+        str(ROOT / 'launch_turbohud.py'),
         '--name', NAME,
         '--windowed',
         '--noconfirm',

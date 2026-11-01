@@ -1,6 +1,6 @@
 # Experiments
 
-Throwaway probes that answer one question each before TurboKit's design is fixed.
+Throwaway probes that answer one question each before TurboHUD's design is fixed.
 They are not part of the app.
 
 ## Overlay probe (`overlay_probe.py`)
@@ -18,7 +18,7 @@ calls and only Python's standard library.
 2. Start the probe:
    - Mac: `sh experiments/run_overlay_probe_mac.sh`. The first run downloads a portable
      Windows Python (3.13, checked against its SHA256) into `.buildtools/win-python`.
-     It runs in the `Steam` bottle; set `TURBOKIT_BOTTLE` for another one.
+     It runs in the `Steam` bottle; set `TURBOHUD_BOTTLE` for another one.
    - Windows: `py -3 -B experiments\overlay_probe.py`
 3. The box starts in move mode (lighter blue, with **Lock** and **Close** buttons at the
    bottom left and a resize grip in the bottom-right corner). Drag the box to move it,
@@ -156,7 +156,7 @@ Other findings:
 
 ## Qt overlay probe (`qt_overlay_probe.py`)
 
-Question: can a Qt (PySide6) window, TurboKit's chosen stack (`docs/STACK.md`), do what
+Question: can a Qt (PySide6) window, TurboHUD's chosen stack (`docs/STACK.md`), do what
 the two native probes do, with HUD graphics drawn by Qt?
 
 The probe shows a test HUD: outlined text, a lap-style clock, a bar that empties once a
@@ -202,7 +202,7 @@ with Fullscreen Exclusive off and on: everything works as planned.
 - Locked, clicks pass through; the shortcuts and move mode work.
 - The game runs fine, with no stutter while the map dot moves.
 
-**Qt works for TurboKit's overlay on the Mac,** with the small ctypes part for the window
+**Qt works for TurboHUD's overlay on the Mac,** with the small ctypes part for the window
 level and the shortcuts. Not tested yet: Windows, Linux.
 PySide6 takes about 335 MB in the development environment on the Mac; a bundled app
 would include only the parts it uses.

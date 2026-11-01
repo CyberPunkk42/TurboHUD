@@ -15,7 +15,7 @@ sys.path.insert(0, str(ROOT))
 
 import build_app
 
-from turbokit import app
+from turbohud import app
 
 
 class BuildArgsTests(unittest.TestCase):
@@ -42,16 +42,16 @@ class NamingTests(unittest.TestCase):
 
     def test_archive_names(self):
         self.assertEqual(
-            build_app.archive_name('2026.10.24', 'windows-x64'), 'TurboKit-2026.10.24-windows-x64.zip'
+            build_app.archive_name('2026.10.24', 'windows-x64'), 'TurboHUD-2026.10.24-windows-x64.zip'
         )
-        self.assertEqual(build_app.archive_name('dev', 'linux-x64'), 'TurboKit-dev-linux-x64.tar.gz')
+        self.assertEqual(build_app.archive_name('dev', 'linux-x64'), 'TurboHUD-dev-linux-x64.tar.gz')
 
     def test_executables(self):
         dist = Path('dist')
-        self.assertEqual(build_app.executable(dist, 'win32'), dist / 'TurboKit' / 'TurboKit.exe')
-        self.assertEqual(build_app.executable(dist, 'linux'), dist / 'TurboKit' / 'TurboKit')
+        self.assertEqual(build_app.executable(dist, 'win32'), dist / 'TurboHUD' / 'TurboHUD.exe')
+        self.assertEqual(build_app.executable(dist, 'linux'), dist / 'TurboHUD' / 'TurboHUD')
         self.assertEqual(
-            build_app.executable(dist, 'darwin'), dist / 'TurboKit.app' / 'Contents' / 'MacOS' / 'TurboKit'
+            build_app.executable(dist, 'darwin'), dist / 'TurboHUD.app' / 'Contents' / 'MacOS' / 'TurboHUD'
         )
 
     def test_bundle_id_only_on_the_mac(self):
@@ -69,9 +69,9 @@ class NamingTests(unittest.TestCase):
 class PackTests(unittest.TestCase):
     def make_dist(self, folder):
         dist = Path(folder) / 'dist'
-        (dist / 'TurboKit' / '_internal').mkdir(parents=True)
-        (dist / 'TurboKit' / 'TurboKit.exe').write_bytes(b'program')
-        (dist / 'TurboKit' / '_internal' / 'lib.dll').write_bytes(b'library')
+        (dist / 'TurboHUD' / '_internal').mkdir(parents=True)
+        (dist / 'TurboHUD' / 'TurboHUD.exe').write_bytes(b'program')
+        (dist / 'TurboHUD' / '_internal' / 'lib.dll').write_bytes(b'library')
         return dist
 
     def check_digest(self, archive):
@@ -80,20 +80,20 @@ class PackTests(unittest.TestCase):
 
     def test_zip_holds_the_app_folder(self):
         with tempfile.TemporaryDirectory() as folder:
-            archive = Path(folder) / 'out' / 'TurboKit-dev-windows-x64.zip'
+            archive = Path(folder) / 'out' / 'TurboHUD-dev-windows-x64.zip'
             build_app.pack(self.make_dist(folder), archive, system='win32')
             with zipfile.ZipFile(archive) as zip_file:
                 self.assertEqual(sorted(zip_file.namelist()), [
-                    'TurboKit/TurboKit.exe', 'TurboKit/_internal/', 'TurboKit/_internal/lib.dll',
+                    'TurboHUD/TurboHUD.exe', 'TurboHUD/_internal/', 'TurboHUD/_internal/lib.dll',
                 ])  # fmt: skip
             self.check_digest(archive)
 
     def test_tar_holds_the_app_folder(self):
         with tempfile.TemporaryDirectory() as folder:
-            archive = Path(folder) / 'TurboKit-dev-linux-x64.tar.gz'
+            archive = Path(folder) / 'TurboHUD-dev-linux-x64.tar.gz'
             build_app.pack(self.make_dist(folder), archive, system='linux')
             with tarfile.open(archive) as tar:
-                self.assertIn('TurboKit/_internal/lib.dll', tar.getnames())
+                self.assertIn('TurboHUD/_internal/lib.dll', tar.getnames())
             self.check_digest(archive)
 
 
@@ -120,7 +120,7 @@ class AppArgsTests(unittest.TestCase):
     def test_without_qt_points_to_the_start_scripts(self):
         with contextlib.redirect_stderr(io.StringIO()) as err:
             self.assertEqual(app.main(['--seconds', '1']), 2)
-        self.assertIn('run_turbokit', err.getvalue())
+        self.assertIn('run_turbohud', err.getvalue())
 
 
 if __name__ == '__main__':

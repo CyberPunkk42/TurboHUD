@@ -10,9 +10,9 @@ on:
     tags: ['v*']
   pull_request:
     paths:
-      - 'turbokit/**'
+      - 'turbohud/**'
       - 'assets/**'
-      - 'launch_turbokit.py'
+      - 'launch_turbohud.py'
       - 'requirements*.txt'
       - 'tools/build_app.py'
       - '.github/workflows/build.yml'
@@ -52,8 +52,8 @@ jobs:
           python -B tools/build_app.py --version "$version" --smoke
       - uses: actions/upload-artifact@v6
         with:
-          name: TurboKit-${{ runner.os }}
-          path: releases/TurboKit-*
+          name: TurboHUD-${{ runner.os }}
+          path: releases/TurboHUD-*
           if-no-files-found: error
 
   release:
@@ -70,4 +70,4 @@ jobs:
       - name: Draft release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "${{ github.ref_name }}" releases/* --repo "${{ github.repository }}" --draft --title "TurboKit ${{ github.ref_name }}"
+        run: gh release create "${{ github.ref_name }}" releases/* --repo "${{ github.repository }}" --draft --title "TurboHUD ${{ github.ref_name }}"

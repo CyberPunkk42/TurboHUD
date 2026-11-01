@@ -8,7 +8,7 @@ import ctypes.util
 import logging
 from ctypes import c_bool, c_char_p, c_int32, c_long, c_uint32, c_ulong, c_void_p
 
-from turbokit.overlay import HOTKEY_LOCK, HOTKEY_QUIT
+from turbohud.overlay import HOTKEY_LOCK, HOTKEY_QUIT
 
 WINDOW_LEVEL = 1000  # NSScreenSaverWindowLevel
 NS_ACTIVATION_POLICY_ACCESSORY = 1
