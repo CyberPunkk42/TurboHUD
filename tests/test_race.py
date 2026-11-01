@@ -200,6 +200,15 @@ class ReaderTests(unittest.TestCase):
         with self.assertRaises(il.NotFound):
             reader.read()
 
+    def test_field_list_gives_names_offsets_and_types(self):
+        reader = build([10_000], laps_completed=0, clock=20_000, limit=0)
+        runtime = reader.il
+        _state, player = reader.local_player()
+        stats = runtime.ref(player, 'm_stats')
+        listed = {name: (offset, static) for name, offset, static, _code in runtime.field_list(runtime.memory.u64(stats))}
+        self.assertEqual(listed['m_lapsCompleted'], (0x32, False))
+        self.assertEqual(runtime.class_name(stats), 'TS.PlayerRaceStats')
+
     def test_unknown_class_is_reported(self):
         reader = build([10_000], laps_completed=0, clock=20_000, limit=0)
         with self.assertRaises(il.NotFound):

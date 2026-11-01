@@ -20,6 +20,14 @@ CLASS_FIELDS = 0x80
 CLASS_STATIC_FIELDS = 0xB8
 FIELD_INFO_SIZE = 32  # name, type, parent, offset (int32), token
 TYPE_ATTRS = 8  # in Il2CppType, after its data pointer
+TYPE_CODE = 10  # in Il2CppType: the type's kind (Il2CppTypeEnum), after the attributes
+# Il2CppTypeEnum values of the simple types, with their struct format.
+SIMPLE_TYPES = {
+    0x02: ('bool', '<?'), 0x04: ('sbyte', '<b'), 0x05: ('byte', '<B'), 0x06: ('short', '<h'),
+    0x07: ('ushort', '<H'), 0x08: ('int', '<i'), 0x09: ('uint', '<I'), 0x0A: ('long', '<q'),
+    0x0B: ('ulong', '<Q'), 0x0C: ('float', '<f'), 0x0D: ('double', '<d'),
+}
+TYPE_VALUETYPE = 0x11  # a struct, such as a Vector3
 FIELD_ATTRIBUTE_STATIC = 0x10
 LIST_ITEMS = 0x10
 LIST_SIZE = 0x18
@@ -131,6 +139,27 @@ class Il2Cpp:
             current = self.memory.u64(current + CLASS_PARENT)
         self._fields[klass] = found
         return found
+
+    def field_list(self, klass):
+        """[(name, offset, is_static, type_code)] of `klass` and its parents, for looking
+        around in a class; type_code is the field's Il2CppTypeEnum value."""
+        found = []
+        current = klass
+        while current:
+            entry = self.memory.u64(current + CLASS_FIELDS)
+            while entry:
+                name, type_, parent = struct.unpack('<QQQ', self.memory.read(entry, 24))
+                if parent != current:
+                    break
+                attrs, code = struct.unpack('<HB', self.memory.read(type_ + TYPE_ATTRS, 3))
+                found.append((self.memory.cstring(name), self.memory.i32(entry + 24), bool(attrs & FIELD_ATTRIBUTE_STATIC), code))
+                entry += FIELD_INFO_SIZE
+            current = self.memory.u64(current + CLASS_PARENT)
+        return found
+
+    def class_name(self, obj):
+        klass = self.memory.u64(obj)
+        return f'{self.memory.cstring(self.memory.u64(klass + CLASS_NAMESPACE))}.{self.memory.cstring(self.memory.u64(klass + CLASS_NAME))}'
 
     def offset(self, obj, name):
         try:
