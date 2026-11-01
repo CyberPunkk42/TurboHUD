@@ -163,3 +163,11 @@ its "Recent changes".
   car passes. The gap is how much later the car passed the checkpoint it last passed,
   and grows while it does not reach your next one (turbohud/core/race.py blue_flag).
   Not yet checked in a race with other players.
+- 2026-11-01: Light tint option, blue flag outline, steady player list (Linux). "Light
+  tint behind the sections" (tray menu and move-mode panel, saved as backdrop, off by
+  default): a faint dark box behind each section's text, only as large as the text (the
+  pedal bars and the player list's right column included); in move mode the blue move
+  tint replaces it. The blue flag now has a darker blue outline. The player list takes
+  a new order only once it has lasted 0.3 s (race.Standings), so cars passing each
+  other or a checkpoint written late do not make names jump back and forth; the gaps
+  stay live.

@@ -168,3 +168,35 @@ class BlueFlagSectionTests(unittest.TestCase):
         self.assertAlmostEqual(sections['blue'], race.blue_flag_opacity(1.2))
         alone = race.Snapshot(status=race.RACING, state=dataclasses.replace(state, players=(me,)), moved_at=10.0)
         self.assertNotIn('blue', race.race_sections(alone, 10.5))
+
+
+class StandingsTests(unittest.TestCase):
+    def test_a_swap_shows_only_once_it_lasted(self):
+        a = player('A', [lap(0), lap(40_000, count=3)])
+        b = player('B', [lap(0), lap(40_500, count=3)])
+        swapped_b = player('B', [lap(0), lap(40_500, count=4)])  # B passed one more: ahead
+        standings = race.Standings(hold=0.3)
+        self.assertEqual([p.name for p in standings.order([a, b], 10.0)], ['A', 'B'])
+        self.assertEqual([p.name for p in standings.order([a, swapped_b], 10.1)], ['A', 'B'])  # held
+        self.assertEqual([p.name for p in standings.order([a, b], 10.2)], ['A', 'B'])  # swapped back
+        self.assertEqual([p.name for p in standings.order([a, swapped_b], 10.3)], ['A', 'B'])
+        self.assertEqual([p.name for p in standings.order([a, swapped_b], 10.5)], ['A', 'B'])
+        shown = standings.order([a, swapped_b], 10.65)
+        self.assertEqual([p.name for p in shown], ['B', 'A'])  # lasted 0.3 s
+        self.assertIs(shown[0], swapped_b)  # the latest data, for live gaps
+
+    def test_held_order_keeps_the_latest_data(self):
+        a = player('A', [lap(0), lap(40_000, count=3)])
+        b = player('B', [lap(0), lap(40_500, count=4)])
+        standings = race.Standings()
+        standings.order([a, player('B', [lap(0), lap(40_500, count=2)])], 0.0)
+        held = standings.order([a, b], 0.1)
+        self.assertEqual([p.name for p in held], ['A', 'B'])
+        self.assertIs(held[1], b)
+
+    def test_joining_players_show_at_once(self):
+        a = player('A', [lap(0), lap(40_000, count=3)])
+        c = player('C', [lap(0), lap(39_000, count=4)])
+        standings = race.Standings()
+        standings.order([a], 0.0)
+        self.assertEqual([p.name for p in standings.order([a, c], 0.1)], ['C', 'A'])

@@ -13,7 +13,6 @@ from turbohud.core.settings import (
     LOG_FILE,
     SETTINGS_FILE,
     SectionPlace,
-    Settings,
     fit_on_screens,
     load_settings,
     save_settings,
@@ -114,17 +113,18 @@ def run(args, folder):
     live = start_live_race()
     pad = None
     if live is not None:
-        from turbohud.core.race import race_sections, status_text, with_local_time
+        from turbohud.core.race import Standings, race_sections, status_text, with_local_time
 
         layout = RACE_SECTIONS
         from turbohud.tsu.controller import Pad, combined
 
         pad = Pad()
         pad.start()
+        standings = Standings()
 
         def contents():
             snapshot = live.snapshot()
-            current = race_sections(snapshot, time.monotonic(), settings.speed_unit)
+            current = race_sections(snapshot, time.monotonic(), settings.speed_unit, standings)
             if 'pedals' in current:
                 current['pedals'] = combined(current['pedals'], pad.pedals())
             return with_local_time(current, snapshot, time.localtime())
@@ -157,6 +157,7 @@ def run(args, folder):
         place = (saved.x, saved.y, saved.width, saved.height) if saved else defaults[name]
         place = fit_on_screens(place, screens)
         window.setGeometry(*place)
+        window.backdrop = settings.backdrop
         window.show_on_top()
         window.set_wanted(saved.visible if saved else True)
         log.info('section %s at %s%s', name, place, '' if window.wanted else ' (hidden)')
@@ -170,9 +171,7 @@ def run(args, folder):
         for name, window in windows.items():
             x, y, width, height = window.placement()
             places[name] = SectionPlace(x, y, width, height, window.wanted)
-        settings = Settings(
-            placement=settings.placement, theme=settings.theme, sections=places, speed_unit=settings.speed_unit
-        )
+        settings = replace(settings, sections=places)
         try:
             save_settings(path, settings)
         except OSError as error:
@@ -215,6 +214,17 @@ def run(args, folder):
         save()
         log.info('speed in %s', settings.speed_unit)
 
+    def set_backdrop(backdrop):
+        nonlocal settings
+        settings = replace(settings, backdrop=backdrop)
+        backdrop_action.setChecked(backdrop)
+        panel.set_backdrop(backdrop)
+        for window in windows.values():
+            window.backdrop = backdrop
+            window.update()
+        save()
+        log.info('tint behind the sections %s', 'on' if backdrop else 'off')
+
     def set_wanted(name, wanted):
         windows[name].set_wanted(wanted)
         log.info('section %s %s', name, 'shown' if wanted else 'hidden')
@@ -232,6 +242,10 @@ def run(args, folder):
     mph_action.setChecked(settings.speed_unit == 'mph')
     mph_action.triggered.connect(lambda checked: set_mph(checked))
     menu.addAction(mph_action)
+    backdrop_action = QAction('Light tint behind the sections', menu, checkable=True)
+    backdrop_action.setChecked(settings.backdrop)
+    backdrop_action.triggered.connect(lambda checked: set_backdrop(checked))
+    menu.addAction(backdrop_action)
     menu.addSeparator()
     menu.addAction(quit_action)
     tray.setContextMenu(menu)
@@ -251,8 +265,9 @@ def run(args, folder):
 
     shortcuts = native.register_hotkeys(on_hotkey)
     log.info('Ctrl+Shift+L and Ctrl+Shift+Q registered' if shortcuts else 'no system-wide shortcuts')
-    panel = MovePanel(native, layout, shortcuts, settings.speed_unit == 'mph')
+    panel = MovePanel(native, layout, shortcuts, settings.speed_unit == 'mph', settings.backdrop)
     panel.mph_changed.connect(set_mph)
+    panel.backdrop_changed.connect(set_backdrop)
     for name, window in windows.items():
         panel.set_wanted(name, window.wanted)
     panel.lock_requested.connect(lambda: set_locked(True))

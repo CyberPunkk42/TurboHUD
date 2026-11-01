@@ -726,10 +726,11 @@ def status_text(snapshot):
     return 'waiting for a race'
 
 
-def race_sections(snapshot, now, speed_unit='kmh'):
+def race_sections(snapshot, now, speed_unit='kmh', standings=None):
     """{section name: rows} for a live-reader snapshot (see core.hud.RACE_SECTIONS); a
     section with nothing to show has no rows. Nothing before the grid: in the menus, the
-    lobby and while a race loads the HUD keeps out of the way (status_text says why)."""
+    lobby and while a race loads the HUD keeps out of the way (status_text says why).
+    `standings` (a Standings) holds the player list's order steady while cars pass."""
     if not on_grid(snapshot, now):
         return {}
     state = snapshot.state
@@ -757,7 +758,8 @@ def race_sections(snapshot, now, speed_unit='kmh'):
     }
     sections.update(car_sections(state.car, state.laps_to_go, speed_unit))
     if state.players:
-        sections['players'] = players_rows(state.players)
+        order = standings.order(state.players, now) if standings is not None else None
+        sections['players'] = players_rows(state.players, order)
         opacity = blue_flag_opacity(blue_flag(state.players, clock_now(snapshot, now)))
         if opacity is not None:
             sections['blue'] = opacity
@@ -857,10 +859,46 @@ def gap_text(found):
     return format_delta(value)
 
 
-def shown_players(players, max_rows=MAX_PLAYER_ROWS):
+SWAP_HOLD = 0.3  # seconds a new order must last before the player list shows it
+
+
+class Standings:
+    """The player list's order, held steady: a new order shows only once it has lasted
+    SWAP_HOLD. While two cars pass each other, or a checkpoint is written a moment late,
+    the order can change back and forth within a few reads; then the list keeps the
+    order it had and only takes the new one when it stays. A player joining or leaving
+    changes the list at once. The gaps next to the names stay live all the time."""
+
+    def __init__(self, hold=SWAP_HOLD):
+        self.hold = hold
+        self.shown = None  # names in the order shown
+        self.pending = None  # a different order, and since when it has lasted
+        self.since = 0.0
+
+    def order(self, players, now):
+        """The players in the order to show at monotonic time `now`."""
+        current = ranked(players)
+        names = tuple(p.name for p in current)
+        if self.shown is None or sorted(names) != sorted(self.shown) or len(set(names)) != len(names):
+            self.shown, self.pending = names, None
+            return current
+        if names == self.shown:
+            self.pending = None
+            return current
+        if names != self.pending:
+            self.pending, self.since = names, now
+        if now - self.since >= self.hold:
+            self.shown, self.pending = names, None
+            return current
+        by_name = {p.name: p for p in current}
+        return [by_name[name] for name in self.shown]
+
+
+def shown_players(players, max_rows=MAX_PLAYER_ROWS, order=None):
     """(position, player) for the rows: everyone, or with more than `max_rows` the
-    leader and the players around the local one."""
-    order = list(enumerate(ranked(players), start=1))
+    leader and the players around the local one. `order` is the race order to use
+    (Standings.order), by default the current one."""
+    order = list(enumerate(ranked(players) if order is None else order, start=1))
     if len(order) <= max_rows:
         return order
     me = next((i for i, (_pos, p) in enumerate(order) if p.local), 0)
@@ -869,11 +907,11 @@ def shown_players(players, max_rows=MAX_PLAYER_ROWS):
     return [order[0]] + order[first:first + around]
 
 
-def players_rows(players):
+def players_rows(players, order=None):
     """The player list: position, flag, name, PIT, and the gap to the local player."""
     me = next((p for p in players if p.local), None)
     rows = []
-    for position, player in shown_players(players):
+    for position, player in shown_players(players, order=order):
         name = player.name or '?'
         if len(name) > MAX_NAME_SHOWN:
             name = name[: MAX_NAME_SHOWN - 1] + '…'

@@ -49,6 +49,14 @@ See `docs/IMPROVEMENT_BACKLOG.md`. In short:
    Hyprland.
 
 ## Recent changes
+- 2026-11-01: Light tint option, blue flag outline, steady player list (Linux). "Light
+  tint behind the sections" (tray menu and move-mode panel, saved as backdrop, off by
+  default): a faint dark box behind each section's text, only as large as the text (the
+  pedal bars and the player list's right column included); in move mode the blue move
+  tint replaces it. The blue flag now has a darker blue outline. The player list takes
+  a new order only once it has lasted 0.3 s (race.Standings), so cars passing each
+  other or a checkpoint written late do not make names jump back and forth; the gaps
+  stay live.
 - 2026-11-01: Blue flag (Linux). A new "Blue flag" section: a navy bar, at the top
   centre of the main screen at first, shown by default and resizable in move mode. It
   appears when a car that is about to lap you (any car, not only the leader) is within

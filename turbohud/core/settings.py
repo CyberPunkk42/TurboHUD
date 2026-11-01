@@ -49,6 +49,7 @@ class Settings:
     theme: Theme = field(default_factory=Theme)
     sections: dict = field(default_factory=dict)  # section name -> SectionPlace
     speed_unit: str = 'kmh'  # 'kmh' or 'mph'
+    backdrop: bool = False  # a light tint behind each section's text while locked
 
 
 def settings_dir(platform=sys.platform, environ=None, home=None):
@@ -140,6 +141,7 @@ def load_settings(path):
         theme=_theme(data.get('theme')),
         sections=_sections(data.get('sections')),
         speed_unit=data.get('speed_unit') if data.get('speed_unit') in SPEED_UNITS else 'kmh',
+        backdrop=data.get('backdrop') is True,
     )
 
 
@@ -157,6 +159,7 @@ def save_settings(path, settings):
             'scale': settings.theme.scale,
         },
         'speed_unit': settings.speed_unit,
+        'backdrop': settings.backdrop,
         'sections': {
             name: {'x': place.x, 'y': place.y, 'width': place.width, 'height': place.height, 'visible': place.visible}
             for name, place in settings.sections.items()

@@ -113,6 +113,15 @@ class SpeedUnitSettingTests(unittest.TestCase):
             path.write_text(json.dumps({'speed_unit': 'knots'}))
             self.assertEqual(s.load_settings(path).speed_unit, 'kmh')
 
+    def test_backdrop_option_round_trips_and_is_off_by_default(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / 'settings.json'
+            self.assertFalse(s.load_settings(path).backdrop)
+            s.save_settings(path, s.Settings(backdrop=True))
+            self.assertTrue(s.load_settings(path).backdrop)
+            path.write_text(json.dumps({'backdrop': 'yes'}))
+            self.assertFalse(s.load_settings(path).backdrop)
+
 
 class FitOnScreensTests(unittest.TestCase):
     screens = ((0, 0, 1920, 1080), (1920, 0, 1280, 1024))

@@ -13,7 +13,7 @@ from PySide6.QtCore import QRectF, Qt, Signal
 from PySide6.QtGui import QColor, QPainter, QPen
 from PySide6.QtWidgets import QCheckBox, QHBoxLayout, QLabel, QPushButton, QSizeGrip, QVBoxLayout, QWidget
 
-from turbohud.core.hud import base_size, content_size, help_lines, hud_lines, pedal_bars, pedal_space, section_scale
+from turbohud.core.hud import MARGIN, base_size, content_size, help_lines, hud_lines, pedal_bars, pedal_space, section_scale
 from turbohud.hud.painter import draw_bars, draw_hud, text_width
 
 TINT = (23, 56, 97, 153)  # move mode's background: red, green, blue, opacity (0-255)
@@ -22,6 +22,10 @@ LABEL_COLOR = (200, 220, 245)
 LABEL_SPACE = 14  # room below the content for the section's name in move mode, at scale 1
 MIN_WIDTH = 40
 BLUE_FLAG = (0, 0, 128)  # navy
+BLUE_FLAG_EDGE = (0, 0, 64)  # its outline, a darker blue
+BLUE_FLAG_EDGE_WIDTH = 2
+PEDAL_INSET = 4  # pedal_bars' default inset
+BACKDROP = (0, 0, 0, 64)  # the light tint behind a section's text (option), RGBA
 BLUE_SAMPLE = 0.6  # the bar's opacity in move mode, to place it
 
 log = logging.getLogger(__name__)
@@ -55,6 +59,7 @@ class SectionWindow(QWidget):
         self.rows = []
         self.pedals = None  # (throttle, brake), 0 to 1, for a section with pedal bars
         self.opacity = None  # a bar section's opacity, 0 to 1; None: not shown
+        self.backdrop = False  # a light tint behind the text while locked (option)
         self.locked = True
         self.wanted = True  # the player wants it shown
         self.setWindowTitle(f'TurboHUD - {section.label}')
@@ -136,6 +141,8 @@ class SectionWindow(QWidget):
         bars = pedal_space(self.theme.scale) if self.section.pedals else 0
         needed = content_size(rows, self.theme.scale, text_width)[0] + bars if rows else None
         scale = self.theme.scale * section_scale((self.width(), self.height()), self.base[1], needed)
+        if self.locked and self.backdrop and rows:
+            self._paint_backdrop(painter, rows, scale, bars)
         left = 0
         if self.section.pedals and rows:  # no bars without a speed (menu, no game)
             throttle, brake = self.pedals or (None, None)
@@ -151,16 +158,38 @@ class SectionWindow(QWidget):
         painter.end()
 
 
+    def _paint_backdrop(self, painter, rows, scale, bars):
+        """The light tint, only as large as the text (and pedal bars): half the margin
+        round it. A section with a right-hand column (the player list) is as wide as its
+        window, where that column is drawn."""
+        width, height = content_size(rows, scale, text_width)
+        pad = round(MARGIN * scale / 2)
+        if any(row.right for row in rows):
+            width = self.width()
+        else:
+            width = min(width + (bars or 0), self.width())
+        top, tall = pad, min(height, self.height()) - 2 * pad
+        if self.section.pedals:
+            top, tall = PEDAL_INSET, self.height() - 2 * PEDAL_INSET  # as tall as the pedal bars
+        rect = QRectF(pad, top, max(width - 2 * pad, 1), max(tall, 1))
+        painter.setPen(Qt.NoPen)
+        painter.setBrush(QColor(*BACKDROP))
+        painter.drawRoundedRect(rect, 6, 6)
+
     def _paint_bar(self, painter):
         """A plain bar filling the window (the blue flag), at its opacity; in move mode
         with a border and its name, so it can be placed while no flag is out."""
         opacity = self.opacity if self.locked else max(self.opacity or 0.0, BLUE_SAMPLE)
         if opacity is None:
             return
-        rect = QRectF(self.rect()).adjusted(1, 1, -1, -1)
-        radius = min(rect.height() / 2, 6)
-        painter.setPen(QPen(QColor(*BORDER), 2) if not self.locked else Qt.NoPen)
-        painter.setBrush(QColor(*BLUE_FLAG, round(255 * min(max(opacity, 0.0), 1.0))))
+        alpha = round(255 * min(max(opacity, 0.0), 1.0))
+        edge = BLUE_FLAG_EDGE_WIDTH
+        rect = QRectF(self.rect()).adjusted(edge / 2, edge / 2, -edge / 2, -edge / 2)
+        radius = min(rect.height() / 2, 4)
+        # A horizontal flag: navy with a darker blue outline; in move mode the move
+        # mode's light border instead, like the other sections.
+        painter.setPen(QPen(QColor(*BORDER), 2) if not self.locked else QPen(QColor(*BLUE_FLAG_EDGE, alpha), edge))
+        painter.setBrush(QColor(*BLUE_FLAG, alpha))
         painter.drawRoundedRect(rect, radius, radius)
         if not self.locked:
             painter.setPen(QColor(*LABEL_COLOR))
@@ -177,10 +206,11 @@ class MovePanel(QWidget):
     quit_requested = Signal()
     wanted_changed = Signal(str, bool)  # section name, shown
     mph_changed = Signal(bool)
+    backdrop_changed = Signal(bool)
 
     focusable = True  # it takes clicks on its tick boxes and buttons
 
-    def __init__(self, native, sections, shortcuts, mph=False):
+    def __init__(self, native, sections, shortcuts, mph=False, backdrop=False):
         super().__init__(None, _flags())
         self.native = native
         self.setWindowTitle('TurboHUD - move mode')
@@ -202,6 +232,10 @@ class MovePanel(QWidget):
         self.mph.setChecked(mph)
         self.mph.toggled.connect(self.mph_changed)
         column.addWidget(self.mph)
+        self.backdrop = QCheckBox('Light tint behind the sections')
+        self.backdrop.setChecked(backdrop)
+        self.backdrop.toggled.connect(self.backdrop_changed)
+        column.addWidget(self.backdrop)
         row = QHBoxLayout()
         lock = QPushButton('Lock')
         quit_ = QPushButton('Quit TurboHUD')
@@ -225,6 +259,12 @@ class MovePanel(QWidget):
             self.mph.blockSignals(True)
             self.mph.setChecked(mph)
             self.mph.blockSignals(False)
+
+    def set_backdrop(self, backdrop):
+        if self.backdrop.isChecked() != backdrop:
+            self.backdrop.blockSignals(True)
+            self.backdrop.setChecked(backdrop)
+            self.backdrop.blockSignals(False)
 
     def show_at(self, x, y):
         self.move(x, y)
