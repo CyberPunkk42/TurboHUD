@@ -31,13 +31,13 @@ class HudLinesTests(unittest.TestCase):
     controls = 44  # height of the Lock and Close row
 
     def test_locked_shows_title_and_clock(self):
-        lines = hud.hud_lines(65, locked=True, shortcuts=True)
+        lines = hud.hud_lines(hud.session_rows(65), locked=True, shortcuts=True)
         self.assertEqual([line.color for line in lines], ['text', 'accent'])
         self.assertEqual(lines[1].text, '1:05')
 
     def test_hint_sits_just_above_the_buttons(self):
         height = 300
-        lines = hud.hud_lines(0, locked=False, shortcuts=True, hint_bottom=height - self.controls)
+        lines = hud.hud_lines(hud.session_rows(0), locked=False, shortcuts=True, hint_bottom=height - self.controls)
         hint = lines[2:]
         self.assertEqual(len(hint), 2)
         self.assertLess(hint[-1].baseline, height - self.controls)
@@ -48,20 +48,34 @@ class HudLinesTests(unittest.TestCase):
             with self.subTest(scale=scale):
                 _, height = hud.min_size(scale, self.controls)
                 bottom = height - self.controls
-                lines = hud.hud_lines(0, locked=False, shortcuts=True, scale=scale, hint_bottom=bottom)
+                lines = hud.hud_lines(hud.session_rows(0), locked=False, shortcuts=True, scale=scale, hint_bottom=bottom)
                 clock_line, first_hint = lines[1], lines[2]
                 # The hint's first line starts below the clock's baseline.
                 self.assertGreaterEqual(first_hint.baseline - first_hint.size, clock_line.baseline)
                 self.assertLessEqual(lines[-1].baseline, bottom)
 
+    def test_the_tallest_content_fits_at_the_minimum_size(self):
+        for scale in (0.5, 1, 2, 3):
+            with self.subTest(scale=scale):
+                _, height = hud.min_size(scale, self.controls)
+                bottom = height - self.controls
+                lines = hud.hud_lines(list(hud.TALLEST), locked=False, shortcuts=True, scale=scale, hint_bottom=bottom)
+                content, first_hint = lines[len(hud.TALLEST) - 1], lines[len(hud.TALLEST)]
+                self.assertGreaterEqual(first_hint.baseline - first_hint.size, content.baseline)
+
+    def test_rows_use_their_style_and_colour(self):
+        lines = hud.hud_lines([hud.Row('a', 'title'), hud.Row('b', 'medium', 'accent')], locked=True, shortcuts=True)
+        sizes = hud.Sizes.for_scale(1)
+        self.assertEqual([(line.size, line.color) for line in lines], [(sizes.title, 'text'), (sizes.medium, 'accent')])
+
     def test_without_a_bottom_the_hint_follows_the_clock(self):
-        lines = hud.hud_lines(0, locked=False, shortcuts=True)
+        lines = hud.hud_lines(hud.session_rows(0), locked=False, shortcuts=True)
         baselines = [line.baseline for line in lines]
         self.assertEqual(baselines, sorted(baselines))
 
     def test_scale_grows_sizes_and_spacing(self):
-        normal = hud.hud_lines(0, locked=False, shortcuts=True)
-        double = hud.hud_lines(0, locked=False, shortcuts=True, scale=2)
+        normal = hud.hud_lines(hud.session_rows(0), locked=False, shortcuts=True)
+        double = hud.hud_lines(hud.session_rows(0), locked=False, shortcuts=True, scale=2)
         for one, two in zip(normal, double, strict=True):
             self.assertAlmostEqual(two.size, 2 * one.size, delta=1)
             self.assertAlmostEqual(two.baseline, 2 * one.baseline, delta=2)

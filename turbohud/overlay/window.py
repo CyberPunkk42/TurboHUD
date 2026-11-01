@@ -12,7 +12,7 @@ from PySide6.QtCore import QRectF, Qt, Signal
 from PySide6.QtGui import QColor, QPainter, QPen
 from PySide6.QtWidgets import QHBoxLayout, QPushButton, QSizeGrip, QVBoxLayout, QWidget
 
-from turbohud.core.hud import hud_lines, min_size
+from turbohud.core.hud import hud_lines, min_size, session_rows
 from turbohud.hud.painter import draw_hud
 
 TINT = (23, 56, 97, 153)  # move mode's background: red, green, blue, opacity (0-255)
@@ -25,7 +25,9 @@ class OverlayWindow(QWidget):
     locked_changed = Signal(bool)
     close_requested = Signal()
 
-    def __init__(self, native, theme):
+    def __init__(self, native, theme, content=None):
+        """`content()` gives the rows to show (turbohud.core.hud.Row); without it the
+        overlay shows how long it has been running."""
         flags = Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint
         if sys.platform != 'darwin':
             flags |= Qt.Tool  # no taskbar button; on the Mac a tool window hides when inactive
@@ -35,6 +37,7 @@ class OverlayWindow(QWidget):
         self.locked = True
         self.shortcuts = False
         self.started = time.monotonic()
+        self.content = content or (lambda: session_rows(self.elapsed()))
         self.setWindowTitle('TurboHUD')
         self.setAttribute(Qt.WA_TranslucentBackground)
         self.setAttribute(Qt.WA_ShowWithoutActivating)
@@ -102,6 +105,6 @@ class OverlayWindow(QWidget):
             painter.setBrush(QColor(*TINT))
             painter.drawRoundedRect(QRectF(self.rect()).adjusted(1, 1, -1, -1), 10, 10)
         hint_bottom = self.height() - self.controls_height
-        lines = hud_lines(self.elapsed(), self.locked, self.shortcuts, self.theme.scale, hint_bottom)
+        lines = hud_lines(self.content(), self.locked, self.shortcuts, self.theme.scale, hint_bottom)
         draw_hud(painter, lines, self.theme)
         painter.end()

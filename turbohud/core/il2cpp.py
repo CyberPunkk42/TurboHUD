@@ -1,0 +1,170 @@
+"""Finding classes and fields by name in a running IL2CPP game, such as TSU.
+
+TSU is built with IL2CPP. Its type information (global-metadata.dat) is mapped into the
+game's memory, and every class the game uses has a runtime record that points to its
+name there, to its fields (each with name and position) and to its static fields. So
+nothing here needs a fixed address: everything is looked up by name at every start.
+
+Reading goes through a `read(address, size) -> bytes` callable, so this runs and tests
+without a game.
+"""
+
+import struct
+from dataclasses import dataclass, field
+
+# IL2CPP runtime layouts (Unity 2021.3, metadata version 29, 64-bit).
+CLASS_NAME = 0x10
+CLASS_NAMESPACE = 0x18
+CLASS_PARENT = 0x58
+CLASS_FIELDS = 0x80
+CLASS_STATIC_FIELDS = 0xB8
+FIELD_INFO_SIZE = 32  # name, type, parent, offset (int32), token
+TYPE_ATTRS = 8  # in Il2CppType, after its data pointer
+FIELD_ATTRIBUTE_STATIC = 0x10
+LIST_ITEMS = 0x10
+LIST_SIZE = 0x18
+ARRAY_LENGTH = 0x18
+ARRAY_DATA = 0x20
+
+
+class ReadError(OSError):
+    """The game refused a read: the address is not mapped (a stale pointer)."""
+
+
+class NotFound(Exception):
+    """The game is not in a state that has this data (menu, loading), or it changed."""
+
+
+class Memory:
+    """Reads the game's memory through a `read(address, size) -> bytes` callable.
+    `regions` are (start, end, permissions, offset, path) from the game's memory map."""
+
+    def __init__(self, read, regions):
+        self.read = read
+        self.regions = regions
+
+    def u64(self, address):
+        return struct.unpack('<Q', self.read(address, 8))[0]
+
+    def i32(self, address):
+        return struct.unpack('<i', self.read(address, 4))[0]
+
+    def u32(self, address):
+        return struct.unpack('<I', self.read(address, 4))[0]
+
+    def u16(self, address):
+        return struct.unpack('<H', self.read(address, 2))[0]
+
+    def u8(self, address):
+        return self.read(address, 1)[0]
+
+    def f32(self, address):
+        return struct.unpack('<f', self.read(address, 4))[0]
+
+    def cstring(self, address, limit=128):
+        return self.read(address, limit).split(b'\0', 1)[0].decode('utf-8', 'replace')
+
+    def search(self, regions, value, chunk=32 << 20):
+        """Addresses (8-aligned) in `regions` that hold the 64-bit `value`."""
+        pattern = struct.pack('<Q', value)
+        hits = []
+        for start, end in regions:
+            address = start
+            while address < end:
+                size = min(chunk, end - address)
+                try:
+                    data = self.read(address, size)
+                except OSError:
+                    address += size
+                    continue
+                index = data.find(pattern)
+                while index != -1:
+                    if index % 8 == 0:
+                        hits.append(address + index)
+                    index = data.find(pattern, index + 1)
+                address += size
+        return hits
+
+
+@dataclass
+class Il2Cpp:
+    """Finds classes and fields by name in a running IL2CPP game."""
+
+    memory: Memory
+    metadata: bytes
+    metadata_base: int
+    _fields: dict = field(default_factory=dict)
+
+    def string_address(self, text):
+        index = self.metadata.find(b'\0' + text.encode() + b'\0')
+        if index < 0:
+            raise NotFound(f'{text!r} is not in the game metadata')
+        return self.metadata_base + index + 1
+
+    def find_class(self, namespace, name):
+        """The runtime class record. Class records live in the C heap (`[heap]`)."""
+        name_address = self.string_address(name)
+        namespace_address = self.string_address(namespace) if namespace else None
+        heap = [(start, end) for start, end, *_rest, path in self.memory.regions if path == '[heap]']
+        for hit in self.memory.search(heap, name_address):
+            klass = hit - CLASS_NAME
+            if namespace_address is None or self.memory.u64(klass + CLASS_NAMESPACE) == namespace_address:
+                return klass
+        raise NotFound(f'class {namespace}.{name} is not loaded')
+
+    def fields(self, klass):
+        """{name: (offset, is_static)} of `klass` and its parents."""
+        if klass in self._fields:
+            return self._fields[klass]
+        found = {}
+        current = klass
+        while current:
+            entry = self.memory.u64(current + CLASS_FIELDS)
+            while entry:
+                name, type_, parent = struct.unpack('<QQQ', self.memory.read(entry, 24))
+                if parent != current:
+                    break
+                offset = self.memory.i32(entry + 24)
+                attrs = struct.unpack('<H', self.memory.read(type_ + TYPE_ATTRS, 2))[0]
+                found.setdefault(self.memory.cstring(name), (offset, bool(attrs & FIELD_ATTRIBUTE_STATIC)))
+                entry += FIELD_INFO_SIZE
+            current = self.memory.u64(current + CLASS_PARENT)
+        self._fields[klass] = found
+        return found
+
+    def offset(self, obj, name):
+        try:
+            return self.fields(self.memory.u64(obj))[name][0]
+        except KeyError:
+            raise NotFound(f'no field {name}') from None
+
+    def ref(self, obj, *names):
+        """Follow reference fields by name; raises NotFound on a null."""
+        for name in names:
+            obj = self.memory.u64(obj + self.offset(obj, name))
+            if not obj:
+                raise NotFound(f'{name} is null')
+        return obj
+
+    def static_ref(self, klass, name):
+        offset, is_static = self.fields(klass)[name]
+        statics = self.memory.u64(klass + CLASS_STATIC_FIELDS)
+        value = self.memory.u64(statics + offset) if is_static and statics else 0
+        if not value:
+            raise NotFound(f'static {name} is null')
+        return value
+
+    def list_items(self, lst):
+        array, size = self.memory.u64(lst + LIST_ITEMS), self.memory.i32(lst + LIST_SIZE)
+        if not 0 <= size <= 1024:
+            raise NotFound('implausible list size')
+        if not size:
+            return []
+        data = self.memory.read(array + ARRAY_DATA, 8 * size)
+        return list(struct.unpack(f'<{size}Q', data))
+
+    def first_u32(self, lst):
+        """First uint32 of a List<uint>."""
+        if self.memory.i32(lst + LIST_SIZE) < 1:
+            raise NotFound('empty list')
+        return self.memory.u32(self.memory.u64(lst + LIST_ITEMS) + ARRAY_DATA)

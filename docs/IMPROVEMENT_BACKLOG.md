@@ -10,9 +10,11 @@ Over TSU on Windows, in windowed, Fullscreen and Fullscreen Exclusive: the built
 run on a build machine. Expected: windowed and Fullscreen work; Exclusive may not, and an
 overlay that injects into the game is out of scope.
 
-## 2. First real HUD data
-Pick the first feature (lap times, fuel estimate or minimap), find the game data it
-needs, and show it in place of the session clock. Read the game's files only.
+## 2. More HUD data: fuel and speed, then Windows and macOS
+Lap times are live on Linux (from TSU's memory, through the memory probe). Next: fuel
+(left, per lap, laps it lasts) and speed, found the same way. Windows and macOS still
+show the session clock: reading memory there needs its own permission route. Later,
+with an event to join: the lap data as a guest on someone else's server.
 
 ## 3. Customising the look in the app
 A small settings window (from the tray menu) for the theme's colours and scale, instead

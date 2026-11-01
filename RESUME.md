@@ -7,7 +7,9 @@
 - App skeleton in `turbohud/` (see `README.md` and the structure in `docs/STACK.md`): the
   overlay with locked and move mode, Ctrl+Shift+L / Ctrl+Shift+Q, a tray icon (the TSU
   TurboHUD image in `assets/`), saved placement and theme, tested by hand on the Mac.
-  The HUD shows only a session clock so far. Start from the source with
+  On Linux, with TSU started through the memory probe (see Next steps), the HUD shows
+  live lap times: lap and time left, running lap, last and best lap. On Windows and
+  macOS it still shows a session clock. Start from the source with
   `run_turbohud.sh` / `run_turbohud.cmd`.
 - Builds: `tools/build_app.py` (PyInstaller) makes a Windows ZIP, a Mac app ZIP and a
   Linux `.tar.gz`, run locally on each system. Nothing goes to GitHub any more; the
@@ -33,8 +35,9 @@
   `py -3 -B -m unittest discover -s tests`).
 
 ## Next steps
-0. Show the live lap data (`experiments/tsu_lap_reader.py`) in TurboHUD's overlay on
-   Linux; check it as a client on someone else's server; then fuel and speed.
+0. Linux: keep TurboHUD on top of TSU on Hyprland; then fuel and speed from memory.
+   Later, when there is an event to join: check the lap data as a guest on someone
+   else's server (the event controller is then another class).
 See `docs/IMPROVEMENT_BACKLOG.md`. In short:
 1. Test TurboHUD and the probes on Windows over TSU in windowed, Fullscreen and
    Fullscreen Exclusive.
@@ -44,6 +47,14 @@ See `docs/IMPROVEMENT_BACKLOG.md`. In short:
    that does not end when the mouse moves, shortcuts, AppImage.
 
 ## Recent changes
+- 2026-11-01: Live lap times in the overlay (Linux). With TSU started from Steam through
+  the memory probe, the HUD shows the lap (3/13) and time left, the running lap time,
+  and the last and best lap; at the finish, the best lap. Before that it says what it is
+  waiting for. Reading runs in a background thread (`turbohud/tsu/client.py`), so the
+  overlay never waits for the game; the logic is in `turbohud/core/il2cpp.py` and
+  `turbohud/core/race.py`. The probe moved into the app (`turbohud/tsu/probe.py`);
+  `experiments/tsu_memory_probe.py` only starts it, so the Steam launch option is
+  unchanged. Windows and macOS keep the session clock.
 - 2026-11-01: Live lap data from TSU's memory, found by name at every start
   (`experiments/tsu_lap_reader.py`): race clock, time left, lap count, current, last and
   best lap, through the game's own type information, with no stored addresses. Works
