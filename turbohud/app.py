@@ -78,7 +78,7 @@ def run(args, folder):
     from PySide6.QtWidgets import QApplication, QMenu, QSystemTrayIcon
 
     from turbohud.overlay import HOTKEY_LOCK, HOTKEY_QUIT, native_for
-    from turbohud.core.hud import CLOCK_SECTIONS, RACE_SECTIONS, below, session_rows, stacked
+    from turbohud.core.hud import CLOCK_SECTIONS, RACE_SECTIONS, below, local_time_rows, session_rows, stacked
     from turbohud.overlay.window import MovePanel, SectionWindow
 
     app = QApplication([sys.argv[0]])
@@ -106,10 +106,14 @@ def run(args, folder):
         from turbohud.core.race import race_sections
 
         layout = RACE_SECTIONS
-        contents = lambda: race_sections(live.snapshot(), time.monotonic())  # noqa: E731
+        def contents():
+            return {**race_sections(live.snapshot(), time.monotonic()), 'localtime': local_time_rows(time.localtime())}
+
     else:
         layout = CLOCK_SECTIONS
-        contents = lambda: {'clock': session_rows(time.monotonic() - started)}  # noqa: E731
+        def contents():
+            return {'clock': session_rows(time.monotonic() - started), 'localtime': local_time_rows(time.localtime())}
+
     started = time.monotonic()
     screens = [screen.geometry().getRect() for screen in QGuiApplication.screens()]
     windows = {section.name: SectionWindow(native, settings.theme, section) for section in layout}
@@ -123,7 +127,7 @@ def run(args, folder):
     new = [section for section in layout if section.name not in saved_places]
     if saved_places and new:
         # Sections added in a later version: below the ones the player already placed.
-        defaults.update(below(new, saved_places, first))
+        defaults.update(below(new, saved_places, first, screens))
     for name, window in windows.items():
         saved = settings.sections.get(name)
         place = (saved.x, saved.y, saved.width, saved.height) if saved else defaults[name]
