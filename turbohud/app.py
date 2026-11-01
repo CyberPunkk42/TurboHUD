@@ -102,12 +102,21 @@ def run(args, folder):
     log.info('Qt platform: %s', QGuiApplication.platformName())
 
     live = start_live_race()
+    pad = None
     if live is not None:
         from turbohud.core.race import race_sections
 
         layout = RACE_SECTIONS
+        from turbohud.tsu.controller import Pad, combined
+
+        pad = Pad()
+        pad.start()
+
         def contents():
-            return {**race_sections(live.snapshot(), time.monotonic()), 'localtime': local_time_rows(time.localtime())}
+            current = race_sections(live.snapshot(), time.monotonic())
+            if 'pedals' in current:
+                current['pedals'] = combined(current['pedals'], pad.pedals())
+            return {**current, 'localtime': local_time_rows(time.localtime())}
 
     else:
         layout = CLOCK_SECTIONS
@@ -268,6 +277,8 @@ def run(args, folder):
         save()
     if live is not None:
         live.stop()
+    if pad is not None:
+        pad.stop()
     native.unregister_hotkeys()
     tray.hide()
     log.info('done')

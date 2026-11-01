@@ -320,3 +320,12 @@ the event's `FuelSettings.maxFuelConsumptionInEvent` (reached through
 peaked at about 57, taken as metres a second (205 km/h), not yet compared in game.
 Some checkpoints are two lines at the same spot (6/7, 12/13, 23/24, 28/29 on the track
 driven) or one line in two pieces (109/110, 111/112), with the same time.
+
+### Throttle and brake (2026-11-01)
+`TS.CarControls` (`CarStateUpdater.m_controls`): `gas` and `brake` are floats but only
+take 0, 1/3, 2/3 and 1 (also kept as `gasInThirds`/`brakeInThirds`, int 0-3): TSU rounds
+input to thirds. Sampled together with the Steam Input virtual pad (`/dev/input/js1`,
+"Microsoft X-Box 360 pad"): game throttle follows axis 5 (right trigger, correlation
+0.97), brake axis 2 (left trigger, 0.8); triggers run from -32767 to 32767.
+While a race is set up the reader reports `m_eventListener is null`; in the menu
+`m_activeServer is null`.

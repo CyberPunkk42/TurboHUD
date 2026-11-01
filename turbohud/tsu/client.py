@@ -12,12 +12,15 @@ import time
 from pathlib import Path
 
 from turbohud.core.il2cpp import Il2Cpp, Memory, NotFound, ReadError
-from turbohud.core.race import RACING, WAITING_FOR_GAME, WAITING_FOR_RACE, LapReader, Snapshot
+from turbohud.core.race import RACING, STARTING, WAITING_FOR_GAME, WAITING_FOR_RACE, LapReader, Snapshot
 from turbohud.tsu.probe import receive_message, send_message, socket_path
 
 READ_INTERVAL = 0.05  # seconds between reads in a race: the live delta updates 20 times a second
 WAIT_INTERVAL = 1.0  # seconds between tries while TSU or a race is not there
 TIMEOUT = 5.0  # seconds before a silent probe counts as gone
+# What the reader says while a session sets up its race (seen in drives): the race
+# objects are not there yet. In the menu it says m_activeServer is null instead.
+STARTING_SIGNS = ('m_eventListener is null', 'm_eventState is null', 'no local player')
 
 log = logging.getLogger(__name__)
 
@@ -116,9 +119,11 @@ class LiveRace:
                 self._reader, self._conn = self._connect()
             state = self._reader.read()
         except (NotFound, ReadError) as error:
-            # In the menu or loading, or a pointer led nowhere between two states.
-            self._set(Snapshot(WAITING_FOR_RACE, read_at=self._clock(), detail=str(error)))
-            return WAIT_INTERVAL
+            # In the menu (no session: no active server), or a session whose race is
+            # being set up, or a pointer led nowhere between two states.
+            status = STARTING if any(sign in str(error) for sign in STARTING_SIGNS) else WAITING_FOR_RACE
+            self._set(Snapshot(status, read_at=self._clock(), detail=str(error)))
+            return WAIT_INTERVAL if status == WAITING_FOR_RACE else READ_INTERVAL
         except (OSError, ValueError, KeyError, StopIteration) as error:
             # Not started through the probe, or TSU quit (the socket closed).
             self._drop()

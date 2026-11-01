@@ -607,6 +607,19 @@ class RowsTests(unittest.TestCase):
         row = race.race_rows(racing(even), 0)[2]
         self.assertEqual((row.text, row.color), ('0.000 vs best', 'text'))
 
+    def test_race_starting_shows_every_section(self):
+        from turbohud.core.hud import RACE_SECTIONS
+
+        sections = race.race_sections(race.Snapshot(race.STARTING), 0)
+        for section in RACE_SECTIONS:
+            if section.name != 'localtime':  # the app adds the time itself
+                self.assertIn(section.name, sections)
+        self.assertEqual(sections['lap'][0].text, 'Race starting...')
+        self.assertEqual(sections['pedals'], (None, None))
+
+    def test_in_the_menu_only_the_lap_section_speaks(self):
+        self.assertEqual(set(race.race_sections(race.Snapshot(race.WAITING_FOR_RACE), 0)), {'lap'})
+
     def test_waiting_texts_fit_the_lap_section(self):
         from turbohud.core.hud import RACE_SECTIONS
 
@@ -640,6 +653,15 @@ class LiveRaceTests(unittest.TestCase):
         live = self.live(connect)
         self.assertEqual(live.step(), self.client.WAIT_INTERVAL)
         self.assertEqual(live.snapshot().status, race.WAITING_FOR_GAME)
+
+    def test_while_a_race_is_set_up_it_says_race_starting(self):
+        class Reader:
+            def read(self):
+                raise il.NotFound('m_eventListener is null')
+
+        live = self.live(lambda: (Reader(), None))
+        self.assertEqual(live.step(), self.client.READ_INTERVAL)
+        self.assertEqual(live.snapshot().status, race.STARTING)
 
     def test_in_the_menu_it_waits_for_a_race_and_keeps_the_connection(self):
         calls = []

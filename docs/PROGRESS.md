@@ -122,3 +122,11 @@ its "Recent changes".
   `gas` and `brake`, or the thirds TSU keeps); not yet checked in a drive.
 - 2026-11-01: The speed turns yellow while lifting: no throttle and no brake, above
   5 km/h (coasting).
+- 2026-11-01: While a session sets up its race (loading, grid), every section shows
+  with placeholders ("Race starting..."), so the HUD is in place before the lights go
+  out; in the menu only the lap section speaks. Pedal bars follow the controller's
+  triggers finely: TSU rounds throttle and brake to thirds (checked in a drive: only 0,
+  1/3, 2/3, 1), so TurboHUD also reads the gamepad itself through the Linux joystick
+  interface (`turbohud/tsu/controller.py`; with Steam Input the virtual X-Box 360 pad,
+  right trigger throttle, left brake; only gamepads, never a keyboard). A bar shows the
+  greater of pad and game value, so a keyboard still works.
