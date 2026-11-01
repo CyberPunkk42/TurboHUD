@@ -49,6 +49,10 @@ See `docs/IMPROVEMENT_BACKLOG.md`. In short:
    Hyprland.
 
 ## Recent changes
+- 2026-11-01: First-launch layout: all sections one below the other at the left of the
+  largest screen, laid out as on a 1920x1080 screen (40 px from the edge, vertically
+  centred, a second column only if they do not fit), none overlapping. Saved places are
+  kept as before; a section whose screen is gone moves to the largest screen.
 - 2026-11-01: The speed section's pedal bars only show with a speed (not in the menus
   or before TSU runs; in move mode as a sample). On Linux the local time shows once TSU
   is running, from its main menu on.

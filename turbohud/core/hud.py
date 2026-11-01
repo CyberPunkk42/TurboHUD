@@ -210,3 +210,42 @@ def below(sections, placed, sizes, screens=(), gap=8):
     right = max(x + width for x, _y, width, _h in placed.values())
     top = min(y for _x, y, _w, _h in placed.values())
     return stacked(sections, right + gap, top, sizes, gap)
+
+
+REFERENCE_SCREEN = (1920, 1080)  # the first-launch layout is made for this size
+LAYOUT_MARGIN = 40  # from the screen's edges
+
+
+def main_screen(screens):
+    """The screen the first-launch layout goes on: the largest (where games usually run);
+    of equal ones, the first. None without screens."""
+    return max(screens, key=lambda s: s[2] * s[3], default=None)
+
+
+def first_launch(sections, sizes, origin=(0, 0), reference=REFERENCE_SCREEN, margin=LAYOUT_MARGIN, gap=8):
+    """{name: (x, y, width, height)} for a first launch: the sections one below the other
+    at the left of a `reference`-sized screen whose top-left corner is `origin`,
+    vertically centred, so the middle stays free. What does not fit in the height starts
+    another column to the right; nothing overlaps."""
+    room = reference[1] - 2 * margin
+    columns, column, height = [], [], 0
+    for section in sections:
+        section_height = sizes[section.name][1]
+        if column and height + gap + section_height > room:
+            columns.append(column)
+            column, height = [], 0
+        height += (gap if column else 0) + section_height
+        column.append(section)
+    if column:
+        columns.append(column)
+    places = {}
+    x = origin[0] + margin
+    for column in columns:
+        total = sum(sizes[s.name][1] for s in column) + gap * (len(column) - 1)
+        y = origin[1] + margin + max((room - total) // 2, 0)
+        for section in column:
+            width, section_height = sizes[section.name]
+            places[section.name] = (x, y, width, section_height)
+            y += section_height + gap
+        x += max(sizes[s.name][0] for s in column) + gap
+    return places
