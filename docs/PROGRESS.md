@@ -50,3 +50,11 @@ its "Recent changes".
   (`experiments/tsu_lap_reader.py`): race clock, time left, lap count, current, last and
   best lap, through the game's own type information, with no stored addresses. Works
   live on Omarchy Linux while hosting alone; the lap times match the game's exactly.
+- 2026-11-01: Live lap times in the overlay (Linux). With TSU started from Steam through
+  the memory probe, the HUD shows the lap (3/13) and time left, the running lap time,
+  and the last and best lap; at the finish, the best lap. Before that it says what it is
+  waiting for. Reading runs in a background thread (`turbohud/tsu/client.py`), so the
+  overlay never waits for the game; the logic is in `turbohud/core/il2cpp.py` and
+  `turbohud/core/race.py`. The probe moved into the app (`turbohud/tsu/probe.py`);
+  `experiments/tsu_memory_probe.py` only starts it, so the Steam launch option is
+  unchanged. Windows and macOS keep the session clock.

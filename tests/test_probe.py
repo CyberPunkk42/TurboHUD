@@ -6,9 +6,11 @@ import time
 import unittest
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'experiments'))
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+sys.path.insert(0, str(ROOT / 'experiments'))
 
-import tsu_memory_probe as probe
+from turbohud.tsu import probe
 
 MAPS = """\
 55d0c000-55d0e000 r--p 00000000 103:02 1234 /opt/game/TSU.x64

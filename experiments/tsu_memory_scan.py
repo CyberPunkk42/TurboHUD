@@ -20,9 +20,9 @@ import struct
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-import tsu_memory_probe as probe
+from turbohud.tsu import probe  # noqa: E402
 
 STATE = Path(__file__).resolve().parents[1] / '.buildtools' / 'memory_scan.json'
 UNITS_PER_SECOND = 10_000

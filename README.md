@@ -4,8 +4,10 @@ A HUD overlay for Turbo Sliders Unlimited (TSU): it sits on top of the running g
 lets every click through, and shows information while you race. It works with TSU's
 Fullscreen mode too.
 
-Early version: for now the HUD shows a session clock. Fuel estimate, minimap and lap
-times are planned.
+Early version. On Linux the HUD shows live lap times (lap and time left, the running
+lap, last and best lap) when TSU is started through TurboHUD's memory probe, see
+[Live lap times on Linux](#live-lap-times-on-linux). On Windows and macOS it shows a
+session clock for now. Fuel estimate, speed and minimap are planned.
 
 ## Install and first start
 
@@ -51,6 +53,21 @@ runs, you see:
    desktop has no tray, TurboHUD starts in move mode, so **Close** quits it.
 4. Known issue: on Wayland desktops (for example Omarchy with Hyprland), TurboHUD runs but
    does not yet stay on top of the game. On X11 it should.
+
+### Live lap times on Linux
+Linux lets a program read another program's memory only if it started that program.
+So TurboHUD's small memory probe starts TSU: then it may read TSU's memory, and nothing
+else's, with no sudo and no change to the system. It only reads and never pauses the
+game.
+1. In Steam, right-click Turbo Sliders Unlimited > **Properties** > **General** >
+   **Launch Options**, and enter (with the path to your copy of this folder):
+   `python3 /home/<user>/Work/workspace/tsu_repositories/TurboHUD/experiments/tsu_memory_probe.py %command%`
+2. Start TSU from Steam, and start TurboHUD (before or after; it finds the game).
+3. Until a race is on, the HUD says what it is waiting for. In a race it shows the lap
+   and time left, the running lap time, and the last and best lap.
+
+Clear the launch option to start TSU without the probe. The probe writes what it did to
+`~/.config/TurboHUD/memory_probe.log`.
 
 ## Use
 

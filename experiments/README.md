@@ -212,6 +212,11 @@ would include only the parts it uses.
 Question: can TurboHUD read TSU's memory on Linux, and only TSU's, without changing the
 system?
 
+The probe is now part of the app (`turbohud/tsu/probe.py`); `tsu_memory_probe.py` here
+only starts it, so the Steam launch option keeps its path. Likewise the lap reader's
+logic is in `turbohud/core/il2cpp.py` and `turbohud/core/race.py`, and
+`tsu_lap_reader.py` is a terminal view of what the overlay shows.
+
 Linux (Yama `ptrace_scope` 1) lets a program read another program's memory only if it
 started it. So the probe starts TSU: Steam runs the probe, the probe runs the game. It
 then may read TSU's memory and nothing else's. No sudo, no `setcap`, no system setting;

@@ -4,6 +4,7 @@ import argparse
 import logging
 import signal
 import sys
+import time
 from pathlib import Path
 
 from turbohud import __version__
@@ -54,6 +55,19 @@ def setup_log(folder):
     )
 
 
+def start_live_race(platform=sys.platform):
+    """On Linux, start reading TSU's race through the memory probe (TSU started from
+    Steam with the launch option); None elsewhere, where the HUD keeps its session clock."""
+    if not platform.startswith('linux'):
+        return None
+    from turbohud.tsu.client import LiveRace
+
+    live = LiveRace()
+    live.start()
+    log.info('reading TSU live through the memory probe')
+    return live
+
+
 def run(args, folder):
     import PySide6
     from PySide6.QtCore import Qt, QTimer
@@ -83,7 +97,13 @@ def run(args, folder):
     )
     log.info('Qt platform: %s', QGuiApplication.platformName())
 
-    overlay = OverlayWindow(native, settings.theme)
+    live = start_live_race()
+    content = None
+    if live is not None:
+        from turbohud.core.race import race_rows
+
+        content = lambda: race_rows(live.snapshot(), time.monotonic())  # noqa: E731
+    overlay = OverlayWindow(native, settings.theme, content)
     screens = [screen.geometry().getRect() for screen in QGuiApplication.screens()]
     placement = fit_on_screens(settings.placement, screens)
     overlay.setGeometry(*placement)
@@ -173,6 +193,8 @@ def run(args, folder):
         overlay.set_locked(True)  # saves and hands the focus back
     else:
         save()
+    if live is not None:
+        live.stop()
     native.unregister_hotkeys()
     tray.hide()
     log.info('done')
