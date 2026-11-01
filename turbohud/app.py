@@ -85,6 +85,7 @@ def run(args, folder):
         below,
         drawing_place,
         first_launch,
+        free_spot,
         local_time_rows,
         main_screen,
         session_rows,
@@ -182,13 +183,17 @@ def run(args, folder):
             log.warning('could not save the settings: %s', error)
 
     def panel_spot():
-        """Where the move-mode panel goes: a third down the screen that holds the first
-        shown section, in the middle."""
+        """Where the move-mode panel goes: on the screen that holds the first shown
+        section, near the middle a third down, but never over a shown section (it would
+        hide it from dragging)."""
         shown = [w for w in windows.values() if w.wanted] or list(windows.values())
-        x, y = shown[0].placement()[:2]
-        for sx, sy, sw, sh in screens:
+        boxes = [w.placement() for w in shown]
+        x, y = boxes[0][:2]
+        for screen in screens:
+            sx, sy, sw, sh = screen
             if sx <= x < sx + sw and sy <= y < sy + sh:
-                return sx + (sw - panel.width()) // 2, sy + sh // 3
+                wanted = (sx + (sw - panel.width()) // 2, sy + sh // 3)
+                return free_spot((panel.width(), panel.height()), screen, boxes, wanted)
         return x + 40, y + 40
 
     def set_locked(value):

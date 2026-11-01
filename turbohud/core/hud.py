@@ -354,3 +354,33 @@ class GroupMover:
             self.known[name] = place
             self.pending[name] = (place[:2], now + GROUP_PENDING)
         return moves
+
+
+FREE_STEP = 40  # pixels between the spots free_spot tries
+FREE_GAP = 12  # room kept between the panel and a section
+
+
+def _overlap(a, b):
+    ax, ay, aw, ah = a
+    bx, by, bw, bh = b
+    return max(0, min(ax + aw, bx + bw) - max(ax, bx)) * max(0, min(ay + ah, by + bh) - max(ay, by))
+
+
+def free_spot(size, screen, boxes, wanted, margin=LAYOUT_MARGIN, step=FREE_STEP, gap=FREE_GAP):
+    """(x, y) for a box of `size` on `screen` (x, y, width, height) that covers none of
+    `boxes` (x, y, width, height), as near `wanted` (x, y) as possible; if every spot
+    covers something, the one covering least. For the move-mode panel, which must not
+    hide a section the player wants to drag."""
+    width, height = size
+    sx, sy, sw, sh = screen
+    padded = [(x - gap, y - gap, w + 2 * gap, h + 2 * gap) for x, y, w, h in boxes]
+    left, top = sx + margin, sy + margin
+    right, bottom = max(left, sx + sw - margin - width), max(top, sy + sh - margin - height)
+    xs = sorted({*range(left, right + 1, step), right, min(max(wanted[0], left), right)})
+    ys = sorted({*range(top, bottom + 1, step), bottom, min(max(wanted[1], top), bottom)})
+
+    def cost(spot):
+        covered = sum(_overlap((spot[0], spot[1], width, height), box) for box in padded)
+        return covered, abs(spot[0] - wanted[0]) + abs(spot[1] - wanted[1])
+
+    return min(((x, y) for x in xs for y in ys), key=cost)

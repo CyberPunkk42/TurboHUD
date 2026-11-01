@@ -250,3 +250,21 @@ class GroupMoverTests(unittest.TestCase):
         seen['lap'] = (10, 10, 200, 80)  # resized at its corner
         seen['tires'] = (400, 400, 100, 30)  # no group
         self.assertEqual(self.look(mover, seen, 0.2), {})
+
+
+class FreeSpotTests(unittest.TestCase):
+    SCREEN = (0, 0, 5120, 1440)  # the player's main monitor
+
+    def test_the_wanted_spot_when_it_is_free(self):
+        self.assertEqual(hud.free_spot((400, 600), self.SCREEN, [(40, 300, 380, 60)], (2360, 480)), (2360, 480))
+
+    def test_moves_off_a_section_such_as_the_radar(self):
+        radar = (2480, 864, 160, 160)
+        x, y = hud.free_spot((400, 600), self.SCREEN, [radar], (2360, 480))
+        self.assertEqual(hud._overlap((x, y, 400, 600), radar), 0)
+        self.assertLess(abs(x - 2360) + abs(y - 480), 400)  # still near the middle
+
+    def test_stays_on_the_screen_and_covers_least_when_nothing_is_free(self):
+        everything = [(0, 0, 5120, 1440)]
+        x, y = hud.free_spot((400, 600), (0, 0, 1920, 1080), everything, (760, 360))
+        self.assertTrue(40 <= x <= 1920 - 40 - 400 and 40 <= y <= 1080 - 40 - 600)

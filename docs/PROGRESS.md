@@ -189,3 +189,7 @@ its "Recent changes".
   your tail over your speed. Cars more than 8 to the side (another part of the track) or
   in the pits do not count; standing still there is no radar. The car size (4.5 x 2) is
   a guess, and whether the game updates the other cars' positions is not checked yet.
+- 2026-11-01: The move-mode panel no longer covers sections. It goes near the middle
+  of the screen a third down as before, but moves to the nearest spot that covers no
+  shown section (hud.free_spot); it had hidden the proximity radar. It can also be
+  dragged by its background.

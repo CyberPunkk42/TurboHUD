@@ -52,6 +52,10 @@ See `docs/IMPROVEMENT_BACKLOG.md`. In short:
    Hyprland.
 
 ## Recent changes
+- 2026-11-01: The move-mode panel no longer covers sections. It goes near the middle
+  of the screen a third down as before, but moves to the nearest spot that covers no
+  shown section (hud.free_spot); it had hidden the proximity radar. It can also be
+  dragged by its background.
 - 2026-11-01: Proximity radar (Linux). A new "Proximity radar" section (160 x 160,
   centred a little below the middle of the main screen at first, shown by default): your
   car in the middle heading up, the other cars around it in their directions. It appears
