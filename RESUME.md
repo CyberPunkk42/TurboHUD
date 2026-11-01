@@ -49,6 +49,12 @@ See `docs/IMPROVEMENT_BACKLOG.md`. In short:
    Hyprland.
 
 ## Recent changes
+- 2026-11-01: Fuel balance without blips: the recent laps' fuel use is taken at the
+  car's place between two checkpoints, with the live delta's handling of lines passed
+  together, same-spot and split lines (shared in LapState.stretch). Replayed over a
+  recorded drive: largest jump 0.008 % of the tank (was 0.144 %). New section "Fuel to
+  finish": laps of fuel to spare (green, +0.8 laps) or short (red), against the laps
+  still to drive by the lap limit or, at the recent lap times, the time limit.
 - 2026-11-01: While a session sets up its race (loading, grid), every section shows
   with placeholders ("Race starting..."), so the HUD is in place before the lights go
   out; in the menu only the lap section speaks. Pedal bars follow the controller's

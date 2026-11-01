@@ -76,7 +76,7 @@ Clear the launch option to start TSU without the probe. The probe writes what it
 
 - The HUD is made of sections, each in its own small box: lap and time left, the running
   lap, the delta to your best lap, last and best lap, fuel and tires left (with the laps
-  they last), speed with throttle and brake bars, and the local time (on Windows and macOS for now
+  they last), the fuel to spare or short for the finish, speed with throttle and brake bars, and the local time (on Windows and macOS for now
   the session clock and the local time). They start one below the other at the top left, **locked**:
   clicks go through them to the game.
 - **Ctrl+Shift+L** (or **Move mode** in the TurboHUD icon's menu) switches to **move

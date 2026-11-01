@@ -113,6 +113,7 @@ RACE_SECTIONS = (
     Section('delta', 'Delta to best', ((Row('+00.000 vs best', 'medium'),),)),
     Section('times', 'Last and best lap', ((Row('Last 0:00.000   Best 0:00.000', 'medium'),),)),
     Section('fuel', 'Fuel', ((Row('Fuel 100.0%', 'medium', tail='  ~10.0 laps  +0.00%'),),)),
+    Section('fuelfinish', 'Fuel to finish', ((Row('Finish +00.0 laps', 'medium'),),)),
     Section('tires', 'Tires', ((Row('Tires 100%  ~10.0 laps', 'medium'),),)),
     Section('speed', 'Speed', ((Row('000 km/h', 'medium'),),), pedals=True),
     Section('localtime', 'Local time', ((Row('00:00', 'medium'),),)),
