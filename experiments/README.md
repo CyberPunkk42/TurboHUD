@@ -242,3 +242,17 @@ open; it goes away when the game quits. TSU keeps lap times as whole numbers in 
 - 2026-11-01, Omarchy Linux: self-test passes (own child readable, terminal refused).
 - 2026-11-01, Omarchy Linux, over TSU started from Steam: the probe found `TSU.x64`
   and read the start of `GameAssembly.so` (OK).
+- 2026-11-01, Omarchy Linux, hotlap alone, laps 1:39.647 and 2:40.032: the lap data was
+  found in memory (heap addresses, different on every start). All times are int32 in
+  steps of 0.1 ms.
+  - **Lap list:** an array of 12-byte entries `{flags, lap number, lap time}`, one per
+    lap of the event's lap limit (the length, 13, sits 12 bytes before the first lap
+    time's entry ends).
+  - **Player lap state:** `{?, time the last lap finished on the race clock, best lap,
+    laps completed}`, e.g. `1, 267.2984 s, 99.6479 s, 2`.
+  - **Race clock:** 32 bytes after a copy of the best lap; follows real time but changes
+    in irregular steps (about every 0.7-1.7 s).
+  - Current lap time = race clock - time the last lap finished. Checked live.
+  - Also found: a list of times 0.1025 s apart, probably the replay recording.
+  - Still open: a stable way to find these places at each start (through the game's
+    type information), and a smoother clock.
