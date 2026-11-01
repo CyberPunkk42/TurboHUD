@@ -130,7 +130,7 @@ class SectionWindow(QWidget):
         needed = content_size(rows, self.theme.scale, text_width)[0] + bars if rows else None
         scale = self.theme.scale * section_scale((self.width(), self.height()), self.base[1], needed)
         left = 0
-        if self.section.pedals:
+        if self.section.pedals and rows:  # no bars without a speed (menu, no game)
             throttle, brake = self.pedals or (None, None)
             draw_bars(painter, pedal_bars(self.width(), self.height(), scale, throttle, brake))
             left = pedal_space(scale) // 2

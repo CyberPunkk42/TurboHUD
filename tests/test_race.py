@@ -681,6 +681,15 @@ class RowsTests(unittest.TestCase):
     def test_in_the_menu_only_the_lap_section_speaks(self):
         self.assertEqual(set(race.race_sections(race.Snapshot(race.WAITING_FOR_RACE), 0)), {'lap'})
 
+    def test_the_local_time_shows_once_tsu_runs(self):
+        import time
+
+        now = time.struct_time((2026, 11, 1, 18, 7, 0, 6, 305, 0))
+        self.assertNotIn('localtime', race.with_local_time({}, race.Snapshot(race.WAITING_FOR_GAME), now))
+        menu = race.with_local_time({}, race.Snapshot(race.WAITING_FOR_RACE), now)
+        self.assertEqual(menu['localtime'][0].text, '18:07')
+        self.assertIn('localtime', race.with_local_time({}, race.Snapshot(race.STARTING), now))
+
     def test_waiting_texts_fit_the_lap_section(self):
         from turbohud.core.hud import RACE_SECTIONS
 

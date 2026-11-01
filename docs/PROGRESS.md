@@ -136,3 +136,6 @@ its "Recent changes".
   recorded drive: largest jump 0.008 % of the tank (was 0.144 %). New section "Fuel to
   finish": laps of fuel to spare (green, +0.8 laps) or short (red), against the laps
   still to drive by the lap limit or, at the recent lap times, the time limit.
+- 2026-11-01: The speed section's pedal bars only show with a speed (not in the menus
+  or before TSU runs; in move mode as a sample). On Linux the local time shows once TSU
+  is running, from its main menu on.
