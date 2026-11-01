@@ -124,6 +124,7 @@ class Section:
     pedals: bool = False  # a throttle bar on its left and a brake bar on its right
     bar: tuple = ()  # (width, height) at scale 1 for a drawing without text
     drawing: str = ''  # what it draws instead of text: 'flag' (blue flag) or 'radar'
+    level: bool = False  # a bar below the text showing how much is left (fuel, tires, health)
 
 
 RACE_SECTIONS = (
@@ -134,10 +135,10 @@ RACE_SECTIONS = (
     Section('current', 'Running lap', ((Row('0:00.0', 'big'),), (Row('10:00.000', 'big'),))),
     Section('delta', 'Delta to best', ((Row('+00.000 vs best', 'medium'),),)),
     Section('times', 'Last and best lap', ((Row('Last 0:00.000   Best 0:00.000', 'medium'),),)),
-    Section('fuel', 'Fuel', ((Row('Fuel 100.0%', 'medium', tail='  ~10.0 laps  +0.00%'),),)),
+    Section('fuel', 'Fuel', ((Row('Fuel 100.0%', 'medium', tail='  ~10.0 laps  +0.00%'),),), level=True),
     Section('fuelfinish', 'Fuel to finish', ((Row('Finish +00.0 laps', 'medium'),),)),
-    Section('tires', 'Tires', ((Row('Tires 100%  ~10.0 laps', 'medium'),),)),
-    Section('health', 'Health', ((Row('Health 100%', 'medium', tail='  less downforce'),),)),
+    Section('tires', 'Tires', ((Row('Tires 100%  ~10.0 laps', 'medium'),),), level=True),
+    Section('health', 'Health', ((Row('Health 100%', 'medium', tail='  less downforce'),),), level=True),
     Section('speed', 'Speed', ((Row('000 km/h', 'medium'),),), pedals=True),
     Section('localtime', 'Local time', ((Row('00:00', 'medium'),),)),
     Section('players', 'Players', (tuple(
@@ -159,7 +160,25 @@ def base_size(section, scale, measure):
         return round(section.bar[0] * scale), round(section.bar[1] * scale)
     sizes = [content_size(rows, scale, measure) for rows in section.samples]
     extra = pedal_space(scale) if section.pedals else 0
-    return sizes[0][0] + extra, max(h for _w, h in sizes)
+    below = level_space(scale) if section.level else 0
+    return sizes[0][0] + extra, max(h for _w, h in sizes) + below
+
+
+LEVEL_HEIGHT = 8  # the level bar's height below the text, at scale 1
+
+
+def level_space(scale):
+    """The height the level bar adds below a section's text."""
+    return round(LEVEL_HEIGHT * scale)
+
+
+def level_bar(width, content_height, scale, fill, color):
+    """The level bar below a section's text: as wide as the section between its
+    margins, just under the text (whose height with margins is `content_height`), lit
+    from the left to `fill` (0 to 1) in `color` ('ahead', 'lift' or 'behind')."""
+    margin = round(MARGIN * scale)
+    top = content_height - margin // 2
+    return Bar(margin, top, max(width - 2 * margin, 1), max(level_space(scale), 2), min(max(fill, 0.0), 1.0), color)
 
 
 PEDAL_WIDTH = 10  # a pedal bar's width at scale 1

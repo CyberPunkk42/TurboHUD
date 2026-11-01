@@ -374,6 +374,7 @@ def run(args, folder):
             window.pedals = current.get('pedals')
             window.opacity = current.get('blue')
             window.radar = current.get('radar')
+            window.level = current.get('levels', {}).get(name)
             window.update()
         grouped = any(w.group for w in windows.values())
         every = GROUP_EVERY if grouped else PLACEMENT_EVERY

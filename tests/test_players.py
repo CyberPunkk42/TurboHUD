@@ -371,3 +371,27 @@ class LiveGapTests(unittest.TestCase):
         leader = driving('Leader', (0, 10_000, 10_000, 30_000), z=35.0)
         me = driving('Me', (5_000, 15_000), z=20.0, local=True)  # passed line 1, not yet written 2
         self.assertEqual(race.gap(leader, me, clock=30_000, gates=lines), ('time', -10_000))
+
+
+class LevelBarTests(unittest.TestCase):
+    def test_fuel_tires_and_health_get_levels_with_colours(self):
+        car = race.CarState(True, 84_000, 168_000, True, int(race.MAX_TIRE_WEAR * 0.9), 30.0,
+                            fuel_per_lap=10_000, health=0.6, downforce_from=0.9, slowed_from=0.75)
+        levels = race.car_sections(car, laps_to_go=5)['levels']
+        self.assertEqual(levels['fuel'], (0.5, 'ahead'))  # 8.4 laps left for 5 to go
+        self.assertAlmostEqual(levels['tires'][0], 0.1)
+        self.assertEqual(levels['tires'][1], 'behind')  # under 15 %
+        self.assertEqual(levels['health'], (0.6, 'behind'))  # slowed
+
+    def test_fuel_bar_is_red_when_it_will_not_last(self):
+        car = race.CarState(True, 84_000, 168_000, False, 0, 30.0, fuel_per_lap=20_000)
+        self.assertEqual(race.car_sections(car, laps_to_go=5)['levels']['fuel'], (0.5, 'behind'))
+
+    def test_the_bar_sits_below_the_text_across_the_section(self):
+        from turbohud.core import hud
+        bar = hud.level_bar(300, 50, 1.0, 0.4, 'lift')
+        self.assertEqual((bar.x, bar.y, bar.width, bar.height), (14, 43, 272, 8))
+        self.assertEqual((bar.fill, bar.color), (0.4, 'lift'))
+        fuel = next(s for s in hud.RACE_SECTIONS if s.name == 'fuel')
+        plain = hud.base_size(hud.RACE_SECTIONS[0], 1.0, lambda t, size: len(t) * size)
+        self.assertTrue(fuel.level and not hud.RACE_SECTIONS[0].level and plain)

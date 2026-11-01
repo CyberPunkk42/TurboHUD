@@ -30,13 +30,15 @@ from turbohud.core.hud import (
     content_size,
     help_lines,
     hud_lines,
+    level_bar,
+    level_space,
     pedal_bars,
     pedal_space,
     section_scale,
 )
 from turbohud.core.race import CAR_LENGTH, CAR_WIDTH, RADAR_FROM, RADAR_FULL, Blip, RadarView
 from turbohud.core.settings import GROUPS
-from turbohud.hud.painter import BEHIND_COLOR, LIFT_COLOR, draw_bars, draw_hud, text_width
+from turbohud.hud.painter import BEHIND_COLOR, LIFT_COLOR, draw_bars, draw_hud, draw_level, text_width
 
 TINT = (23, 56, 97, 153)  # move mode's background: red, green, blue, opacity (0-255)
 BORDER = (120, 170, 230)
@@ -49,6 +51,7 @@ BLUE_FLAG_EDGE_WIDTH = 2
 PEDAL_INSET = 4  # pedal_bars' default inset
 BACKDROP = (0, 0, 0, 40)  # the light tint behind a section's text (option), RGBA
 BLUE_SAMPLE = 0.6  # the bar's opacity in move mode, to place it
+LEVEL_SAMPLE = (0.7, 'ahead')  # a level bar in move mode, to place the section
 RADAR_CAR_AT = 0.4  # the local car's height in the radar, from the top
 RADAR_BACK = (10, 14, 22, 150)  # RGBA
 RADAR_EDGE = (120, 130, 150, 200)
@@ -94,6 +97,7 @@ class SectionWindow(QWidget):
         self.pedals = None  # (throttle, brake), 0 to 1, for a section with pedal bars
         self.opacity = None  # the blue flag's opacity, 0 to 1; None: not shown
         self.radar = None  # the radar's turbohud.core.race.RadarView; None: not shown
+        self.level = None  # (0 to 1, colour) for a section with a level bar
         self.backdrop = False  # a light tint behind the text while locked (option)
         self.locked = True
         self.wanted = True  # the player wants it shown
@@ -189,6 +193,11 @@ class SectionWindow(QWidget):
             draw_bars(painter, pedal_bars(self.width(), self.height(), scale, throttle, brake))
             left = pedal_space(scale) // 2
         draw_hud(painter, hud_lines(rows, scale), self.theme, scale, left, self.width() - left)
+        if self.section.level and rows:
+            level = self.level or (None if self.locked else LEVEL_SAMPLE)
+            if level is not None:
+                content_height = content_size(rows, scale, text_width)[1]
+                draw_level(painter, level_bar(self.width(), content_height, scale, *level))
         if not self.locked:
             painter.setPen(QColor(*LABEL_COLOR))
             font = painter.font()
@@ -204,6 +213,9 @@ class SectionWindow(QWidget):
         window, where that column is drawn."""
         width, height = content_size(rows, scale, text_width)
         pad = round(MARGIN * scale / 2)
+        if self.section.level:
+            height += level_space(scale) + pad // 2  # the level bar, with a little room below
+            width = self.width()  # the level bar spans the section
         if any(row.right for row in rows):
             width = self.width()
         else:

@@ -245,3 +245,8 @@ its "Recent changes".
   game is a client) it stays at the last checkpoint both passed. Not yet seen in a race.
 - 2026-11-01: Health is rounded up as in the game: 126 of 500 hit points showed 25 %
   where TSU says 26 % (checked live). The colours keep the exact value.
+- 2026-11-01: Level bars below fuel, tires and health: lit from the left to what is
+  left. Fuel red when it will not last to the finish, else (like tires) green, yellow
+  under 35 %, red under 15 %; health green, yellow with less downforce, red when slowed.
+  Saved section sizes stay, so their text gets a little smaller to make room (resize in
+  move mode to taste).

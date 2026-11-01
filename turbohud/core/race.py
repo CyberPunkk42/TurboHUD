@@ -948,8 +948,13 @@ def car_sections(car, laps_to_go=None, speed_unit='kmh'):
             sections['fuelfinish'] = [Row('Finish -', 'medium')]
         else:
             sections['fuelfinish'] = [Row(f'Finish {margin:+.1f} laps', 'medium', 'ahead' if margin >= 0 else 'behind')]
+    levels = {}
+    if car.fuel_left is not None:
+        margin = fuel_margin(car, laps_to_go)
+        levels['fuel'] = (car.fuel_left, 'behind' if margin is not None and margin < 0 else _level_color(car.fuel_left))
     if car.tires_left is not None:
         sections['tires'] = [Row(f'Tires {car.tires_left * 100:.0f}%{_laps_text(car.tire_laps)}', 'medium')]
+        levels['tires'] = (car.tires_left, _level_color(car.tires_left))
     if car.health is not None:
         effect = car.damage_effect
         color = {'slowed': 'behind', 'downforce': 'lift', None: 'text'}[effect]
@@ -957,7 +962,18 @@ def car_sections(car, laps_to_go=None, speed_unit='kmh'):
         # Rounded up as the game shows it (126 of 500 is 26 %): 0 % only when wrecked.
         shown = math.ceil(round(car.health * 100, 6))
         sections['health'] = [Row(f'Health {shown}%', 'medium', color, tail=tail, tail_color=color)]
+        levels['health'] = (car.health, {'slowed': 'behind', 'downforce': 'lift', None: 'ahead'}[effect])
+    if levels:
+        sections['levels'] = levels  # {section: (0 to 1, colour)} for the bars below the text
     return sections
+
+
+LEVEL_LOW = 0.15  # below this the level bar is red
+LEVEL_HALF = 0.35  # below this it is yellow
+
+
+def _level_color(left):
+    return 'behind' if left < LEVEL_LOW else 'lift' if left < LEVEL_HALF else 'ahead'
 
 
 def with_local_time(sections, snapshot, now_struct):

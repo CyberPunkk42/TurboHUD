@@ -73,6 +73,18 @@ def draw_bars(painter, bars):
             painter.drawRoundedRect(QRectF(bar.x, bar.y + bar.height - lit, bar.width, lit), 3, 3)
 
 
+def draw_level(painter, bar):
+    """A level bar from turbohud.core.hud.level_bar: grey, lit from the left."""
+    colors = {'ahead': QColor(AHEAD_COLOR), 'behind': QColor(BEHIND_COLOR), 'lift': QColor(LIFT_COLOR)}
+    radius = min(bar.height / 2, 3)
+    painter.setPen(QPen(QColor(0, 0, 0, 160), 1))
+    painter.setBrush(QColor(*BAR_OFF))
+    painter.drawRoundedRect(QRectF(bar.x, bar.y, bar.width, bar.height), radius, radius)
+    if bar.fill > 0:
+        painter.setBrush(colors[bar.color])
+        painter.drawRoundedRect(QRectF(bar.x, bar.y, bar.width * bar.fill, bar.height), radius, radius)
+
+
 EMOJI_FAMILIES = ['Noto Color Emoji', 'Apple Color Emoji', 'Segoe UI Emoji', 'Twemoji']
 
 
