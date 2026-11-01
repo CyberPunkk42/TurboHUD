@@ -21,6 +21,8 @@ BORDER = (120, 170, 230)
 LABEL_COLOR = (200, 220, 245)
 LABEL_SPACE = 14  # room below the content for the section's name in move mode, at scale 1
 MIN_WIDTH = 40
+BLUE_FLAG = (0, 0, 128)  # navy
+BLUE_SAMPLE = 0.6  # the bar's opacity in move mode, to place it
 
 log = logging.getLogger(__name__)
 
@@ -52,6 +54,7 @@ class SectionWindow(QWidget):
         self.section = section
         self.rows = []
         self.pedals = None  # (throttle, brake), 0 to 1, for a section with pedal bars
+        self.opacity = None  # a bar section's opacity, 0 to 1; None: not shown
         self.locked = True
         self.wanted = True  # the player wants it shown
         self.setWindowTitle(f'TurboHUD - {section.label}')
@@ -59,7 +62,7 @@ class SectionWindow(QWidget):
         self.setAttribute(Qt.WA_ShowWithoutActivating)
         self.setWindowFlag(Qt.WindowTransparentForInput, True)
         width, height = base_size(section, theme.scale, text_width)
-        self.base = (width, height + round(LABEL_SPACE * theme.scale))
+        self.base = (width, height + (0 if section.bar else round(LABEL_SPACE * theme.scale)))
         self.grip = QSizeGrip(self)
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -120,6 +123,10 @@ class SectionWindow(QWidget):
             painter.end()
             return
         painter.setRenderHint(QPainter.Antialiasing)
+        if self.section.bar:
+            self._paint_bar(painter)
+            painter.end()
+            return
         rows = self.rows
         if not self.locked:
             painter.setPen(QPen(QColor(*BORDER), 2))
@@ -142,6 +149,25 @@ class SectionWindow(QWidget):
             painter.setFont(font)
             painter.drawText(self.rect().adjusted(6, 0, -20, -3), Qt.AlignBottom | Qt.AlignLeft, self.section.label)
         painter.end()
+
+
+    def _paint_bar(self, painter):
+        """A plain bar filling the window (the blue flag), at its opacity; in move mode
+        with a border and its name, so it can be placed while no flag is out."""
+        opacity = self.opacity if self.locked else max(self.opacity or 0.0, BLUE_SAMPLE)
+        if opacity is None:
+            return
+        rect = QRectF(self.rect()).adjusted(1, 1, -1, -1)
+        radius = min(rect.height() / 2, 6)
+        painter.setPen(QPen(QColor(*BORDER), 2) if not self.locked else Qt.NoPen)
+        painter.setBrush(QColor(*BLUE_FLAG, round(255 * min(max(opacity, 0.0), 1.0))))
+        painter.drawRoundedRect(rect, radius, radius)
+        if not self.locked:
+            painter.setPen(QColor(*LABEL_COLOR))
+            font = painter.font()
+            font.setPixelSize(11)
+            painter.setFont(font)
+            painter.drawText(self.rect().adjusted(6, 0, -20, 0), Qt.AlignVCenter | Qt.AlignLeft, self.section.label)
 
 
 class MovePanel(QWidget):

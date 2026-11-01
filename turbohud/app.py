@@ -79,7 +79,16 @@ def run(args, folder):
     from PySide6.QtWidgets import QApplication, QMenu, QSystemTrayIcon
 
     from turbohud.overlay import HOTKEY_LOCK, HOTKEY_QUIT, native_for
-    from turbohud.core.hud import CLOCK_SECTIONS, RACE_SECTIONS, below, first_launch, local_time_rows, main_screen, session_rows
+    from turbohud.core.hud import (
+        CLOCK_SECTIONS,
+        RACE_SECTIONS,
+        below,
+        first_launch,
+        local_time_rows,
+        main_screen,
+        session_rows,
+        top_centre,
+    )
     from turbohud.overlay.window import MovePanel, SectionWindow
 
     app = QApplication([sys.argv[0]])
@@ -136,10 +145,13 @@ def run(args, folder):
         for name, place in settings.sections.items()
         if name in windows
     }
-    new = [section for section in layout if section.name not in saved_places]
+    new = [section for section in layout if section.name not in saved_places and not section.bar]
     if saved_places and new:
         # Sections added in a later version: below the ones the player already placed.
         defaults.update(below(new, saved_places, first, screens))
+    for section in layout:
+        if section.bar:  # the blue flag: top centre of the main screen
+            defaults[section.name] = top_centre(first[section.name], screen or (0, 0, 1920, 1080))
     for name, window in windows.items():
         saved = settings.sections.get(name)
         place = (saved.x, saved.y, saved.width, saved.height) if saved else defaults[name]
@@ -278,6 +290,7 @@ def run(args, folder):
         for name, window in windows.items():
             window.rows = current.get(name, [])
             window.pedals = current.get('pedals')
+            window.opacity = current.get('blue')
             window.update()
         if not locked and time.monotonic() - last_seen >= PLACEMENT_EVERY:
             # In move mode, note where the sections are: on Wayland only the desktop

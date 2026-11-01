@@ -693,6 +693,14 @@ def current_lap_now(snapshot, now):
     return current + int(ahead * UNITS_PER_SECOND)
 
 
+def clock_now(snapshot, now):
+    """The race clock at monotonic time `now`, run on like current_lap_now."""
+    clock = snapshot.state.clock
+    if not snapshot.running:
+        return clock
+    return clock + int(min(max(now - snapshot.read_at, 0.0), MAX_EXTRAPOLATION) * UNITS_PER_SECOND)
+
+
 STILL_SECONDS = 2.0  # a race clock standing this long: not on the grid (lobby, pause)
 
 
@@ -750,6 +758,9 @@ def race_sections(snapshot, now, speed_unit='kmh'):
     sections.update(car_sections(state.car, state.laps_to_go, speed_unit))
     if state.players:
         sections['players'] = players_rows(state.players)
+        opacity = blue_flag_opacity(blue_flag(state.players, clock_now(snapshot, now)))
+        if opacity is not None:
+            sections['blue'] = opacity
     return sections
 
 
@@ -875,6 +886,60 @@ def players_rows(players):
             right=gap_text(found), right_color=color,
         ))
     return rows
+
+
+BLUE_FROM = 2.0  # seconds: a car about to lap the local player this close shows the flag
+BLUE_FULL = 0.5  # seconds: this close or closer, the flag is fully visible
+BLUE_FAINT = 0.2  # the flag's opacity at BLUE_FROM: faint, but visible
+
+
+def blue_flag(players, now):
+    """Seconds until the nearest car that is about to lap the local player reaches them
+    on the track, or None when no such car is within BLUE_FROM. `now` is the race clock.
+
+    A car is about to lap the local player when it is ahead in the race but behind on
+    the track: it has passed more checkpoints, and the difference, taken round a lap, is
+    more than half a lap (so it is nearer behind than ahead). Exactly whole laps ahead,
+    it stands at the local player's last checkpoint and has not passed them yet. Any
+    car counts, not only the leader. The gap is how much later it passed the checkpoint
+    it last passed than the local player did; once the local player has passed the next
+    one and it has not, the gap is at least the time since then, so the flag fades as it
+    falls back. When it passes, it is a little ahead on the track and the flag goes."""
+    me = next((p for p in players if p.local), None)
+    if me is None or me.finished or me.in_pit:
+        return None
+    lap_length = next((len(p.checkpoints[0]) for p in players if len(p.checkpoints) > 1), 0)
+    if lap_length < 2:
+        return None  # no lap completed by anyone yet: nobody can lap anybody
+    mine = me.passed
+    nearest = None
+    for player in players:
+        if player.local or player.finished or player.in_pit:
+            continue
+        theirs = player.passed
+        ahead = len(theirs) - len(mine)
+        rest = ahead % lap_length
+        if ahead <= 0 or not (rest > lap_length // 2 or rest == 0):
+            continue
+        same = len(theirs) - 1 - -(-ahead // lap_length) * lap_length  # my index for their last checkpoint
+        if same < 0 or NO_CHECKPOINT in (theirs[-1], mine[same]):
+            continue
+        units = theirs[-1] - mine[same]
+        if same + 1 < len(mine) and mine[same + 1] != NO_CHECKPOINT:
+            units = max(units, now - mine[same + 1])
+        seconds = max(units, 0) / UNITS_PER_SECOND
+        if seconds <= BLUE_FROM and (nearest is None or seconds < nearest):
+            nearest = seconds
+    return nearest
+
+
+def blue_flag_opacity(seconds):
+    """How visible the blue flag is (0 to 1) for a car `seconds` behind: BLUE_FAINT at
+    BLUE_FROM, rising evenly to 1 at BLUE_FULL; None (no flag) without a car."""
+    if seconds is None or seconds > BLUE_FROM:
+        return None
+    share = min(max((BLUE_FROM - seconds) / (BLUE_FROM - BLUE_FULL), 0.0), 1.0)
+    return BLUE_FAINT + (1 - BLUE_FAINT) * share
 
 
 def race_rows(snapshot, now):

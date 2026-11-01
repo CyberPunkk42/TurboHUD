@@ -1,3 +1,4 @@
+import dataclasses
 import sys
 import unittest
 from pathlib import Path
@@ -100,3 +101,70 @@ class SpeedUnitTests(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+N = 4  # checkpoints per lap in these tests
+
+
+class BlueFlagTests(unittest.TestCase):
+    """The local player has done one lap and 3 of 4 checkpoints of the next; a car a lap
+    ahead comes up behind them."""
+
+    me = player('Me', [lap(0), lap(400_000, 10_000, 3)], local=True)  # 40.0, 41.0, 42.0 s
+
+    def test_a_car_a_lap_ahead_close_behind_on_track(self):
+        # Its last checkpoint is my second of this lap (41.0 s), which it passed at 42.2 s.
+        fast = player('Fast', [lap(0, 40_000), lap(160_000, 40_000), (405_000, 422_000)], laps=2)
+        # theirs: 4 + 4 + 2 = 10 checkpoints, mine 4 + 3 = 7: 3 ahead, 1 behind on the track.
+        self.assertAlmostEqual(race.blue_flag([self.me, fast], now=425_000), 1.2)
+
+    def test_the_gap_grows_while_it_does_not_reach_my_next_checkpoint(self):
+        fast = player('Fast', [lap(0, 40_000), lap(160_000, 40_000), (405_000, 422_000)], laps=2)
+        # I passed my third at 42.0 s; at 43.5 s it still has not: at least 1.5 s behind.
+        self.assertAlmostEqual(race.blue_flag([self.me, fast], now=435_000), 1.5)
+        self.assertIsNone(race.blue_flag([self.me, fast], now=445_000))  # over 2 s
+
+    def test_at_my_checkpoint_it_has_not_passed_yet(self):
+        fast = player('Fast', [lap(0, 40_000), lap(160_000, 40_000), (405_000, 411_000, 421_000)], laps=2)
+        self.assertAlmostEqual(race.blue_flag([self.me, fast], now=422_000), 0.1)
+
+    def test_gone_once_it_passed(self):
+        fast = player('Fast', [lap(0, 40_000), lap(160_000, 40_000), (405_000, 411_000, 421_000, 424_000)], laps=2)
+        self.assertIsNone(race.blue_flag([self.me, fast], now=425_000))
+
+    def test_a_car_on_the_same_lap_just_ahead_is_no_blue_flag(self):
+        near = player('Near', [lap(0), lap(390_000, 10_000)])
+        self.assertIsNone(race.blue_flag([self.me, near], now=430_000))
+
+    def test_any_car_counts_and_the_nearest_wins(self):
+        first = player('First', [lap(0, 40_000), lap(160_000, 40_000), (405_000, 422_000)], laps=2)
+        second = player('Second', [lap(0, 40_000), lap(160_000, 40_000), (404_000, 418_000)], laps=2)
+        self.assertAlmostEqual(race.blue_flag([self.me, first, second], now=421_000), 0.8)
+
+    def test_none_before_anyone_completed_a_lap_or_in_the_pits(self):
+        start = player('Me', [lap(0, count=3)], local=True)
+        other = player('Other', [lap(0, count=2)])
+        self.assertIsNone(race.blue_flag([start, other], now=300_000))
+        fast = player('Fast', [lap(0, 40_000), lap(160_000, 40_000), (405_000, 422_000)], laps=2, in_pit=True)
+        self.assertIsNone(race.blue_flag([self.me, fast], now=425_000))
+
+    def test_opacity_from_faint_at_two_seconds_to_full_at_half_a_second(self):
+        self.assertIsNone(race.blue_flag_opacity(None))
+        self.assertIsNone(race.blue_flag_opacity(2.01))
+        self.assertAlmostEqual(race.blue_flag_opacity(2.0), race.BLUE_FAINT)
+        self.assertAlmostEqual(race.blue_flag_opacity(1.25), (race.BLUE_FAINT + 1) / 2)
+        self.assertEqual(race.blue_flag_opacity(0.5), 1.0)
+        self.assertEqual(race.blue_flag_opacity(0.0), 1.0)
+
+
+class BlueFlagSectionTests(unittest.TestCase):
+    def test_race_sections_carry_the_opacity_only_while_a_car_comes(self):
+        me = player('Me', [lap(0), lap(400_000, 10_000, 3)], local=True)
+        fast = player('Fast', [lap(0, 40_000), lap(160_000, 40_000), (405_000, 422_000)], laps=2)
+        state = race.LapState(lap_starts=(0, 400_000), laps_completed=1, laps_to_finish=5, clock=425_000,
+                              time_limit=0, checkpoints=(), players=(me, fast))
+        snapshot = race.Snapshot(status=race.RACING, state=state, running=False, read_at=10.0, moved_at=10.0)
+        sections = race.race_sections(snapshot, 10.5)
+        self.assertAlmostEqual(sections['blue'], race.blue_flag_opacity(1.2))
+        alone = race.Snapshot(status=race.RACING, state=dataclasses.replace(state, players=(me,)), moved_at=10.0)
+        self.assertNotIn('blue', race.race_sections(alone, 10.5))

@@ -15,6 +15,8 @@ Lap times are live on Linux (from TSU's memory, through the memory probe). Next:
 (left, per lap, laps it lasts) and speed, found the same way. Windows and macOS still
 show the session clock: reading memory there needs its own permission route. Later,
 with an event to join: the lap data as a guest on someone else's server.
+Done on Linux since: fuel, tires, speed and pedals, the player list, mph, and the blue
+flag (still to check in a race with other players).
 
 ## 3. Customising the look in the app
 A small settings window (from the tray menu) for the theme's colours and scale, instead

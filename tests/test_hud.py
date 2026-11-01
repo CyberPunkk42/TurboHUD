@@ -59,13 +59,21 @@ class FirstLaunchTests(unittest.TestCase):
 
     def test_one_column_at_the_left_centred_in_1080_without_overlap(self):
         places = hud.first_launch(hud.RACE_SECTIONS, self.SIZES)
-        boxes = [places[s.name] for s in hud.RACE_SECTIONS]
+        boxes = [places[s.name] for s in hud.RACE_SECTIONS if not s.bar]
+        self.assertNotIn('blueflag', places)  # a bar: top centre instead
         self.assertTrue(all(x == 40 for x, *_ in boxes))
         for (_, y1, _, h1), (_, y2, _, _) in zip(boxes, boxes[1:]):
             self.assertGreaterEqual(y2, y1 + h1)  # below, not overlapping
         top, bottom = boxes[0][1], boxes[-1][1] + boxes[-1][3]
         self.assertAlmostEqual(top - 40, 1040 - bottom, delta=1)  # centred
         self.assertLessEqual(bottom, 1080 - 40)
+
+    def test_the_blue_flag_bar_goes_top_centre(self):
+        blue = next(s for s in hud.RACE_SECTIONS if s.name == 'blueflag')
+        size = hud.base_size(blue, 1.0, lambda text, size: len(text) * size)
+        self.assertEqual(size, (480, 24))
+        self.assertEqual(hud.top_centre(size, (0, 0, 1920, 1080)), (720, 40, 480, 24))
+        self.assertEqual(hud.top_centre(size, (100, -1440, 2560, 1440)), (1140, -1400, 480, 24))
 
     def test_on_the_main_screen_from_its_corner(self):
         screens = [(1280, -1440, 2560, 1440), (0, 0, 5120, 1440)]  # the player's two monitors
@@ -143,7 +151,7 @@ class PedalBarTests(unittest.TestCase):
 class SectionTests(unittest.TestCase):
     def test_race_sections_have_distinct_names(self):
         names = [section.name for section in hud.RACE_SECTIONS]
-        self.assertEqual(names, ['lap', 'current', 'delta', 'times', 'fuel', 'fuelfinish', 'tires', 'speed', 'localtime', 'players'])
+        self.assertEqual(names, ['lap', 'current', 'delta', 'times', 'fuel', 'fuelfinish', 'tires', 'speed', 'localtime', 'players', 'blueflag'])
         self.assertEqual(len(set(names)), len(names))
 
     def test_content_size_fits_the_text(self):

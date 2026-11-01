@@ -122,6 +122,7 @@ class Section:
     label: str  # how menus and move mode name it
     samples: tuple  # row lists it may show; the widest and tallest sets its size
     pedals: bool = False  # a throttle bar on its left and a brake bar on its right
+    bar: tuple = ()  # (width, height) at scale 1 for a plain coloured bar without text
 
 
 RACE_SECTIONS = (
@@ -140,6 +141,7 @@ RACE_SECTIONS = (
     Section('players', 'Players', (tuple(
         Row(f'{n}. Playername1234567', 'small', tail='  PIT', flag='DE', right='+00.000') for n in range(10, 10 + 8)
     ),)),
+    Section('blueflag', 'Blue flag', (), bar=(480, 24)),
 )
 CLOCK_SECTIONS = (
     Section('clock', 'Session time', ((Row('TurboHUD - session time', 'title'), Row('00:00', 'big')),)),
@@ -150,6 +152,8 @@ CLOCK_SECTIONS = (
 def base_size(section, scale, measure):
     """(width, height) of a section at scale 1 of its own: as wide as its usual content
     (the first sample, and its pedal bars) and as tall as its tallest."""
+    if section.bar:
+        return round(section.bar[0] * scale), round(section.bar[1] * scale)
     sizes = [content_size(rows, scale, measure) for rows in section.samples]
     extra = pedal_space(scale) if section.pedals else 0
     return sizes[0][0] + extra, max(h for _w, h in sizes)
@@ -249,7 +253,9 @@ def first_launch(sections, sizes, origin=(0, 0), reference=REFERENCE_SCREEN, mar
     """{name: (x, y, width, height)} for a first launch: the sections one below the other
     at the left of a `reference`-sized screen whose top-left corner is `origin`,
     vertically centred, so the middle stays free. What does not fit in the height starts
-    another column to the right; nothing overlaps."""
+    another column to the right; nothing overlaps. Bars (the blue flag) are not in the
+    column: see top_centre."""
+    sections = [section for section in sections if not section.bar]
     room = reference[1] - 2 * margin
     columns, column, height = [], [], 0
     for section in sections:
@@ -272,3 +278,11 @@ def first_launch(sections, sizes, origin=(0, 0), reference=REFERENCE_SCREEN, mar
             y += section_height + gap
         x += max(sizes[s.name][0] for s in column) + gap
     return places
+
+
+def top_centre(size, screen, margin=LAYOUT_MARGIN):
+    """(x, y, width, height) of a `size` box at the top centre of `screen` (x, y, width,
+    height): where a bar such as the blue flag goes first."""
+    width, height = size
+    x, y, screen_width, _screen_height = screen
+    return (x + (screen_width - width) // 2, y + margin, width, height)

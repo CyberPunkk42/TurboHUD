@@ -79,10 +79,13 @@ Clear the launch option to start TSU without the probe. The probe writes what it
 - The HUD is made of sections, each in its own small box: lap and time left, the running
   lap, the delta to your best lap, last and best lap, fuel and tires left (with the laps
   they last), the fuel to spare or short for the finish, speed with throttle and brake
-  bars (km/h or mph), the player list with flags, pit status and gaps, and the local
-  time (on Windows and macOS for now the session clock and the local time). On the first
-  start they sit one below the other at the left of your largest screen (laid out as on
-  a 1920x1080 screen), **locked**: clicks go through them to the game.
+  bars (km/h or mph), the player list with flags, pit status and gaps, the local time
+  (on Windows and macOS for now the session clock and the local time), and a blue flag
+  bar. On the first start they sit one below the other at the left of your largest
+  screen (laid out as on a 1920x1080 screen), the blue flag at its top centre,
+  **locked**: clicks go through them to the game.
+- The **blue flag** is a navy bar that shows when a car about to lap you is within 2
+  seconds behind: faint at 2 s, fully visible from 0.5 s, gone once it has passed.
 - **Ctrl+Shift+L** (or **Move mode** in the TurboHUD icon's menu) switches to **move
   mode**: every section gets a blue tint and its name. Drag a section anywhere, for
   example to the edges of a wide screen. At its bottom-right corner, making it taller or

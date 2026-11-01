@@ -49,6 +49,13 @@ See `docs/IMPROVEMENT_BACKLOG.md`. In short:
    Hyprland.
 
 ## Recent changes
+- 2026-11-01: Blue flag (Linux). A new "Blue flag" section: a navy bar, at the top
+  centre of the main screen at first, shown by default and resizable in move mode. It
+  appears when a car that is about to lap you (any car, not only the leader) is within
+  2 s behind on the track: faint (20 %) at 2 s, fully visible from 0.5 s, gone once the
+  car passes. The gap is how much later the car passed the checkpoint it last passed,
+  and grows while it does not reach your next one (turbohud/core/race.py blue_flag).
+  Not yet checked in a race with other players.
 - 2026-11-01: Player list and mph (Linux). New "Players" section: position, flag (as a
   colour emoji where such a font is installed, else the country code), name, PIT, and the
   gap to the local player at the last checkpoint both passed (red ahead, green behind,
