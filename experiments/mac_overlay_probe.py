@@ -427,7 +427,7 @@ def run(args, position_file=POSITION_FILE):
                 else:
                     keys_text = 'Move mode: drag the box. Ctrl+Shift+L locks.'
                 message = nsstring(
-                    f'TurboKit native Mac overlay test (level {args.level}), {elapsed} s\n{keys_text}'
+                    f'TurboHUD native Mac overlay test (level {args.level}), {elapsed} s\n{keys_text}'
                 )
                 for label in (shadow, text):
                     send(label, 'setStringValue:', message, restype=None, argtypes=[c_void_p])

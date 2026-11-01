@@ -2,11 +2,11 @@
 # Run overlay_probe.py inside TSU's CrossOver bottle, using a portable Windows Python
 # kept in .buildtools/win-python (gitignored). Nothing is installed into the bottle.
 #   sh experiments/run_overlay_probe_mac.sh [probe options, e.g. --x 200 --alpha 120]
-# The bottle is "Steam" unless TURBOKIT_BOTTLE names another one.
+# The bottle is "Steam" unless TURBOHUD_BOTTLE names another one.
 set -eu
 
 repo="$(cd "$(dirname "$0")/.." && pwd)"
-bottle="${TURBOKIT_BOTTLE:-Steam}"
+bottle="${TURBOHUD_BOTTLE:-Steam}"
 version=3.13.17
 zip_name="python-$version-embed-amd64.zip"
 zip_sha256=9e35319bffedab8b36ad44d8f377cb4f1733bcec257a0b6d04d94f01486ddb38

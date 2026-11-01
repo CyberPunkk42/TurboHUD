@@ -16,7 +16,7 @@ releases/*.zip
 releases/*.zip.sha256
 releases/*.tar.gz
 releases/*.tar.gz.sha256
-turbokit/_build.py
+turbohud/_build.py
 
 # Development tools environment (Ruff formatter); never shipped
 .buildtools/

@@ -1,6 +1,6 @@
 """Qt overlay experiment: can a Qt (PySide6) window do what the two native probes do?
 
-TurboKit's stack is Python with Qt (docs/STACK.md). This probe checks the overlay window
+TurboHUD's stack is Python with Qt (docs/STACK.md). This probe checks the overlay window
 on that stack: a transparent, click-through, always-on-top window with HUD graphics drawn
 by Qt (outlined text, a bar and a small animated map), a move mode, and the shortcuts.
 On the Mac it raises Qt's window to a level above TSU's Fullscreen through ctypes, as
@@ -451,7 +451,7 @@ def run(args, placement_file=PLACEMENT_FILE):
                 painter.drawRoundedRect(box, 10, 10)
             seconds = self.elapsed()
             white = QColor(255, 255, 255)
-            outlined_text(painter, QPointF(16, 34), f'TurboKit Qt overlay test ({native.name})', 20, white)
+            outlined_text(painter, QPointF(16, 34), f'TurboHUD Qt overlay test ({native.name})', 20, white)
             outlined_text(painter, QPointF(16, 84), clock(seconds), 44, QColor(255, 214, 90))
             outlined_text(painter, QPointF(16, 112), help_text(self.locked, self.shortcuts), 14, white)
 

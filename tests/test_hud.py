@@ -5,7 +5,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from turbokit.core import hud
+from turbohud.core import hud
 
 
 class ClockTests(unittest.TestCase):
@@ -74,7 +74,7 @@ class HudLinesTests(unittest.TestCase):
 
 class CoreIsQtFreeTests(unittest.TestCase):
     def test_core_does_not_use_qt(self):
-        for path in (ROOT / 'turbokit' / 'core').glob('*.py'):
+        for path in (ROOT / 'turbohud' / 'core').glob('*.py'):
             with self.subTest(path=path.name):
                 self.assertNotIn('PySide6', path.read_text(encoding='utf-8'))
 

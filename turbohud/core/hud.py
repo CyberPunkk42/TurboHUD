@@ -1,4 +1,4 @@
-"""What the HUD shows and where, as plain data that turbokit.hud draws."""
+"""What the HUD shows and where, as plain data that turbohud.hud draws."""
 
 from dataclasses import dataclass
 
@@ -56,7 +56,7 @@ def hud_lines(seconds, locked, shortcuts, scale=1.0, hint_bottom=None):
     """
     sizes = Sizes.for_scale(scale)
     baseline = sizes.margin + sizes.title
-    lines = [Line('TurboKit - session time', sizes.title, 'text', baseline)]
+    lines = [Line('TurboHUD - session time', sizes.title, 'text', baseline)]
     baseline += sizes.gap + sizes.big
     lines.append(Line(clock(seconds), sizes.big, 'accent', baseline))
     hint = help_lines(locked, shortcuts)

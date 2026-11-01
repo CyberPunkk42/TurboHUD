@@ -1,4 +1,4 @@
-"""TurboKit's settings: where they live on each system, and reading and writing them.
+"""TurboHUD's settings: where they live on each system, and reading and writing them.
 
 Settings are one JSON file in the user's settings folder. Reading never fails: a missing,
 broken or partly wrong file gives the defaults for whatever is missing or wrong.
@@ -11,9 +11,9 @@ import sys
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 
-APP_NAME = 'TurboKit'
+APP_NAME = 'TurboHUD'
 SETTINGS_FILE = 'settings.json'
-LOG_FILE = 'turbokit.log'
+LOG_FILE = 'turbohud.log'
 DEFAULT_PLACEMENT = (40, 40, 420, 190)  # x, y, width, height
 MIN_WIDTH = 240
 MIN_HEIGHT = 100
@@ -37,7 +37,7 @@ class Settings:
 
 
 def settings_dir(platform=sys.platform, environ=None, home=None):
-    """The folder for TurboKit's settings and log on this system."""
+    """The folder for TurboHUD's settings and log on this system."""
     environ = os.environ if environ is None else environ
     home = Path.home() if home is None else Path(home)
     if platform == 'win32':

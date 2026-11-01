@@ -19,13 +19,13 @@ class TextPathTests(unittest.TestCase):
     def test_overlapping_parts_of_a_letter_are_filled(self):
         # A plus is two overlapping bars in many fonts; filled odd-even, its centre was
         # a hole, which is what made letters such as the 4 look broken.
-        from turbokit.hud.painter import text_path
+        from turbohud.hud.painter import text_path
 
         path = text_path('+', 80)
         self.assertTrue(path.contains(path.boundingRect().center()))
 
     def test_paths_are_reused(self):
-        from turbokit.hud.painter import text_path
+        from turbohud.hud.painter import text_path
 
         self.assertIs(text_path('0:44', 40), text_path('0:44', 40))
 

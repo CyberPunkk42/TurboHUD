@@ -73,7 +73,7 @@ DT_CENTER = 0x0001
 DT_VCENTER = 0x0004
 DT_LEFT_WORDBREAK = 0x0010
 DT_SINGLELINE = 0x0020
-CLASS_NAME = 'TurboKitOverlayProbe'
+CLASS_NAME = 'TurboHUDOverlayProbe'
 DEFAULT_PLACEMENT = (40, 40, 640, 240)  # x, y, width, height
 MIN_WIDTH = 320
 MIN_HEIGHT = 120
@@ -428,13 +428,13 @@ def run(args, placement_file=PLACEMENT_FILE):
         elapsed = int(time.monotonic() - started)
         if state['locked']:
             text = (
-                f'TurboKit overlay test (locked, click-through)\n'
+                f'TurboHUD overlay test (locked, click-through)\n'
                 f'Running for {elapsed} s, clicks received: {state["clicks"]}\n'
                 f'Ctrl+Shift+L unlocks, Ctrl+Shift+Q quits'
             )
         else:
             text = (
-                f'TurboKit overlay test (move mode, {width}x{height})\n'
+                f'TurboHUD overlay test (move mode, {width}x{height})\n'
                 f'Drag the box to move it, drag the corner to resize it, then press Lock.\n'
                 f'Running for {elapsed} s (quits after {args.seconds} s)'
             )
@@ -571,7 +571,7 @@ def run(args, placement_file=PLACEMENT_FILE):
     x, y, width, height = (saved[i] if value is None else value for i, value in enumerate(given))
     requested = ex_style(args.locked)
     hwnd = user32.CreateWindowExW(
-        requested, CLASS_NAME, 'TurboKit overlay probe', WS_POPUP,
+        requested, CLASS_NAME, 'TurboHUD overlay probe', WS_POPUP,
         x, y, width, height, None, None, instance, None,
     )  # fmt: skip
     if not hwnd:

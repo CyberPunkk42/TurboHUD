@@ -6,7 +6,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from turbokit.core import settings as s
+from turbohud.core import settings as s
 
 
 class SettingsDirTests(unittest.TestCase):
@@ -14,21 +14,21 @@ class SettingsDirTests(unittest.TestCase):
 
     def test_windows_uses_appdata(self):
         folder = s.settings_dir('win32', {'APPDATA': r'C:\Users\x\AppData\Roaming'}, self.home)
-        self.assertEqual(folder, Path(r'C:\Users\x\AppData\Roaming') / 'TurboKit')
+        self.assertEqual(folder, Path(r'C:\Users\x\AppData\Roaming') / 'TurboHUD')
 
     def test_windows_without_appdata(self):
         self.assertEqual(
-            s.settings_dir('win32', {}, self.home), self.home / 'AppData' / 'Roaming' / 'TurboKit'
+            s.settings_dir('win32', {}, self.home), self.home / 'AppData' / 'Roaming' / 'TurboHUD'
         )
 
     def test_mac(self):
         folder = s.settings_dir('darwin', {}, self.home)
-        self.assertEqual(folder, self.home / 'Library' / 'Application Support' / 'TurboKit')
+        self.assertEqual(folder, self.home / 'Library' / 'Application Support' / 'TurboHUD')
 
     def test_linux_follows_xdg(self):
-        self.assertEqual(s.settings_dir('linux', {}, self.home), self.home / '.config' / 'TurboKit')
+        self.assertEqual(s.settings_dir('linux', {}, self.home), self.home / '.config' / 'TurboHUD')
         folder = s.settings_dir('linux', {'XDG_CONFIG_HOME': '/cfg'}, self.home)
-        self.assertEqual(folder, Path('/cfg') / 'TurboKit')
+        self.assertEqual(folder, Path('/cfg') / 'TurboHUD')
 
 
 class LoadSaveTests(unittest.TestCase):

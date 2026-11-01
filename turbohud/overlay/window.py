@@ -12,8 +12,8 @@ from PySide6.QtCore import QRectF, Qt, Signal
 from PySide6.QtGui import QColor, QPainter, QPen
 from PySide6.QtWidgets import QHBoxLayout, QPushButton, QSizeGrip, QVBoxLayout, QWidget
 
-from turbokit.core.hud import hud_lines, min_size
-from turbokit.hud.painter import draw_hud
+from turbohud.core.hud import hud_lines, min_size
+from turbohud.hud.painter import draw_hud
 
 TINT = (23, 56, 97, 153)  # move mode's background: red, green, blue, opacity (0-255)
 BORDER = (120, 170, 230)
@@ -35,7 +35,7 @@ class OverlayWindow(QWidget):
         self.locked = True
         self.shortcuts = False
         self.started = time.monotonic()
-        self.setWindowTitle('TurboKit')
+        self.setWindowTitle('TurboHUD')
         self.setAttribute(Qt.WA_TranslucentBackground)
         self.setAttribute(Qt.WA_ShowWithoutActivating)
         self.setWindowFlag(Qt.WindowTransparentForInput, True)

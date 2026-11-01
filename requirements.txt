@@ -1,2 +1,2 @@
-# What TurboKit needs to run; the run_turbokit scripts install it into .buildtools/venv.
+# What TurboHUD needs to run; the run_turbohud scripts install it into .buildtools/venv.
 PySide6-Essentials==6.11.2

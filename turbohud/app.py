@@ -1,4 +1,4 @@
-"""Starting TurboKit: settings, log, the overlay window, shortcuts and the tray icon."""
+"""Starting TurboHUD: settings, log, the overlay window, shortcuts and the tray icon."""
 
 import argparse
 import logging
@@ -6,8 +6,8 @@ import signal
 import sys
 from pathlib import Path
 
-from turbokit import __version__
-from turbokit.core.settings import (
+from turbohud import __version__
+from turbohud.core.settings import (
     LOG_FILE,
     SETTINGS_FILE,
     fit_on_screens,
@@ -17,8 +17,8 @@ from turbokit.core.settings import (
 )
 
 FRAME_MS = 100  # redraw interval
-ICON = 'tsu_turbo_kit_00.png'  # in assets/, also the bundled app's icon
-log = logging.getLogger('turbokit')
+ICON = 'tsu_turbo_hud_00.png'  # in assets/, also the bundled app's icon
+log = logging.getLogger('turbohud')
 
 
 def asset_path(name, bundle=None):
@@ -30,9 +30,9 @@ def asset_path(name, bundle=None):
 
 def parse_args(argv):
     parser = argparse.ArgumentParser(
-        prog='TurboKit', description='A HUD overlay for Turbo Sliders Unlimited.'
+        prog='TurboHUD', description='A HUD overlay for Turbo Sliders Unlimited.'
     )
-    parser.add_argument('--version', action='version', version=f'TurboKit {__version__}')
+    parser.add_argument('--version', action='version', version=f'TurboHUD {__version__}')
     parser.add_argument('--move', action='store_true', help='start in move mode instead of locked')
     parser.add_argument('--seconds', type=float, help='quit after this many seconds (for tests)')
     args = parser.parse_args(argv)
@@ -42,7 +42,7 @@ def parse_args(argv):
 
 
 def setup_log(folder):
-    """Log to the terminal and to turbokit.log in the settings folder, replaced each run."""
+    """Log to the terminal and to turbohud.log in the settings folder, replaced each run."""
     handlers = [logging.StreamHandler()] if sys.stderr else []  # a windowed app has no terminal
     try:
         folder.mkdir(parents=True, exist_ok=True)
@@ -60,11 +60,11 @@ def run(args, folder):
     from PySide6.QtGui import QAction, QGuiApplication, QIcon
     from PySide6.QtWidgets import QApplication, QMenu, QSystemTrayIcon
 
-    from turbokit.overlay import HOTKEY_LOCK, HOTKEY_QUIT, native_for
-    from turbokit.overlay.window import OverlayWindow
+    from turbohud.overlay import HOTKEY_LOCK, HOTKEY_QUIT, native_for
+    from turbohud.overlay.window import OverlayWindow
 
     app = QApplication([sys.argv[0]])
-    app.setApplicationName('TurboKit')
+    app.setApplicationName('TurboHUD')
     app.setQuitOnLastWindowClosed(False)
     icon = QIcon(str(asset_path(ICON)))
     if icon.isNull():
@@ -75,7 +75,7 @@ def run(args, folder):
     path = folder / SETTINGS_FILE
     settings = load_settings(path)
     log.info(
-        'TurboKit %s on %s, Python %s, PySide6 %s',
+        'TurboHUD %s on %s, Python %s, PySide6 %s',
         __version__,
         native.name,
         sys.version.split()[0],
@@ -103,11 +103,11 @@ def run(args, folder):
 
     # Tray icon (menu bar on the Mac): the way to move mode where there are no shortcuts.
     tray = QSystemTrayIcon(icon)
-    tray.setToolTip('TurboKit')
+    tray.setToolTip('TurboHUD')
     menu = QMenu()
     move_action = QAction('Move mode', menu, checkable=True)
     move_action.triggered.connect(lambda checked: overlay.set_locked(not checked))
-    quit_action = QAction('Quit TurboKit', menu)
+    quit_action = QAction('Quit TurboHUD', menu)
     quit_action.triggered.connect(app.quit)
     menu.addAction(move_action)
     menu.addSeparator()
@@ -130,7 +130,7 @@ def run(args, folder):
     overlay.shortcuts = native.register_hotkeys(on_hotkey)
     log.info('Ctrl+Shift+L and Ctrl+Shift+Q registered' if overlay.shortcuts else 'no system-wide shortcuts')
 
-    was_active = False  # in move mode: whether TurboKit has been the active app yet
+    was_active = False  # in move mode: whether TurboHUD has been the active app yet
 
     def on_locked(locked):
         nonlocal was_active
@@ -184,8 +184,8 @@ def main(argv=None):
     try:
         import PySide6  # noqa: F401 - only checks that Qt is there
     except ImportError:
-        print('TurboKit needs PySide6. Start it with run_turbokit.sh (macOS, Linux) or', file=sys.stderr)
-        print('run_turbokit.cmd (Windows), which set it up first.', file=sys.stderr)
+        print('TurboHUD needs PySide6. Start it with run_turbohud.sh (macOS, Linux) or', file=sys.stderr)
+        print('run_turbohud.cmd (Windows), which set it up first.', file=sys.stderr)
         return 2
     folder = settings_dir()
     setup_log(folder)

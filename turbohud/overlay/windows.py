@@ -6,7 +6,7 @@ from ctypes import wintypes
 
 from PySide6.QtCore import QAbstractNativeEventFilter, QCoreApplication
 
-from turbokit.overlay import HOTKEY_LOCK, HOTKEY_QUIT
+from turbohud.overlay import HOTKEY_LOCK, HOTKEY_QUIT
 
 MOD_CONTROL = 0x2
 MOD_SHIFT = 0x4

@@ -1,4 +1,4 @@
-# Choosing TurboKit's stack
+# Choosing TurboHUD's stack
 
 Status: **decided: B, Python with Qt (PySide6), shipped as a ready-to-run app for each
 system.** Chosen 2026-10-23; merging the pull request that adds this file confirms it.
@@ -66,13 +66,13 @@ From the two overlay probes (`experiments/README.md`) and the user's priorities:
 Costs accepted:
 - Each download is larger, roughly 60-150 MB instead of a few MB.
 - Releases need a build on each system (see below), instead of a plain source ZIP.
-- TurboKit no longer uses only the standard library. LiveryStudio keeps its own rule.
+- TurboHUD no longer uses only the standard library. LiveryStudio keeps its own rule.
 
 ## How players install it
 
 Each release is a ready-to-run app with Python and Qt inside, built by PyInstaller:
-- **Windows:** a ZIP with `TurboKit.exe`. Unpack and run.
-- **macOS:** `TurboKit.app` in a ZIP or disk image. Drag to Applications.
+- **Windows:** a ZIP with `TurboHUD.exe`. Unpack and run.
+- **macOS:** `TurboHUD.app` in a ZIP or disk image. Drag to Applications.
 - **Linux:** an AppImage. Make it executable and run.
 
 PyInstaller builds only for the system it runs on, so GitHub Actions builds all three,
@@ -89,10 +89,10 @@ Without paid code signing, each system warns once on first start:
 Built on 2026-10-24 as:
 
 ```
-launch_turbokit.py      start file; the bundles run the same code
-run_turbokit.sh/.cmd    start from the source, setting up PySide6 in .buildtools/venv
+launch_turbohud.py      start file; the bundles run the same code
+run_turbohud.sh/.cmd    start from the source, setting up PySide6 in .buildtools/venv
 requirements.txt        PySide6, pinned; requirements-build.txt adds PyInstaller
-turbokit/
+turbohud/
   app.py                start-up: settings, log, window, shortcuts, tray icon
   core/                 shared, no Qt: settings and themes, HUD layout (later: game
                         paths, reading game files, HUD maths)
