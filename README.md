@@ -60,7 +60,8 @@ runs, you see:
 Linux lets a program read another program's memory only if it started that program.
 So TurboHUD's small memory probe starts TSU: then it may read TSU's memory, and nothing
 else's, with no sudo and no change to the system. It only reads and never pauses the
-game.
+game. How it all works, and what it does to RAM and the game:
+[docs/HOW_IT_WORKS.md](docs/HOW_IT_WORKS.md).
 1. In Steam, right-click Turbo Sliders Unlimited > **Properties** > **General** >
    **Launch Options**, and enter (with the path to your copy of this folder):
    `python3 /home/<user>/Work/workspace/tsu_repositories/TurboHUD/experiments/tsu_memory_probe.py %command%`

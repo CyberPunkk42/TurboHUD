@@ -258,3 +258,7 @@ its "Recent changes".
   "Event ended."; the log is only read), and the probe reuses one buffer per connection
   (checked: 16 MB once, flat over repeated searches). The probe change needs TSU to be
   restarted (the probe starts with the game).
+- 2026-11-01: docs/HOW_IT_WORKS.md: what TurboHUD shows, its three parts (game,
+  probe, overlay), the permission, how the race is found by name, online races, inputs,
+  the Hyprland windows, what it does to RAM, CPU and the game (with measurements), the
+  files it writes, and its limits.

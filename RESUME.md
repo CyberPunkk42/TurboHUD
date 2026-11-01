@@ -52,6 +52,10 @@ See `docs/IMPROVEMENT_BACKLOG.md`. In short:
    Hyprland.
 
 ## Recent changes
+- 2026-11-01: docs/HOW_IT_WORKS.md: what TurboHUD shows, its three parts (game,
+  probe, overlay), the permission, how the race is found by name, online races, inputs,
+  the Hyprland windows, what it does to RAM, CPU and the game (with measurements), the
+  files it writes, and its limits.
 - 2026-11-01: Online search made light. Measured: in menus and lobbies (no active
   server) TurboHUD searched the game's memory every 10 s for an online race, the probe
   peaking at 58 % of a core and holding 4.4 GB of RAM (peak 5.4 GB) from a new 16 MB
