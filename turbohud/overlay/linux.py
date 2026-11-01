@@ -18,6 +18,8 @@ from turbohud.overlay import hyprland
 APP_ID = 'TurboHUD'  # the Wayland app id, which desktops show as the window's class
 FIND_TRIES = 40  # times 50 ms: how long to wait for the window to appear in Hyprland
 FIND_STEP_MS = 50
+PLACE_TRIES = 3  # Hyprland may refuse requests for a window that has only just appeared
+PLACE_RETRY_MS = 250
 
 log = logging.getLogger(__name__)
 
@@ -50,10 +52,11 @@ class Native:
         if self.hypr is None:
             return 'always on top through Qt'
         target = (widget.x(), widget.y(), widget.width(), widget.height())
+        self.last_placement = target
         QTimer.singleShot(FIND_STEP_MS, lambda: self._place(widget, target, FIND_TRIES))
         return 'Hyprland: floating, pinned, no keyboard focus (requests for its own window only)'
 
-    def _place(self, widget, target, tries):
+    def _place(self, widget, target, tries, place_tries=PLACE_TRIES):
         address = self.hypr.own_window(os.getpid(), widget.windowTitle())
         if address is None:
             if tries > 1:
@@ -63,6 +66,10 @@ class Native:
             return
         self.address = address
         ok = self.hypr.place(address, *target)
+        if not ok and place_tries > 1:
+            log.info('Hyprland: trying again')
+            QTimer.singleShot(PLACE_RETRY_MS, lambda: self._place(widget, target, 1, place_tries - 1))
+            return
         log.info('Hyprland: window %s placed at %s%s', address, target, '' if ok else ' (some requests refused)')
         self.give_focus_back()
 

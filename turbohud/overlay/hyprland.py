@@ -44,11 +44,24 @@ def _run(args):
     return result.stdout.strip()
 
 
-def place_commands(window, x, y, width, height):
+def place_commands(window, x, y, width, height, workspace=None):
     """(lua, classic) command pairs that float, size, place and pin `window`
-    ('address:0x...'), put it in front and keep the keyboard focus away from it."""
+    ('address:0x...'), put it in front and keep the keyboard focus away from it.
+
+    A window opens on the monitor that has the focus, and a pinned window only shows
+    on its own monitor; so it first moves, without following, to `workspace`: the one
+    shown on the monitor that holds (x, y)."""
+    to_workspace = []
+    if workspace is not None:
+        to_workspace = [
+            (
+                f"hl.dsp.window.move({{ workspace = {workspace}, follow = false, window = '{window}' }})",
+                f'movetoworkspacesilent {workspace},{window}',
+            )
+        ]
     return [
         (f"hl.dsp.window.float({{ action = 'enable', window = '{window}' }})", f'setfloating {window}'),
+        *to_workspace,
         (
             f"hl.dsp.window.resize({{ x = {width}, y = {height}, window = '{window}' }})",
             f'resizewindowpixel exact {width} {height},{window}',
@@ -73,14 +86,17 @@ class Hyprland:
     def dispatch(self, command):
         """Run a (lua, classic) pair; True if Hyprland answered ok to either."""
         lua, classic = command
+        answers = []
         for text in (lua, classic):
             try:
-                if self.run(['dispatch', text]) == 'ok':
-                    return True
+                answer = self.run(['dispatch', text])
             except (OSError, subprocess.SubprocessError) as error:
                 log.info('hyprctl failed: %s', error)
                 return False
-        log.info('Hyprland refused: %s', classic)
+            if answer == 'ok':
+                return True
+            answers.append(answer.splitlines()[0] if answer else '(no answer)')
+        log.info('Hyprland refused %s: %s', lua, ' / '.join(answers))
         return False
 
     def _json(self, what):
@@ -102,17 +118,28 @@ class Hyprland:
         return active.get('address') if isinstance(active, dict) else None
 
     def geometry(self, address):
-        """(x, y, width, height) of a window as Hyprland has it, or None."""
+        """(x, y, width, height) of a floating window as Hyprland has it, or None. A tiled
+        window's place is the layout's, not TurboHUD's, so it is never taken."""
         for client in self._json('clients') or []:
-            if client.get('address') == address:
+            if client.get('address') == address and client.get('floating'):
                 (x, y), (width, height) = client['at'], client['size']
                 return (x, y, width, height)
+        return None
+
+    def workspace_at(self, x, y):
+        """The id of the workspace shown on the monitor that holds the point, or None."""
+        for monitor in self._json('monitors') or []:
+            mx, my, width, height = monitor['x'], monitor['y'], monitor['width'], monitor['height']
+            scale = monitor.get('scale') or 1
+            if mx <= x < mx + width / scale and my <= y < my + height / scale:
+                return monitor.get('activeWorkspace', {}).get('id')
         return None
 
     def place(self, address, x, y, width, height):
         """Float, place and pin the window; True if every command was taken."""
         window = f'address:{address}'
-        return all([self.dispatch(command) for command in place_commands(window, x, y, width, height)])
+        commands = place_commands(window, x, y, width, height, self.workspace_at(x, y))
+        return all([self.dispatch(command) for command in commands])
 
     def focus(self, address):
         return self.dispatch(focus_command(f'address:{address}'))

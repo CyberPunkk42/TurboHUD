@@ -9,9 +9,17 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from turbohud.overlay import hyprland
 
 CLIENTS = [
-    {'address': '0xaaa', 'pid': 10, 'title': 'TurboHUD', 'mapped': True, 'at': [40, 50], 'size': [420, 194]},
+    {'address': '0xaaa', 'pid': 10, 'title': 'TurboHUD', 'mapped': True, 'floating': True, 'at': [40, 50], 'size': [420, 194]},
+    {'address': '0xddd', 'pid': 10, 'title': 'tiled', 'mapped': True, 'floating': False, 'at': [0, 0], 'size': [5096, 1390]},
     {'address': '0xbbb', 'pid': 99, 'title': 'TurboHUD', 'mapped': True, 'at': [0, 0], 'size': [10, 10]},
     {'address': '0xccc', 'pid': 10, 'title': 'other', 'mapped': True, 'at': [0, 0], 'size': [10, 10]},
+]
+
+
+# The user's layout: a second monitor above and to the right of the main one.
+MONITORS = [
+    {'x': 1280, 'y': -1440, 'width': 2560, 'height': 1440, 'scale': 1, 'activeWorkspace': {'id': 2}},
+    {'x': 0, 'y': 0, 'width': 5120, 'height': 1440, 'scale': 1, 'activeWorkspace': {'id': 1}},
 ]
 
 
@@ -26,6 +34,8 @@ class FakeHyprctl:
         self.calls.append(args)
         if args == ['-j', 'clients']:
             return json.dumps(CLIENTS)
+        if args == ['-j', 'monitors']:
+            return json.dumps(MONITORS)
         if args == ['-j', 'activewindow']:
             return json.dumps({'address': '0xgame'})
         if args[0] == 'dispatch':
@@ -69,7 +79,23 @@ class HyprlandTests(unittest.TestCase):
         hypr = hyprland.Hyprland(FakeHyprctl())
         self.assertEqual(hypr.geometry('0xaaa'), (40, 50, 420, 194))
         self.assertIsNone(hypr.geometry('0xdead'))
+        self.assertIsNone(hypr.geometry('0xddd'))  # tiled: the layout's size, not TurboHUD's
         self.assertEqual(hypr.active_window(), '0xgame')
+
+    def test_the_window_goes_to_the_monitor_of_its_place_first(self):
+        # It opens where the focus is (here the upper monitor); a pinned window shows only
+        # on its own monitor, so it must move to the main one before it is placed there.
+        fake = FakeHyprctl()
+        hyprland.Hyprland(fake).place('0xaaa', 40, 40, 420, 194)
+        sent = fake.dispatched()
+        self.assertIn('workspace = 1, follow = false', sent[1])
+        self.assertLess(1, next(i for i, text in enumerate(sent) if 'x = 40, y = 40' in text))
+
+    def test_workspace_at(self):
+        hypr = hyprland.Hyprland(FakeHyprctl())
+        self.assertEqual(hypr.workspace_at(40, 40), 1)
+        self.assertEqual(hypr.workspace_at(2000, -500), 2)
+        self.assertIsNone(hypr.workspace_at(-100, 5000))
 
     def test_lua_commands_on_new_hyprland(self):
         fake = FakeHyprctl(lua=True)
