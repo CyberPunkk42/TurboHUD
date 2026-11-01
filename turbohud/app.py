@@ -133,9 +133,8 @@ def run(args, folder):
         place = (saved.x, saved.y, saved.width, saved.height) if saved else defaults[name]
         place = fit_on_screens(place, screens)
         window.setGeometry(*place)
-        window.wanted = saved.visible if saved else True
-        if window.wanted:
-            window.show_on_top()
+        window.show_on_top()
+        window.set_wanted(saved.visible if saved else True)
         log.info('section %s at %s%s', name, place, '' if window.wanted else ' (hidden)')
     shortcuts = False
     panel = None  # made once the shortcuts are known

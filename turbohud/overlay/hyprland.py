@@ -61,6 +61,9 @@ def place_commands(window, x, y, width, height, workspace=None, focusable=False)
             )
         ]
     return [
+        # A window that appears while a game runs fullscreen may be made fullscreen too;
+        # end that for this window only (classic commands cannot name a window for it).
+        (f"hl.dsp.window.fullscreen({{ action = 'unset', window = '{window}' }})", None),
         (f"hl.dsp.window.float({{ action = 'enable', window = '{window}' }})", f'setfloating {window}'),
         *to_workspace,
         (
@@ -89,7 +92,7 @@ class Hyprland:
         """Run a (lua, classic) pair; True if Hyprland answered ok to either."""
         lua, classic = command
         answers = []
-        for text in (lua, classic):
+        for text in (lua, classic) if classic else (lua,):
             try:
                 answer = self.run(['dispatch', text])
             except (OSError, subprocess.SubprocessError) as error:
@@ -141,7 +144,9 @@ class Hyprland:
         """Float, place and pin the window; True if every command was taken."""
         window = f'address:{address}'
         commands = place_commands(window, x, y, width, height, self.workspace_at(x, y), focusable)
-        return all([self.dispatch(command) for command in commands])
+        # A step without a classic form is a best effort: older Hyprland lacks it.
+        results = [self.dispatch(command) or command[1] is None for command in commands]
+        return all(results)
 
     def set_focusable(self, address, focusable):
         """Let the window take the mouse and focus (move mode) or not (locked). Hyprland's

@@ -81,7 +81,7 @@ class SectionWindow(QWidget):
             return
         self.locked = locked
         if not self.wanted:
-            return
+            return  # hidden: stays click-through and empty in both modes
         in_place = _set_input(self, self.native, locked)
         movable = getattr(self.native, 'set_movable', None)
         if movable is not None:
@@ -93,16 +93,21 @@ class SectionWindow(QWidget):
         self.update()
 
     def set_wanted(self, wanted):
-        """Show or hide the section for good (the panel's tick boxes)."""
+        """Show or hide the section (the panel's tick boxes). A hidden section keeps its
+        window, draws nothing and lets every click through: showing it again then needs
+        no new window, which a desktop could place anywhere, or make fullscreen over a
+        fullscreen game."""
         if wanted == self.wanted:
             return
         self.wanted = wanted
-        if wanted:
-            self.setWindowFlag(Qt.WindowTransparentForInput, self.locked)
-            self.grip.setVisible(not self.locked)
+        in_place = _set_input(self, self.native, self.locked or not wanted)
+        movable = getattr(self.native, 'set_movable', None)
+        if movable is not None:
+            movable(self, wanted and not self.locked)
+        self.grip.setVisible(wanted and not self.locked)
+        if not in_place:
             self.show_on_top()
-        else:
-            self.hide()
+        self.update()
 
     def mousePressEvent(self, event):
         if not self.locked and event.button() == Qt.LeftButton:
@@ -110,6 +115,9 @@ class SectionWindow(QWidget):
 
     def paintEvent(self, _event):
         painter = QPainter(self)
+        if not self.wanted:
+            painter.end()
+            return
         painter.setRenderHint(QPainter.Antialiasing)
         rows = self.rows
         if not self.locked:

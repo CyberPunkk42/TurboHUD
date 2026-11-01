@@ -111,3 +111,8 @@ its "Recent changes".
   end in a second colour.
 - 2026-11-01: The fuel line also shows how much fuel this lap has saved (+0.18%, green)
   or burnt (-0.12%, red) so far against the recent laps, in % of the tank.
+- 2026-11-01: Hiding a section no longer closes its window: it draws nothing and lets
+  clicks through, so showing it again needs no new window (Hyprland had opened the new
+  one as fullscreen over the fullscreen game, where it could not be placed or pinned).
+  As a safety net TurboHUD ends fullscreen for its own windows before placing them.
+  New sections are placed only by the sections on the same monitor.
