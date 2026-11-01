@@ -87,7 +87,7 @@ def run(args, folder):
         local_time_rows,
         main_screen,
         session_rows,
-        top_centre,
+        drawing_place,
     )
     from turbohud.overlay import HOTKEY_LOCK, HOTKEY_QUIT, native_for
     from turbohud.overlay.window import MovePanel, SectionWindow
@@ -115,7 +115,7 @@ def run(args, folder):
     live = start_live_race()
     pad = None
     if live is not None:
-        from turbohud.core.race import Standings, race_sections, status_text, with_local_time
+        from turbohud.core.race import Radar, Standings, race_sections, status_text, with_local_time
 
         layout = RACE_SECTIONS
         from turbohud.tsu.controller import Pad, combined
@@ -123,10 +123,11 @@ def run(args, folder):
         pad = Pad()
         pad.start()
         standings = Standings()
+        radar = Radar()
 
         def contents():
             snapshot = live.snapshot()
-            current = race_sections(snapshot, time.monotonic(), settings.speed_unit, standings)
+            current = race_sections(snapshot, time.monotonic(), settings.speed_unit, standings, radar)
             if 'pedals' in current:
                 current['pedals'] = combined(current['pedals'], pad.pedals())
             return with_local_time(current, snapshot, time.localtime())
@@ -152,8 +153,8 @@ def run(args, folder):
         # Sections added in a later version: below the ones the player already placed.
         defaults.update(below(new, saved_places, first, screens))
     for section in layout:
-        if section.bar:  # the blue flag: top centre of the main screen
-            defaults[section.name] = top_centre(first[section.name], screen or (0, 0, 1920, 1080))
+        if section.bar:  # the blue flag and the radar: their own spots on the main screen
+            defaults[section.name] = drawing_place(section, first[section.name], screen or (0, 0, 1920, 1080))
     for name, window in windows.items():
         saved = settings.sections.get(name)
         place = (saved.x, saved.y, saved.width, saved.height) if saved else defaults[name]
@@ -351,6 +352,7 @@ def run(args, folder):
             window.rows = current.get(name, [])
             window.pedals = current.get('pedals')
             window.opacity = current.get('blue')
+            window.radar = current.get('radar')
             window.update()
         grouped = any(w.group for w in windows.values())
         every = GROUP_EVERY if grouped else PLACEMENT_EVERY

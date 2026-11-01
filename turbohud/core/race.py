@@ -367,6 +367,7 @@ class PlayerState:
     finished: bool = False
     in_pit: bool = False
     local: bool = False
+    position: tuple | None = None  # the car's (x, z) on the ground plane, for the radar
 
     @property
     def passed(self):
@@ -568,13 +569,25 @@ class LapReader:
                     self._laps[lap] = passed
             if passed:
                 checkpoints.append(passed)
-        in_pit = False
+        in_pit, position = False, None
         try:
-            updater = self._ref('vehicle', self._ref('player', player, 'm_vehicle'), 'm_stateUpdater')
-            in_pit = bool(memory.u8(updater + self._offset('updater', updater, 'inPit')))
-        except (NotFound, ReadError):
-            pass
-        return PlayerState(name, flag, laps_completed, tuple(checkpoints), finished, in_pit, local)
+            vehicle = self._ref('player', player, 'm_vehicle')
+        except NotFound:
+            vehicle = None
+        if vehicle is not None:
+            try:
+                updater = self._ref('vehicle', vehicle, 'm_stateUpdater')
+                in_pit = bool(memory.u8(updater + self._offset('updater', updater, 'inPit')))
+            except (NotFound, ReadError):
+                pass
+            try:
+                where = vehicle + self._offset('vehicle', vehicle, 'm_statsNewPosition')
+                x, _y, z = struct.unpack('<3f', memory.read(where, 12))
+                if math.isfinite(x) and math.isfinite(z):
+                    position = (x, z)
+            except (NotFound, ReadError):
+                pass
+        return PlayerState(name, flag, laps_completed, tuple(checkpoints), finished, in_pit, local, position)
 
     def _number(self, role, obj, name):
         """A simple field read by the type the game gives it (int, float, ...)."""
@@ -726,11 +739,12 @@ def status_text(snapshot):
     return 'waiting for a race'
 
 
-def race_sections(snapshot, now, speed_unit='kmh', standings=None):
+def race_sections(snapshot, now, speed_unit='kmh', standings=None, radar=None):
     """{section name: rows} for a live-reader snapshot (see core.hud.RACE_SECTIONS); a
     section with nothing to show has no rows. Nothing before the grid: in the menus, the
     lobby and while a race loads the HUD keeps out of the way (status_text says why).
-    `standings` (a Standings) holds the player list's order steady while cars pass."""
+    `standings` (a Standings) holds the player list's order steady while cars pass;
+    `radar` (a Radar) follows the cars' movement for the proximity radar."""
     if not on_grid(snapshot, now):
         return {}
     state = snapshot.state
@@ -763,6 +777,9 @@ def race_sections(snapshot, now, speed_unit='kmh', standings=None):
         opacity = blue_flag_opacity(blue_flag(state.players, clock_now(snapshot, now)))
         if opacity is not None:
             sections['blue'] = opacity
+        view = radar.update(state.players, snapshot.read_at) if radar is not None else None
+        if view is not None:
+            sections['radar'] = view
     return sections
 
 
@@ -978,6 +995,139 @@ def blue_flag_opacity(seconds):
         return None
     share = min(max((BLUE_FROM - seconds) / (BLUE_FROM - BLUE_FULL), 0.0), 1.0)
     return BLUE_FAINT + (1 - BLUE_FAINT) * share
+
+
+# Proximity radar. Positions and speeds are in the game's own unit, so the time gap
+# (distance / speed) needs no scale. The car's size is a guess (the game's unit looks
+# like metres: the car does about 56 a second at 205 km/h); check it in a race.
+CAR_LENGTH = 4.5
+CAR_WIDTH = 2.0
+RADAR_FROM = 0.5  # seconds behind: the radar appears, faint
+RADAR_FULL = 0.1  # seconds behind or alongside: fully visible
+RADAR_FAINT = 0.2  # its opacity at RADAR_FROM
+RADAR_SIDE = 8.0  # sideways reach: a car farther to the side (another part of the track) does not count
+RADAR_VIEW = 20.0  # the radar shows at least this far behind; more at speed (radar_view)
+RADAR_MIN_SPEED = 3.0  # slower (standing on the grid): no radar, the direction is unknown
+HEADING_SPAN = 0.15  # seconds of movement a car's direction and speed are taken from
+HEADING_KEEP = 1.0  # seconds of positions kept per car
+
+
+@dataclass(frozen=True)
+class Blip:
+    """Another car on the radar: `ahead` and `side` (right positive) from the middle
+    of the local car, in game units along its direction; `angle` its direction against
+    the local car's, in radians; `seconds` the time gap if it counts (behind or beside)."""
+
+    ahead: float
+    side: float
+    angle: float
+    seconds: float | None
+
+
+@dataclass(frozen=True)
+class RadarView:
+    opacity: float  # 0 to 1 for the whole radar
+    blips: tuple  # Blip
+    view: float = RADAR_VIEW  # how far behind the local car the radar reaches
+
+
+def radar_view(speed):
+    """How far behind the radar reaches at `speed`: a car RADAR_FROM behind still shows,
+    with room to spare."""
+    return max(RADAR_VIEW, speed * RADAR_FROM + 2 * CAR_LENGTH)
+
+
+def _heading(history, now):
+    """(direction unit vector, speed) from a car's recent (time, (x, z)), or None."""
+    if len(history) < 2:
+        return None
+    last_time, last = history[-1]
+    first = next(((t, p) for t, p in history if last_time - t <= HEADING_SPAN), history[-2])
+    if first[0] >= last_time:
+        first = history[-2]
+    dt = last_time - first[0]
+    dx, dz = last[0] - first[1][0], last[1] - first[1][1]
+    length = math.hypot(dx, dz)
+    if dt <= 0 or length <= 0:
+        return None
+    return (dx / length, dz / length), length / dt
+
+
+def radar_opacity(seconds):
+    """How visible the radar is for the nearest counting car `seconds` away: None (not
+    shown) past RADAR_FROM, RADAR_FAINT there, rising evenly to 1 at RADAR_FULL."""
+    if seconds is None or seconds > RADAR_FROM:
+        return None
+    share = min(max((RADAR_FROM - seconds) / (RADAR_FROM - RADAR_FULL), 0.0), 1.0)
+    return RADAR_FAINT + (1 - RADAR_FAINT) * share
+
+
+def radar_blips(me, speed, others):
+    """Blips for `others` [(position, direction or None)] around the local car at `me`
+    ((x, z), direction) at `speed`. A car counts when it is behind or beside, no more
+    than RADAR_SIDE to the side: beside (overlapping in length) is 0 s, behind is the
+    gap from its nose to the local car's tail over the local speed."""
+    (mx, mz), (fx, fz) = me
+    blips = []
+    for (x, z), direction in others:
+        dx, dz = x - mx, z - mz
+        ahead = dx * fx + dz * fz
+        side = dx * fz - dz * fx  # right of the direction of travel (x right, z forward)
+        if abs(ahead) > radar_view(speed) * 1.5 or abs(side) > radar_view(speed):
+            continue
+        angle = 0.0
+        if direction is not None:
+            angle = math.atan2(direction[0] * fz - direction[1] * fx, direction[0] * fx + direction[1] * fz)
+        seconds = None
+        if abs(side) <= RADAR_SIDE and ahead <= CAR_LENGTH:
+            gap = -ahead - CAR_LENGTH  # nose to tail; under 0: overlapping
+            seconds = max(gap, 0.0) / speed
+        blips.append(Blip(ahead, side, angle, seconds))
+    return tuple(blips)
+
+
+class Radar:
+    """Follows every car's recent positions to know where it heads and how fast; gives
+    the proximity radar (a RadarView) for the latest read, or None when no car is close
+    enough behind or beside to show it."""
+
+    def __init__(self):
+        self.tracks = {}  # player name -> [(read time, (x, z))]
+        self.read_at = None
+
+    def update(self, players, read_at):
+        if read_at != self.read_at:
+            self.read_at = read_at
+            names = set()
+            for player in players:
+                if player.position is None:
+                    continue
+                names.add(player.name)
+                track = self.tracks.setdefault(player.name, [])
+                track.append((read_at, player.position))
+                while track and read_at - track[0][0] > HEADING_KEEP:
+                    track.pop(0)
+            for name in set(self.tracks) - names:
+                del self.tracks[name]
+        me = next((p for p in players if p.local), None)
+        if me is None or me.position is None or me.in_pit or me.finished:
+            return None
+        heading = _heading(self.tracks.get(me.name, []), read_at)
+        if heading is None or heading[1] < RADAR_MIN_SPEED:
+            return None
+        direction, speed = heading
+        others = []
+        for player in players:
+            if player.local or player.position is None or player.in_pit or player.finished:
+                continue
+            theirs = _heading(self.tracks.get(player.name, []), read_at)
+            others.append((player.position, theirs[0] if theirs else None))
+        blips = radar_blips((me.position, direction), speed, others)
+        nearest = min((b.seconds for b in blips if b.seconds is not None), default=None)
+        opacity = radar_opacity(nearest)
+        if opacity is None:
+            return None
+        return RadarView(opacity, blips, radar_view(speed))
 
 
 def race_rows(snapshot, now):

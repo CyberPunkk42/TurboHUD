@@ -122,7 +122,8 @@ class Section:
     label: str  # how menus and move mode name it
     samples: tuple  # row lists it may show; the widest and tallest sets its size
     pedals: bool = False  # a throttle bar on its left and a brake bar on its right
-    bar: tuple = ()  # (width, height) at scale 1 for a plain coloured bar without text
+    bar: tuple = ()  # (width, height) at scale 1 for a drawing without text
+    drawing: str = ''  # what it draws instead of text: 'flag' (blue flag) or 'radar'
 
 
 RACE_SECTIONS = (
@@ -141,7 +142,8 @@ RACE_SECTIONS = (
     Section('players', 'Players', (tuple(
         Row(f'{n}. Playername1234567', 'small', tail='  PIT', flag='DE', right='+00.000') for n in range(10, 10 + 8)
     ),)),
-    Section('blueflag', 'Blue flag', (), bar=(480, 24)),
+    Section('blueflag', 'Blue flag', (), bar=(480, 24), drawing='flag'),
+    Section('radar', 'Proximity radar', (), bar=(160, 160), drawing='radar'),
 )
 CLOCK_SECTIONS = (
     Section('clock', 'Session time', ((Row('TurboHUD - session time', 'title'), Row('00:00', 'big')),)),
@@ -286,6 +288,19 @@ def top_centre(size, screen, margin=LAYOUT_MARGIN):
     width, height = size
     x, y, screen_width, _screen_height = screen
     return (x + (screen_width - width) // 2, y + margin, width, height)
+
+
+RADAR_DOWN = 0.6  # the radar starts centred, this far down the screen (below the car)
+
+
+def drawing_place(section, size, screen):
+    """Where a drawing section goes first: the blue flag at the top centre, the radar
+    in the middle a little below the centre, where the eyes are while driving."""
+    if section.drawing == 'radar':
+        width, height = size
+        x, y, screen_width, screen_height = screen
+        return (x + (screen_width - width) // 2, y + round(screen_height * RADAR_DOWN), width, height)
+    return top_centre(size, screen)
 
 
 GROUP_TOLERANCE = 3  # pixels: a window this close to where TurboHUD moved it has arrived

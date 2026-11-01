@@ -200,3 +200,62 @@ class StandingsTests(unittest.TestCase):
         standings = race.Standings()
         standings.order([a], 0.0)
         self.assertEqual([p.name for p in standings.order([a, c], 0.1)], ['C', 'A'])
+
+
+def car(name, position, local=False, in_pit=False):
+    return race.PlayerState(name, GERMANY, 1, (lap(0),), False, in_pit, local, position)
+
+
+class RadarTests(unittest.TestCase):
+    """The local car drives north (+z) at 40 a second; reads come every 0.05 s."""
+
+    def drive(self, others_at, steps=4, speed=40.0, others_move=True):
+        radar = race.Radar()
+        view = None
+        for step in range(steps):
+            t = step * 0.05
+            me = car('Me', (0.0, speed * t), local=True)
+            others = [car(name, (x, z + (speed * t if others_move else 0.0))) for name, (x, z) in others_at.items()]
+            view = radar.update([me, *others], t)
+        return view
+
+    def test_nothing_without_a_car_close_behind(self):
+        self.assertIsNone(self.drive({}))
+        self.assertIsNone(self.drive({'Far': (0.0, -40.0)}))  # 1 s behind
+        self.assertIsNone(self.drive({'Ahead': (0.0, 10.0)}))  # ahead does not count
+
+    def test_faint_at_half_a_second_full_from_a_tenth(self):
+        # Behind by 0.5 s: nose to tail 20 at 40 a second; centres are a car length more apart.
+        half = self.drive({'Behind': (0.0, -(20.0 + race.CAR_LENGTH))})
+        self.assertAlmostEqual(half.opacity, race.RADAR_FAINT, places=2)
+        tenth = self.drive({'Behind': (0.0, -(4.0 + race.CAR_LENGTH))})
+        self.assertAlmostEqual(tenth.opacity, 1.0)
+        beside = self.drive({'Beside': (3.0, 0.0)})
+        self.assertEqual(beside.opacity, 1.0)
+        self.assertEqual(beside.blips[0].seconds, 0.0)
+
+    def test_sides_and_directions(self):
+        view = self.drive({'Right': (3.0, -1.0)})
+        blip = view.blips[0]
+        self.assertAlmostEqual(blip.side, 3.0)  # on the right: positive
+        self.assertAlmostEqual(blip.ahead, -1.0)
+        self.assertAlmostEqual(blip.angle, 0.0)  # same direction
+
+    def test_far_to_the_side_does_not_count(self):
+        # Another part of the track next to this one, 15 to the side.
+        self.assertIsNone(self.drive({'Other road': (15.0, -2.0)}))
+
+    def test_standing_still_or_in_the_pits_shows_nothing(self):
+        self.assertIsNone(self.drive({'Beside': (3.0, 0.0)}, speed=0.0))
+        radar = race.Radar()
+        for step in range(4):
+            t = step * 0.05
+            me = car('Me', (0.0, 40 * t), local=True)
+            view = radar.update([me, car('Pit', (3.0, 40 * t), in_pit=True)], t)
+        self.assertIsNone(view)
+
+    def test_opacity_curve(self):
+        self.assertIsNone(race.radar_opacity(None))
+        self.assertIsNone(race.radar_opacity(0.51))
+        self.assertAlmostEqual(race.radar_opacity(0.3), (race.RADAR_FAINT + 1) / 2)
+        self.assertEqual(race.radar_opacity(0.05), 1.0)

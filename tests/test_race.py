@@ -564,6 +564,11 @@ class CarTests(unittest.TestCase):
         self.assertEqual(me.checkpoints[0][0], 10_000)
         self.assertEqual(len(players), 1)  # the other one has no statistics: left out
 
+    def test_reader_reads_each_cars_position_for_the_radar(self):
+        reader = build([10_000], laps_completed=0, clock=20_000, limit=0, car=(12.5, -3.0), gates=STRAIGHT, name='A')
+        me = next(p for p in reader.read().players if p.local)
+        self.assertEqual(me.position, (12.5, -3.0))
+
     def test_without_car_data_there_are_no_car_sections(self):
         reader = build([10_000], laps_completed=0, clock=20_000, limit=0)
         self.assertIsNone(reader.read().car)

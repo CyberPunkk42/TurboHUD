@@ -75,6 +75,11 @@ class FirstLaunchTests(unittest.TestCase):
         self.assertEqual(hud.top_centre(size, (0, 0, 1920, 1080)), (720, 40, 480, 24))
         self.assertEqual(hud.top_centre(size, (100, -1440, 2560, 1440)), (1140, -1400, 480, 24))
 
+    def test_the_radar_starts_centred_below_the_middle(self):
+        radar = next(s for s in hud.RACE_SECTIONS if s.name == 'radar')
+        self.assertNotIn('radar', hud.first_launch(hud.RACE_SECTIONS, self.SIZES))
+        self.assertEqual(hud.drawing_place(radar, (160, 160), (0, 0, 1920, 1080)), (880, 648, 160, 160))
+
     def test_on_the_main_screen_from_its_corner(self):
         screens = [(1280, -1440, 2560, 1440), (0, 0, 5120, 1440)]  # the player's two monitors
         self.assertEqual(hud.main_screen(screens), (0, 0, 5120, 1440))
@@ -151,7 +156,7 @@ class PedalBarTests(unittest.TestCase):
 class SectionTests(unittest.TestCase):
     def test_race_sections_have_distinct_names(self):
         names = [section.name for section in hud.RACE_SECTIONS]
-        self.assertEqual(names, ['lap', 'current', 'delta', 'times', 'fuel', 'fuelfinish', 'tires', 'speed', 'localtime', 'players', 'blueflag'])
+        self.assertEqual(names, ['lap', 'current', 'delta', 'times', 'fuel', 'fuelfinish', 'tires', 'speed', 'localtime', 'players', 'blueflag', 'radar'])
         self.assertEqual(len(set(names)), len(names))
 
     def test_content_size_fits_the_text(self):

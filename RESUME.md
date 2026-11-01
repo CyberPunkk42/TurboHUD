@@ -52,6 +52,16 @@ See `docs/IMPROVEMENT_BACKLOG.md`. In short:
    Hyprland.
 
 ## Recent changes
+- 2026-11-01: Proximity radar (Linux). A new "Proximity radar" section (160 x 160,
+  centred a little below the middle of the main screen at first, shown by default): your
+  car in the middle heading up, the other cars around it in their directions. It appears
+  when a car is 0.5 s behind (faint, 20 %) and is fully visible from 0.1 s or alongside;
+  a car is red when beside or within 0.1 s, yellow when closing in behind, grey ahead.
+  Every car's position is read (TS.Vehicle.m_statsNewPosition); direction and speed come
+  from the last 0.15 s of positions, and the time gap is the distance from its nose to
+  your tail over your speed. Cars more than 8 to the side (another part of the track) or
+  in the pits do not count; standing still there is no radar. The car size (4.5 x 2) is
+  a guess, and whether the game updates the other cars' positions is not checked yet.
 - 2026-11-01: Section groups. In the move-mode panel each section can join group A, B,
   C or D (saved per section); dragging one section of a group moves the others by the
   same amount. TurboHUD looks where the sections are five times a second in move mode

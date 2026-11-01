@@ -7,9 +7,10 @@ content. The panel says what to do, shows or hides sections, and locks or quits.
 """
 
 import logging
+import math
 import sys
 
-from PySide6.QtCore import QRectF, Qt, Signal
+from PySide6.QtCore import QPointF, QRectF, Qt, Signal
 from PySide6.QtGui import QColor, QPainter, QPen
 from PySide6.QtWidgets import (
     QCheckBox,
@@ -33,8 +34,9 @@ from turbohud.core.hud import (
     pedal_space,
     section_scale,
 )
+from turbohud.core.race import CAR_LENGTH, CAR_WIDTH, RADAR_FROM, RADAR_FULL, Blip, RadarView
 from turbohud.core.settings import GROUPS
-from turbohud.hud.painter import draw_bars, draw_hud, text_width
+from turbohud.hud.painter import BEHIND_COLOR, LIFT_COLOR, draw_bars, draw_hud, text_width
 
 TINT = (23, 56, 97, 153)  # move mode's background: red, green, blue, opacity (0-255)
 BORDER = (120, 170, 230)
@@ -47,6 +49,18 @@ BLUE_FLAG_EDGE_WIDTH = 2
 PEDAL_INSET = 4  # pedal_bars' default inset
 BACKDROP = (0, 0, 0, 64)  # the light tint behind a section's text (option), RGBA
 BLUE_SAMPLE = 0.6  # the bar's opacity in move mode, to place it
+RADAR_CAR_AT = 0.4  # the local car's height in the radar, from the top
+RADAR_BACK = (10, 14, 22, 150)  # RGBA
+RADAR_EDGE = (120, 130, 150, 200)
+RADAR_LINES = (120, 130, 150, 90)
+RADAR_ME = '#f2f2f2'
+RADAR_OTHER = '#8c95a3'  # a car near but not behind or beside (ahead, or far to the side)
+# In move mode: one car beside, one closing in behind, one ahead.
+RADAR_SAMPLE = (
+    Blip(-1.0, 3.0, 0.0, 0.0),
+    Blip(-9.5, -1.0, 0.1, 0.3),
+    Blip(11.0, 0.5, -0.05, None),
+)
 
 log = logging.getLogger(__name__)
 
@@ -78,7 +92,8 @@ class SectionWindow(QWidget):
         self.section = section
         self.rows = []
         self.pedals = None  # (throttle, brake), 0 to 1, for a section with pedal bars
-        self.opacity = None  # a bar section's opacity, 0 to 1; None: not shown
+        self.opacity = None  # the blue flag's opacity, 0 to 1; None: not shown
+        self.radar = None  # the radar's turbohud.core.race.RadarView; None: not shown
         self.backdrop = False  # a light tint behind the text while locked (option)
         self.locked = True
         self.wanted = True  # the player wants it shown
@@ -149,6 +164,10 @@ class SectionWindow(QWidget):
             painter.end()
             return
         painter.setRenderHint(QPainter.Antialiasing)
+        if self.section.drawing == 'radar':
+            self._paint_radar(painter)
+            painter.end()
+            return
         if self.section.bar:
             self._paint_bar(painter)
             painter.end()
@@ -196,6 +215,62 @@ class SectionWindow(QWidget):
         painter.setPen(Qt.NoPen)
         painter.setBrush(QColor(*BACKDROP))
         painter.drawRoundedRect(rect, 6, 6)
+
+    def _paint_radar(self, painter):
+        """The proximity radar: the local car in the middle heading up, the others
+        where they are around it; red when beside or within RADAR_FULL behind, yellow
+        when closing in behind, grey elsewhere. The whole radar fades with its opacity.
+        In move mode a sample, with a border and its name."""
+        view = self.radar
+        if not self.locked and view is None:
+            view = RadarView(BLUE_SAMPLE, RADAR_SAMPLE)
+        if view is None:
+            return
+        size = min(self.width(), self.height())
+        box = QRectF((self.width() - size) / 2, (self.height() - size) / 2, size, size).adjusted(1, 1, -1, -1)
+        painter.setOpacity(min(max(view.opacity, 0.0), 1.0))
+        painter.setPen(QPen(QColor(*RADAR_EDGE), 1.5))
+        painter.setBrush(QColor(*RADAR_BACK))
+        painter.drawRoundedRect(box, 10, 10)
+        # The local car sits a little above the middle: more room behind, where the
+        # cars that count come from. view.view reaches from it to the bottom edge.
+        centre = QPointF(box.center().x(), box.top() + box.height() * RADAR_CAR_AT)
+        per_unit = box.height() * (1 - RADAR_CAR_AT) / view.view
+        painter.setPen(QPen(QColor(*RADAR_LINES), 1))
+        painter.drawLine(QPointF(centre.x(), box.top() + 6), QPointF(centre.x(), box.bottom() - 6))
+        painter.drawLine(QPointF(box.left() + 6, centre.y()), QPointF(box.right() - 6, centre.y()))
+        painter.setClipRect(box)
+
+        def car(ahead, side, angle, color):
+            painter.save()
+            painter.translate(centre.x() + side * per_unit, centre.y() - ahead * per_unit)
+            painter.rotate(math.degrees(angle))
+            w, h = CAR_WIDTH * per_unit, CAR_LENGTH * per_unit
+            painter.setPen(QPen(QColor(0, 0, 0, 160), 1))
+            painter.setBrush(QColor(color))
+            painter.drawRoundedRect(QRectF(-w / 2, -h / 2, w, h), w / 4, w / 4)
+            painter.restore()
+
+        for blip in view.blips:
+            if blip.seconds is not None and blip.seconds <= RADAR_FULL:
+                color = BEHIND_COLOR
+            elif blip.seconds is not None and blip.seconds <= RADAR_FROM:
+                color = LIFT_COLOR
+            else:
+                color = RADAR_OTHER
+            car(blip.ahead, blip.side, blip.angle, color)
+        car(0.0, 0.0, 0.0, RADAR_ME)
+        painter.setClipping(False)
+        painter.setOpacity(1.0)
+        if not self.locked:
+            painter.setPen(QPen(QColor(*BORDER), 2))
+            painter.setBrush(Qt.NoBrush)
+            painter.drawRoundedRect(QRectF(self.rect()).adjusted(1, 1, -1, -1), 8, 8)
+            painter.setPen(QColor(*LABEL_COLOR))
+            font = painter.font()
+            font.setPixelSize(11)
+            painter.setFont(font)
+            painter.drawText(self.rect().adjusted(6, 0, -20, -3), Qt.AlignBottom | Qt.AlignLeft, self.section.label)
 
     def _paint_bar(self, painter):
         """A plain bar filling the window (the blue flag), at its opacity; in move mode
