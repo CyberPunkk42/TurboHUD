@@ -55,8 +55,8 @@ class LinuxNativeTests(unittest.TestCase):
     def test_the_last_known_place_is_kept_once_the_window_is_gone(self):
         hypr = FakeHypr()
         native = self.native(hypr)
-        native.address = '0xaaa'
         widget = FakeWidget()
+        native.addresses[id(widget)] = '0xaaa'
         self.assertEqual(native.placement(widget), (300, 200, 450, 220))
         hypr.where, widget.visible = None, False
         self.assertEqual(native.placement(widget), (300, 200, 450, 220))
@@ -65,7 +65,7 @@ class LinuxNativeTests(unittest.TestCase):
         hypr = FakeHypr()
         native = self.native(hypr)
         native.prepare_app()
-        native.address = '0xaaa'
+        native.addresses[1] = '0xaaa'
         native.give_focus_back()
         self.assertEqual(hypr.focused, ['0xgame'])
 

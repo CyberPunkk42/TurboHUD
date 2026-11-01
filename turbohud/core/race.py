@@ -318,20 +318,20 @@ def current_lap_now(snapshot, now):
     return current + int(ahead * UNITS_PER_SECOND)
 
 
-def race_rows(snapshot, now):
-    """What the HUD shows for a live-reader snapshot."""
+def race_sections(snapshot, now):
+    """{section name: rows} for a live-reader snapshot (see core.hud.RACE_SECTIONS); a
+    section with nothing to show has no rows."""
     if snapshot.status == WAITING_FOR_GAME:
-        return [Row('TurboHUD', 'title'), Row('Start TSU from Steam with the launch option.', 'small')]
+        return {'lap': [Row('Waiting for TSU (launch option)', 'title')]}
     if snapshot.status != RACING or snapshot.state is None:
-        return [Row('TurboHUD', 'title'), Row('Waiting for a race...', 'small')]
+        return {'lap': [Row('Waiting for a race...', 'title')]}
     state = snapshot.state
-    times = f'Last {format_time(state.last_lap)}   Best {format_time(state.best_lap)}'
     if state.finished or state.laps_to_finish and state.laps_completed >= state.laps_to_finish:
-        return [
-            Row(f'Finished - {state.laps_completed} laps', 'title'),
-            Row(format_time(state.best_lap), 'big', 'accent'),
-            Row(f'Best lap   Last {format_time(state.last_lap)}', 'medium'),
-        ]
+        return {
+            'lap': [Row(f'Finished - {state.laps_completed} laps', 'title')],
+            'current': [Row(format_time(state.best_lap), 'big', 'accent')],
+            'times': [Row(f'Best lap   Last {format_time(state.last_lap)}', 'medium')],
+        }
     title = f'Lap {state.lap_number}/{state.laps_to_finish}' if state.laps_to_finish else f'Lap {state.lap_number}'
     left = state.time_left
     if left is not None:
@@ -341,9 +341,15 @@ def race_rows(snapshot, now):
         delta_row = Row('vs best  -', 'medium')
     else:
         delta_row = Row(f'{format_delta(delta)} vs best', 'medium', 'ahead' if delta < 0 else 'behind')
-    return [
-        Row(title, 'title'),
-        Row(format_tenths(current_lap_now(snapshot, now)), 'big', 'accent'),
-        delta_row,
-        Row(times, 'medium'),
-    ]
+    return {
+        'lap': [Row(title, 'title')],
+        'current': [Row(format_tenths(current_lap_now(snapshot, now)), 'big', 'accent')],
+        'delta': [delta_row],
+        'times': [Row(f'Last {format_time(state.last_lap)}   Best {format_time(state.best_lap)}', 'medium')],
+    }
+
+
+def race_rows(snapshot, now):
+    """All sections' rows in one list, top to bottom (for the terminal and tests)."""
+    sections = race_sections(snapshot, now)
+    return [row for name in ('lap', 'current', 'delta', 'times') for row in sections.get(name, [])]

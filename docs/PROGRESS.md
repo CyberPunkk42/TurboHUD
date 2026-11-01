@@ -79,3 +79,10 @@ its "Recent changes".
   race, field lists and checkpoint lines come in batched reads, and the probe no longer
   loads the C library for every read (4 µs instead of about 1.6 ms; takes effect when
   TSU is next started). The race is read and the HUD drawn 20 times a second.
+- 2026-11-01: HUD sections. The HUD is now four separate boxes (lap and time left,
+  running lap, delta to best, last and best lap), each in its own window, so they can sit
+  anywhere on a wide screen. Move mode unlocks them all: drag to place, resize at the
+  corner to scale the text; a panel shows or hides each section and locks or quits.
+  Each section's place, size and visibility are saved (`sections` in `settings.json`);
+  on the first start they stack where the old HUD was. On Hyprland every section and the
+  panel are floated and pinned on their own (the panel takes clicks).

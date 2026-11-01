@@ -32,7 +32,7 @@ class Native:
         if hypr == 'detect':
             hypr = hyprland.Hyprland() if hyprland.available() else None
         self.hypr = hypr
-        self.address = None  # TurboHUD's window in Hyprland, once found
+        self.addresses = {}  # id(widget) -> its window in Hyprland, once found
         self.previous = None  # the window that had the focus before TurboHUD appeared
         # Wayland: switching click-through must not re-create the window, which would
         # make Hyprland tile it again.
@@ -40,7 +40,7 @@ class Native:
         # Lock move mode when another window becomes active (the Mac's way)? Not on
         # Hyprland: there the focus follows the mouse, which would end move mode at once.
         self.auto_lock = self.hypr is None
-        self.last_placement = None
+        self.last_placements = {}  # id(widget) -> where it was last seen
 
     def prepare_app(self):
         QGuiApplication.setDesktopFileName(APP_ID)
@@ -52,9 +52,10 @@ class Native:
         if self.hypr is None:
             return 'always on top through Qt'
         target = (widget.x(), widget.y(), widget.width(), widget.height())
-        self.last_placement = target
+        self.last_placements[id(widget)] = target
         QTimer.singleShot(FIND_STEP_MS, lambda: self._place(widget, target, FIND_TRIES))
-        return 'Hyprland: floating, pinned, no keyboard focus (requests for its own window only)'
+        focus = 'takes clicks' if getattr(widget, 'focusable', False) else 'no keyboard focus'
+        return f'Hyprland: floating, pinned, {focus} (requests for its own window only)'
 
     def _place(self, widget, target, tries, place_tries=PLACE_TRIES):
         address = self.hypr.own_window(os.getpid(), widget.windowTitle())
@@ -64,8 +65,8 @@ class Native:
             else:
                 log.info('Hyprland: TurboHUD window not found; it may not stay on top')
             return
-        self.address = address
-        ok = self.hypr.place(address, *target)
+        self.addresses[id(widget)] = address
+        ok = self.hypr.place(address, *target, focusable=getattr(widget, 'focusable', False))
         if not ok and place_tries > 1:
             log.info('Hyprland: trying again')
             QTimer.singleShot(PLACE_RETRY_MS, lambda: self._place(widget, target, 1, place_tries - 1))
@@ -76,17 +77,20 @@ class Native:
     def placement(self, widget):
         """Where the window really is: on Wayland, Qt does not know its position. Once
         the window is gone (Qt closes it when quitting), the last known place."""
-        if self.hypr is None or self.address is None:
+        address = self.addresses.get(id(widget))
+        if self.hypr is None or address is None:
             return None
         if widget.isVisible():
-            self.last_placement = self.hypr.geometry(self.address) or self.last_placement
-        return self.last_placement
+            seen = self.hypr.geometry(address)
+            if seen:
+                self.last_placements[id(widget)] = seen
+        return self.last_placements.get(id(widget))
 
     def take_focus(self):
         pass
 
     def give_focus_back(self):
-        if self.hypr is not None and self.previous and self.previous != self.address:
+        if self.hypr is not None and self.previous and self.previous not in self.addresses.values():
             self.hypr.focus(self.previous)
 
     def register_hotkeys(self, on_hotkey):

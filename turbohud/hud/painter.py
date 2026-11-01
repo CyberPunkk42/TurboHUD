@@ -42,8 +42,14 @@ def outlined_text(painter, x, y, text, size, color, outline):
     painter.fillPath(path, color)
 
 
-def draw_hud(painter, lines, theme):
-    """Draw the lines from turbohud.core.hud.hud_lines with the theme's colours."""
+def text_width(text, size):
+    """How wide a line of HUD text is, in pixels, with its outline."""
+    return text_path(text, size).boundingRect().right() + max(2.0, size / 10)
+
+
+def draw_hud(painter, lines, theme, scale=None):
+    """Draw the lines from turbohud.core.hud.hud_lines with the theme's colours, at
+    `scale` (the theme's own by default)."""
     colors = {
         'text': QColor(theme.text_color),
         'accent': QColor(theme.accent_color),
@@ -51,7 +57,7 @@ def draw_hud(painter, lines, theme):
         'behind': QColor(BEHIND_COLOR),
     }
     outline = _rgba(theme.outline_color)
-    x = round(MARGIN * theme.scale)
+    x = round(MARGIN * (theme.scale if scale is None else scale))
     for line in lines:
         outlined_text(painter, x, line.baseline, line.text, line.size, colors[line.color], outline)
 

@@ -43,11 +43,6 @@ class Sizes:
         return cls(scaled(MARGIN), scaled(16), scaled(40), scaled(20), scaled(13), scaled(8), scaled(6))
 
 
-# The tallest content the HUD shows (a race: title, current lap, delta to the best lap,
-# last and best); the box's minimum size leaves room for it.
-TALLEST = (Row('Lap', 'title'), Row('0:00.0', 'big'), Row('+0.000', 'medium'), Row('Last', 'medium'))
-
-
 def clock(seconds):
     """'m:ss' for a number of seconds, like a lap time."""
     minutes, seconds = divmod(int(seconds), 60)
@@ -59,12 +54,10 @@ def session_rows(seconds):
     return [Row('TurboHUD - session time', 'title'), Row(clock(seconds), 'big', 'accent')]
 
 
-def help_lines(locked, shortcuts):
-    """The hint shown in move mode, as lines; none while locked."""
-    if locked:
-        return []
-    finish = 'Ctrl+Shift+L or Lock finishes.' if shortcuts else 'Lock finishes, Close quits.'
-    return ['Drag to move. Resize at the corner.', finish]
+def help_lines(shortcuts):
+    """The move-mode hint, as lines, for the move-mode panel."""
+    finish = 'Ctrl+Shift+L or Lock finishes.' if shortcuts else 'Lock finishes.'
+    return ['Drag a section to move it; resize it at its corner to scale it.', finish]
 
 
 def _content(rows, sizes):
@@ -77,35 +70,61 @@ def _content(rows, sizes):
     return lines, baseline
 
 
-def hud_lines(rows, locked, shortcuts, scale=1.0, hint_bottom=None):
-    """The HUD's lines, top to bottom: the content `rows`, then in move mode the hint.
+def hud_lines(rows, scale=1.0):
+    """The lines of a section's content `rows`, top to bottom."""
+    return _content(rows, Sizes.for_scale(scale))[0]
 
-    The move-mode hint sits at the bottom, its last line just above `hint_bottom` (the
-    top of the Lock and Close buttons), so it never covers them; without `hint_bottom`
-    it follows the content.
-    """
+
+def content_size(rows, scale, measure):
+    """(width, height) a section needs for `rows` at `scale`. `measure(text, size)` gives
+    a text's width in pixels (Qt knows the font)."""
     sizes = Sizes.for_scale(scale)
-    lines, baseline = _content(rows, sizes)
-    hint = help_lines(locked, shortcuts)
-    if not hint:
-        return lines
-    step = sizes.small + sizes.hint_gap
-    if hint_bottom is None:
-        first = baseline + sizes.hint_gap + step
-    else:
-        # The last baseline leaves room below it for letters such as g and p.
-        first = hint_bottom - sizes.hint_gap - (len(hint) - 1) * step
-    for index, text in enumerate(hint):
-        lines.append(Line(text, sizes.small, 'text', first + index * step))
-    return lines
+    lines, bottom = _content(rows, sizes)
+    width = max((measure(line.text, line.size) for line in lines), default=0)
+    # Below the last baseline: room for letters such as g and p, then the margin.
+    return round(width + 2 * sizes.margin), round(bottom + sizes.margin)
 
 
-def min_size(scale, controls_height):
-    """(width, height) the box needs so the tallest content, the hint and the buttons do
-    not overlap. `controls_height` is the height the Lock and Close row takes at the
-    bottom."""
-    sizes = Sizes.for_scale(scale)
-    _, content_bottom = _content(TALLEST, sizes)
-    hint = len(help_lines(locked=False, shortcuts=True)) * (sizes.small + sizes.hint_gap)
-    height = content_bottom + sizes.hint_gap + hint + sizes.hint_gap + controls_height
-    return max(MIN_WIDTH, round(MIN_WIDTH * scale)), height
+@dataclass(frozen=True)
+class Section:
+    """One part of the HUD in its own window, placed by the player."""
+
+    name: str  # its key in settings.json
+    label: str  # how menus and move mode name it
+    samples: tuple  # row lists it may show; the widest and tallest sets its size
+
+
+RACE_SECTIONS = (
+    Section('lap', 'Lap and time left', (
+        (Row('Lap 13/13  -  21:00 left', 'title'),),
+        (Row('Waiting for TSU (launch option)', 'title'),),
+    )),
+    Section('current', 'Running lap', ((Row('0:00.0', 'big'),), (Row('10:00.000', 'big'),))),
+    Section('delta', 'Delta to best', ((Row('+00.000 vs best', 'medium'),),)),
+    Section('times', 'Last and best lap', ((Row('Last 0:00.000   Best 0:00.000', 'medium'),),)),
+)
+CLOCK_SECTIONS = (Section('clock', 'Session time', ((Row('TurboHUD - session time', 'title'), Row('00:00', 'big')),)),)
+
+
+def base_size(section, scale, measure):
+    """(width, height) of a section at scale 1 of its own: fits all its samples."""
+    sizes = [content_size(rows, scale, measure) for rows in section.samples]
+    return max(w for w, _h in sizes), max(h for _w, h in sizes)
+
+
+def section_scale(size, base, low=0.5, high=8.0):
+    """How much a section resized to `size` scales its content, against its `base`
+    size; the content keeps its shape and fits."""
+    (width, height), (base_width, base_height) = size, base
+    return min(max(min(width / base_width, height / base_height), low), high)
+
+
+def stacked(sections, x, y, sizes, gap=8):
+    """{name: (x, y, width, height)}: sections one below the other from (x, y), where
+    the HUD used to be, for a first start."""
+    places = {}
+    for section in sections:
+        width, height = sizes[section.name]
+        places[section.name] = (x, y, width, height)
+        y += height + gap
+    return places

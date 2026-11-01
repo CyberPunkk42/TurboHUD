@@ -412,6 +412,15 @@ class RowsTests(unittest.TestCase):
         row = race.race_rows(racing(behind), 0)[2]
         self.assertEqual((row.text, row.color), ('+0.234 vs best', 'behind'))
 
+    def test_waiting_texts_fit_the_lap_section(self):
+        from turbohud.core.hud import RACE_SECTIONS
+
+        widest = max(len(rows[0].text) for rows in RACE_SECTIONS[0].samples)
+        for status in (race.WAITING_FOR_GAME, race.WAITING_FOR_RACE):
+            with self.subTest(status=status):
+                text = race.race_sections(race.Snapshot(status), 0)['lap'][0].text
+                self.assertLessEqual(len(text), widest)
+
     def test_waiting(self):
         game = race.race_rows(race.Snapshot(race.WAITING_FOR_GAME), 0)
         self.assertIn('launch option', game[-1].text)

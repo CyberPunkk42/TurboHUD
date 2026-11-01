@@ -17,6 +17,7 @@ LOG_FILE = 'turbohud.log'
 DEFAULT_PLACEMENT = (40, 40, 420, 190)  # x, y, width, height
 MIN_WIDTH = 240
 MIN_HEIGHT = 100
+MIN_SECTION_SIZE = 8  # a saved section smaller than this is broken
 MIN_SCALE = 0.5
 MAX_SCALE = 3.0
 _COLOR = re.compile(r'#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?')
@@ -31,9 +32,21 @@ class Theme:
 
 
 @dataclass(frozen=True)
+class SectionPlace:
+    """Where one HUD section sits and whether it shows."""
+
+    x: int
+    y: int
+    width: int
+    height: int
+    visible: bool = True
+
+
+@dataclass(frozen=True)
 class Settings:
-    placement: tuple = DEFAULT_PLACEMENT
+    placement: tuple = DEFAULT_PLACEMENT  # the whole HUD before it had sections; new sections start here
     theme: Theme = field(default_factory=Theme)
+    sections: dict = field(default_factory=dict)  # section name -> SectionPlace
 
 
 def settings_dir(platform=sys.platform, environ=None, home=None):
@@ -94,6 +107,25 @@ def _placement(data):
     return (x, y, *clamped_size(width, height))
 
 
+def _sections(data):
+    """{name: SectionPlace} from the file; a broken entry is left out (it then starts
+    at its default place)."""
+    places = {}
+    if not isinstance(data, dict):
+        return places
+    for name, entry in data.items():
+        if not isinstance(entry, dict):
+            continue
+        try:
+            x, y, width, height = (int(entry[key]) for key in ('x', 'y', 'width', 'height'))
+        except (KeyError, TypeError, ValueError):
+            continue
+        if width < MIN_SECTION_SIZE or height < MIN_SECTION_SIZE:
+            continue
+        places[str(name)] = SectionPlace(x, y, width, height, entry.get('visible', True) is not False)
+    return places
+
+
 def load_settings(path):
     try:
         data = json.loads(Path(path).read_text(encoding='utf-8'))
@@ -101,7 +133,11 @@ def load_settings(path):
         return Settings()
     if not isinstance(data, dict):
         return Settings()
-    return Settings(placement=_placement(data.get('placement')), theme=_theme(data.get('theme')))
+    return Settings(
+        placement=_placement(data.get('placement')),
+        theme=_theme(data.get('theme')),
+        sections=_sections(data.get('sections')),
+    )
 
 
 def save_settings(path, settings):
@@ -116,6 +152,10 @@ def save_settings(path, settings):
             'accent_color': settings.theme.accent_color,
             'outline_color': settings.theme.outline_color,
             'scale': settings.theme.scale,
+        },
+        'sections': {
+            name: {'x': place.x, 'y': place.y, 'width': place.width, 'height': place.height, 'visible': place.visible}
+            for name, place in settings.sections.items()
         },
     }
     path.parent.mkdir(parents=True, exist_ok=True)
