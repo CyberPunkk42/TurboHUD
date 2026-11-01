@@ -303,6 +303,7 @@ class MovePanel(QWidget):
     quit_requested = Signal()
     wanted_changed = Signal(str, bool)  # section name, shown
     group_changed = Signal(str, str)  # section name, group ('' for none)
+    align_requested = Signal(str, bool, bool)  # section name, centre across, centre down
     mph_changed = Signal(bool)
     backdrop_changed = Signal(bool)
 
@@ -336,6 +337,17 @@ class MovePanel(QWidget):
             )
             grid.addWidget(group, row, 1)
             self.groups[section.name] = group
+            if section.drawing:  # the blue flag and the radar can be centred on the screen
+                for column_, (text, tip, across, down) in enumerate((
+                    ('Centre ↔', 'Centre across the screen', True, False),
+                    ('Centre ↕', 'Centre down the screen', False, True),
+                ), start=2):
+                    button = QPushButton(text)
+                    button.setToolTip(tip)
+                    button.clicked.connect(
+                        lambda _checked=False, name=section.name, a=across, d=down: self.align_requested.emit(name, a, d)
+                    )
+                    grid.addWidget(button, row, column_)
         column.addLayout(grid)
         self.mph = QCheckBox('Speed in mph')
         self.mph.setChecked(mph)

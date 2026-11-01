@@ -52,6 +52,9 @@ See `docs/IMPROVEMENT_BACKLOG.md`. In short:
    Hyprland.
 
 ## Recent changes
+- 2026-11-01: Centre buttons for the blue flag and the radar. In the move-mode panel,
+  "Centre ↔" centres the section across the screen it is on and "Centre ↕" down it
+  (hud.centred); its size stays and its group stays where it is.
 - 2026-11-01: The move-mode panel no longer covers sections. It goes near the middle
   of the screen a third down as before, but moves to the nearest spot that covers no
   shown section (hud.free_spot); it had hidden the proximity radar. It can also be

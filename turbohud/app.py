@@ -83,11 +83,13 @@ def run(args, folder):
         RACE_SECTIONS,
         GroupMover,
         below,
+        centred,
         drawing_place,
         first_launch,
         free_spot,
         local_time_rows,
         main_screen,
+        screen_of,
         session_rows,
     )
     from turbohud.overlay import HOTKEY_LOCK, HOTKEY_QUIT, native_for
@@ -273,6 +275,19 @@ def run(args, folder):
                     move_window(window, mover.known[name], settle=True)
         group_moving = bool(moves)
 
+    def align(name, across, down):
+        """Centre a section on the screen that holds it (the panel's Centre buttons)."""
+        window = windows[name]
+        place = tuple(window.placement())
+        screen = screen_of(place, screens)
+        if screen is None:
+            return
+        target = centred(place, screen, across, down)
+        move_window(window, target, settle=True)
+        mover.known[name] = target  # TurboHUD moved it: its group stays where it is
+        mover.pending[name] = (target[:2], time.monotonic() + 1.0)
+        log.info('section %s centred%s%s at %s', name, ' across' if across else '', ' down' if down else '', target)
+
     def set_wanted(name, wanted):
         windows[name].set_wanted(wanted)
         log.info('section %s %s', name, 'shown' if wanted else 'hidden')
@@ -322,6 +337,7 @@ def run(args, folder):
     panel.quit_requested.connect(app.quit)
     panel.wanted_changed.connect(set_wanted)
     panel.group_changed.connect(set_group)
+    panel.align_requested.connect(align)
     for name, window in windows.items():
         panel.set_group(name, window.group)
 

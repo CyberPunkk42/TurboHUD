@@ -384,3 +384,27 @@ def free_spot(size, screen, boxes, wanted, margin=LAYOUT_MARGIN, step=FREE_STEP,
         return covered, abs(spot[0] - wanted[0]) + abs(spot[1] - wanted[1])
 
     return min(((x, y) for x in xs for y in ys), key=cost)
+
+
+def screen_of(place, screens):
+    """The screen (x, y, width, height) that holds the middle of `place`, else the
+    largest; None without screens."""
+    x, y, width, height = place
+    cx, cy = x + width / 2, y + height / 2
+    for screen in screens:
+        sx, sy, sw, sh = screen
+        if sx <= cx < sx + sw and sy <= cy < sy + sh:
+            return screen
+    return main_screen(screens)
+
+
+def centred(place, screen, horizontal=False, vertical=False):
+    """`place` (x, y, width, height) centred on `screen` across (horizontal), down
+    (vertical) or both; its size stays."""
+    x, y, width, height = place
+    sx, sy, sw, sh = screen
+    if horizontal:
+        x = sx + (sw - width) // 2
+    if vertical:
+        y = sy + (sh - height) // 2
+    return (x, y, width, height)

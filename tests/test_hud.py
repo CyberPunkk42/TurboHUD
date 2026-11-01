@@ -268,3 +268,23 @@ class FreeSpotTests(unittest.TestCase):
         everything = [(0, 0, 5120, 1440)]
         x, y = hud.free_spot((400, 600), (0, 0, 1920, 1080), everything, (760, 360))
         self.assertTrue(40 <= x <= 1920 - 40 - 400 and 40 <= y <= 1080 - 40 - 600)
+
+
+class CentreTests(unittest.TestCase):
+    SCREENS = [(1280, -1440, 2560, 1440), (0, 0, 5120, 1440)]  # the player's two monitors
+
+    def test_centre_across_down_or_both_on_its_own_screen(self):
+        radar = (300, 900, 160, 160)
+        screen = hud.screen_of(radar, self.SCREENS)
+        self.assertEqual(screen, (0, 0, 5120, 1440))
+        self.assertEqual(hud.centred(radar, screen, horizontal=True), (2480, 900, 160, 160))
+        self.assertEqual(hud.centred(radar, screen, vertical=True), (300, 640, 160, 160))
+        self.assertEqual(hud.centred(radar, screen, True, True), (2480, 640, 160, 160))
+
+    def test_on_the_upper_monitor(self):
+        flag = (1500, -1300, 480, 24)
+        screen = hud.screen_of(flag, self.SCREENS)
+        self.assertEqual(hud.centred(flag, screen, horizontal=True), (2320, -1300, 480, 24))
+
+    def test_only_the_drawings_have_centre_buttons(self):
+        self.assertEqual({s.name for s in hud.RACE_SECTIONS if s.drawing}, {'blueflag', 'radar'})

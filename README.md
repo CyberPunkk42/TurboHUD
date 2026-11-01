@@ -91,6 +91,8 @@ Clear the launch option to start TSU without the probe. The probe writes what it
 - The **proximity radar** shows your car and the cars around you when one is within
   half a second behind (faint) up to alongside (fully visible): red beside you, yellow
   closing in.
+- The blue flag and the radar have **Centre ↔** and **Centre ↕** buttons in the
+  move-mode panel: they centre it across or down the screen it is on.
 - **Groups:** in the move-mode panel, put sections in the same group (A to D). Dragging
   one of them then moves the whole group; the others follow a moment later.
 - **Ctrl+Shift+L** (or **Move mode** in the TurboHUD icon's menu) switches to **move
