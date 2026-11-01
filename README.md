@@ -65,7 +65,9 @@ game.
    **Launch Options**, and enter (with the path to your copy of this folder):
    `python3 /home/<user>/Work/workspace/tsu_repositories/TurboHUD/experiments/tsu_memory_probe.py %command%`
 2. Start TSU from Steam, and start TurboHUD (before or after; it finds the game).
-3. Until a race is on, the HUD says what it is waiting for. In a race it shows the lap
+3. The race sections appear when the cars stand on the grid, before the lights; in the
+   menus, the lobby and while a race loads only the local time shows (hover over the
+   TurboHUD icon to see what it waits for). In a race it shows the lap
    and time left, the running lap time, how far ahead (green) or behind (red) your best
    lap you are at the last checkpoint, and the last and best lap.
 

@@ -49,6 +49,11 @@ See `docs/IMPROVEMENT_BACKLOG.md`. In short:
    Hyprland.
 
 ## Recent changes
+- 2026-11-01: The race sections show from the grid on: once the race exists and its
+  clock runs (it starts when the grid is set, before the lights). Not while TSU starts,
+  in the menus, the lobby or while a race loads (no placeholders, no waiting texts), and
+  not while the clock stands (a finished race lingering in the lobby, or a pause). What
+  TurboHUD waits for is in the tray icon's tooltip. The local time shows while TSU runs.
 - 2026-11-01: First-launch layout: all sections one below the other at the left of the
   largest screen, laid out as on a 1920x1080 screen (40 px from the edge, vertically
   centred, a second column only if they do not fit), none overlapping. Saved places are

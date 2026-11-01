@@ -23,6 +23,7 @@ against the game's own lap times on 2026-11-01: they match exactly.
 import dataclasses
 import math
 import struct
+import time
 from dataclasses import dataclass
 
 from turbohud.core.hud import Row, clock, local_time_rows
@@ -584,6 +585,7 @@ class Snapshot:
     running: bool = False  # the race clock moved since the read before
     read_at: float = 0.0  # time.monotonic() of the read
     detail: str = ''  # why it is waiting, for the log
+    moved_at: float = 0.0  # time.monotonic() when the race clock last moved
 
 
 def current_lap_now(snapshot, now):
@@ -597,26 +599,37 @@ def current_lap_now(snapshot, now):
     return current + int(ahead * UNITS_PER_SECOND)
 
 
+STILL_SECONDS = 2.0  # a race clock standing this long: not on the grid (lobby, pause)
+
+
+def on_grid(snapshot, now=None):
+    """Whether the cars stand on the grid or race: the race exists and its clock runs
+    (it starts when the grid is set, before the lights). Not in the menus, while a race
+    loads, or in the lobby, where a finished race may linger with its clock standing.
+    `now` (time.monotonic()) checks that the clock moved lately; without it, only that
+    it has started."""
+    if snapshot.status != RACING or snapshot.state is None or snapshot.state.clock <= 0:
+        return False
+    return now is None or now - snapshot.moved_at < STILL_SECONDS
+
+
+def status_text(snapshot):
+    """What TurboHUD is waiting for, for the tray icon's tooltip."""
+    if snapshot.status == WAITING_FOR_GAME:
+        return 'waiting for TSU (start it with the launch option)'
+    if on_grid(snapshot, time.monotonic()):
+        return 'racing'
+    if snapshot.status in (STARTING, RACING):
+        return 'race being set up'
+    return 'waiting for a race'
+
+
 def race_sections(snapshot, now):
     """{section name: rows} for a live-reader snapshot (see core.hud.RACE_SECTIONS); a
-    section with nothing to show has no rows."""
-    if snapshot.status == WAITING_FOR_GAME:
-        return {'lap': [Row('Waiting for TSU (launch option)', 'title')]}
-    if snapshot.status == STARTING:
-        # Everything shows, with placeholders, so the HUD is in place for the start.
-        return {
-            'lap': [Row('Race starting...', 'title')],
-            'current': [Row(format_tenths(None), 'big', 'accent')],
-            'delta': [Row('vs best  -', 'medium')],
-            'times': [Row('Last -   Best -', 'medium')],
-            'fuel': [Row('Fuel -', 'medium')],
-            'fuelfinish': [Row('Finish -', 'medium')],
-            'tires': [Row('Tires -', 'medium')],
-            'speed': [Row('- km/h', 'medium')],
-            'pedals': (None, None),
-        }
-    if snapshot.status != RACING or snapshot.state is None:
-        return {'lap': [Row('Waiting for a race...', 'title')]}
+    section with nothing to show has no rows. Nothing before the grid: in the menus, the
+    lobby and while a race loads the HUD keeps out of the way (status_text says why)."""
+    if not on_grid(snapshot, now):
+        return {}
     state = snapshot.state
     if state.finished or state.laps_to_finish and state.laps_completed >= state.laps_to_finish:
         return {

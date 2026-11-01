@@ -276,8 +276,8 @@ class ReaderTests(unittest.TestCase):
             reader.il.find_class('TS', 'NoSuchClass')
 
 
-def racing(state, running=False, read_at=100.0):
-    return race.Snapshot(race.RACING, state, running, read_at)
+def racing(state, running=False, read_at=100.0, moved_at=100.0):
+    return race.Snapshot(race.RACING, state, running, read_at, moved_at=moved_at)
 
 
 MID_RACE = race.LapState(
@@ -628,7 +628,7 @@ class RowsTests(unittest.TestCase):
         self.assertEqual(rows[1].color, 'accent')
 
     def test_the_time_left_rounds_up_like_a_countdown(self):
-        state = race.LapState(clock=0, time_limit=10_001, laps_completed=0, laps_to_finish=5, lap_starts=[0])
+        state = race.LapState(clock=1, time_limit=10_002, laps_completed=0, laps_to_finish=5, lap_starts=[0])
         self.assertIn('0:02 left', race.race_rows(racing(state), 0)[0].text)
 
     def test_time_is_up(self):
@@ -647,39 +647,26 @@ class RowsTests(unittest.TestCase):
 
     def test_finished(self):
         state = race.LapState(
-            clock=0, time_limit=0, laps_completed=2, laps_to_finish=2, lap_starts=[0, 900_000, 1_700_000, 1_750_000]
+            clock=1_800_000, time_limit=0, laps_completed=2, laps_to_finish=2, lap_starts=[0, 900_000, 1_700_000, 1_750_000]
         )
         rows = race.race_rows(racing(state), 0)
         self.assertTrue(rows[0].text.startswith('Finished'))
         self.assertEqual(rows[1].text, '1:20.000')
 
     def test_delta_row_is_green_ahead_and_red_behind(self):
-        ahead = race.LapState(0, 0, 1, 13, [0, 900_000], checkpoints=((0, 300_000), (900_000, 1_199_000)))
+        ahead = race.LapState(1, 0, 1, 13, [0, 900_000], checkpoints=((0, 300_000), (900_000, 1_199_000)))
         row = race.race_rows(racing(ahead), 0)[2]
         self.assertEqual((row.text, row.color), ('-0.100 vs best', 'ahead'))
-        behind = race.LapState(0, 0, 1, 13, [0, 900_000], checkpoints=((0, 300_000), (900_000, 1_202_340)))
+        behind = race.LapState(1, 0, 1, 13, [0, 900_000], checkpoints=((0, 300_000), (900_000, 1_202_340)))
         row = race.race_rows(racing(behind), 0)[2]
         self.assertEqual((row.text, row.color), ('+0.234 vs best', 'behind'))
 
     def test_a_delta_too_small_to_show_is_even(self):
         self.assertEqual(race.format_delta(-3), '0.000')
         self.assertEqual(race.format_delta(5), '+0.001')
-        even = race.LapState(0, 0, 1, 13, [0, 900_000], checkpoints=((0, 300_000), (900_000, 1_199_997)))
+        even = race.LapState(1, 0, 1, 13, [0, 900_000], checkpoints=((0, 300_000), (900_000, 1_199_997)))
         row = race.race_rows(racing(even), 0)[2]
         self.assertEqual((row.text, row.color), ('0.000 vs best', 'text'))
-
-    def test_race_starting_shows_every_section(self):
-        from turbohud.core.hud import RACE_SECTIONS
-
-        sections = race.race_sections(race.Snapshot(race.STARTING), 0)
-        for section in RACE_SECTIONS:
-            if section.name != 'localtime':  # the app adds the time itself
-                self.assertIn(section.name, sections)
-        self.assertEqual(sections['lap'][0].text, 'Race starting...')
-        self.assertEqual(sections['pedals'], (None, None))
-
-    def test_in_the_menu_only_the_lap_section_speaks(self):
-        self.assertEqual(set(race.race_sections(race.Snapshot(race.WAITING_FOR_RACE), 0)), {'lap'})
 
     def test_the_local_time_shows_once_tsu_runs(self):
         import time
@@ -690,20 +677,32 @@ class RowsTests(unittest.TestCase):
         self.assertEqual(menu['localtime'][0].text, '18:07')
         self.assertIn('localtime', race.with_local_time({}, race.Snapshot(race.STARTING), now))
 
-    def test_waiting_texts_fit_the_lap_section(self):
-        from turbohud.core.hud import RACE_SECTIONS
-
-        widest = max(len(rows[0].text) for rows in RACE_SECTIONS[0].samples)
-        for status in (race.WAITING_FOR_GAME, race.WAITING_FOR_RACE):
+    def test_nothing_before_the_grid(self):
+        for status in (race.WAITING_FOR_GAME, race.WAITING_FOR_RACE, race.STARTING):
             with self.subTest(status=status):
-                text = race.race_sections(race.Snapshot(status), 0)['lap'][0].text
-                self.assertLessEqual(len(text), widest)
+                self.assertEqual(race.race_sections(race.Snapshot(status), 0), {})
+        lobby = race.LapState(clock=0, time_limit=0, laps_completed=0, laps_to_finish=13, lap_starts=[])
+        self.assertEqual(race.race_sections(racing(lobby), 0), {})  # race made, clock not running
 
-    def test_waiting(self):
-        game = race.race_rows(race.Snapshot(race.WAITING_FOR_GAME), 0)
-        self.assertIn('launch option', game[-1].text)
-        waiting = race.race_rows(race.Snapshot(race.WAITING_FOR_RACE), 0)
-        self.assertIn('Waiting for a race', waiting[-1].text)
+    def test_everything_from_the_grid_on(self):
+        grid = race.LapState(clock=2_800, time_limit=12_660_000, laps_completed=0, laps_to_finish=13, lap_starts=[])
+        sections = race.race_sections(racing(grid), 0)
+        self.assertEqual(sections['lap'][0].text, 'Lap 1/13  -  21:06 left')
+        self.assertEqual(sections['current'][0].text, '-:--.-')
+
+    def test_a_standing_clock_hides_the_hud(self):
+        # A finished race left in memory while the lobby waits for the next one.
+        old = race.LapState(clock=9_000_000, time_limit=0, laps_completed=13, laps_to_finish=13, lap_starts=[0])
+        self.assertEqual(race.race_sections(racing(old, moved_at=100.0), 103.0), {})
+        self.assertNotEqual(race.race_sections(racing(old, moved_at=100.0), 101.0), {})
+
+    def test_status_for_the_tray(self):
+        self.assertIn('launch option', race.status_text(race.Snapshot(race.WAITING_FOR_GAME)))
+        self.assertEqual(race.status_text(race.Snapshot(race.WAITING_FOR_RACE)), 'waiting for a race')
+        self.assertEqual(race.status_text(race.Snapshot(race.STARTING)), 'race being set up')
+        import time
+
+        self.assertEqual(race.status_text(racing(MID_RACE, moved_at=time.monotonic())), 'racing')
 
 
 class LiveRaceTests(unittest.TestCase):
@@ -765,6 +764,21 @@ class LiveRaceTests(unittest.TestCase):
         live.step()
         self.assertFalse(live.snapshot().running)
         self.assertEqual(live.snapshot().read_at, 50.0)
+
+    def test_it_notes_when_the_clock_last_moved(self):
+        clocks = iter([1000, 1200, 1200])
+
+        class Reader:
+            def read(self):
+                return race.LapState(next(clocks), 0, 0, 13, [0])
+
+        live = self.live(lambda: (Reader(), None))
+        live.step()
+        self.now = 51.0
+        live.step()
+        self.now = 55.0
+        live.step()
+        self.assertEqual(live.snapshot().moved_at, 51.0)
 
     def test_when_tsu_quits_it_reconnects(self):
         attempts = []
