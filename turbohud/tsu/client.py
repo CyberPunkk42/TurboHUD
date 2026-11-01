@@ -129,9 +129,12 @@ class LiveRace:
             self._drop()
             self._set(Snapshot(WAITING_FOR_GAME, read_at=self._clock(), detail=str(error)))
             return WAIT_INTERVAL
-        before = self.snapshot().state
+        previous = self.snapshot()
+        before = previous.state
         running = before is not None and state.clock > before.clock
-        self._set(Snapshot(RACING, state, running, self._clock()))
+        now = self._clock()
+        moved_at = now if running or before is None else previous.moved_at
+        self._set(Snapshot(RACING, state, running, now, moved_at=moved_at))
         return READ_INTERVAL
 
     def _run(self):

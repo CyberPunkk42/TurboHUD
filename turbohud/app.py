@@ -104,7 +104,7 @@ def run(args, folder):
     live = start_live_race()
     pad = None
     if live is not None:
-        from turbohud.core.race import race_sections, with_local_time
+        from turbohud.core.race import race_sections, status_text, with_local_time
 
         layout = RACE_SECTIONS
         from turbohud.tsu.controller import Pad, combined
@@ -249,9 +249,16 @@ def run(args, folder):
 
     last_seen = 0.0
 
+    shown_status = None
+
     def tick():
-        nonlocal last_seen
+        nonlocal last_seen, shown_status
         current = contents()
+        if live is not None:
+            text = status_text(live.snapshot())
+            if text != shown_status:
+                tray.setToolTip(f'TurboHUD - {text}')
+                shown_status = text
         for name, window in windows.items():
             window.rows = current.get(name, [])
             window.pedals = current.get('pedals')
