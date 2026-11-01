@@ -104,7 +104,7 @@ def run(args, folder):
     live = start_live_race()
     pad = None
     if live is not None:
-        from turbohud.core.race import race_sections
+        from turbohud.core.race import race_sections, with_local_time
 
         layout = RACE_SECTIONS
         from turbohud.tsu.controller import Pad, combined
@@ -113,10 +113,11 @@ def run(args, folder):
         pad.start()
 
         def contents():
-            current = race_sections(live.snapshot(), time.monotonic())
+            snapshot = live.snapshot()
+            current = race_sections(snapshot, time.monotonic())
             if 'pedals' in current:
                 current['pedals'] = combined(current['pedals'], pad.pedals())
-            return {**current, 'localtime': local_time_rows(time.localtime())}
+            return with_local_time(current, snapshot, time.localtime())
 
     else:
         layout = CLOCK_SECTIONS

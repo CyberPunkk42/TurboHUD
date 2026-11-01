@@ -25,7 +25,7 @@ import math
 import struct
 from dataclasses import dataclass
 
-from turbohud.core.hud import Row, clock
+from turbohud.core.hud import Row, clock, local_time_rows
 from turbohud.core.il2cpp import ARRAY_DATA, LIST_ITEMS, SIMPLE_TYPES, NotFound, ReadError
 
 UNITS_PER_SECOND = 10_000
@@ -685,6 +685,14 @@ def car_sections(car, laps_to_go=None):
     if car.tires_left is not None:
         sections['tires'] = [Row(f'Tires {car.tires_left * 100:.0f}%{_laps_text(car.tire_laps)}', 'medium')]
     return sections
+
+
+def with_local_time(sections, snapshot, now_struct):
+    """`sections` plus the local time once TSU is running (its menus included); while
+    TurboHUD waits for the game the clock stays away too."""
+    if snapshot.status == WAITING_FOR_GAME:
+        return sections
+    return {**sections, 'localtime': local_time_rows(now_struct)}
 
 
 def race_rows(snapshot, now):

@@ -49,6 +49,9 @@ See `docs/IMPROVEMENT_BACKLOG.md`. In short:
    Hyprland.
 
 ## Recent changes
+- 2026-11-01: The speed section's pedal bars only show with a speed (not in the menus
+  or before TSU runs; in move mode as a sample). On Linux the local time shows once TSU
+  is running, from its main menu on.
 - 2026-11-01: Fuel balance without blips: the recent laps' fuel use is taken at the
   car's place between two checkpoints, with the live delta's handling of lines passed
   together, same-spot and split lines (shared in LapState.stretch). Replayed over a
