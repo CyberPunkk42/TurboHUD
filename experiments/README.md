@@ -281,3 +281,20 @@ time left twice a second.
   Compared with the game's own lap times by the user: they match exactly. Not yet
   tried as a client on someone else's server (the event controller is then another
   class).
+
+### Fuel, tire wear and speed: where to look (`tsu_vehicle_dump.py`)
+From the class and field tables in `global-metadata.dat` (version 29, read offline;
+field positions are only known at runtime):
+- The local `TS.EventPlayer` has `m_vehicle` (`TS.Vehicle`). Its `m_state`
+  (`TS.VehicleState`) has `fuelConsumption`, `tireWear`, `hitPoints`, `inPitArea` and
+  `tireCompoundAndChangeTicks`; its `m_stateUpdater` (`TS.CarStateUpdater`) has
+  `m_forwardSpeed`, `m_speedOnFrontSurface`, `m_oldSpeed3d` and `inPit`.
+- `TS.AIPittingEstimator` (the AI's pit planning) keeps `m_fuelPerLap`,
+  `m_tireWearPerLap`, `m_fuelConsumptionAtStartOfLap`: TurboHUD can work out the same
+  per lap from the lap starts it already reads.
+- Methods named `GetEstimatedLapsWithFuel`, `GetSpeedInMetersPerSecond` and the HUD texts
+  "Moving: {0} / {1}Mph" hint at the units, still to be confirmed.
+
+`python3 -B experiments/tsu_vehicle_dump.py` lists every simple field of these objects
+with its value once; `--watch` prints the likely ones twice a second while driving.
+Not yet run in a race.
