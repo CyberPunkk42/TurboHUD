@@ -206,3 +206,73 @@ with Fullscreen Exclusive off and on: everything works as planned.
 level and the shortcuts. Not tested yet: Windows, Linux.
 PySide6 takes about 335 MB in the development environment on the Mac; a bundled app
 would include only the parts it uses.
+
+## Memory probe (`tsu_memory_probe.py`, Linux)
+
+Question: can TurboHUD read TSU's memory on Linux, and only TSU's, without changing the
+system?
+
+Linux (Yama `ptrace_scope` 1) lets a program read another program's memory only if it
+started it. So the probe starts TSU: Steam runs the probe, the probe runs the game. It
+then may read TSU's memory and nothing else's. No sudo, no `setcap`, no system setting;
+the right ends when the game quits. It only reads (`process_vm_readv`), never writes,
+and never pauses the game. If the probe fails, the game still runs.
+
+### Run it
+1. Without the game: `python3 -B experiments/tsu_memory_probe.py --self-test`. It reads
+   a program it started (should work) and the terminal (should be refused).
+2. In Steam: Turbo Sliders Unlimited > Properties > General > Launch Options:
+   `python3 /home/<user>/Work/workspace/tsu_repositories/TurboHUD/experiments/tsu_memory_probe.py %command%`
+3. Start TSU from Steam and wait until the menu shows.
+4. Read `~/.config/TurboHUD/memory_probe.log`. `OK: read 16 bytes of GameAssembly.so`
+   means it works.
+5. Clear the launch option again to start TSU without the probe.
+
+### Finding the lap time (`tsu_memory_scan.py`)
+While TSU runs through the probe, the probe answers read-only requests (memory map,
+read, search) on `$XDG_RUNTIME_DIR/turbohud/tsu-memory.sock`, which only this user can
+open; it goes away when the game quits. TSU keeps lap times as whole numbers in steps of
+0.1 ms (`lapTimeIn100us` in its code), so a lap of 1:35.421 is one of 954210-954219.
+1. Drive a lap alone (hotlap) and note the lap time the game shows.
+2. `python3 -B experiments/tsu_memory_scan.py find 1:35.421`
+3. Drive another lap, then `python3 -B experiments/tsu_memory_scan.py refine <new time>`.
+4. Repeat until a few places remain; `show` lists them.
+
+### Results
+- 2026-11-01, Omarchy Linux: self-test passes (own child readable, terminal refused).
+- 2026-11-01, Omarchy Linux, over TSU started from Steam: the probe found `TSU.x64`
+  and read the start of `GameAssembly.so` (OK).
+- 2026-11-01, Omarchy Linux, hotlap alone, laps 1:39.647 and 2:40.032: the lap data was
+  found in memory (heap addresses, different on every start). All times are int32 in
+  steps of 0.1 ms.
+  - **Lap list:** an array of 12-byte entries `{flags, lap number, lap time}`, one per
+    lap of the event's lap limit (the length, 13, sits 12 bytes before the first lap
+    time's entry ends).
+  - **Player lap state:** `{?, time the last lap finished on the race clock, best lap,
+    laps completed}`, e.g. `1, 267.2984 s, 99.6479 s, 2`.
+  - **Race clock:** 32 bytes after a copy of the best lap; follows real time but changes
+    in irregular steps (about every 0.7-1.7 s).
+  - Current lap time = race clock - time the last lap finished. Checked live.
+  - Also found: a list of times 0.1025 s apart, probably the replay recording.
+  - Still open: a stable way to find these places at each start (through the game's
+    type information), and a smoother clock.
+
+### Live lap data by name (`tsu_lap_reader.py`)
+The addresses above change on every start. The game's IL2CPP type information is mapped
+into its memory (`global-metadata.dat`), and every loaded class has a runtime record
+pointing to its name, its fields (name and position) and its static fields. So the
+reader finds everything by name, in about 0.1 s, with no stored addresses:
+`TS.Services.sm_instance.m_activeServer.m_eventListener.m_eventState`, then
+`times` (race clock, 50 ticks a second, and the event's time limit) and the local
+`players[i]` (`m_localHumanIndex >= 0`) `.m_stats` (`TS.PlayerRaceStats`:
+`m_lapsCompleted`, `m_lapsToFinish`, and per lap `m_checkpointTimesForLaps[lap].m_times`,
+120 checkpoint times whose first is the lap's start).
+
+`python3 -B experiments/tsu_lap_reader.py` prints lap, current, last and best lap and the
+time left twice a second.
+
+- 2026-11-01, Omarchy Linux, hosting a session alone: works live, e.g.
+  `lap 3/13  current 0:36.545  last 1:24.095  best 1:24.095  time left 17:25.900`.
+  Compared with the game's own lap times by the user: they match exactly. Not yet
+  tried as a client on someone else's server (the event controller is then another
+  class).
