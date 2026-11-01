@@ -1,7 +1,7 @@
 import sys
 from functools import lru_cache
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import QRectF, Qt
 from PySide6.QtGui import QColor, QFont, QFontMetricsF, QPainterPath, QPen
 
 from turbohud.core.hud import MARGIN
@@ -10,6 +10,7 @@ from turbohud.core.hud import MARGIN
 # sans-serif one. Qt uses the first that is installed. Windows and macOS keep their
 # system font, which draws well.
 AHEAD_COLOR = '#5ee07a'  # the delta when faster than the best lap
+BAR_OFF = (110, 110, 110, 170)  # a pedal bar with no input: grey
 BEHIND_COLOR = '#ff6b6b'  # and when slower
 LINUX_FAMILIES = ['Noto Sans', 'DejaVu Sans', 'Liberation Sans', 'Cantarell', 'Ubuntu', 'Arial']
 
@@ -57,7 +58,21 @@ def text_width(text, size):
     return text_path(text, size).boundingRect().right() + max(2.0, size / 10)
 
 
-def draw_hud(painter, lines, theme, scale=None):
+def draw_bars(painter, bars):
+    """Pedal bars from turbohud.core.hud.pedal_bars: grey, lit from the bottom."""
+    colors = {'ahead': QColor(AHEAD_COLOR), 'behind': QColor(BEHIND_COLOR)}
+    painter.setPen(QPen(QColor(0, 0, 0, 160), 1))
+    for bar in bars:
+        rect = QRectF(bar.x, bar.y, bar.width, bar.height)
+        painter.setBrush(QColor(*BAR_OFF))
+        painter.drawRoundedRect(rect, 3, 3)
+        if bar.fill > 0:
+            lit = bar.height * bar.fill
+            painter.setBrush(colors[bar.color])
+            painter.drawRoundedRect(QRectF(bar.x, bar.y + bar.height - lit, bar.width, lit), 3, 3)
+
+
+def draw_hud(painter, lines, theme, scale=None, left=0):
     """Draw the lines from turbohud.core.hud.hud_lines with the theme's colours, at
     `scale` (the theme's own by default)."""
     colors = {
@@ -67,7 +82,7 @@ def draw_hud(painter, lines, theme, scale=None):
         'behind': QColor(BEHIND_COLOR),
     }
     outline = _rgba(theme.outline_color)
-    x = round(MARGIN * (theme.scale if scale is None else scale))
+    x = left + round(MARGIN * (theme.scale if scale is None else scale))
     for line in lines:
         outlined_text(painter, x, line.baseline, line.text, line.size, colors[line.color], outline)
         if line.tail:

@@ -94,6 +94,24 @@ class LocalTimeTests(unittest.TestCase):
             self.assertIn('localtime', [section.name for section in layout])
 
 
+class PedalBarTests(unittest.TestCase):
+    def test_bars_are_as_tall_as_the_section_left_green_right_red(self):
+        throttle, brake = hud.pedal_bars(200, 60, 1, throttle=1.0, brake=0.0)
+        self.assertEqual((throttle.x, throttle.color, throttle.fill), (4, 'ahead', 1.0))
+        self.assertEqual((brake.x + brake.width, brake.color, brake.fill), (196, 'behind', 0.0))
+        self.assertEqual(throttle.height, 60 - 8)
+
+    def test_unknown_or_out_of_range_input_is_clamped(self):
+        throttle, brake = hud.pedal_bars(200, 60, 1, throttle=None, brake=1.7)
+        self.assertEqual((throttle.fill, brake.fill), (0.0, 1.0))
+
+    def test_the_speed_section_makes_room_for_its_bars(self):
+        speed = next(s for s in hud.RACE_SECTIONS if s.name == 'speed')
+        self.assertTrue(speed.pedals)
+        text_width = hud.content_size(speed.samples[0], 1, measure)[0]
+        self.assertEqual(hud.base_size(speed, 1, measure)[0], text_width + hud.pedal_space(1))
+
+
 class SectionTests(unittest.TestCase):
     def test_race_sections_have_distinct_names(self):
         names = [section.name for section in hud.RACE_SECTIONS]

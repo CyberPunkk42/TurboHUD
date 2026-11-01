@@ -49,6 +49,10 @@ See `docs/IMPROVEMENT_BACKLOG.md`. In short:
    Hyprland.
 
 ## Recent changes
+- 2026-11-01: Pedal bars in the speed section: a throttle bar on its left (lights up
+  green) and a brake bar on its right (red), as tall as the section, grey without input,
+  filled in part for part pressure. Read from TS.CarControls (CarStateUpdater.m_controls,
+  `gas` and `brake`, or the thirds TSU keeps); not yet checked in a drive.
 - 2026-11-01: Hiding a section no longer closes its window: it draws nothing and lets
   clicks through, so showing it again needs no new window (Hyprland had opened the new
   one as fullscreen over the fullscreen game, where it could not be placed or pinned).

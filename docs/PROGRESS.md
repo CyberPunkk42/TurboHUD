@@ -116,3 +116,7 @@ its "Recent changes".
   one as fullscreen over the fullscreen game, where it could not be placed or pinned).
   As a safety net TurboHUD ends fullscreen for its own windows before placing them.
   New sections are placed only by the sections on the same monitor.
+- 2026-11-01: Pedal bars in the speed section: a throttle bar on its left (lights up
+  green) and a brake bar on its right (red), as tall as the section, grey without input,
+  filled in part for part pressure. Read from TS.CarControls (CarStateUpdater.m_controls,
+  `gas` and `brake`, or the thirds TSU keeps); not yet checked in a drive.

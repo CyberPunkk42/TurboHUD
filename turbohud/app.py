@@ -243,6 +243,7 @@ def run(args, folder):
         current = contents()
         for name, window in windows.items():
             window.rows = current.get(name, [])
+            window.pedals = current.get('pedals')
             window.update()
         if not locked and time.monotonic() - last_seen >= PLACEMENT_EVERY:
             # In move mode, note where the sections are: on Wayland only the desktop
