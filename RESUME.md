@@ -52,6 +52,15 @@ See `docs/IMPROVEMENT_BACKLOG.md`. In short:
    Hyprland.
 
 ## Recent changes
+- 2026-11-01: Radar flicker fixed. On a hosted online race (TSU runs the server: the
+  offline path, TS.HostEventController) car positions are read, but the game moves them
+  on only about every 0.1 s while TurboHUD reads every 0.05 s; with direction and speed
+  taken from the movement, every other read had none and the radar blinked. Now each
+  car's velocity and nose direction come from the game (CarStateUpdater.m_oldVelocity3d,
+  m_oldForwardDirection; checked online: matches the speedometer), positions are carried
+  on along the velocity between updates, and the radar shows at once but stays 0.4 s and
+  fades when no car counts any more. Online races with only AI drivers (the game is a
+  client there) still have no positions.
 - 2026-11-01: Online races (Linux), including ones the player hosts. Checked in a
   self-hosted online race with 13 AI drivers: there TS.Services.m_activeServer is null
   and the game is a client; the race is in a TS.ClientEventController, which no static

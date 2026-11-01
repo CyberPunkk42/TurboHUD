@@ -259,3 +259,45 @@ class RadarTests(unittest.TestCase):
         self.assertIsNone(race.radar_opacity(0.51))
         self.assertAlmostEqual(race.radar_opacity(0.3), (race.RADAR_FAINT + 1) / 2)
         self.assertEqual(race.radar_opacity(0.05), 1.0)
+
+
+def moving(name, position, velocity, local=False):
+    return race.PlayerState(name, GERMANY, 1, (lap(0),), False, False, local, position, velocity, (0.0, 1.0))
+
+
+class RadarSteadyTests(unittest.TestCase):
+    """As on a hosted online server: positions move on only every other read (0.1 s),
+    reads come every 0.05 s, and the game gives each car's velocity and direction."""
+
+    def test_no_blinking_when_positions_update_every_other_read(self):
+        radar = race.Radar()
+        shown = []
+        for step in range(20):
+            t = step * 0.05
+            updated = (step // 2) * 0.1  # the time of the game's last position update
+            me = moving('Me', (0.0, 40.0 * updated), (0.0, 40.0), local=True)
+            behind = moving('Behind', (1.0, 40.0 * updated - 12.0), (0.0, 40.0))  # ~0.19 s behind
+            view = radar.update([me, behind], t)
+            shown.append(view is not None)
+            if view is not None:
+                blip = view.blips[0]
+                self.assertAlmostEqual(blip.ahead, -12.0, delta=0.01)  # carried on together: steady
+        self.assertTrue(all(shown[1:]))
+
+    def test_it_stays_a_moment_and_fades_after_the_car_drops_back(self):
+        radar = race.Radar()
+        me = lambda t: moving('Me', (0.0, 40.0 * t), (0.0, 40.0), local=True)
+        for step in range(3):
+            t = step * 0.05
+            view = radar.update([me(t), moving('Close', (3.0, 40.0 * t), (0.0, 40.0))], t)
+        self.assertEqual(view.opacity, 1.0)
+        gone = [radar.update([me(t), moving('Close', (3.0, 40.0 * t - 60), (0.0, 40.0))], t)
+                for t in (0.2, 0.3, 0.4)]
+        self.assertTrue(all(v is not None for v in gone))  # held
+        self.assertLess(gone[-1].opacity, gone[0].opacity)  # fading
+        self.assertIsNone(radar.update([me(0.8), moving('Close', (3.0, 40.0 * 0.8 - 60), (0.0, 40.0))], 0.8))
+
+    def test_a_car_beside_shows_at_once_at_full(self):
+        radar = race.Radar()
+        view = radar.update([moving('Me', (0.0, 0.0), (0.0, 40.0), local=True), moving('B', (3.0, 0.0), (0.0, 40.0))], 0.0)
+        self.assertEqual(view.opacity, 1.0)

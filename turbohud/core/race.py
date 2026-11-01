@@ -369,6 +369,8 @@ class PlayerState:
     in_pit: bool = False
     local: bool = False
     position: tuple | None = None  # the car's (x, z) on the ground plane, for the radar
+    velocity: tuple | None = None  # its (x, z) velocity, game units a second
+    forward: tuple | None = None  # the (x, z) way its nose points
 
     @property
     def passed(self):
@@ -616,24 +618,37 @@ class LapReader:
                     self._laps[lap] = passed
             if passed:
                 checkpoints.append(passed)
-        in_pit, position = False, None
+        in_pit, position, velocity, forward = False, None, None, None
         try:
             vehicle = self._ref('player', player, 'm_vehicle')
         except NotFound:
             vehicle = None
         if vehicle is not None:
+            updater = None
             try:
                 updater = self._ref('vehicle', vehicle, 'm_stateUpdater')
                 in_pit = bool(memory.u8(updater + self._offset('updater', updater, 'inPit')))
             except (NotFound, ReadError):
                 pass
+            if updater is not None:
+                velocity, forward = self._flat(updater, 'm_oldVelocity3d'), self._flat(updater, 'm_oldForwardDirection')
             try:
                 where = vehicle + self._offset('vehicle', vehicle, 'm_statsNewPosition')
                 x, _y, z = struct.unpack('<3f', memory.read(where, 12))
                 position = _known_position(x, z)
             except (NotFound, ReadError):
                 pass
-        return PlayerState(name, flag, laps_completed, tuple(checkpoints), finished, in_pit, local, position)
+        return PlayerState(
+            name, flag, laps_completed, tuple(checkpoints), finished, in_pit, local, position, velocity, forward
+        )
+
+    def _flat(self, obj, name):
+        """A Vector3 field of a CarStateUpdater as (x, z), or None where it is missing."""
+        try:
+            x, _y, z = struct.unpack('<3f', self.il.memory.read(obj + self._offset('updater', obj, name), 12))
+        except (NotFound, ReadError):
+            return None
+        return (x, z) if math.isfinite(x) and math.isfinite(z) else None
 
     def _number(self, role, obj, name):
         """A simple field read by the type the game gives it (int, float, ...)."""
@@ -1062,7 +1077,10 @@ RADAR_FAINT = 0.2  # its opacity at RADAR_FROM
 RADAR_SIDE = 8.0  # sideways reach: a car farther to the side (another part of the track) does not count
 RADAR_VIEW = 20.0  # the radar shows at least this far behind; more at speed (radar_view)
 RADAR_MIN_SPEED = 3.0  # slower (standing on the grid): no radar, the direction is unknown
-HEADING_SPAN = 0.15  # seconds of movement a car's direction and speed are taken from
+HEADING_SPAN = 0.3  # seconds of movement a car's direction and speed are taken from (no game values)
+MAX_CARRY = 0.25  # seconds a car's position is carried on along its velocity since its last update
+RADAR_HOLD = 0.4  # seconds the radar stays (fading) after the last car that counted
+RADAR_EASE = 0.35  # share of the way to a lower opacity it goes per read
 HEADING_KEEP = 1.0  # seconds of positions kept per car
 
 
@@ -1141,47 +1159,95 @@ def radar_blips(me, speed, others):
 
 
 class Radar:
-    """Follows every car's recent positions to know where it heads and how fast; gives
-    the proximity radar (a RadarView) for the latest read, or None when no car is close
-    enough behind or beside to show it."""
+    """Follows every car to give the proximity radar (a RadarView) for the latest read,
+    or None when no car is close enough behind or beside to show it.
+
+    The game moves a car's position on only every other read or so (about ten times a
+    second, seen on a hosted online race), so positions are carried on along each car's
+    velocity between its updates, and direction and speed come from the game's own
+    values (CarStateUpdater: forward direction and velocity) where it has them, else
+    from the car's movement. The radar shows at once when a car comes close; when none
+    counts any more it stays for RADAR_HOLD and fades, so it does not blink."""
 
     def __init__(self):
-        self.tracks = {}  # player name -> [(read time, (x, z))]
+        self.tracks = {}  # player name -> [(read time, (x, z))], only when it changed
         self.read_at = None
+        self.opacity = 0.0
+        self.counted_at = None  # read time a car last counted
+
+    def _record(self, players, read_at):
+        names = set()
+        for player in players:
+            if player.position is None:
+                continue
+            names.add(player.name)
+            track = self.tracks.setdefault(player.name, [])
+            if not track or track[-1][1] != player.position:
+                track.append((read_at, player.position))
+            while len(track) > 2 and read_at - track[0][0] > HEADING_KEEP:
+                track.pop(0)
+        for name in set(self.tracks) - names:
+            del self.tracks[name]
+
+    def _motion(self, player, now):
+        """(position now, direction, speed) of a car, or None without enough to go on."""
+        track = self.tracks.get(player.name)
+        if not track:
+            return None
+        changed_at, position = track[-1]
+        velocity = player.velocity
+        if velocity is None:
+            moved = _heading(track, now)
+            if moved is None:
+                return None
+            (fx, fz), speed = moved
+            velocity = (fx * speed, fz * speed)
+        speed = math.hypot(*velocity)
+        ahead = min(max(now - changed_at, 0.0), MAX_CARRY)
+        position = (position[0] + velocity[0] * ahead, position[1] + velocity[1] * ahead)
+        direction = player.forward
+        if direction is None or not any(direction):
+            if speed <= 0:
+                return None
+            direction = (velocity[0] / speed, velocity[1] / speed)
+        else:
+            length = math.hypot(*direction)
+            direction = (direction[0] / length, direction[1] / length)
+        return position, direction, speed
 
     def update(self, players, read_at):
-        if read_at != self.read_at:
+        fresh = read_at != self.read_at
+        if fresh:
             self.read_at = read_at
-            names = set()
-            for player in players:
-                if player.position is None:
-                    continue
-                names.add(player.name)
-                track = self.tracks.setdefault(player.name, [])
-                track.append((read_at, player.position))
-                while track and read_at - track[0][0] > HEADING_KEEP:
-                    track.pop(0)
-            for name in set(self.tracks) - names:
-                del self.tracks[name]
+            self._record(players, read_at)
         me = next((p for p in players if p.local), None)
-        if me is None or me.position is None or me.in_pit or me.finished:
+        mine = None if me is None or me.in_pit or me.finished else self._motion(me, read_at)
+        if mine is None or mine[2] < RADAR_MIN_SPEED:
+            self.opacity, self.counted_at = 0.0, None
             return None
-        heading = _heading(self.tracks.get(me.name, []), read_at)
-        if heading is None or heading[1] < RADAR_MIN_SPEED:
-            return None
-        direction, speed = heading
+        position, direction, speed = mine
         others = []
         for player in players:
-            if player.local or player.position is None or player.in_pit or player.finished:
+            if player.local or player.in_pit or player.finished:
                 continue
-            theirs = _heading(self.tracks.get(player.name, []), read_at)
-            others.append((player.position, theirs[0] if theirs else None))
-        blips = radar_blips((me.position, direction), speed, others)
-        nearest = min((b.seconds for b in blips if b.seconds is not None), default=None)
-        opacity = radar_opacity(nearest)
-        if opacity is None:
+            theirs = self._motion(player, read_at)
+            if theirs is not None:
+                others.append((theirs[0], theirs[1]))
+        blips = radar_blips((position, direction), speed, others)
+        if fresh:
+            nearest = min((b.seconds for b in blips if b.seconds is not None), default=None)
+            target = radar_opacity(nearest)
+            if target is not None:
+                self.counted_at = read_at
+                # Up at once (a car beside matters now), down gently.
+                self.opacity = target if target >= self.opacity else self.opacity + (target - self.opacity) * RADAR_EASE
+            elif self.counted_at is not None and read_at - self.counted_at <= RADAR_HOLD:
+                self.opacity = max(RADAR_FAINT, self.opacity + (RADAR_FAINT - self.opacity) * RADAR_EASE)
+            else:
+                self.opacity, self.counted_at = 0.0, None
+        if self.opacity <= 0:
             return None
-        return RadarView(opacity, blips, radar_view(speed))
+        return RadarView(self.opacity, blips, radar_view(speed))
 
 
 def race_rows(snapshot, now):
