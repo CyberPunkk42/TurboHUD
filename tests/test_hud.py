@@ -20,6 +20,16 @@ def measure(text, size):
     return len(text) * size * 0.6
 
 
+class NewSectionPlaceTests(unittest.TestCase):
+    def test_new_sections_go_below_the_placed_ones(self):
+        placed = {'lap': (2000, 100, 200, 40), 'delta': (2500, 900, 300, 60)}
+        sizes = {'fuel': (220, 30), 'tires': (230, 30)}
+        new = [s for s in hud.RACE_SECTIONS if s.name in sizes]
+        places = hud.below(new, placed, sizes, gap=8)
+        self.assertEqual(places['fuel'], (2000, 968, 220, 30))
+        self.assertEqual(places['tires'], (2000, 1006, 230, 30))
+
+
 class HelpLinesTests(unittest.TestCase):
     def test_move_mode_says_how_to_finish(self):
         self.assertIn('Ctrl+Shift+L', hud.help_lines(shortcuts=True)[-1])
@@ -51,7 +61,8 @@ class HudLinesTests(unittest.TestCase):
 class SectionTests(unittest.TestCase):
     def test_race_sections_have_distinct_names(self):
         names = [section.name for section in hud.RACE_SECTIONS]
-        self.assertEqual(names, ['lap', 'current', 'delta', 'times'])
+        self.assertEqual(names, ['lap', 'current', 'delta', 'times', 'fuel', 'tires', 'speed'])
+        self.assertEqual(len(set(names)), len(names))
 
     def test_content_size_fits_the_text(self):
         width, height = hud.content_size([hud.Row('0:00.0', 'big')], 1, measure)
@@ -78,7 +89,7 @@ class SectionTests(unittest.TestCase):
 
     def test_first_start_stacks_the_sections_where_the_hud_was(self):
         sizes = {'lap': (200, 40), 'current': (150, 60), 'delta': (180, 30), 'times': (300, 30)}
-        places = hud.stacked(hud.RACE_SECTIONS, 40, 40, sizes, gap=8)
+        places = hud.stacked(hud.RACE_SECTIONS[:4], 40, 40, sizes, gap=8)
         self.assertEqual(places['lap'], (40, 40, 200, 40))
         self.assertEqual(places['current'], (40, 88, 150, 60))
         self.assertEqual(places['times'][1], 40 + 40 + 8 + 60 + 8 + 30 + 8)

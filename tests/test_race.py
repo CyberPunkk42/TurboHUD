@@ -146,8 +146,22 @@ def build(lap_starts, laps_completed, clock, limit, local_index=0, finished=Fals
     g.q(local + 0x30, stats)
     g.q(state + 0x28, g.list_of([remote, local]))
     if car is not None:
-        vehicle = g.alloc_obj(g.klass('TS', 'Vehicle', [('m_statsNewPosition', 0x64, False)]))
+        vehicle = g.alloc_obj(g.klass('TS', 'Vehicle', [
+            ('m_state', 0x30, False), ('m_stateUpdater', 0x38, False), ('m_statsNewPosition', 0x64, False)]))
         g.put(vehicle + 0x64, struct.pack('<3f', car[0], 10.0, car[1]))
+        state = g.alloc_obj(g.klass('TS', 'VehicleState', [('fuelConsumption', 0x40, False), ('tireWear', 0x48, False)]))
+        g.put(state + 0x40, struct.pack('<i', 42_000))
+        g.put(state + 0x48, struct.pack('<i', 576_000))
+        g.q(vehicle + 0x30, state)
+        updater = g.alloc_obj(g.klass('TS', 'CarStateUpdater', [
+            ('m_fuelSettings', 0x18, False), ('m_fuelEnabled', 0x50, False), ('m_tireWearEnabled', 0x51, False),
+            ('m_forwardSpeed', 0x60, False)]))
+        g.put(updater + 0x50, bytes([1, 1]))
+        g.put(updater + 0x60, struct.pack('<f', 50.0))
+        g.q(vehicle + 0x38, updater)
+        fuel = g.alloc_obj(g.klass('TS', 'FuelSettings', [('maxFuelConsumptionInEvent', 0x14, False)]))
+        g.put(fuel + 0x14, struct.pack('<i', 168_000))
+        g.q(updater + 0x18, fuel)
         g.q(local + 0x20, vehicle)
         updater = g.alloc_obj(g.klass('TS', 'PlayerRaceStatsUpdater', [('m_checkpoints', 0x18, False)]))
         g.q(local + 0x38, updater)
@@ -359,6 +373,30 @@ class LiveDeltaTests(unittest.TestCase):
         b = ((100.0, 90.0), (100.0, 110.0))
         self.assertAlmostEqual(race.gate_share(a, b, (50.0, 50.0)), 0.5)
 
+    def test_a_line_at_the_same_spot_is_skipped_ahead(self):
+        # Lines 1 and 2 at the same spot (z 100) with the same time; TSU writes line 2's
+        # time only when the car reaches line 3 (z 200). Best lap: 10 s to z 100, 20 s to
+        # z 200. This lap passed z 100 after 10 s; halfway to z 200 at 15 s: even.
+        gates = (((-10.0, 0.0), (10.0, 0.0)), ((-10.0, 100.0), (10.0, 100.0)), ((-10.0, 100.0), (10.0, 100.0)),
+                 ((-10.0, 200.0), (10.0, 200.0)))
+        laps = ((0, 100_000, 100_000, 200_000), (300_000, 400_000, 400_000, 500_000), (600_000, 700_000))
+        state = race.LapState(
+            clock=750_000, time_limit=0, laps_completed=2, laps_to_finish=13,
+            lap_starts=[lap[0] for lap in laps], checkpoints=laps, position=(0.0, 150.0), gates=gates,
+        )
+        self.assertEqual(state.delta_to_best, 0)
+
+    def test_a_long_line_crossed_far_from_its_middle(self):
+        # Line 1 is 200 units long; the car drives along z 10, far from its middle.
+        line0 = ((0.0, 0.0), (0.0, 20.0))
+        line1 = ((100.0, 0.0), (100.0, 200.0))
+        self.assertAlmostEqual(race.gate_share(line0, line1, (50.0, 10.0)), 0.5)
+
+    def test_a_split_line_counts_its_nearest_piece(self):
+        # The next checkpoint is two pieces at x 100 (z 0-20 and z 20-200).
+        pieces = [((100.0, 20.0), (100.0, 200.0)), ((100.0, 0.0), (100.0, 20.0))]
+        self.assertAlmostEqual(race.gate_share([((0.0, 0.0), (0.0, 20.0))], pieces, (75.0, 10.0)), 0.75)
+
     def test_without_position_it_falls_back_to_checkpoints(self):
         state = race.LapState(
             clock=860_000, time_limit=0, laps_completed=2, laps_to_finish=13,
@@ -382,6 +420,51 @@ class CachingReaderTests(unittest.TestCase):
         array = reader.il.memory.u64(times + il.LIST_ITEMS)
         reader.game.put(array + il.ARRAY_DATA, struct.pack('<I', 1))
         self.assertEqual(reader.read().checkpoints[0], first.checkpoints[0])
+
+
+class CarTests(unittest.TestCase):
+    def car(self, **changes):
+        values = dict(fuel_on=True, fuel_used=42_000, fuel_tank=168_000, tires_on=True, tire_wear=576_000, speed=50.0)
+        values.update(changes)
+        return race.CarState(**values)
+
+    def test_what_is_left(self):
+        car = self.car(fuel_per_lap=10_500, wear_per_lap=144_000)
+        self.assertAlmostEqual(car.fuel_left, 0.75)
+        self.assertAlmostEqual(car.tires_left, 0.9)
+        self.assertAlmostEqual(car.fuel_laps, 12.0)
+        self.assertAlmostEqual(car.tire_laps, 36.0)
+        self.assertAlmostEqual(car.kmh, 180.0)
+
+    def test_off_in_the_event(self):
+        car = self.car(fuel_on=False, tires_on=False)
+        self.assertIsNone(car.fuel_left)
+        self.assertIsNone(car.tire_laps)
+        self.assertEqual(set(race.car_sections(car)), {'speed'})
+
+    def test_per_lap_averages_the_last_laps_and_restarts_after_a_pit_stop(self):
+        self.assertIsNone(race.per_lap([0]))
+        self.assertEqual(race.per_lap([0, 11_000, 21_000, 31_000, 41_000]), 10_000)  # last 3 laps
+        self.assertEqual(race.per_lap([0, 11_000, 21_000, 2_000, 12_000]), 10_000)  # refuelled after lap 2
+        self.assertIsNone(race.per_lap([0, 11_000, 21_000, 2_000]))
+
+    def test_section_texts(self):
+        sections = race.car_sections(self.car(fuel_per_lap=10_500))
+        self.assertEqual(sections['fuel'][0].text, 'Fuel 75%  ~12.0 laps')
+        self.assertEqual(sections['tires'][0].text, 'Tires 90%')  # no lap measured yet
+        self.assertEqual(sections['speed'][0].text, '180 km/h')
+
+    def test_reader_reads_the_car_and_the_use_per_lap(self):
+        reader = build([10_000, 944_595], laps_completed=1, clock=1_000_000, limit=0, car=(0.0, 0.0), gates=STRAIGHT)
+        car = reader.read().car
+        self.assertEqual((car.fuel_used, car.fuel_tank, car.tire_wear), (42_000, 168_000, 576_000))
+        self.assertTrue(car.fuel_on and car.tires_on)
+        self.assertAlmostEqual(car.speed, 50.0)
+        self.assertIsNone(car.fuel_per_lap)  # one lap start seen so far
+
+    def test_without_car_data_there_are_no_car_sections(self):
+        reader = build([10_000], laps_completed=0, clock=20_000, limit=0)
+        self.assertIsNone(reader.read().car)
 
 
 class RowsTests(unittest.TestCase):

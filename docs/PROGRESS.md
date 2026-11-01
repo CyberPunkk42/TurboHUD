@@ -92,3 +92,12 @@ its "Recent changes".
   now form one stretch, which removes the wrong positive deltas just after the line and
   before the finish; the car is projected onto the path between the lines' middles,
   which also holds in tight bends.
+- 2026-11-01: Smoother live delta and fuel, tires and speed (Linux). A recorded drive
+  showed where the delta jumped (up to 1.5 s): some checkpoints are two lines at the
+  same spot or one line split in two pieces with the same time, and TSU writes the second
+  one's time only at the next line; some lines are very long. Same-time lines now count
+  as one checkpoint, and how far the car is between checkpoints comes from its distance
+  to the actual line pieces. Replayed over the drive: largest jump 0.11 s (was 1.46 s),
+  95 % of readings within 6 ms of the smooth curve (was 59 ms). New sections: fuel and
+  tires left in % with the laps they last (average of the last 3 laps, restarting after
+  a pit stop), and speed in km/h. New sections go below the ones already placed.

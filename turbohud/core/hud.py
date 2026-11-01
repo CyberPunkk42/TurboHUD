@@ -102,6 +102,9 @@ RACE_SECTIONS = (
     Section('current', 'Running lap', ((Row('0:00.0', 'big'),), (Row('10:00.000', 'big'),))),
     Section('delta', 'Delta to best', ((Row('+00.000 vs best', 'medium'),),)),
     Section('times', 'Last and best lap', ((Row('Last 0:00.000   Best 0:00.000', 'medium'),),)),
+    Section('fuel', 'Fuel', ((Row('Fuel 100%  ~10.0 laps', 'medium'),),)),
+    Section('tires', 'Tires', ((Row('Tires 100%  ~10.0 laps', 'medium'),),)),
+    Section('speed', 'Speed', ((Row('000 km/h', 'medium'),),)),
 )
 CLOCK_SECTIONS = (Section('clock', 'Session time', ((Row('TurboHUD - session time', 'title'), Row('00:00', 'big')),)),)
 
@@ -134,3 +137,11 @@ def stacked(sections, x, y, sizes, gap=8):
         places[section.name] = (x, y, width, height)
         y += height + gap
     return places
+
+
+def below(sections, placed, sizes, gap=8):
+    """{name: place} for sections new to a player who has placed others: stacked one
+    below the other under the lowest placed one, lined up with the first."""
+    first = next(iter(placed.values()))
+    bottom = max(y + height for _x, y, _w, height in placed.values())
+    return stacked(sections, first[0], bottom + gap, sizes, gap)
