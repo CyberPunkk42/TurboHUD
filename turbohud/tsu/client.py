@@ -14,6 +14,7 @@ from pathlib import Path
 
 from turbohud.core.il2cpp import Il2Cpp, Memory, NotFound, ReadError
 from turbohud.core.race import RACING, STARTING, WAITING_FOR_GAME, WAITING_FOR_RACE, LapReader, Snapshot
+from turbohud.tsu.gamelog import EventLog
 from turbohud.tsu.probe import receive_message, send_message, socket_path
 
 READ_INTERVAL = 0.05  # seconds between reads in a race: the live delta updates 20 times a second
@@ -75,7 +76,7 @@ def connect(path=None):
             raise NotFound('the game metadata is not mapped yet')
         memory = Memory(conn.read, regions, conn.read_many, conn.find_pointers)
         il2cpp = Il2Cpp(memory, Path(metadata[4]).read_bytes(), metadata[0])
-        return LapReader(il2cpp), conn
+        return LapReader(il2cpp, event_running=EventLog().running), conn
     except BaseException:
         conn.close()
         raise

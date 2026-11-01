@@ -1,5 +1,6 @@
 import struct
 import sys
+import time
 import unittest
 from pathlib import Path
 
@@ -102,7 +103,7 @@ class FakeGame:
 
 
 def build(lap_starts, laps_completed, clock, limit, local_index=0, finished=False, car=None, gates=(), pedals=None,
-          name=None, online=False, clock_fn=None, health=None, pit_area=False):
+          name=None, online=False, clock_fn=None, health=None, pit_area=False, event_running=None):
     """A fake race; `car` is the car's (x, z) and `gates` the checkpoint lines, both
     optional like in a game without them."""
     g = FakeGame()
@@ -235,7 +236,7 @@ def build(lap_starts, laps_completed, clock, limit, local_index=0, finished=Fals
     g.laps = laps
 
     runtime = il.Il2Cpp(g.memory(), g.strings, METADATA_BASE)
-    reader = race.LapReader(runtime) if clock_fn is None else race.LapReader(runtime, clock=clock_fn)
+    reader = race.LapReader(runtime, clock=clock_fn or time.monotonic, event_running=event_running)
     reader.game = g
     return reader
 
@@ -608,6 +609,18 @@ class CarTests(unittest.TestCase):
         with self.assertRaises(race.NotFound):
             reader.read()
         self.assertEqual(g.searches, 2)
+
+    def test_no_search_while_the_games_log_says_no_event_runs(self):
+        running = [False]
+        reader = build([10_000], laps_completed=0, clock=20_000, limit=0, name='A', online=True,
+                       event_running=lambda: running[0])
+        with self.assertRaises(race.NotFound):
+            reader.read()
+        self.assertEqual(getattr(reader.game, 'searches', 0), 0)  # menus, lobby: no search
+        running[0] = True
+        reader._next_search = 0.0
+        self.assertEqual(reader.read().laps_completed, 0)
+        self.assertEqual(reader.game.searches, 1)
 
     def test_online_the_unkept_position_counts_as_unknown(self):
         reader = build([10_000], laps_completed=0, clock=20_000, limit=0, car=(0.0, 0.0), gates=STRAIGHT, name='A')

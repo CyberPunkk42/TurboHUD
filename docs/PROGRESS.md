@@ -250,3 +250,11 @@ its "Recent changes".
   under 35 %, red under 15 %; health green, yellow with less downforce, red when slowed.
   Saved section sizes stay, so their text gets a little smaller to make room (resize in
   move mode to taste).
+- 2026-11-01: Online search made light. Measured: in menus and lobbies (no active
+  server) TurboHUD searched the game's memory every 10 s for an online race, the probe
+  peaking at 58 % of a core and holding 4.4 GB of RAM (peak 5.4 GB) from a new 16 MB
+  buffer per chunk that the allocator kept. Now it searches only while TSU's own log
+  says an event runs (turbohud/tsu/gamelog.py: last "Event started." after the last
+  "Event ended."; the log is only read), and the probe reuses one buffer per connection
+  (checked: 16 MB once, flat over repeated searches). The probe change needs TSU to be
+  restarted (the probe starts with the game).

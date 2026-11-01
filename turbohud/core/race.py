@@ -367,6 +367,7 @@ def per_lap(history, laps=PER_LAP_LAPS):
 
 
 CLIENT_SEARCH_EVERY = 10.0  # seconds between searches for an online race while there is none
+CLIENT_LOG_EVERY = 2.0  # seconds between looks at TSU's log while it says no event runs
 STRING_LENGTH, STRING_CHARS = 0x10, 0x14  # System.String: length, then UTF-16 text
 MAX_NAME = 64
 
@@ -404,8 +405,12 @@ class LapReader:
     player, finished laps, the track's checkpoint lines) is kept between reads, so a read
     asks the game only for what moves: about twenty small reads."""
 
-    def __init__(self, il2cpp, clock=time.monotonic):
+    def __init__(self, il2cpp, clock=time.monotonic, event_running=None):
+        """`event_running`: a callable saying whether TSU has an event running (True,
+        False, or None for not known), so the game's memory is only searched for an
+        online race while there is one (turbohud.tsu.gamelog)."""
         self.il = il2cpp
+        self._event_running = event_running
         self.services_class = il2cpp.find_class('TS', 'Services')
         self._clock = clock
         self._client_class = None  # TS.ClientEventController, once looked up
@@ -452,6 +457,11 @@ class LapReader:
             self._next_search = 0.0  # gone (race over): look again at once
         find = memory.find_pointers
         if find is None or self._clock() < self._next_search:
+            raise error
+        if self._event_running is not None and self._event_running() is False:
+            # Menus and lobbies: no event, nothing to search for (a search reads all
+            # of the game's data and keeps a CPU core busy for over a second).
+            self._next_search = self._clock() + CLIENT_LOG_EVERY
             raise error
         self._next_search = self._clock() + CLIENT_SEARCH_EVERY
         if self._client_class is None:
