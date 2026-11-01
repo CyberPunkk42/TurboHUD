@@ -41,3 +41,8 @@ its "Recent changes".
   nothing is pushed to GitHub (the remote's push URL is disabled), changes are approved by
   a local merge, and the folder will be shared over the local network later. The icon
   image still reads "TurboKit" and needs a new version.
+- 2026-11-01: Memory probe for Linux (`experiments/tsu_memory_probe.py`). Steam starts
+  TSU through it, so it may read TSU's memory and nothing else's, with no sudo, setcap or
+  system change. It checks one read of the game's code and logs the result to
+  `~/.config/TurboHUD/memory_probe.log`. Self-test passes on Omarchy; not yet tried with
+  TSU.

@@ -206,3 +206,28 @@ with Fullscreen Exclusive off and on: everything works as planned.
 level and the shortcuts. Not tested yet: Windows, Linux.
 PySide6 takes about 335 MB in the development environment on the Mac; a bundled app
 would include only the parts it uses.
+
+## Memory probe (`tsu_memory_probe.py`, Linux)
+
+Question: can TurboHUD read TSU's memory on Linux, and only TSU's, without changing the
+system?
+
+Linux (Yama `ptrace_scope` 1) lets a program read another program's memory only if it
+started it. So the probe starts TSU: Steam runs the probe, the probe runs the game. It
+then may read TSU's memory and nothing else's. No sudo, no `setcap`, no system setting;
+the right ends when the game quits. It only reads (`process_vm_readv`), never writes,
+and never pauses the game. If the probe fails, the game still runs.
+
+### Run it
+1. Without the game: `python3 -B experiments/tsu_memory_probe.py --self-test`. It reads
+   a program it started (should work) and the terminal (should be refused).
+2. In Steam: Turbo Sliders Unlimited > Properties > General > Launch Options:
+   `python3 /home/<user>/Work/workspace/tsu_repositories/TurboHUD/experiments/tsu_memory_probe.py %command%`
+3. Start TSU from Steam and wait until the menu shows.
+4. Read `~/.config/TurboHUD/memory_probe.log`. `OK: read 16 bytes of GameAssembly.so`
+   means it works.
+5. Clear the launch option again to start TSU without the probe.
+
+### Results
+- 2026-11-01, Omarchy Linux: self-test passes (own child readable, terminal refused).
+  Not yet tried with TSU.

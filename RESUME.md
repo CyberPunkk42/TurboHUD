@@ -33,6 +33,8 @@
   `py -3 -B -m unittest discover -s tests`).
 
 ## Next steps
+0. Try the memory probe with TSU (`experiments/README.md`), then find the car's
+   data (lap time, speed, fuel) in memory.
 See `docs/IMPROVEMENT_BACKLOG.md`. In short:
 1. Test TurboHUD and the probes on Windows over TSU in windowed, Fullscreen and
    Fullscreen Exclusive.
@@ -42,6 +44,11 @@ See `docs/IMPROVEMENT_BACKLOG.md`. In short:
    that does not end when the mouse moves, shortcuts, AppImage.
 
 ## Recent changes
+- 2026-11-01: Memory probe for Linux (`experiments/tsu_memory_probe.py`). Steam starts
+  TSU through it, so it may read TSU's memory and nothing else's, with no sudo, setcap or
+  system change. It checks one read of the game's code and logs the result to
+  `~/.config/TurboHUD/memory_probe.log`. Self-test passes on Omarchy; not yet tried with
+  TSU.
 - 2026-11-01: Renamed TurboKit to TurboHUD (package `turbohud/`, `launch_turbohud.py`,
   `run_turbohud.sh` / `.cmd`, settings folder `TurboHUD`). The project is now local only:
   nothing is pushed to GitHub (the remote's push URL is disabled), changes are approved by
