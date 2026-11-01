@@ -143,5 +143,15 @@ class Hyprland:
         commands = place_commands(window, x, y, width, height, self.workspace_at(x, y), focusable)
         return all([self.dispatch(command) for command in commands])
 
+    def set_focusable(self, address, focusable):
+        """Let the window take the mouse and focus (move mode) or not (locked). Hyprland's
+        no_focus keeps the mouse away too, so a window with it cannot be dragged."""
+        window = f'address:{address}'
+        value = '0' if focusable else '1'
+        return self.dispatch((
+            f"hl.dsp.window.set_prop({{ prop = 'no_focus', value = '{value}', window = '{window}' }})",
+            f'setprop {window} nofocus {value}',
+        ))
+
     def focus(self, address):
         return self.dispatch(focus_command(f'address:{address}'))

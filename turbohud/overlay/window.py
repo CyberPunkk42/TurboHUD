@@ -83,6 +83,9 @@ class SectionWindow(QWidget):
         if not self.wanted:
             return
         in_place = _set_input(self, self.native, locked)
+        movable = getattr(self.native, 'set_movable', None)
+        if movable is not None:
+            movable(self, not locked)
         self.grip.setVisible(not locked)
         self.setCursor(Qt.ArrowCursor if locked else Qt.OpenHandCursor)
         if not in_place:

@@ -72,7 +72,16 @@ class Native:
             QTimer.singleShot(PLACE_RETRY_MS, lambda: self._place(widget, target, 1, place_tries - 1))
             return
         log.info('Hyprland: window %s placed at %s%s', address, target, '' if ok else ' (some requests refused)')
+        if not getattr(widget, 'locked', True):
+            self.hypr.set_focusable(address, True)  # move mode began before it was placed
         self.give_focus_back()
+
+    def set_movable(self, widget, movable):
+        """Move mode on or off for a shown window: on Hyprland it must take the mouse to
+        be dragged, and must not when locked."""
+        address = self.addresses.get(id(widget))
+        if self.hypr is not None and address is not None:
+            self.hypr.set_focusable(address, movable)
 
     def placement(self, widget):
         """Where the window really is: on Wayland, Qt does not know its position. Once
