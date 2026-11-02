@@ -110,13 +110,21 @@ TS.Services.sm_instance          (a static field: always findable)
 A lap has 120 checkpoints on the tracks seen. Each player's list of checkpoint times is
 the backbone: lap times, the delta to your best lap, the player order and the gaps
 between players all come from it, made live between checkpoints by the cars'
-positions. The checkpoint lines themselves (both ends of each) also give the
-track map its shape: their middles trace the track, so no track file is needed and
-the map works on every track, online too.
+positions.
 
 What does not change during a race (field positions, finished laps, the track's
 checkpoint lines) is read once and kept. A normal update then needs about twenty small
 reads and takes about 10 ms.
+
+### The track map
+
+The track map's shape is learnt from where the cars drive, not from the checkpoint
+lines: on some tracks those are long and set off to one side, far from the road.
+TurboHUD records each car's path, and once any car has driven a whole lap (not through
+the pits), that lap is the track. Until then the map shows the longest stretch driven so
+far; with AI or other players on track it is learnt within about a lap. The learnt
+track is saved (see the files below), so the next race on that track has its map at
+once. No track file of the game is read, so it works on every track, online too.
 
 ### Online races
 
@@ -195,6 +203,8 @@ effect for the probe the next time TSU is started.
 
 - `settings.json`: section places, sizes, groups, shown or hidden, mph, light tint,
   other cars on the track map
+- `tracks/`: the track map's learnt tracks, one small file per track (the line it
+  draws, and the start line), named from the track's checkpoint lines
 - `turbohud.log`: what TurboHUD did in this run (replaced at each start)
 - `memory_probe.log`: written by the probe: the game it found, errors
 

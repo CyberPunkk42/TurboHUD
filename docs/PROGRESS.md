@@ -377,3 +377,15 @@ its "Recent changes".
   user in a race, where the map otherwise works). It is now a white ring, open in the
   middle and drawn on top, so a car under it still shows; all dots are a little smaller
   (2.6 % of the map instead of 3.4 %).
+- 2026-11-03: Track map learnt from where the cars drive. In an AI event the map's
+  track did not match where the dots went (seen by the user): on that track the
+  checkpoint lines are long (up to 300 units) and set off to one side, so a line through
+  their middles lay up to 67 units from the road. Now TurboHUD records each car's path
+  (real positions only, not in the pits, starting afresh after a jump) and, once any car
+  has driven a whole lap, that lap is the track; before that the longest stretch driven
+  so far shows. The start mark is where that lap crosses line 0. A learnt track is saved
+  in `~/.config/TurboHUD/tracks/` (named from its checkpoint lines), so the next race
+  there has its map at once. Checked live on a 63-checkpoint track in the AI event:
+  learnt within about a lap, cars 2.3 units from the line on average, 12 at most
+  (about the road's width). Dots outside the learnt track (a road from the grid) stay
+  inside the map's square.

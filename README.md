@@ -117,7 +117,10 @@ Clear the launch option to start TSU without the probe. The probe writes what it
   car, the next one ahead takes the red dot. Smaller bluish dots are backmarkers (cars
   you are about to lap) on the road between you and the car ahead. **Other cars on the
   track map** (TurboHUD icon's menu, or the move-mode panel) adds everyone else as faint
-  grey dots. It is square; resize it at its corner in move mode.
+  grey dots. It is square; resize it at its corner in move mode. The track's shape
+  is learnt from where the cars drive: on a track new to TurboHUD the map grows during
+  the first lap and is complete once any car has driven a whole lap; after that it is
+  saved and shows at once.
 - The blue flag, the radar and the track map have **Centre ↔** and **Centre ↕**
   buttons in the move-mode panel: they centre it across or down the screen it is on.
 - **Groups:** in the move-mode panel, put sections in the same group (A to D). Dragging

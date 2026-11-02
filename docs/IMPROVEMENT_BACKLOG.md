@@ -31,10 +31,12 @@ through. If XWayland is not enough there, the layer-shell extension (KDE, Sway; 
 GNOME) would need a library outside PySide6.
 
 ## 5. Track map: check in races
-The user saw it work in a race (2026-11-03). Still to check: the track's shape (tight
+The user saw it work in a race (2026-11-03), and the track is now learnt from the cars
+(checked live in an AI event). Still to check: the track's shape (tight
 hairpins, tracks that cross themselves, point-to-point tracks), the road's width, the
 dots changing over at an overtake, backmarkers, and as an online client. Possible
-later: an arrow for the direction of travel, the pit lane.
+later: an arrow for the direction of travel, the pit lane, a hotlap alone (the map
+then needs one whole lap of your own first).
 
 ## Design notes for the real overlay
 - Move mode is a short, deliberate step: while the overlay takes the mouse, the game gets

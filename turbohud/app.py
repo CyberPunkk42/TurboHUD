@@ -189,7 +189,7 @@ def run(args, folder):
 
         standings = Standings()
         radar = Radar()
-        track_map = TrackMap(settings.map_others)
+        track_map = TrackMap(settings.map_others, folder)  # learnt tracks beside the settings
 
         def contents():
             snapshot = live.snapshot()

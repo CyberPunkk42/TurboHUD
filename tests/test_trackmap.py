@@ -2,6 +2,7 @@ import importlib.util
 import math
 import os
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -62,45 +63,131 @@ def roles(view):
     return {dot.role: dot for dot in view.dots}
 
 
+def driver(name, u, local=False, in_pit=False, estimated=False, radius=RADIUS):
+    """A car `u` checkpoints round the test track (it passed line 0 at u = 0): on the
+    circle of `radius`, anticlockwise from (radius, 0)."""
+    count = math.floor(u) + 1
+    times = [i * 10_000 for i in range(count)]
+    laps = tuple(tuple(times[i : i + LINES]) for i in range(0, count, LINES))
+    turn = 2 * math.pi * u / LINES
+    position = (radius * math.cos(turn), radius * math.sin(turn))
+    return race.PlayerState(
+        name, 0, max(len(laps) - 1, 0), laps, False, in_pit, local, position, estimated=estimated
+    )
+
+
+def drive(track_map, until, gates=GATES, step=0.05, since=0.0, **kwargs):
+    """Feed `track_map` one car driving from `since` to `until` checkpoints round."""
+    view = None
+    u = since
+    while u <= until:
+        me = driver('Trainer', u, local=True, **kwargs)
+        view = track_map.update(state([me], gates), [me])
+        u += step
+    return view
+
+
+def learnt_map(others=False):
+    """A TrackMap that has learnt the test track from a car's lap."""
+    track_map = trackmap.TrackMap(others)
+    drive(track_map, LINES + 1.5)
+    assert track_map.learned is not None
+    return track_map
+
+
 def view_of(players, others=False):
-    return trackmap.TrackMap(others).update(state(players), race.ranked(players))
+    return learnt_map(others).update(state(players), race.ranked(players))
 
 
-class OutlineTests(unittest.TestCase):
-    def test_a_round_track_is_a_closed_smooth_loop(self):
-        outline = trackmap.track_outline(GATES)
+# Long checkpoint lines all off to the outside of the road, as on some real tracks:
+# their middles lie 100 units off the road.
+OFF_GATES = tuple(
+    (
+        (RADIUS * math.cos(2 * math.pi * i / LINES), RADIUS * math.sin(2 * math.pi * i / LINES)),
+        (3 * RADIUS * math.cos(2 * math.pi * i / LINES), 3 * RADIUS * math.sin(2 * math.pi * i / LINES)),
+    )
+    for i in range(LINES)
+)
+
+
+class LearntTrackTests(unittest.TestCase):
+    def radii(self, outline):
+        return [math.hypot(x, z) for x, z in outline.points]
+
+    def test_a_whole_lap_gives_a_closed_loop_on_the_road_not_the_lines(self):
+        track_map = trackmap.TrackMap()
+        drive(track_map, LINES - 0.5, OFF_GATES)
+        self.assertIsNone(track_map.learned)  # not a whole lap yet
+        view = drive(track_map, LINES + 1.5, OFF_GATES, since=LINES - 0.45)
+        outline = view.outline
+        self.assertIs(outline, track_map.learned)
         self.assertTrue(outline.closed)
-        self.assertEqual(len(outline.points), LINES * 4)  # two rounds of corner cutting
-        self.assertAlmostEqual(outline.width, 10.0)
-        self.assertEqual(outline.start, GATES[0])
-        min_x, min_z, max_x, max_z = outline.bounds
-        self.assertTrue(-RADIUS <= min_x < -80 and 80 < max_x <= RADIUS)
-        self.assertTrue(-RADIUS <= min_z < -80 and 80 < max_z <= RADIUS)
+        self.assertTrue(all(RADIUS - 1 < r <= RADIUS for r in self.radii(outline)))
+        self.assertLess(abs(len(outline.points) - 2 * trackmap.MAP_POINTS), 10)  # one round of smoothing
 
-    def test_lines_at_the_same_spot_and_lines_in_two_pieces_are_one(self):
-        (a, b) = GATES[2]
-        middle = ((a[0] + b[0]) / 2, (a[1] + b[1]) / 2)
-        split = (a, middle), (middle, b)  # one line in two pieces
-        gates = GATES[:2] + split + GATES[2:3] + GATES[3:]  # and the same line once more
-        merged = trackmap.merged_gates(gates)
-        self.assertEqual(len(merged), LINES)
-        ends = sorted(merged[2])
-        self.assertEqual(ends, sorted(GATES[2]))
+    def test_before_a_whole_lap_the_stretch_driven_so_far_shows(self):
+        track_map = trackmap.TrackMap()
+        view = drive(track_map, LINES / 2, OFF_GATES)
+        self.assertFalse(view.outline.closed)
+        self.assertTrue(all(RADIUS - 1 < r <= RADIUS + 1e-9 for r in self.radii(view.outline)))
+        _min_x, min_z, _max_x, _max_z = view.outline.bounds
+        self.assertGreaterEqual(min_z, -1e-9)  # only the half driven: z from 0 up
 
-    def test_one_line_after_another_stays_apart(self):
-        straight = tuple(((float(z), -5.0), (float(z), 5.0)) for z in range(0, 50, 5))
-        self.assertEqual(len(trackmap.merged_gates(straight)), len(straight))
+    def test_the_start_line_is_where_line_0_was_crossed_across_the_way_driven(self):
+        outline = learnt_map().learned
+        (x, z), (fx, fz) = outline.start
+        self.assertAlmostEqual(math.hypot(x - RADIUS, z), 0, delta=0.01)  # on line 0
+        self.assertAlmostEqual(fx, 0, delta=0.1)  # anticlockwise from (100, 0): up the z axis
+        self.assertAlmostEqual(fz, 1, delta=0.1)
 
-    def test_a_point_to_point_track_stays_open_and_keeps_its_ends(self):
-        straight = tuple(((-5.0, float(z)), (5.0, float(z))) for z in range(0, 200, 10))
-        outline = trackmap.track_outline(straight)
-        self.assertFalse(outline.closed)
-        self.assertEqual(outline.points[0], (0.0, 0.0))
-        self.assertEqual(outline.points[-1], (0.0, 190.0))
+    def test_where_the_path_misses_the_start_line_the_count_places_the_mark(self):
+        path = [(0.0, float(z)) for z in range(10)]
+        short_line = ((5.0, 4.5), (6.0, 4.5))  # off to the side: never crossed
+        self.assertEqual(trackmap.start_mark(path, short_line, 5), ((0.0, 4.5), (0.0, 1.0)))
+        self.assertEqual(trackmap.start_mark(path, ((-1.0, 4.5), (1.0, 4.5))), ((0.0, 4.5), (0.0, 1.0)))
+        self.assertIsNone(trackmap.start_mark(path, short_line))
 
-    def test_too_few_lines_give_no_map(self):
-        self.assertIsNone(trackmap.track_outline(GATES[:2]))
-        self.assertIsNone(trackmap.TrackMap().update(state([car('Me', 3, local=True)], ()), []))
+    def test_pits_and_worked_out_positions_do_not_count(self):
+        track_map = trackmap.TrackMap()
+        drive(track_map, 4.0)
+        drive(track_map, 4.1, since=4.05, in_pit=True)  # the path starts afresh after the pits
+        drive(track_map, LINES + 1.5, since=4.15)
+        self.assertIsNone(track_map.learned)
+        estimated = trackmap.TrackMap()
+        self.assertIsNone(drive(estimated, LINES + 1.5, estimated=True))
+
+    def test_a_jump_starts_the_path_afresh(self):
+        track_map = trackmap.TrackMap()
+        drive(track_map, 4.0)
+        drive(track_map, 4.0, since=4.0, radius=RADIUS + trackmap.JUMP + 10)  # put back elsewhere
+        drive(track_map, LINES + 1.5, since=4.05)
+        self.assertIsNone(track_map.learned)
+
+    def test_a_learnt_track_is_saved_and_known_at_once_next_time(self):
+        with tempfile.TemporaryDirectory() as folder:
+            first = trackmap.TrackMap(folder=folder)
+            drive(first, LINES + 1.5)
+            files = list((Path(folder) / trackmap.TRACKS_FOLDER).iterdir())
+            self.assertEqual([f.name for f in files], [f'{trackmap.track_key(GATES)}.json'])
+            again = trackmap.TrackMap(folder=folder)
+            me = driver('Me', 0.5, local=True)
+            view = again.update(state([me]), [me])
+            self.assertTrue(view.outline.closed)
+            self.assertEqual(len(view.outline.points), len(first.learned.points))
+            other_track = trackmap.TrackMap(folder=folder)
+            self.assertIsNone(other_track.update(state([me], OFF_GATES), [me]))  # a different track
+            files[0].write_text('{broken')
+            self.assertIsNone(trackmap.TrackMap(folder=folder).update(state([me]), [me]))
+
+    def test_one_read_is_no_map(self):
+        me = car('Me', 3, local=True)
+        self.assertIsNone(trackmap.TrackMap().update(state([me]), [me]))
+
+    def test_evened_points(self):
+        self.assertEqual(
+            trackmap.evened([(0.0, 0.0), (10.0, 0.0)], 2.5),
+            [(0.0, 0.0), (2.5, 0.0), (5.0, 0.0), (7.5, 0.0), (10.0, 0.0)],
+        )
 
     def test_fits_the_box_the_same_both_ways_with_z_up(self):
         scale, x_off, y_off = trackmap.map_transform((-100, -50, 100, 50), (240, 240), 20)
@@ -109,16 +196,9 @@ class OutlineTests(unittest.TestCase):
         self.assertAlmostEqual(y_off - 50 * scale, 70)  # top (most z) centred down the box
         self.assertAlmostEqual(y_off - -50 * scale, 170)
 
-    def test_the_road_is_never_lost_nor_too_fat(self):
-        outline = trackmap.track_outline(GATES)
-        self.assertEqual(trackmap.road_width(outline, 0.01, 240), trackmap.ROAD_PIXELS[0])
-        self.assertAlmostEqual(trackmap.road_width(outline, 10.0, 240), 240 * trackmap.ROAD_PIXELS[1])
-
-    def test_the_outline_is_kept_for_the_same_track(self):
-        track_map = trackmap.TrackMap()
-        first = track_map.outline(GATES)
-        self.assertIs(track_map.outline(tuple(GATES)), first)
-        self.assertIsNot(track_map.outline(circle_gates(radius=50.0)), first)
+    def test_the_road_grows_with_the_map_but_never_vanishes(self):
+        self.assertEqual(trackmap.road_width(10), trackmap.LEAST_ROAD)
+        self.assertAlmostEqual(trackmap.road_width(240), 240 * trackmap.ROAD_SHARE)
 
 
 class DotTests(unittest.TestCase):
@@ -223,7 +303,7 @@ class RaceSectionsTests(unittest.TestCase):
             players=players,
         )
         snapshot = race.Snapshot(race.RACING, lap_state, True, 1.0, moved_at=1.0)
-        sections = race.race_sections(snapshot, 1.0, track_map=trackmap.TrackMap())
+        sections = race.race_sections(snapshot, 1.0, track_map=learnt_map())
         self.assertEqual([d.role for d in sections['trackmap'].dots], ['leader', 'me'])
         self.assertNotIn('trackmap', race.race_sections(snapshot, 1.0))
 

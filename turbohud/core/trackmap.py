@@ -1,43 +1,53 @@
-"""The track map: the track's shape from its checkpoint lines, and where the cars that
-matter are on it.
+"""The track map: the track's shape, learnt from where the cars drive, and where the cars
+that matter are on it.
 
-TurboHUD already reads every checkpoint line of the track (both ends, about 120 a lap)
-for the live delta. Their middles trace the track, so the map needs no track file and
-works on every track, online too. The cars come from the race (LapState.players): their
-positions where the game keeps them, else the worked-out ones (race.DeadReckoning), which
-are close enough at a map's scale.
+The track's own checkpoint lines are no good for its shape: on some tracks they are
+long (up to 300 units) and set well off to one side, so their middles lie far from the
+road (seen on 2026-11-03 in an AI event: cars up to 67 units from a line through the
+middles). So the map follows the cars instead. TrackMap records every car's path (where
+the game gives real positions; not worked-out ones, not in the pits); once any car has
+driven a whole lap without a break, that lap is the track. Until then the longest
+stretch driven so far shows. A learnt track is saved in TurboHUD's own folder, under a
+name made from the track's checkpoint lines, so the next race there has it at once.
 
 On the map: the local player, the race leader, the next car ahead and the next car
 behind in the race order (the player list's, held steady while cars pass), and smaller
 dots for backmarkers (cars the local player is about to lap) on the road between the
 local player and the next car ahead (a backmarker is never the "next car behind", even
-when it comes next in the race order: it is ahead on the road). The other cars are faint grey dots, if the player
-turns them on.
+when it comes next in the race order: it is ahead on the road). The other cars are
+faint grey dots, if the player turns them on.
 """
 
+import hashlib
 import itertools
+import json
+import logging
 import math
-import statistics
+import os
 from dataclasses import dataclass
+from pathlib import Path
 
-SAME_LINE_SLANT = 0.2  # two lines this little apart in direction (sine of the angle) ...
-SAME_LINE_OFFSET = 1.0  # ... and this close to each other's line (game units) are one
-CLOSED_STEPS = 3.0  # first and last middle within this many usual steps: the track is a loop
-SMOOTHING = 2  # rounds of corner cutting on the centre line
-ROAD_PIXELS = (2.5, 0.06)  # the road's least width in pixels, and its most as a share of the map
+SMOOTHING = 1  # rounds of corner cutting on the learnt line
+MAP_POINTS = 300  # a learnt line is evened out to about this many points ...
+LEAST_SPACING = 2.0  # ... but no closer than this (game units)
+JUMP = 40.0  # a car this far from its last position (game units) was put back on the track: its path starts afresh
+ROAD_SHARE = 0.03  # the road's width on the map, as a share of the map
+LEAST_ROAD = 2.5  # pixels
 LAPPING_SHARE = 0.5  # a car more than half a lap behind in the race and ahead on the road is a backmarker
+TRACKS_FOLDER = 'tracks'
+
+log = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
 class TrackOutline:
-    """The track for the map: its centre line (x, z) after smoothing, whether it is a
-    loop, its usual width, its start line's two ends and its bounds (min x, min z, max
-    x, max z)."""
+    """The track for the map: its line (x, z) through the road, whether it is a loop
+    (a whole lap learnt), the start line as (point, direction of travel) or None, and
+    its bounds (min x, min z, max x, max z)."""
 
     points: tuple
     closed: bool
-    width: float
-    start: tuple
+    start: tuple | None
     bounds: tuple
 
 
@@ -63,50 +73,6 @@ def _middle(gate):
     return ((x1 + x2) / 2, (z1 + z2) / 2)
 
 
-def _length(gate):
-    (x1, z1), (x2, z2) = gate
-    return math.hypot(x2 - x1, z2 - z1)
-
-
-def _same_line(first, second):
-    """Whether two checkpoint lines are one line: the same line twice (two checkpoints
-    at the same spot), or one line in two pieces. Both lie along one straight line;
-    two checkpoints one after another are parallel but apart."""
-    (ax, az), (bx, bz) = first
-    length = math.hypot(bx - ax, bz - az)
-    other = _length(second)
-    if length == 0 or other == 0:
-        return length == other == 0 and _middle(first) == _middle(second)
-    ux, uz = (bx - ax) / length, (bz - az) / length
-    (cx, cz), (dx, dz) = second
-    vx, vz = (dx - cx) / other, (dz - cz) / other
-    if abs(ux * vz - uz * vx) > SAME_LINE_SLANT:
-        return False
-    mx, mz = _middle(second)
-    return abs((mx - ax) * uz - (mz - az) * ux) <= SAME_LINE_OFFSET
-
-
-def _span(first, second):
-    """One line over both: the two ends farthest apart."""
-    ends = [*first, *second]
-    return max(
-        ((a, b) for i, a in enumerate(ends) for b in ends[i + 1 :]),
-        key=lambda pair: math.hypot(pair[1][0] - pair[0][0], pair[1][1] - pair[0][1]),
-    )
-
-
-def merged_gates(gates):
-    """The checkpoint lines with each line that is one with the one before (see
-    _same_line) joined into it, so the centre line does not zigzag."""
-    merged = []
-    for gate in gates:
-        if merged and _same_line(merged[-1], gate):
-            merged[-1] = _span(merged[-1], gate)
-        else:
-            merged.append(gate)
-    return merged
-
-
 def smoothed(points, closed, rounds=SMOOTHING):
     """The line through `points` with its corners cut (Chaikin): each round puts two
     points on every piece, a quarter from each end. An open line keeps its ends."""
@@ -123,22 +89,74 @@ def smoothed(points, closed, rounds=SMOOTHING):
     return points
 
 
-def track_outline(gates):
-    """The TrackOutline for checkpoint lines `gates` (race order, ((x1, z1), (x2, z2))
-    each), or None with fewer than three distinct lines."""
-    lines = merged_gates(gates)
-    if len(lines) > 2 and _same_line(lines[-1], lines[0]):
-        lines.pop()  # the last line is the start line again
-    if len(lines) < 3:
+def evened(points, spacing):
+    """Points along the line through `points`, `spacing` apart (and its last point)."""
+    if len(points) < 2:
+        return list(points)
+    result, carry = [points[0]], 0.0
+    for (x1, z1), (x2, z2) in itertools.pairwise(points):
+        length = math.hypot(x2 - x1, z2 - z1)
+        along = spacing - carry
+        while along <= length:
+            share = along / length
+            result.append((x1 + (x2 - x1) * share, z1 + (z2 - z1) * share))
+            along += spacing
+        carry = length - (along - spacing)
+    if result[-1] != points[-1]:
+        result.append(points[-1])
+    return result
+
+
+def _unit(dx, dz):
+    length = math.hypot(dx, dz)
+    return (dx / length, dz / length) if length > 0 else None
+
+
+def start_mark(path, gate, index=None):
+    """The start line's mark on a driven `path`: (point, direction of travel) where the
+    path first crosses the start line `gate` ((x1, z1), (x2, z2)). Where it does not
+    (a line too short), between the points before and after `index`, the first point
+    after the game counted the line; else None."""
+    (ax, az), (bx, bz) = gate
+    for (x1, z1), (x2, z2) in itertools.pairwise(path):
+        rx, rz, sx, sz = x2 - x1, z2 - z1, bx - ax, bz - az
+        cross = rx * sz - rz * sx
+        if cross == 0:
+            continue
+        t = ((ax - x1) * sz - (az - z1) * sx) / cross  # along the path's piece
+        u = ((ax - x1) * rz - (az - z1) * rx) / cross  # along the line
+        direction = _unit(rx, rz)
+        if 0 <= t <= 1 and 0 <= u <= 1 and direction is not None:
+            return ((x1 + rx * t, z1 + rz * t), direction)
+    if index is None or not 0 < index < len(path):
         return None
-    middles = [_middle(gate) for gate in lines]
-    steps = [math.dist(a, b) for a, b in itertools.pairwise(middles)]
-    usual = statistics.median(steps)
-    closed = math.dist(middles[-1], middles[0]) <= CLOSED_STEPS * max(usual, 1e-9)
-    points = tuple(smoothed(middles, closed))
-    width = statistics.median(_length(gate) for gate in lines)
+    (x1, z1), (x2, z2) = path[index - 1], path[index]
+    direction = _unit(x2 - x1, z2 - z1)
+    return (((x1 + x2) / 2, (z1 + z2) / 2), direction) if direction is not None else None
+
+
+def outline_from_path(path, closed, start=None):
+    """The TrackOutline for a driven `path` [(x, z)]: evened out and smoothed a little;
+    `start` is the start line's mark (see start_mark) or None. None with too short a
+    path."""
+    if len(path) < 3:
+        return None
+    total = sum(math.dist(a, b) for a, b in itertools.pairwise(path))
+    if total <= 0:
+        return None
+    spacing = max(total / MAP_POINTS, LEAST_SPACING)
+    points = evened(path, spacing)
+    if closed and len(points) > 2 and math.dist(points[-1], points[0]) < spacing:
+        points.pop()  # the lap ends where it began
+    points = tuple(smoothed(points, closed))
     xs, zs = [x for x, _z in points], [z for _x, z in points]
-    return TrackOutline(points, closed, width, lines[0], (min(xs), min(zs), max(xs), max(zs)))
+    return TrackOutline(points, closed, start, (min(xs), min(zs), max(xs), max(zs)))
+
+
+def track_key(gates):
+    """A name for the track from its checkpoint lines, for its saved file."""
+    text = ';'.join(f'{x:.1f},{z:.1f}' for gate in gates for x, z in gate)
+    return hashlib.sha1(text.encode('ascii')).hexdigest()[:16]
 
 
 def map_transform(bounds, size, padding):
@@ -153,11 +171,9 @@ def map_transform(bounds, size, padding):
     return scale, width / 2 - (min_x + max_x) / 2 * scale, height / 2 + (min_z + max_z) / 2 * scale
 
 
-def road_width(outline, scale, map_size):
-    """The road's width on the map in pixels: its usual width at `scale`, at least
-    visible and at most a small share of the map."""
-    least, most = ROAD_PIXELS
-    return min(max(outline.width * scale, least), max(least, most * map_size))
+def road_width(map_size):
+    """The road's width on the map in pixels."""
+    return max(LEAST_ROAD, ROAD_SHARE * map_size)
 
 
 def lap_length(players, gates=()):
@@ -204,27 +220,140 @@ def backmarkers(order, me, ahead, gates, laps):
     return found
 
 
+class TrackPaths:
+    """Every car's path as it drives: (checkpoints passed, (x, z)) whenever its
+    position changes. A path starts afresh in the pits, when the car is put back on the
+    track (a jump), or when its count goes back (a new race). Only the last lap is
+    kept. `lap()` gives the first whole lap any car has driven."""
+
+    def __init__(self):
+        self.paths = {}
+
+    def add(self, players, laps):
+        for player in players:
+            if player.position is None or player.estimated or player.finished:
+                continue
+            if player.in_pit:
+                self.paths.pop(player.name, None)
+                continue
+            count, position = len(player.passed), player.position
+            path = self.paths.setdefault(player.name, [])
+            if path:
+                last_count, last = path[-1]
+                if position == last:
+                    continue
+                if count < last_count or math.dist(position, last) > JUMP:
+                    path.clear()
+            path.append((count, position))
+            while laps and len(path) > 2 and path[-1][0] - path[1][0] > laps:
+                path.pop(0)  # still more than a lap without the first point: not needed
+
+    def lap(self, laps):
+        """(points, start index) of a whole lap driven by one car, or None. A car's
+        path is a whole lap once it has passed one more line than a lap from where it
+        begins (so it has surely come round past its first point); the lap ends at its
+        point nearest the first, a lap on."""
+        if laps < 2:
+            return None
+        for path in self.paths.values():
+            first_count, first = path[0]
+            if len(path) < 3 or path[-1][0] - first_count <= laps:
+                continue
+            ends = [i for i, (count, _p) in enumerate(path) if count == first_count + laps]
+            if not ends:
+                continue
+            end = min(ends, key=lambda i: math.dist(path[i][1], first))
+            points = [position for _count, position in path[:end]]
+            start = next(
+                (i for i in range(1, end) if path[i][0] != path[i - 1][0] and (path[i][0] - 1) % laps == 0),
+                None,
+            )
+            return points, start
+        return None
+
+    def longest(self):
+        """The longest path so far (points), for the map before a whole lap."""
+        best = max(self.paths.values(), key=len, default=[])
+        return [position for _count, position in best]
+
+
 class TrackMap:
-    """Gives the track map (a TrackMapView) for the race: the outline is worked out
-    once per track and kept. `others`: the other cars show as faint grey dots."""
+    """Gives the track map (a TrackMapView) for the race. The track is learnt from the
+    cars' paths (TrackPaths) and saved in `folder` (None: not saved). `others`: the
+    other cars show as faint grey dots."""
 
-    def __init__(self, others=False):
+    def __init__(self, others=False, folder=None):
         self.others = others
+        self.folder = Path(folder) if folder is not None else None
         self._gates = None
-        self._outline = None
+        self.learned = None  # the whole lap's TrackOutline, once known
+        self.paths = TrackPaths()
+        self._partial = None  # (path length, TrackOutline) while no lap is known
 
-    def outline(self, gates):
+    def _file(self, gates):
+        return self.folder / TRACKS_FOLDER / f'{track_key(gates)}.json' if self.folder else None
+
+    def _load(self, gates):
+        path = self._file(gates)
+        if path is None:
+            return None
+        try:
+            data = json.loads(path.read_text(encoding='utf-8'))
+            points = [(float(x), float(z)) for x, z in data['points']]
+            mark = data.get('start')
+            start = ((float(mark[0]), float(mark[1])), (float(mark[2]), float(mark[3]))) if mark else None
+            outline = outline_from_path(points, data.get('closed') is True, start)
+        except (OSError, ValueError, KeyError, TypeError):
+            return None
+        if outline is not None:
+            log.info('track map: learnt track loaded (%s)', path.name)
+        return outline
+
+    def _save(self, gates, points, start):
+        path = self._file(gates)
+        if path is None:
+            return
+        mark = [*start[0], *start[1]] if start else None
+        data = {'points': [[round(x, 2), round(z, 2)] for x, z in points], 'closed': True, 'start': mark}
+        try:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            temporary = path.with_name(path.name + '.tmp')
+            temporary.write_text(json.dumps(data) + '\n', encoding='utf-8')
+            os.replace(temporary, path)
+            log.info('track map: track learnt and saved (%s)', path.name)
+        except OSError as error:
+            log.warning('track map: could not save the learnt track: %s', error)
+
+    def outline(self, players, gates, laps):
+        """The outline to draw: the learnt lap, or the longest stretch driven so far."""
         if gates != self._gates:
-            self._gates, self._outline = gates, track_outline(gates) if gates else None
-        return self._outline
+            self._gates, self.paths, self._partial = gates, TrackPaths(), None
+            self.learned = self._load(gates) if gates else None
+        if self.learned is not None:
+            return self.learned
+        self.paths.add(players, laps)
+        lap = self.paths.lap(laps)
+        if lap is not None:
+            points, index = lap
+            start = start_mark(points, gates[0], index)
+            self.learned = outline_from_path(points, True, start)
+            if self.learned is not None:
+                self._save(gates, points, start)
+                return self.learned
+        longest = self.paths.longest()
+        if self._partial is None or len(longest) != self._partial[0]:
+            self._partial = (len(longest), outline_from_path(longest, False))
+        return self._partial[1]
 
     def update(self, state, order):
         """The view for the race `state` (LapState) with its players in race `order`,
         or None without a track or a local player."""
-        outline = self.outline(state.gates)
         order = list(order)
         me = next((p for p in order if p.local), None)
-        if outline is None or me is None:
+        if me is None:
+            return None
+        outline = self.outline(order, state.gates, lap_length(order, state.gates))
+        if outline is None:
             return None
         index = order.index(me)
         leader = order[0] if index > 0 else None

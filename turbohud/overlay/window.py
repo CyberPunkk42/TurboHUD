@@ -38,7 +38,7 @@ from turbohud.core.hud import (
 )
 from turbohud.core.race import CAR_LENGTH, CAR_WIDTH, RADAR_FROM, RADAR_FULL, Blip, RadarView
 from turbohud.core.settings import GROUPS
-from turbohud.core.trackmap import MapDot, TrackMapView, map_transform, road_width, track_outline
+from turbohud.core.trackmap import MapDot, TrackMapView, map_transform, outline_from_path, road_width
 from turbohud.hud.painter import (
     AHEAD_COLOR,
     BEHIND_COLOR,
@@ -98,16 +98,12 @@ MAP_RING = 0.4  # the local player's ring: its width, as a share of its radius
 
 def _sample_map():
     """A track map to place the section in move mode: an oval with a car of each kind."""
-    gates = []
-    for step in range(40):
-        turn = 2 * math.pi * step / 40
-        x, z, nx, nz = 100 * math.cos(turn), 60 * math.sin(turn), math.cos(turn), math.sin(turn)
-        gates.append(((x - 6 * nx, z - 6 * nz), (x + 6 * nx, z + 6 * nz)))
-    outline = track_outline(gates)
 
     def at(step):
         turn = 2 * math.pi * step / 40
         return (100 * math.cos(turn), 60 * math.sin(turn))
+
+    outline = outline_from_path([at(step) for step in range(40)], True, (at(0), (0.0, 1.0)))
 
     roles = (('leader', 30), ('backmarker', 9), ('ahead', 13), ('behind', 2), ('me', 6))
     return TrackMapView(outline, tuple(MapDot(at(step), role) for role, step in roles))
@@ -400,20 +396,21 @@ class SectionWindow(QWidget):
                 path.lineTo(at(point))
             if outline.closed:
                 path.closeSubpath()
-            road = road_width(outline, scale, size)
+            road = road_width(size)
             painter.setBrush(Qt.NoBrush)
             painter.setPen(QPen(QColor(*MAP_ROAD_EDGE), road + 3, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin))
             painter.drawPath(path)
             painter.setPen(QPen(QColor(*MAP_ROAD), road, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin))
             painter.drawPath(path)
-            # The start line: across the road, a little wider than it.
-            (x1, z1), (x2, z2) = outline.start
-            middle, length = ((x1 + x2) / 2, (z1 + z2) / 2), math.hypot(x2 - x1, z2 - z1) or 1.0
-            reach = (road * 0.8 + 2) / scale
-            ux, uz = (x2 - x1) / length * reach, (z2 - z1) / length * reach
-            painter.setPen(QPen(QColor(MAP_START), max(2.0, road / 3), Qt.SolidLine, Qt.FlatCap))
-            painter.drawLine(at((middle[0] - ux, middle[1] - uz)), at((middle[0] + ux, middle[1] + uz)))
+            if outline.start is not None:
+                # The start line: across the road, a little wider than it.
+                (sx, sz), (fx, fz) = outline.start
+                reach = (road * 0.8 + 2) / scale
+                ux, uz = -fz * reach, fx * reach  # across the direction of travel
+                painter.setPen(QPen(QColor(MAP_START), max(2.0, road / 3), Qt.SolidLine, Qt.FlatCap))
+                painter.drawLine(at((sx - ux, sz - uz)), at((sx + ux, sz + uz)))
             radius = max(2.5, size * MAP_DOT)
+            painter.setClipRect(box)  # a car off the learnt track (a road from the grid) stays inside
             for dot in view.dots:
                 painter.setOpacity(MAP_PIT_OPACITY if dot.in_pit else 1.0)
                 color = QColor(MAP_COLORS[dot.role])
@@ -436,6 +433,7 @@ class SectionWindow(QWidget):
                 painter.setPen(QPen(QColor(0, 0, 0, 200), 1.5))
                 painter.setBrush(color)
                 painter.drawEllipse(at(dot.position), r, r)
+            painter.setClipping(False)
             painter.setOpacity(1.0)
         if not self.locked:
             painter.setPen(QPen(QColor(*BORDER), 2))
