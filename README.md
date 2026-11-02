@@ -120,7 +120,8 @@ Clear the launch option to start TSU without the probe. The probe writes what it
   only shrinks when the box is too narrow for it). A panel lets you show or hide each section, and **Lock** (or
   Ctrl+Shift+L again) ends move mode. On the Mac, clicking back into the game also locks.
 - **Ctrl+Shift+Q** quits; the panel and the icon's menu have **Quit** as well. On Linux
-  the shortcuts are not available yet; use the icon.
+  there are no shortcuts: use the icon, or `run_turbohud.sh --toggle` / `--quit` (see
+  Linux above).
 
 Where each section sits, its size, whether it shows, and the look are saved in
 `settings.json`, with a log of the last run in
