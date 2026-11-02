@@ -95,8 +95,7 @@ def run(args, folder):
     )
     from turbohud.overlay import HOTKEY_LOCK, HOTKEY_QUIT, native_for
     from turbohud.overlay.settings_window import SettingsWindow
-    from turbohud.overlay.window import MovePanel, SectionWindow
-    from turbohud.overlay.window import window_flags
+    from turbohud.overlay.window import MovePanel, SectionWindow, window_flags
 
     app = QApplication([sys.argv[0]])
     app.setApplicationName('TurboHUD')
