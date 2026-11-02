@@ -80,7 +80,10 @@ class SectionPlaceTests(unittest.TestCase):
     def test_section_places_and_visibility_are_kept(self):
         with tempfile.TemporaryDirectory() as folder:
             path = Path(folder) / 'settings.json'
-            places = {'delta': s.SectionPlace(2000, 600, 300, 60), 'times': s.SectionPlace(10, 20, 250, 40, visible=False)}
+            places = {
+                'delta': s.SectionPlace(2000, 600, 300, 60),
+                'times': s.SectionPlace(10, 20, 250, 40, visible=False),
+            }
             s.save_settings(path, s.Settings(sections=places))
             self.assertEqual(s.load_settings(path).sections, places)
 
@@ -95,12 +98,18 @@ class SectionPlaceTests(unittest.TestCase):
     def test_broken_section_entries_are_left_out(self):
         with tempfile.TemporaryDirectory() as folder:
             path = Path(folder) / 'settings.json'
-            path.write_text(json.dumps({'sections': {
-                'lap': {'x': 1, 'y': 2, 'width': 100, 'height': 30},
-                'delta': {'x': 'left'},
-                'times': 'nonsense',
-                'current': {'x': 1, 'y': 2, 'width': 0, 'height': 0},
-            }}))
+            path.write_text(
+                json.dumps(
+                    {
+                        'sections': {
+                            'lap': {'x': 1, 'y': 2, 'width': 100, 'height': 30},
+                            'delta': {'x': 'left'},
+                            'times': 'nonsense',
+                            'current': {'x': 1, 'y': 2, 'width': 0, 'height': 0},
+                        }
+                    }
+                )
+            )
             self.assertEqual(list(s.load_settings(path).sections), ['lap'])
 
 

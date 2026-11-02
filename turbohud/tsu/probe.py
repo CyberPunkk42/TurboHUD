@@ -53,7 +53,7 @@ class IoVec(ctypes.Structure):
     _fields_ = [('iov_base', ctypes.c_void_p), ('iov_len', ctypes.c_size_t)]
 
 
-@functools.lru_cache(maxsize=None)
+@functools.cache
 def _libc():
     """libc with process_vm_readv set up, loaded once (finding it takes a while)."""
     libc = ctypes.CDLL(ctypes.util.find_library('c') or 'libc.so.6', use_errno=True)
@@ -306,7 +306,7 @@ def serve(pid, path, log_file):
                     request, _ = receive_message(conn)
                     try:
                         header, payload = handle(pid, request)
-                    except Exception as error:  # A bad request must never end the service.
+                    except Exception as error:  # noqa: BLE001 - a bad request must never end the service.
                         header, payload = {'ok': False, 'error': str(error)}, b''
                     send_message(conn, header, payload)
             except (ConnectionError, struct.error):
@@ -357,7 +357,7 @@ def run_game(command):
             log([result], path)
             if result.startswith('OK'):
                 server = serve(pid, socket_path(), path)
-    except Exception as error:  # The game must keep running whatever happens here.
+    except Exception as error:  # noqa: BLE001 - the game must keep running whatever happens here.
         try:
             log([f'FAIL: probe error {error!r}'], path)
         except OSError:

@@ -312,3 +312,8 @@ its "Recent changes".
 - 2026-11-02: Notes brought up to date: RESUME's current state and next steps, and the
   backlog (Windows overlay and live data, macOS, builds and release, Linux shortcuts,
   more features); fuel, speed, guest races and the rest are done.
+- 2026-11-02: Code formatted with Ruff throughout (16 files) and the remaining lint
+  findings fixed: f-strings in the privacy check, pairwise and ClassVar in tests, the
+  probe's two catch-all handlers marked as intended. No change in behaviour; all tests
+  pass, the privacy check runs as before. `ruff check .` and `ruff format --check .`
+  now pass.

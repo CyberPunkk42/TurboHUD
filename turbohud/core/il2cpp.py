@@ -25,9 +25,17 @@ TYPE_ATTRS = 8  # in Il2CppType, after its data pointer
 TYPE_CODE = 10  # in Il2CppType: the type's kind (Il2CppTypeEnum), after the attributes
 # Il2CppTypeEnum values of the simple types, with their struct format.
 SIMPLE_TYPES = {
-    0x02: ('bool', '<?'), 0x04: ('sbyte', '<b'), 0x05: ('byte', '<B'), 0x06: ('short', '<h'),
-    0x07: ('ushort', '<H'), 0x08: ('int', '<i'), 0x09: ('uint', '<I'), 0x0A: ('long', '<q'),
-    0x0B: ('ulong', '<Q'), 0x0C: ('float', '<f'), 0x0D: ('double', '<d'),
+    0x02: ('bool', '<?'),
+    0x04: ('sbyte', '<b'),
+    0x05: ('byte', '<B'),
+    0x06: ('short', '<h'),
+    0x07: ('ushort', '<H'),
+    0x08: ('int', '<i'),
+    0x09: ('uint', '<I'),
+    0x0A: ('long', '<q'),
+    0x0B: ('ulong', '<Q'),
+    0x0C: ('float', '<f'),
+    0x0D: ('double', '<d'),
 }
 TYPE_VALUETYPE = 0x11  # a struct, such as a Vector3
 FIELD_ATTRIBUTE_STATIC = 0x10

@@ -76,7 +76,11 @@ def session_rows(seconds):
 def help_lines(shortcuts):
     """The move-mode hint, as lines, for the move-mode panel."""
     finish = 'Ctrl+Shift+L or Lock finishes.' if shortcuts else 'Lock finishes.'
-    return ['Drag a section to move it. At its corner: taller or shorter scales', 'the text, wider makes room for it.', finish]
+    return [
+        'Drag a section to move it. At its corner: taller or shorter scales',
+        'the text, wider makes room for it.',
+        finish,
+    ]
 
 
 def _content(rows, sizes):
@@ -85,7 +89,19 @@ def _content(rows, sizes):
     for index, row in enumerate(rows):
         size = getattr(sizes, row.style)
         baseline += (sizes.gap if index else 0) + size
-        lines.append(Line(row.text, size, row.color, baseline, row.tail, row.tail_color, row.flag, row.right, row.right_color))
+        lines.append(
+            Line(
+                row.text,
+                size,
+                row.color,
+                baseline,
+                row.tail,
+                row.tail_color,
+                row.flag,
+                row.right,
+                row.right_color,
+            )
+        )
     return lines, baseline
 
 
@@ -128,10 +144,14 @@ class Section:
 
 
 RACE_SECTIONS = (
-    Section('lap', 'Lap and time left', (
-        (Row('Lap 13/13  -  21:00 left', 'title'),),
-        (Row('Waiting for TSU (launch option)', 'title'),),
-    )),
+    Section(
+        'lap',
+        'Lap and time left',
+        (
+            (Row('Lap 13/13  -  21:00 left', 'title'),),
+            (Row('Waiting for TSU (launch option)', 'title'),),
+        ),
+    ),
     Section('current', 'Running lap', ((Row('0:00.0', 'big'),), (Row('10:00.000', 'big'),))),
     Section('delta', 'Delta to best', ((Row('+00.000 vs best', 'medium'),),)),
     Section('times', 'Last and best lap', ((Row('Last 0:00.000   Best 0:00.000', 'medium'),),)),
@@ -142,9 +162,16 @@ RACE_SECTIONS = (
     Section('draft', 'Draft', ((Row('Draft 100%', 'medium', tail='  -80% downforce'),),), level=True),
     Section('speed', 'Speed', ((Row('000 km/h', 'medium'),),), pedals=True),
     Section('localtime', 'Local time', ((Row('00:00', 'medium'),),)),
-    Section('players', 'Players', (tuple(
-        Row(f'{n}. Playername1234567', 'small', tail='  PIT', flag='DE', right='+00.000') for n in range(10, 10 + 8)
-    ),)),
+    Section(
+        'players',
+        'Players',
+        (
+            tuple(
+                Row(f'{n}. Playername1234567', 'small', tail='  PIT', flag='DE', right='+00.000')
+                for n in range(10, 10 + 8)
+            ),
+        ),
+    ),
     Section('blueflag', 'Blue flag', (), bar=(480, 24), drawing='flag'),
     Section('radar', 'Proximity radar', (), bar=(160, 160), drawing='radar'),
 )
@@ -179,7 +206,9 @@ def level_bar(width, content_height, scale, fill, color):
     from the left to `fill` (0 to 1) in `color` ('ahead', 'lift' or 'behind')."""
     margin = round(MARGIN * scale)
     top = content_height - margin // 2
-    return Bar(margin, top, max(width - 2 * margin, 1), max(level_space(scale), 2), min(max(fill, 0.0), 1.0), color)
+    return Bar(
+        margin, top, max(width - 2 * margin, 1), max(level_space(scale), 2), min(max(fill, 0.0), 1.0), color
+    )
 
 
 PEDAL_WIDTH = 10  # a pedal bar's width at scale 1
@@ -246,11 +275,14 @@ def below(sections, placed, sizes, screens=(), gap=8):
     run off the bottom of that screen, they start a new column to the right of the placed
     sections instead, from the top of the highest one."""
     first = next(iter(placed.values()))
-    screen = next((s for s in screens if s[0] <= first[0] < s[0] + s[2] and s[1] <= first[1] < s[1] + s[3]), None)
+    screen = next(
+        (s for s in screens if s[0] <= first[0] < s[0] + s[2] and s[1] <= first[1] < s[1] + s[3]), None
+    )
     if screen is not None:
         # Only the sections on that screen count (some may sit on another monitor).
         placed = {
-            name: place for name, place in placed.items()
+            name: place
+            for name, place in placed.items()
             if screen[0] <= place[0] < screen[0] + screen[2] and screen[1] <= place[1] < screen[1] + screen[3]
         }
     bottom = max(y + height for _x, y, _w, height in placed.values())

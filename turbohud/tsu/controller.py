@@ -52,7 +52,13 @@ class Pad:
     """Reads the first gamepad found in a background thread; `pedals()` gives the latest
     (throttle, brake), or None without a pad."""
 
-    def __init__(self, pattern='/dev/input/js*', throttle_axis=THROTTLE_AXIS, brake_axis=BRAKE_AXIS, clock=time.monotonic):
+    def __init__(
+        self,
+        pattern='/dev/input/js*',
+        throttle_axis=THROTTLE_AXIS,
+        brake_axis=BRAKE_AXIS,
+        clock=time.monotonic,
+    ):
         self.pattern = pattern
         self.throttle_axis = throttle_axis
         self.brake_axis = brake_axis

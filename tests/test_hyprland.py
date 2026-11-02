@@ -9,8 +9,24 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from turbohud.overlay import hyprland
 
 CLIENTS = [
-    {'address': '0xaaa', 'pid': 10, 'title': 'TurboHUD', 'mapped': True, 'floating': True, 'at': [40, 50], 'size': [420, 194]},
-    {'address': '0xddd', 'pid': 10, 'title': 'tiled', 'mapped': True, 'floating': False, 'at': [0, 0], 'size': [5096, 1390]},
+    {
+        'address': '0xaaa',
+        'pid': 10,
+        'title': 'TurboHUD',
+        'mapped': True,
+        'floating': True,
+        'at': [40, 50],
+        'size': [420, 194],
+    },
+    {
+        'address': '0xddd',
+        'pid': 10,
+        'title': 'tiled',
+        'mapped': True,
+        'floating': False,
+        'at': [0, 0],
+        'size': [5096, 1390],
+    },
     {'address': '0xbbb', 'pid': 99, 'title': 'TurboHUD', 'mapped': True, 'at': [0, 0], 'size': [10, 10]},
     {'address': '0xccc', 'pid': 10, 'title': 'other', 'mapped': True, 'at': [0, 0], 'size': [10, 10]},
 ]
@@ -59,7 +75,9 @@ class AvailableTests(unittest.TestCase):
 
 class CommandTests(unittest.TestCase):
     def test_every_command_names_only_turbohuds_window(self):
-        for lua, classic in hyprland.place_commands('address:0xaaa', 1, 2, 3, 4) + [hyprland.focus_command('address:0xaaa')]:
+        for lua, classic in hyprland.place_commands('address:0xaaa', 1, 2, 3, 4) + [
+            hyprland.focus_command('address:0xaaa')
+        ]:
             with self.subTest(lua=lua):
                 self.assertIn("window = 'address:0xaaa'", lua)
                 if classic is not None:
@@ -72,11 +90,19 @@ class CommandTests(unittest.TestCase):
         self.assertIsNone(classic)  # classic fullscreen commands act on the active window
         fake = FakeHyprctl(lua=False)
         hyprland.Hyprland(fake).place('0xaaa', 1, 2, 3, 4)
-        self.assertFalse(any('fullscreen' in text and not text.startswith('hl.') for text in fake.dispatched()))
+        self.assertFalse(
+            any('fullscreen' in text and not text.startswith('hl.') for text in fake.dispatched())
+        )
 
     def test_place_floats_sizes_moves_pins_and_keeps_focus_away(self):
         lua = ' '.join(command for command, _ in hyprland.place_commands('address:0xaaa', 40, 50, 420, 194))
-        for part in ('float(', 'x = 420, y = 194', 'x = 40, y = 50', 'pin(', "prop = 'no_focus', value = '1'"):
+        for part in (
+            'float(',
+            'x = 420, y = 194',
+            'x = 40, y = 50',
+            'pin(',
+            "prop = 'no_focus', value = '1'",
+        ):
             self.assertIn(part, lua)
 
 

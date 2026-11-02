@@ -71,7 +71,9 @@ class Native:
             log.info('Hyprland: trying again')
             QTimer.singleShot(PLACE_RETRY_MS, lambda: self._place(widget, target, 1, place_tries - 1))
             return
-        log.info('Hyprland: window %s placed at %s%s', address, target, '' if ok else ' (some requests refused)')
+        log.info(
+            'Hyprland: window %s placed at %s%s', address, target, '' if ok else ' (some requests refused)'
+        )
         if not getattr(widget, 'locked', True):
             self.hypr.set_focusable(address, True)  # move mode began before it was placed
         self.give_focus_back()

@@ -38,9 +38,8 @@
   active again.
 - Tests: `/opt/homebrew/bin/python3.13 -B -m unittest discover -s tests` (Windows:
   `py -3 -B -m unittest discover -s tests`).
-- Lint and format: `.buildtools/ruff-venv/bin/ruff check turbohud tests` (Linux; a
-  separate tools environment, never part of the app). An older backlog of findings and
-  unformatted files remains for a chore branch.
+- Lint and format: `.buildtools/ruff-venv/bin/ruff check .` and `ruff format --check .`
+  (Linux; a separate tools environment, never part of the app). Both pass.
 
 ## Next steps
 See `docs/IMPROVEMENT_BACKLOG.md`. In short:
@@ -54,6 +53,11 @@ See `docs/IMPROVEMENT_BACKLOG.md`. In short:
 5. More features: the draft extras and a settings window are being built (2026-11-02).
 
 ## Recent changes
+- 2026-11-02: Code formatted with Ruff throughout (16 files) and the remaining lint
+  findings fixed: f-strings in the privacy check, pairwise and ClassVar in tests, the
+  probe's two catch-all handlers marked as intended. No change in behaviour; all tests
+  pass, the privacy check runs as before. `ruff check .` and `ruff format --check .`
+  now pass.
 - 2026-11-02: Notes brought up to date: RESUME's current state and next steps, and the
   backlog (Windows overlay and live data, macOS, builds and release, Linux shortcuts,
   more features); fuel, speed, guest races and the rest are done.

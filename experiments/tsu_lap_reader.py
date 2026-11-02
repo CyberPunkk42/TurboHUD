@@ -13,8 +13,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from turbohud.core.race import RACING, WAITING_FOR_GAME, format_time  # noqa: E402
-from turbohud.tsu.client import LiveRace  # noqa: E402
+from turbohud.core.race import RACING, WAITING_FOR_GAME, format_time
+from turbohud.tsu.client import LiveRace
 
 NOT_CONNECTED = 'TSU is not running through TurboHUD. Start TSU from Steam (with the launch option).'
 NO_RACE = 'TSU is running, but no race is on yet (menu or loading). Waiting...'

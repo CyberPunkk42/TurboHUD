@@ -70,11 +70,17 @@ def place_commands(window, x, y, width, height, workspace=None, focusable=False)
             f"hl.dsp.window.resize({{ x = {width}, y = {height}, window = '{window}' }})",
             f'resizewindowpixel exact {width} {height},{window}',
         ),
-        (f"hl.dsp.window.move({{ x = {x}, y = {y}, window = '{window}' }})", f'movewindowpixel exact {x} {y},{window}'),
+        (
+            f"hl.dsp.window.move({{ x = {x}, y = {y}, window = '{window}' }})",
+            f'movewindowpixel exact {x} {y},{window}',
+        ),
         (f"hl.dsp.window.pin({{ action = 'enable', window = '{window}' }})", f'pin {window}'),
         (f"hl.dsp.window.alter_zorder({{ mode = 'top', window = '{window}' }})", f'alterzorder top,{window}'),
     ] + [
-        (f"hl.dsp.window.set_prop({{ prop = '{prop}', value = '{value}', window = '{window}' }})", f'setprop {window} {old} {value}')
+        (
+            f"hl.dsp.window.set_prop({{ prop = '{prop}', value = '{value}', window = '{window}' }})",
+            f'setprop {window} {old} {value}',
+        )
         for prop, old, value in WINDOW_PROPS
         if not (focusable and prop == 'no_focus')
     ]
@@ -143,10 +149,12 @@ class Hyprland:
     def move(self, address, x, y):
         """Move the window only (a group mate following a drag); True if taken."""
         window = f'address:{address}'
-        return self.dispatch((
-            f"hl.dsp.window.move({{ x = {x}, y = {y}, window = '{window}' }})",
-            f'movewindowpixel exact {x} {y},{window}',
-        ))
+        return self.dispatch(
+            (
+                f"hl.dsp.window.move({{ x = {x}, y = {y}, window = '{window}' }})",
+                f'movewindowpixel exact {x} {y},{window}',
+            )
+        )
 
     def workspace_at(self, x, y):
         """The id of the workspace shown on the monitor that holds the point, or None."""
@@ -170,10 +178,12 @@ class Hyprland:
         no_focus keeps the mouse away too, so a window with it cannot be dragged."""
         window = f'address:{address}'
         value = '0' if focusable else '1'
-        return self.dispatch((
-            f"hl.dsp.window.set_prop({{ prop = 'no_focus', value = '{value}', window = '{window}' }})",
-            f'setprop {window} nofocus {value}',
-        ))
+        return self.dispatch(
+            (
+                f"hl.dsp.window.set_prop({{ prop = 'no_focus', value = '{value}', window = '{window}' }})",
+                f'setprop {window} nofocus {value}',
+            )
+        )
 
     def focus(self, address):
         return self.dispatch(focus_command(f'address:{address}'))

@@ -1,6 +1,8 @@
+import itertools
 import sys
 import unittest
 from pathlib import Path
+from typing import ClassVar
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
@@ -45,8 +47,10 @@ class NewSectionsWithOthersOnAnotherMonitorTests(unittest.TestCase):
     def test_sections_on_another_monitor_do_not_count(self):
         # As the player had it: tires and speed on the upper monitor (y -1400).
         placed = {
-            'lap': (1093, 5, 583, 120), 'fuel': (1445, 1357, 309, 79),
-            'tires': (1320, -1400, 242, 63), 'speed': (1320, -1400, 121, 63),
+            'lap': (1093, 5, 583, 120),
+            'fuel': (1445, 1357, 309, 79),
+            'tires': (1320, -1400, 242, 63),
+            'speed': (1320, -1400, 121, 63),
         }
         screens = [(1280, -1440, 2560, 1440), (0, 0, 5120, 1440)]
         clock = [s for s in hud.RACE_SECTIONS if s.name == 'localtime']
@@ -55,14 +59,14 @@ class NewSectionsWithOthersOnAnotherMonitorTests(unittest.TestCase):
 
 
 class FirstLaunchTests(unittest.TestCase):
-    SIZES = {s.name: (300, 70) for s in hud.RACE_SECTIONS}
+    SIZES: ClassVar[dict] = {s.name: (300, 70) for s in hud.RACE_SECTIONS}
 
     def test_one_column_at_the_left_centred_in_1080_without_overlap(self):
         places = hud.first_launch(hud.RACE_SECTIONS, self.SIZES)
         boxes = [places[s.name] for s in hud.RACE_SECTIONS if not s.bar]
         self.assertNotIn('blueflag', places)  # a bar: top centre instead
         self.assertTrue(all(x == 40 for x, *_ in boxes))
-        for (_, y1, _, h1), (_, y2, _, _) in zip(boxes, boxes[1:]):
+        for (_, y1, _, h1), (_, y2, _, _) in itertools.pairwise(boxes):
             self.assertGreaterEqual(y2, y1 + h1)  # below, not overlapping
         top, bottom = boxes[0][1], boxes[-1][1] + boxes[-1][3]
         self.assertAlmostEqual(top - 40, 1040 - bottom, delta=1)  # centred
@@ -112,7 +116,9 @@ class HudLinesTests(unittest.TestCase):
     def test_rows_use_their_style_and_colour(self):
         lines = hud.hud_lines([hud.Row('a', 'title'), hud.Row('b', 'medium', 'accent')])
         sizes = hud.Sizes.for_scale(1)
-        self.assertEqual([(line.size, line.color) for line in lines], [(sizes.title, 'text'), (sizes.medium, 'accent')])
+        self.assertEqual(
+            [(line.size, line.color) for line in lines], [(sizes.title, 'text'), (sizes.medium, 'accent')]
+        )
 
     def test_lines_go_down_and_grow_with_the_scale(self):
         normal = hud.hud_lines(hud.session_rows(0))
@@ -127,8 +133,12 @@ class LocalTimeTests(unittest.TestCase):
     def test_hours_and_minutes_in_24_hours(self):
         import time
 
-        self.assertEqual(hud.local_time_rows(time.struct_time((2026, 11, 1, 17, 5, 59, 6, 305, 0)))[0].text, '17:05')
-        self.assertEqual(hud.local_time_rows(time.struct_time((2026, 11, 1, 0, 0, 0, 6, 305, 0)))[0].text, '00:00')
+        self.assertEqual(
+            hud.local_time_rows(time.struct_time((2026, 11, 1, 17, 5, 59, 6, 305, 0)))[0].text, '17:05'
+        )
+        self.assertEqual(
+            hud.local_time_rows(time.struct_time((2026, 11, 1, 0, 0, 0, 6, 305, 0)))[0].text, '00:00'
+        )
 
     def test_on_every_system(self):
         for layout in (hud.RACE_SECTIONS, hud.CLOCK_SECTIONS):
@@ -156,7 +166,25 @@ class PedalBarTests(unittest.TestCase):
 class SectionTests(unittest.TestCase):
     def test_race_sections_have_distinct_names(self):
         names = [section.name for section in hud.RACE_SECTIONS]
-        self.assertEqual(names, ['lap', 'current', 'delta', 'times', 'fuel', 'fuelfinish', 'tires', 'health', 'draft', 'speed', 'localtime', 'players', 'blueflag', 'radar'])
+        self.assertEqual(
+            names,
+            [
+                'lap',
+                'current',
+                'delta',
+                'times',
+                'fuel',
+                'fuelfinish',
+                'tires',
+                'health',
+                'draft',
+                'speed',
+                'localtime',
+                'players',
+                'blueflag',
+                'radar',
+            ],
+        )
         self.assertEqual(len(set(names)), len(names))
 
     def test_content_size_fits_the_text(self):
@@ -205,14 +233,18 @@ MOVER_GROUPS = {'lap': 'A', 'delta': 'A', 'speed': 'A', 'fuel': 'B', 'tires': ''
 
 
 class GroupMoverTests(unittest.TestCase):
-
     def look(self, mover, seen, now):
         return mover.follow(dict(seen), MOVER_GROUPS, now)
 
     def start(self):
         mover = hud.GroupMover()
-        seen = {'lap': (10, 10, 100, 40), 'delta': (10, 60, 100, 30), 'speed': (10, 100, 100, 30),
-                'fuel': (300, 10, 100, 30), 'tires': (300, 60, 100, 30)}
+        seen = {
+            'lap': (10, 10, 100, 40),
+            'delta': (10, 60, 100, 30),
+            'speed': (10, 100, 100, 30),
+            'fuel': (300, 10, 100, 30),
+            'tires': (300, 60, 100, 30),
+        }
         self.assertEqual(self.look(mover, seen, 0.0), {})  # first look: nothing to compare
         return mover, seen
 
@@ -256,7 +288,9 @@ class FreeSpotTests(unittest.TestCase):
     SCREEN = (0, 0, 5120, 1440)  # the player's main monitor
 
     def test_the_wanted_spot_when_it_is_free(self):
-        self.assertEqual(hud.free_spot((400, 600), self.SCREEN, [(40, 300, 380, 60)], (2360, 480)), (2360, 480))
+        self.assertEqual(
+            hud.free_spot((400, 600), self.SCREEN, [(40, 300, 380, 60)], (2360, 480)), (2360, 480)
+        )
 
     def test_moves_off_a_section_such_as_the_radar(self):
         radar = (2480, 864, 160, 160)
@@ -271,7 +305,7 @@ class FreeSpotTests(unittest.TestCase):
 
 
 class CentreTests(unittest.TestCase):
-    SCREENS = [(1280, -1440, 2560, 1440), (0, 0, 5120, 1440)]  # the player's two monitors
+    SCREENS: ClassVar[list] = [(1280, -1440, 2560, 1440), (0, 0, 5120, 1440)]  # the player's two monitors
 
     def test_centre_across_down_or_both_on_its_own_screen(self):
         radar = (300, 900, 160, 160)
