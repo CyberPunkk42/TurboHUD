@@ -1503,10 +1503,11 @@ def blue_flag_opacity(seconds):
 
 
 # Proximity radar. Positions and speeds are in the game's own unit, so the time gap
-# (distance / speed) needs no scale. The car's size is a guess (the game's unit looks
-# like metres: the car does about 56 a second at 205 km/h); check it in a race.
-CAR_LENGTH = 4.5
-CAR_WIDTH = 2.0
+# (distance / speed) needs no scale. The car's size was measured in an online race with
+# 13 AI cars (Tatuus FA01, 630 reads): cars in line got no closer than about 4.0 centre
+# to centre, cars side by side about 1.3 to 1.4. Other car models may differ a little.
+CAR_LENGTH = 4.0
+CAR_WIDTH = 1.4
 RADAR_FROM = 0.5  # seconds behind or ahead: the radar appears, faint
 RADAR_FULL = 0.1  # seconds behind or alongside: fully visible
 RADAR_FAINT = 0.2  # its opacity at RADAR_FROM

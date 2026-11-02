@@ -32,10 +32,6 @@ player binds to a key themselves, or the GlobalShortcuts portal where the deskto
 it. Other Wayland desktops (KDE, GNOME) ignore Qt's on-top hint: the layer-shell
 extension (KDE, Sway; not GNOME) would need a library outside PySide6.
 
-## 5. More HUD features
-- Open questions: the radar's car size (4.5 x 2 is an estimate); what happens to the
-  game if the probe stops while it runs.
-
 ## Design notes for the real overlay
 - Move mode is a short, deliberate step: while the overlay takes the mouse, the game gets
   no mouse input under it. On the Mac, end move mode as soon as the game becomes active

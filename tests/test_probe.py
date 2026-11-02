@@ -67,6 +67,14 @@ class DescendantTests(unittest.TestCase):
     def test_a_game_elsewhere_is_not_ours(self):
         self.assertIsNone(probe.find_game(11, timeout=0, proc_root=self.proc.dir.name))
 
+    def test_stops_looking_once_the_started_program_has_ended(self):
+        # Stopped before the game was found: no waiting out the timeout.
+        started = time.monotonic()
+        self.assertIsNone(
+            probe.find_game(11, timeout=30, proc_root=self.proc.dir.name, running=lambda: False)
+        )
+        self.assertLess(time.monotonic() - started, 1)
+
 
 @unittest.skipUnless(sys.platform.startswith('linux'), 'Linux only')
 class LiveReadTests(unittest.TestCase):

@@ -245,10 +245,10 @@ class RadarTests(unittest.TestCase):
         self.assertIsNone(self.drive({'Far ahead': (0.0, 40.0)}))  # 0.9 s ahead
 
     def test_a_car_close_ahead_counts_too(self):
-        # 10 ahead: nose to tail 5.5 at 40 a second, about 0.14 s.
+        # 10 ahead: nose to tail 10 less a car length, at 40 a second.
         view = self.drive({'Ahead': (0.0, 10.0)})
-        self.assertAlmostEqual(view.blips[0].seconds, 5.5 / 40, places=3)
-        self.assertGreater(view.opacity, 0.9)
+        self.assertAlmostEqual(view.blips[0].seconds, (10 - race.CAR_LENGTH) / 40, places=3)
+        self.assertGreater(view.opacity, 0.85)  # 0.15 s: close to full
 
     def test_faint_at_half_a_second_full_from_a_tenth(self):
         # Behind by 0.5 s: nose to tail 20 at 40 a second; centres are a car length more apart.

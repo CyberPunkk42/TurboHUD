@@ -52,6 +52,15 @@ See `docs/IMPROVEMENT_BACKLOG.md`. In short:
    other Wayland desktops.
 
 ## Recent changes
+- 2026-11-02: Open questions answered. Car size measured in an online race with 13 AI
+  cars (Tatuus FA01, 630 reads of real positions): cars in line no closer than about
+  4.0 centre to centre, side by side about 1.3 to 1.4; the radar now uses 4.0 x 1.4
+  (was a guess of 4.5 x 2.0; `size` in CarPhysicsProperties is 4 bytes, not the size).
+  Probe tested with a stand-in game: killed hard (SIGKILL, like a crash) the game keeps
+  running (it goes to the system's process manager), TurboHUD then shows "waiting";
+  stopped politely (SIGTERM, like Steam's Stop) it passes the stop on and the game ends.
+  Fixed: stopped before the game was found, the probe looked on for up to 3 minutes;
+  now it quits as soon as the program it started has ended.
 - 2026-11-02: The user tested the draft extras (cones, event line, lap share, who
   drafts you) and the settings window (colours, Smaller/Bigger, saved): all seems to
   work.

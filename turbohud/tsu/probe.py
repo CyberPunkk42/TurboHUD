@@ -142,9 +142,12 @@ def process_name(pid, proc_root='/proc'):
         return ''
 
 
-def find_game(root_pid, timeout=FIND_TIMEOUT, proc_root='/proc'):
+def find_game(root_pid, timeout=FIND_TIMEOUT, proc_root='/proc', running=None):
+    """The pid of the game below `root_pid`, or None after `timeout` seconds, or as soon
+    as `running()` says the started program has ended (stopped before the game was found:
+    the probe then quits with it instead of looking on)."""
     deadline = time.monotonic() + timeout
-    while time.monotonic() < deadline:
+    while time.monotonic() < deadline and (running is None or running()):
         for pid in descendants(root_pid, proc_root):
             # comm is cut to 15 characters, which "TSU.x64" fits.
             if process_name(pid, proc_root) == GAME_EXE:
@@ -346,7 +349,7 @@ def run_game(command):
     server = None
     try:
         log([f'Started: {" ".join(command)}'], path)
-        pid = find_game(game.pid)
+        pid = find_game(game.pid, running=lambda: game.poll() is None)
         if pid is None:
             log([f'FAIL: no {GAME_EXE} process appeared below the probe'], path)
         else:
