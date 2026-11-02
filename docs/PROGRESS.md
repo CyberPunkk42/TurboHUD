@@ -262,3 +262,10 @@ its "Recent changes".
   probe, overlay), the permission, how the race is found by name, online races, inputs,
   the Hyprland windows, what it does to RAM, CPU and the game (with measurements), the
   files it writes, and its limits.
+- 2026-11-02: Live delta and gaps as an online client. Joining someone else's server
+  (or hosting online with only AI) the game keeps no car positions (they stay at (0, 0)),
+  so the delta went in checkpoint steps. It does keep each car's velocity, so
+  race.DeadReckoning starts a car at the middle of the checkpoint line it passed last, at
+  its checkpoint time, and moves it on by its velocity until the next line (about a
+  second). The delta, the fuel trend and the player gaps use it; the radar does not
+  (where across the track a car is stays unknown). Not yet seen in a race.

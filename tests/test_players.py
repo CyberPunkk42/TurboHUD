@@ -395,3 +395,45 @@ class LevelBarTests(unittest.TestCase):
         fuel = next(s for s in hud.RACE_SECTIONS if s.name == 'fuel')
         plain = hud.base_size(hud.RACE_SECTIONS[0], 1.0, lambda t, size: len(t) * size)
         self.assertTrue(fuel.level and not hud.RACE_SECTIONS[0].level and plain)
+
+
+def client_car(name, times, velocity, local=False):
+    """A car as the game keeps it online as a client: no position, but a velocity."""
+    return race.PlayerState(name, GERMANY, 0, (tuple(times),), local=local, velocity=velocity)
+
+
+class DeadReckoningTests(unittest.TestCase):
+    def test_from_the_last_line_on_by_the_velocity(self):
+        reckoning = race.DeadReckoning()
+        car = client_car('Me', (0, 10_000), (0.0, 10.0), local=True)  # passed line 1 (z = 10) at 1 s
+        self.assertEqual(reckoning.position(car, LINES, clock=15_000), (0.0, 15.0))  # 0.5 s later
+        self.assertEqual(reckoning.position(car, LINES, clock=17_500), (0.0, 17.5))  # runs on
+
+    def test_the_next_line_starts_it_again(self):
+        reckoning = race.DeadReckoning()
+        reckoning.position(client_car('Me', (0, 10_000), (0.0, 30.0), local=True), LINES, clock=19_000)  # drifted on
+        car = client_car('Me', (0, 10_000, 20_000), (0.0, 10.0), local=True)
+        self.assertEqual(reckoning.position(car, LINES, clock=21_000), (0.0, 21.0))  # from line 2, not the drift
+
+    def test_filled_in_only_where_the_game_has_none_and_not_for_the_radar(self):
+        reckoning = race.DeadReckoning()
+        known = race.PlayerState('Known', GERMANY, 0, ((0, 10_000),), position=(1.0, 12.0), velocity=(0.0, 10.0))
+        filled = reckoning.fill([known, client_car('Guess', (0, 10_000), (0.0, 10.0))], LINES, clock=12_000)
+        self.assertEqual(filled[0].position, (1.0, 12.0))
+        self.assertFalse(filled[0].estimated)
+        self.assertEqual(filled[1].position, (0.0, 12.0))
+        self.assertTrue(filled[1].estimated)
+        me = race.PlayerState('Me', GERMANY, 0, ((0,),), local=True, position=(0.0, 0.0), velocity=(0.0, 40.0),
+                              estimated=True, forward=(0.0, 1.0))
+        self.assertIsNone(race.Radar().update([me, filled[1]], 0.0))
+
+    def test_the_live_delta_runs_between_checkpoints_with_it(self):
+        best = (0, 10_000, 20_000, 30_000)
+        reckoning = race.DeadReckoning()
+        me = client_car('Me', (40_000, 49_000), (0.0, 10.0), local=True)  # 1 s faster to line 1
+        position = reckoning.position(me, LINES, clock=54_000)  # z = 15, halfway to line 2
+        state = race.LapState(clock=54_000, time_limit=0, laps_completed=1, laps_to_finish=3,
+                              lap_starts=[0, 40_000], checkpoints=(best, (40_000, 49_000)),
+                              position=position, gates=LINES)
+        # The best lap was at z = 15 after 1.5 s; this lap after 1.4 s: 0.1 s ahead.
+        self.assertEqual(state.delta_to_best, -1_000)

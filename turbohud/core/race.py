@@ -386,6 +386,7 @@ class PlayerState:
     position: tuple | None = None  # the car's (x, z) on the ground plane, for the radar
     velocity: tuple | None = None  # its (x, z) velocity, game units a second
     forward: tuple | None = None  # the (x, z) way its nose points
+    estimated: bool = False  # the position is worked out (DeadReckoning), not read
 
     @property
     def passed(self):
@@ -413,6 +414,7 @@ class LapReader:
         self._event_running = event_running
         self.services_class = il2cpp.find_class('TS', 'Services')
         self._clock = clock
+        self._reckoning = DeadReckoning()  # positions where the game keeps none (online client)
         self._client_class = None  # TS.ClientEventController, once looked up
         self._controller = None  # the online race's event controller, once found
         self._next_search = 0.0  # when to look for it again
@@ -513,6 +515,7 @@ class LapReader:
         if state != self._state:
             # A new event (or the first read): start the caches afresh.
             self._state, self._offsets, self._laps, self._gates = state, {}, {}, None
+            self._reckoning = DeadReckoning()
             self._fuel_history, self._wear_history, self._fuel_marks, self._types = {}, {}, {}, {}
             self._player = self.local_player()[1]
         player = self._player
@@ -553,7 +556,12 @@ class LapReader:
             gates=gates,
             car=car,
         )
-        state = dataclasses.replace(state, players=self._players(state_object))
+        players = self._reckoning.fill(self._players(state_object), gates, clock)
+        if position is None:
+            # Online, as a client, the game keeps no position: the delta and the fuel
+            # trend use the worked-out one.
+            position = next((p.position for p in players if p.local), None)
+        state = dataclasses.replace(state, players=players, position=position)
         live = state.live_fuel_trend(self._fuel_marks, self._fuel_history)
         if live is not None:
             state = dataclasses.replace(state, car=dataclasses.replace(car, fuel_trend=live))
@@ -774,6 +782,46 @@ class LapReader:
             return _known_position(x, z), self._gates
         except NotFound:
             return None, ()
+
+
+class DeadReckoning:
+    """Positions for cars whose position the game does not keep (online, when the game
+    is a client: it stays at (0, 0)), worked out for the live delta and gaps. Each car
+    starts at the middle of the checkpoint line it passed last, at the moment it passed
+    it (its checkpoint time), and moves on by its velocity (which the game does keep)
+    until the next line resets it: about a second, so it cannot drift far. Where across
+    the track it is stays unknown, so the radar does not use these."""
+
+    def __init__(self):
+        self.cars = {}  # name -> (checkpoints passed, (x, z), race clock)
+
+    def position(self, player, gates, clock):
+        passed = player.passed
+        if player.velocity is None or not gates or not passed or passed[-1] == NO_CHECKPOINT:
+            return None
+        vx, vz = player.velocity
+        count = len(passed)
+        known = self.cars.get(player.name)
+        if known is not None and known[0] == count and clock >= known[2]:
+            _count, (x, z), since = known
+        else:
+            (x1, z1), (x2, z2) = gates[(count - 1) % len(gates)]
+            x, z, since = (x1 + x2) / 2, (z1 + z2) / 2, passed[-1]
+        seconds = max(clock - since, 0) / UNITS_PER_SECOND
+        x, z = x + vx * seconds, z + vz * seconds
+        self.cars[player.name] = (count, (x, z), clock)
+        return (x, z)
+
+    def fill(self, players, gates, clock):
+        """`players` with a worked-out position where the game gave none."""
+        filled = []
+        for player in players:
+            if player.position is None:
+                worked_out = self.position(player, gates, clock)
+                if worked_out is not None:
+                    player = dataclasses.replace(player, position=worked_out, estimated=True)
+            filled.append(player)
+        return tuple(filled)
 
 
 def _known_position(x, z):
@@ -1357,6 +1405,7 @@ class Radar:
         if fresh:
             self.read_at = read_at
             self._record(players, read_at)
+        players = [p for p in players if not p.estimated]  # not exact enough for the radar
         me = next((p for p in players if p.local), None)
         mine = None if me is None or me.in_pit or me.finished else self._motion(me, read_at)
         if mine is None or mine[2] < RADAR_MIN_SPEED:

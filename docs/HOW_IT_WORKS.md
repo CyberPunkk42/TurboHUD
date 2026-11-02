@@ -197,9 +197,10 @@ gives no control over the car.
 - Live data on Linux only. Windows and macOS need their own way to read the game's
   memory.
 - In online races where your game is a client (joining someone else's server, or
-  hosting with only AI drivers), the cars' positions are not available yet: the radar
-  does not show there, and the delta and the gaps update at checkpoints instead of
-  continuously.
+  hosting with only AI drivers), the game keeps no car positions. TurboHUD works them
+  out from the last checkpoint each car passed and its velocity, for a live delta and
+  live gaps; the radar does not show there, as these positions are not exact enough
+  for it.
 - The car size on the radar (4.5 x 2 units) is an estimate.
 - A game update can rename classes or fields. TurboHUD then shows "waiting" instead of
   wrong numbers, and the names need updating.
