@@ -352,3 +352,8 @@ its "Recent changes".
   mentions --toggle where there are no shortcuts. On Wayland desktops other than
   Hyprland (KDE, GNOME) TurboHUD now runs through XWayland, where staying on top works
   (not yet tried there; TURBOHUD_PLATFORM=wayland keeps Wayland). Hyprland unchanged.
+- 2026-11-02: "<name> drafts you" changes colour with the strength of that car's
+  slipstream from the local player (the closer behind, the stronger): from the draft's
+  cyan through blue, violet and magenta to red (hud.blend goes round the colour wheel,
+  as a straight mix turns grey halfway). Rows can now have a colour of their own
+  ('#rrggbb') besides the theme's names.

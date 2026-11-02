@@ -1,5 +1,6 @@
 """What the HUD shows and where, as plain data that turbohud.hud draws."""
 
+import colorsys
 from dataclasses import dataclass, field
 
 MARGIN = 14  # space between the box's edge and the text, before scaling
@@ -55,6 +56,21 @@ class Sizes:
             return max(1, round(value * scale))
 
         return cls(scaled(MARGIN), scaled(16), scaled(40), scaled(20), scaled(13), scaled(8), scaled(6))
+
+
+def blend(start, end, share):
+    """'#rrggbb' that far (0 to 1) from colour `start` to `end`, both '#rrggbb', round
+    the colour wheel (hue, saturation and brightness each move evenly): a straight mix
+    of cyan and red turns grey halfway, this stays bright (through violet). The hue
+    goes the shorter way round."""
+    share = min(max(share, 0.0), 1.0)
+    if share in (0.0, 1.0):
+        return start if share == 0.0 else end
+    h1, s1, v1 = colorsys.rgb_to_hsv(*(int(start[i : i + 2], 16) / 255 for i in (1, 3, 5)))
+    h2, s2, v2 = colorsys.rgb_to_hsv(*(int(end[i : i + 2], 16) / 255 for i in (1, 3, 5)))
+    turn = (h2 - h1 + 0.5) % 1.0 - 0.5  # the shorter way round
+    rgb = colorsys.hsv_to_rgb((h1 + turn * share) % 1.0, s1 + (s2 - s1) * share, v1 + (v2 - v1) * share)
+    return '#' + ''.join(f'{round(c * 255):02x}' for c in rgb)
 
 
 def clock(seconds):

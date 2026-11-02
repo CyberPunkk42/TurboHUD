@@ -138,17 +138,33 @@ def draw_hud(painter, lines, theme, scale=None, left=0, width=None):
         if line.flag:
             draw_flag(painter, x, line.baseline, line.flag, line.size, outline)
             text_x = x + FLAG_WIDTH * line.size
-        outlined_text(painter, text_x, line.baseline, line.text, line.size, colors[line.color], outline)
+        outlined_text(
+            painter, text_x, line.baseline, line.text, line.size, _pick(colors, line.color), outline
+        )
         if line.right and width is not None:
             right_x = width - margin - text_advance(line.right, line.size)
             outlined_text(
-                painter, right_x, line.baseline, line.right, line.size, colors[line.right_color], outline
+                painter,
+                right_x,
+                line.baseline,
+                line.right,
+                line.size,
+                _pick(colors, line.right_color),
+                outline,
             )
         if line.tail:
             tail_x = text_x + text_advance(line.text, line.size)
             outlined_text(
-                painter, tail_x, line.baseline, line.tail, line.size, colors[line.tail_color], outline
+                painter, tail_x, line.baseline, line.tail, line.size, _pick(colors, line.tail_color), outline
             )
+
+
+def _pick(colors, name):
+    """The QColor for a row's colour: a theme name ('text', 'ahead' ...) or a colour of
+    its own, '#rrggbb' (such as a blend from turbohud.core.hud.blend)."""
+    if name.startswith('#'):
+        return QColor(name)
+    return colors[name]
 
 
 def _rgba(text):

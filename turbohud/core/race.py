@@ -27,7 +27,7 @@ import time
 from dataclasses import dataclass
 
 from turbohud.core.flags import flag_code, flag_text
-from turbohud.core.hud import Row, clock, local_time_rows
+from turbohud.core.hud import Row, blend, clock, local_time_rows
 from turbohud.core.il2cpp import ARRAY_DATA, ARRAY_LENGTH, LIST_ITEMS, SIMPLE_TYPES, NotFound, ReadError
 
 UNITS_PER_SECOND = 10_000
@@ -1242,6 +1242,8 @@ DRAFT_DOWNFORCE_WARN = 0.05  # downforce lost to the slipstream from which the d
 DRAFT_COUNTS = 0.05  # a draft at least this strong counts as time in a slipstream
 DRAFT_CARD_SECONDS = 20  # the race clock up to which the draft section shows the event's settings
 DRAFTED_FROM = 0.05  # a car behind drafting at least this strongly shows as drafting you
+DRAFTED_FROM_COLOR = '#5ec8ff'  # a car drafting the local player weakly: the draft's cyan
+DRAFTED_CLOSE_COLOR = '#ff3b3b'  # ... at full strength (right behind): red
 DRAFT_ANGLE_SPARE = 5  # degrees beyond the event's angle still taken as behind (positions lag a little)
 LEVEL_LOW = 0.15  # below this the level bar is red
 LEVEL_HALF = 0.35  # below this it is yellow
@@ -1639,7 +1641,10 @@ def draft_rows(state):
         name, strength = who
         if len(name) > MAX_NAME_SHOWN:
             name = name[: MAX_NAME_SHOWN - 1] + '…'
-        rows.append(Row(f'{name} drafts you {strength * 100:.0f}%', 'small', 'lift'))
+        # From the draft's cyan to red, the stronger its slipstream from the local car
+        # (the closer it is behind).
+        color = blend(DRAFTED_FROM_COLOR, DRAFTED_CLOSE_COLOR, strength)
+        rows.append(Row(f'{name} drafts you {strength * 100:.0f}%', 'small', color))
     return rows
 
 
