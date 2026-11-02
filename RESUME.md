@@ -51,6 +51,12 @@ See `docs/IMPROVEMENT_BACKLOG.md`. In short:
 4. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-02: The user confirmed in a race that the "drafts you" colour works.
+- 2026-11-02: "<name> drafts you" changes colour with the strength of that car's
+  slipstream from the local player (the closer behind, the stronger): from the draft's
+  cyan through blue, violet and magenta to red (hud.blend goes round the colour wheel,
+  as a straight mix turns grey halfway). Rows can now have a colour of their own
+  ('#rrggbb') besides the theme's names.
 - 2026-11-02: Linux commands and other desktops. `run_turbohud.sh --toggle` / `--move` /
   `--lock` / `--settings` / `--quit` tell the running TurboHUD what to do through a
   socket in the user's private runtime folder (turbohud/control.py, no Qt: answers in

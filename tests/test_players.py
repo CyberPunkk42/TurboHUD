@@ -612,3 +612,37 @@ class DraftTimeTests(unittest.TestCase):
         for clock in range(15_000, 100_001, 5_000):  # in a slipstream from 1 to 10 s: 9 s of a 100 s lap
             reader._count_draft(state(clock, 0.5, [0]))
         self.assertAlmostEqual(reader._count_draft(state(1_000_000, 0.0, [0, 1_000_000])), 0.09)
+
+
+class DraftedColourTests(unittest.TestCase):
+    def test_blend(self):
+        from turbohud.core.hud import blend
+
+        middle = blend('#5ec8ff', '#ff3b3b', 0.5)
+        self.assertGreater(max(int(middle[i : i + 2], 16) for i in (1, 3, 5)), 220)  # bright, not grey
+        self.assertEqual(blend('#5ec8ff', '#ff3b3b', 0.0), '#5ec8ff')
+        self.assertEqual(blend('#5ec8ff', '#ff3b3b', 1.0), '#ff3b3b')
+        self.assertEqual(blend('#5ec8ff', '#ff3b3b', 2.0), '#ff3b3b')  # kept within the two
+
+    def test_the_closer_the_redder(self):
+        me = heading_north('Me', (0.0, 100.0), local=True)
+        car = race.CarState(False, 0, 0, False, 0, 40.0, draft=0.0)
+
+        def colour(drag):
+            chaser = heading_north('Chaser', (0.5, 90.0), drag=drag)
+            state = race.LapState(
+                clock=900_000,
+                time_limit=0,
+                laps_completed=1,
+                laps_to_finish=3,
+                lap_starts=[0, 800_000],
+                car=car,
+                draft=SERVER_DRAFT,
+                players=(me, chaser),
+            )
+            return race.draft_rows(state)[-1].color
+
+        weak, strong = colour(0.99), colour(0.905)  # 10 % and 95 % of the slipstream
+        red = lambda c: int(c[1:3], 16) - int(c[5:7], 16)  # red over blue
+        self.assertLess(red(weak), 0)  # still bluish
+        self.assertGreater(red(strong), 150)  # nearly red
