@@ -52,6 +52,10 @@ See `docs/IMPROVEMENT_BACKLOG.md`. In short:
    Hyprland.
 
 ## Recent changes
+- 2026-11-02: Confirmed by the user in races: PIT over the whole pit area, health
+  (number, colours, bar), the HUD staying after the finish until the race is over, and
+  move mode (groups, centring, saved after a restart). Still to see: the radar as an
+  online client (car places, cars ahead).
 - 2026-11-02: The user confirmed the draft section works in an online race (meter and
   downforce warning).
 - 2026-11-02: Draft section (slipstream). "Draft 73%" with a cyan level bar: how strong
