@@ -23,14 +23,12 @@ Bundled apps from `tools/build_app.py` with the probe and clear launch-option st
 Linux; an AppImage instead of the `.tar.gz`. Before the repository goes public for the
 TSU community: the privacy check (pre-push hook), a licence, a README for players.
 
-## 4. Linux: shortcuts, other Wayland desktops
-On top of the game on Hyprland works (runtime requests for TurboHUD's own windows).
-Shortcuts: Linux has none yet (Ctrl+Shift+L and Ctrl+Shift+Q do nothing there); the tray
-menu switches move mode. Options: X11 key grabs under XWayland; on Wayland, a command
-such as `TurboHUD --toggle` that tells the running TurboHUD what to do, which the
-player binds to a key themselves, or the GlobalShortcuts portal where the desktop has
-it. Other Wayland desktops (KDE, GNOME) ignore Qt's on-top hint: the layer-shell
-extension (KDE, Sway; not GNOME) would need a library outside PySide6.
+## 4. Linux: other desktops
+Commands for the running TurboHUD (`run_turbohud.sh --toggle` and so on) are done, and
+on Wayland desktops other than Hyprland TurboHUD runs through XWayland, where staying on
+top should work. Still to try on KDE and GNOME: on top over the game, clicks going
+through. If XWayland is not enough there, the layer-shell extension (KDE, Sway; not
+GNOME) would need a library outside PySide6.
 
 ## Design notes for the real overlay
 - Move mode is a short, deliberate step: while the overlay takes the mouse, the game gets

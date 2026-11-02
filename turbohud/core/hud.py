@@ -73,14 +73,18 @@ def session_rows(seconds):
     return [Row('TurboHUD - session time', 'title'), Row(clock(seconds), 'big', 'accent')]
 
 
-def help_lines(shortcuts):
-    """The move-mode hint, as lines, for the move-mode panel."""
+def help_lines(shortcuts, commands=False):
+    """The move-mode hint, as lines, for the move-mode panel. `commands`: the command
+    line can switch move mode (turbohud.control), for systems without shortcuts."""
     finish = 'Ctrl+Shift+L or Lock finishes.' if shortcuts else 'Lock finishes.'
-    return [
+    lines = [
         'Drag a section to move it. At its corner: taller or shorter scales',
         'the text, wider makes room for it.',
         finish,
     ]
+    if commands and not shortcuts:
+        lines.append('Without shortcuts: run_turbohud.sh --toggle (a key can run it).')
+    return lines
 
 
 def _content(rows, sizes):

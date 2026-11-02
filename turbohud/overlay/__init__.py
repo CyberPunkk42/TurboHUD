@@ -7,10 +7,28 @@ Each system module has a `Native` class with the same methods:
 - register_hotkeys(on_hotkey) -> bool, unregister_hotkeys()
 """
 
+import os
 import sys
 
 HOTKEY_LOCK = 1
 HOTKEY_QUIT = 2
+
+
+def choose_platform(environ=None, platform=sys.platform):
+    """The Qt platform to use, or None for Qt's own choice. On Linux under Wayland
+    without Hyprland (KDE, GNOME ...), Qt's stay-on-top hint is ignored, so TurboHUD
+    runs through XWayland ('xcb'), where those desktops honour it. Not on Hyprland,
+    where TurboHUD asks Hyprland itself; not when the player set QT_QPA_PLATFORM, or
+    TURBOHUD_PLATFORM=wayland to keep Wayland."""
+    environ = os.environ if environ is None else environ
+    if not platform.startswith('linux') or 'QT_QPA_PLATFORM' in environ:
+        return None
+    if environ.get('TURBOHUD_PLATFORM') == 'wayland':
+        return None
+    wayland = environ.get('WAYLAND_DISPLAY') or environ.get('XDG_SESSION_TYPE') == 'wayland'
+    if wayland and not environ.get('HYPRLAND_INSTANCE_SIGNATURE') and environ.get('DISPLAY'):
+        return 'xcb'
+    return None
 
 
 def native_for(platform=sys.platform):

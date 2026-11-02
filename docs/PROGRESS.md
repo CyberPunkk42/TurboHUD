@@ -343,3 +343,12 @@ its "Recent changes".
   stopped politely (SIGTERM, like Steam's Stop) it passes the stop on and the game ends.
   Fixed: stopped before the game was found, the probe looked on for up to 3 minutes;
   now it quits as soon as the program it started has ended.
+- 2026-11-02: Linux commands and other desktops. `run_turbohud.sh --toggle` / `--move` /
+  `--lock` / `--settings` / `--quit` tell the running TurboHUD what to do through a
+  socket in the user's private runtime folder (turbohud/control.py, no Qt: answers in
+  34 to 75 ms, tested end to end); a second start opens no second copy but switches the
+  running one to move mode. The player can bind a command to a key in the desktop's own
+  settings (README shows a Hyprland line); TurboHUD changes none. The move-mode panel
+  mentions --toggle where there are no shortcuts. On Wayland desktops other than
+  Hyprland (KDE, GNOME) TurboHUD now runs through XWayland, where staying on top works
+  (not yet tried there; TURBOHUD_PLATFORM=wayland keeps Wayland). Hyprland unchanged.

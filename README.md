@@ -47,14 +47,29 @@ runs, you see:
    `tar -xzf TurboHUD-<version>-linux-x64.tar.gz`
 2. Start it: double-click `TurboHUD` in the unpacked `TurboHUD` folder, or in a terminal
    `./TurboHUD/TurboHUD`.
-3. Linux has no shortcuts yet: Ctrl+Shift+L and Ctrl+Shift+Q do nothing there. Use the
-   TurboHUD icon's menu (in the tray or status bar) instead: **Move mode** shows the blue
-   box with the **Lock** and **Close** buttons, **Quit TurboHUD** quits. Where the
-   desktop has no tray, TurboHUD starts in move mode, so **Close** quits it.
+3. Linux has no shortcuts of its own (Ctrl+Shift+L and Ctrl+Shift+Q do nothing there).
+   Use the TurboHUD icon's menu (in the tray or status bar): **Move mode**, **Settings…**,
+   **Quit TurboHUD**. Or tell the running TurboHUD from a terminal, in a few hundredths
+   of a second:
+
+   | Command | Does |
+   |---|---|
+   | `run_turbohud.sh --toggle` | move mode on or off |
+   | `run_turbohud.sh --move` / `--lock` | move mode on / off |
+   | `run_turbohud.sh --settings` | open the settings window |
+   | `run_turbohud.sh --quit` | quit TurboHUD |
+
+   Starting TurboHUD again while it runs opens no second copy: it switches the running
+   one to move mode. To have a key for it, bind the command in your desktop's own key
+   settings yourself (TurboHUD changes none). On Hyprland, for example, a line like
+   `bind = SUPER SHIFT, H, exec, sh /home/<user>/<folder>/TurboHUD/run_turbohud.sh --toggle`
+   in your own bindings file (on Omarchy `~/.config/hypr/bindings.conf`).
+   Where the desktop has no tray, TurboHUD starts in move mode, so **Close** quits it.
 4. On Hyprland (for example Omarchy), TurboHUD asks Hyprland to float and pin its own
    window above the game, without a frame and without taking the keyboard focus; your
-   Hyprland settings are not changed. On X11 Qt keeps it on top. Other Wayland desktops
-   (GNOME, KDE) do not keep it on top yet.
+   Hyprland settings are not changed. On X11 Qt keeps it on top. On other Wayland
+   desktops (KDE, GNOME ...) TurboHUD runs through XWayland, where those desktops keep
+   a window on top (not yet tried there; `TURBOHUD_PLATFORM=wayland` keeps Wayland).
 
 ### Live lap times on Linux
 Linux lets a program read another program's memory only if it started that program.

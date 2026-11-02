@@ -48,10 +48,18 @@ See `docs/IMPROVEMENT_BACKLOG.md`. In short:
 2. macOS: what reading the game's memory inside CrossOver would take.
 3. Builds and release: bundled apps with the probe, an AppImage; before the repository
    goes public, the privacy check, a licence and a README for players.
-4. Linux: shortcuts (for example a `TurboHUD --toggle` the player binds themselves) and
-   other Wayland desktops.
+4. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-02: Linux commands and other desktops. `run_turbohud.sh --toggle` / `--move` /
+  `--lock` / `--settings` / `--quit` tell the running TurboHUD what to do through a
+  socket in the user's private runtime folder (turbohud/control.py, no Qt: answers in
+  34 to 75 ms, tested end to end); a second start opens no second copy but switches the
+  running one to move mode. The player can bind a command to a key in the desktop's own
+  settings (README shows a Hyprland line); TurboHUD changes none. The move-mode panel
+  mentions --toggle where there are no shortcuts. On Wayland desktops other than
+  Hyprland (KDE, GNOME) TurboHUD now runs through XWayland, where staying on top works
+  (not yet tried there; TURBOHUD_PLATFORM=wayland keeps Wayland). Hyprland unchanged.
 - 2026-11-02: Open questions answered. Car size measured in an online race with 13 AI
   cars (Tatuus FA01, 630 reads of real positions): cars in line no closer than about
   4.0 centre to centre, side by side about 1.3 to 1.4; the radar now uses 4.0 x 1.4
