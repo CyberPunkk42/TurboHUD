@@ -214,7 +214,11 @@ class LapState:
 
     @property
     def lap_number(self):
-        return min(self.laps_completed + 1, self.laps_to_finish) if self.laps_to_finish else self.laps_completed + 1
+        return (
+            min(self.laps_completed + 1, self.laps_to_finish)
+            if self.laps_to_finish
+            else self.laps_completed + 1
+        )
 
 
 def _segment_distance(gate, point):
@@ -312,7 +316,11 @@ class CarState:
     def saving(self):
         """True when this lap uses less fuel than the recent ones so far, False when more,
         None when about the same or not known yet."""
-        if self.fuel_trend is None or not self.fuel_per_lap or abs(self.fuel_trend) < EVEN_FUEL * self.fuel_per_lap:
+        if (
+            self.fuel_trend is None
+            or not self.fuel_per_lap
+            or abs(self.fuel_trend) < EVEN_FUEL * self.fuel_per_lap
+        ):
             return None
         return self.fuel_trend < 0
 
@@ -362,7 +370,7 @@ def per_lap(history, laps=PER_LAP_LAPS):
     for index in range(1, len(history)):
         if history[index] < history[index - 1]:
             start = index
-    recent = history[start:][-(laps + 1):]
+    recent = history[start:][-(laps + 1) :]
     if len(recent) < 2:
         return None
     return (recent[-1] - recent[0]) / (len(recent) - 1)
@@ -591,7 +599,9 @@ class LapReader:
             recorded = self._recorded_positions(clock)
             if recorded:
                 players = tuple(
-                    dataclasses.replace(p, position=recorded[i]) if p.position is None and i in recorded else p
+                    dataclasses.replace(p, position=recorded[i])
+                    if p.position is None and i in recorded
+                    else p
                     for p, i in zip(players, self._player_indices)
                 )
         players = self._reckoning.fill(players, gates, clock)
@@ -633,10 +643,22 @@ class LapReader:
         fuel_starts = [self._fuel_history[i] for i in sorted(self._fuel_history)]
         wear_starts = [self._wear_history[i] for i in sorted(self._wear_history)]
         return CarState(
-            fuel_on=fuel_on, fuel_used=fuel_used, fuel_tank=tank, tires_on=tires_on, tire_wear=tire_wear,
-            speed=speed, fuel_per_lap=per_lap(fuel_starts), wear_per_lap=per_lap(wear_starts), fuel_trend=trend,
-            throttle=throttle, brake=brake, health=health, downforce_from=downforce_from, slowed_from=slowed_from,
-            draft=draft, draft_downforce_loss=downforce_loss,
+            fuel_on=fuel_on,
+            fuel_used=fuel_used,
+            fuel_tank=tank,
+            tires_on=tires_on,
+            tire_wear=tire_wear,
+            speed=speed,
+            fuel_per_lap=per_lap(fuel_starts),
+            wear_per_lap=per_lap(wear_starts),
+            fuel_trend=trend,
+            throttle=throttle,
+            brake=brake,
+            health=health,
+            downforce_from=downforce_from,
+            slowed_from=slowed_from,
+            draft=draft,
+            draft_downforce_loss=downforce_loss,
         )
 
     def _drafting(self, updater):
@@ -742,12 +764,17 @@ class LapReader:
         elif clock - self._recorder_moved > RECORDER_STALE:
             return {}
         found = {}
-        for index, (element, data) in enumerate(zip(elements, memory.read_many([e + to_position for e in elements], 12))):
+        for index, (element, data) in enumerate(
+            zip(elements, memory.read_many([e + to_position for e in elements], 12))
+        ):
             if not element or data is None:
                 continue
             x, _y, z = struct.unpack('<3I', data)
             if x or z:
-                found[index] = ((x - QUANTIZED_ZERO) / QUANTIZED_SCALE, (z - QUANTIZED_ZERO) / QUANTIZED_SCALE)
+                found[index] = (
+                    (x - QUANTIZED_ZERO) / QUANTIZED_SCALE,
+                    (z - QUANTIZED_ZERO) / QUANTIZED_SCALE,
+                )
         return found
 
     def _player_state(self, player):
@@ -796,7 +823,10 @@ class LapReader:
             except (NotFound, ReadError):
                 pass
             if updater is not None:
-                velocity, forward = self._flat(updater, 'm_oldVelocity3d'), self._flat(updater, 'm_oldForwardDirection')
+                velocity, forward = (
+                    self._flat(updater, 'm_oldVelocity3d'),
+                    self._flat(updater, 'm_oldForwardDirection'),
+                )
             try:
                 where = vehicle + self._offset('vehicle', vehicle, 'm_statsNewPosition')
                 x, _y, z = struct.unpack('<3f', memory.read(where, 12))
@@ -804,7 +834,16 @@ class LapReader:
             except (NotFound, ReadError):
                 pass
         return PlayerState(
-            name, flag, laps_completed, tuple(checkpoints), finished, in_pit, local, position, velocity, forward
+            name,
+            flag,
+            laps_completed,
+            tuple(checkpoints),
+            finished,
+            in_pit,
+            local,
+            position,
+            velocity,
+            forward,
         )
 
     def _flat(self, obj, name):
@@ -819,7 +858,11 @@ class LapReader:
         """A simple field read by the type the game gives it (int, float, ...)."""
         key = (role, name)
         if key not in self._types:
-            found = {n: (offset, code) for n, offset, static, code in self.il.field_list(self.il.memory.u64(obj)) if not static}
+            found = {
+                n: (offset, code)
+                for n, offset, static, code in self.il.field_list(self.il.memory.u64(obj))
+                if not static
+            }
             if name not in found or found[name][1] not in SIMPLE_TYPES:
                 raise NotFound(f'no simple field {name}')
             self._types[key] = found[name]
@@ -838,7 +881,9 @@ class LapReader:
                 if isinstance(value, float):
                     values.append(min(max(value, 0.0), 1.0))
                 else:
-                    values.append(min(max(self._number('controls', controls, f'{name}InThirds') / 3, 0.0), 1.0))
+                    values.append(
+                        min(max(self._number('controls', controls, f'{name}InThirds') / 3, 0.0), 1.0)
+                    )
             return tuple(values)
         except (NotFound, ReadError):
             return None, None  # optional: the rest of the race reads on without it
@@ -860,7 +905,10 @@ class LapReader:
         one = self._offset('properties', properties[0], 'position1')
         two = self._offset('properties', properties[0], 'position2')
         gates = []
-        ends = zip(memory.read_many([p + one for p in properties], 12), memory.read_many([p + two for p in properties], 12))
+        ends = zip(
+            memory.read_many([p + one for p in properties], 12),
+            memory.read_many([p + two for p in properties], 12),
+        )
         for first, second in ends:
             if first is None or second is None:
                 raise NotFound('checkpoint line not readable')
@@ -875,7 +923,9 @@ class LapReader:
         memory = self.il.memory
         try:
             vehicle = self._ref('player', player, 'm_vehicle')
-            x, _y, z = struct.unpack('<3f', memory.read(vehicle + self._offset('vehicle', vehicle, 'm_statsNewPosition'), 12))
+            x, _y, z = struct.unpack(
+                '<3f', memory.read(vehicle + self._offset('vehicle', vehicle, 'm_statsNewPosition'), 12)
+            )
             if self._gates is None:
                 self._gates = self._read_gates(player)
             return _known_position(x, z), self._gates
@@ -1048,7 +1098,11 @@ def race_sections(snapshot, now, speed_unit='kmh', standings=None, radar=None):
 def _racing_sections(snapshot, now):
     """The lap sections while the local player races."""
     state = snapshot.state
-    title = f'Lap {state.lap_number}/{state.laps_to_finish}' if state.laps_to_finish else f'Lap {state.lap_number}'
+    title = (
+        f'Lap {state.lap_number}/{state.laps_to_finish}'
+        if state.laps_to_finish
+        else f'Lap {state.lap_number}'
+    )
     left = state.time_left
     if left is not None:
         title += f'  -  {clock(math.ceil(left / UNITS_PER_SECOND))} left' if left > 0 else '  -  time is up'
@@ -1104,11 +1158,16 @@ def car_sections(car, laps_to_go=None, speed_unit='kmh'):
         if margin is None:
             sections['fuelfinish'] = [Row('Finish -', 'medium')]
         else:
-            sections['fuelfinish'] = [Row(f'Finish {margin:+.1f} laps', 'medium', 'ahead' if margin >= 0 else 'behind')]
+            sections['fuelfinish'] = [
+                Row(f'Finish {margin:+.1f} laps', 'medium', 'ahead' if margin >= 0 else 'behind')
+            ]
     levels = {}
     if car.fuel_left is not None:
         margin = fuel_margin(car, laps_to_go)
-        levels['fuel'] = (car.fuel_left, 'behind' if margin is not None and margin < 0 else _level_color(car.fuel_left))
+        levels['fuel'] = (
+            car.fuel_left,
+            'behind' if margin is not None and margin < 0 else _level_color(car.fuel_left),
+        )
     if car.tires_left is not None:
         sections['tires'] = [Row(f'Tires {car.tires_left * 100:.0f}%{_laps_text(car.tire_laps)}', 'medium')]
         levels['tires'] = (car.tires_left, _level_color(car.tires_left))
@@ -1124,7 +1183,9 @@ def car_sections(car, laps_to_go=None, speed_unit='kmh'):
         warn = car.draft_downforce_loss >= DRAFT_DOWNFORCE_WARN
         tail = f'  -{car.draft_downforce_loss * 100:.0f}% downforce' if warn else ''
         color = 'draft' if car.draft > 0 else 'text'
-        sections['draft'] = [Row(f'Draft {car.draft * 100:.0f}%', 'medium', color, tail=tail, tail_color='lift')]
+        sections['draft'] = [
+            Row(f'Draft {car.draft * 100:.0f}%', 'medium', color, tail=tail, tail_color='lift')
+        ]
         levels['draft'] = (car.draft, 'draft')
     if levels:
         sections['levels'] = levels  # {section: (0 to 1, colour)} for the bars below the text
@@ -1155,6 +1216,7 @@ MAX_NAME_SHOWN = 18
 def ranked(players):
     """Players in race order: finished ones by when they finished, then the others by
     how many checkpoints they passed, and at the same checkpoint by who got there first."""
+
     def key(player):
         if player.finish_time is not None:
             return (0, player.finish_time, 0)
@@ -1302,7 +1364,7 @@ def shown_players(players, max_rows=MAX_PLAYER_ROWS, order=None):
     me = next((i for i, (_pos, p) in enumerate(order) if p.local), 0)
     around = max_rows - 1
     first = min(max(me - around // 2, 1), len(order) - around)
-    return [order[0]] + order[first:first + around]
+    return [order[0]] + order[first : first + around]
 
 
 def players_rows(players, order=None, clock=None, gates=()):
@@ -1316,12 +1378,18 @@ def players_rows(players, order=None, clock=None, gates=()):
             name = name[: MAX_NAME_SHOWN - 1] + '…'
         found = gap(player, me, clock, gates) if me is not None and not player.local else None
         color = 'text' if found is None or found[1] == 0 else ('behind' if found[1] < 0 else 'ahead')
-        rows.append(Row(
-            f'{position}. {name}', 'small', 'accent' if player.local else 'text',
-            tail='  PIT' if player.in_pit else '', tail_color='lift',
-            flag=flag_code(player.flag) or flag_text(player.flag),
-            right=gap_text(found), right_color=color,
-        ))
+        rows.append(
+            Row(
+                f'{position}. {name}',
+                'small',
+                'accent' if player.local else 'text',
+                tail='  PIT' if player.in_pit else '',
+                tail_color='lift',
+                flag=flag_code(player.flag) or flag_text(player.flag),
+                right=gap_text(found),
+                right_color=color,
+            )
+        )
     return rows
 
 
@@ -1559,7 +1627,9 @@ class Radar:
             if target is not None:
                 self.counted_at = read_at
                 # Up at once (a car beside matters now), down gently.
-                self.opacity = target if target >= self.opacity else self.opacity + (target - self.opacity) * RADAR_EASE
+                self.opacity = (
+                    target if target >= self.opacity else self.opacity + (target - self.opacity) * RADAR_EASE
+                )
             elif self.counted_at is not None and read_at - self.counted_at <= RADAR_HOLD:
                 self.opacity = max(RADAR_FAINT, self.opacity + (RADAR_FAINT - self.opacity) * RADAR_EASE)
             else:
@@ -1572,5 +1642,17 @@ class Radar:
 def race_rows(snapshot, now):
     """All sections' rows in one list, top to bottom (for the terminal and tests)."""
     sections = race_sections(snapshot, now)
-    order = ('lap', 'current', 'delta', 'times', 'fuel', 'fuelfinish', 'tires', 'health', 'draft', 'speed', 'players')
+    order = (
+        'lap',
+        'current',
+        'delta',
+        'times',
+        'fuel',
+        'fuelfinish',
+        'tires',
+        'health',
+        'draft',
+        'speed',
+        'players',
+    )
     return [row for name in order for row in sections.get(name, [])]

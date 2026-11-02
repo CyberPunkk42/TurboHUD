@@ -21,8 +21,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from turbohud.core.il2cpp import SIMPLE_TYPES, TYPE_VALUETYPE, NotFound  # noqa: E402
-from turbohud.tsu.client import connect  # noqa: E402
+from turbohud.core.il2cpp import SIMPLE_TYPES, TYPE_VALUETYPE, NotFound
+from turbohud.tsu.client import connect
 
 # (object, field) pairs to watch while driving.
 WATCH = [
@@ -39,7 +39,7 @@ WATCH = [
 def value(il, obj, offset, code):
     """A field's value as text: simple types as numbers, structs as three floats."""
     if code in SIMPLE_TYPES:
-        name, fmt = SIMPLE_TYPES[code]
+        _name, fmt = SIMPLE_TYPES[code]
         number = struct.unpack(fmt, il.memory.read(obj + offset, struct.calcsize(fmt)))[0]
         return f'{number:.4f}' if isinstance(number, float) else str(number)
     if code == TYPE_VALUETYPE:

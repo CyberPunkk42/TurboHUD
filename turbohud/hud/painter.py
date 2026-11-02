@@ -76,8 +76,12 @@ def draw_bars(painter, bars):
 
 def draw_level(painter, bar):
     """A level bar from turbohud.core.hud.level_bar: grey, lit from the left."""
-    colors = {'ahead': QColor(AHEAD_COLOR), 'behind': QColor(BEHIND_COLOR), 'lift': QColor(LIFT_COLOR),
-              'draft': QColor(DRAFT_COLOR)}
+    colors = {
+        'ahead': QColor(AHEAD_COLOR),
+        'behind': QColor(BEHIND_COLOR),
+        'lift': QColor(LIFT_COLOR),
+        'draft': QColor(DRAFT_COLOR),
+    }
     radius = min(bar.height / 2, 3)
     painter.setPen(QPen(QColor(0, 0, 0, 160), 1))
     painter.setBrush(QColor(*BAR_OFF))
@@ -137,10 +141,14 @@ def draw_hud(painter, lines, theme, scale=None, left=0, width=None):
         outlined_text(painter, text_x, line.baseline, line.text, line.size, colors[line.color], outline)
         if line.right and width is not None:
             right_x = width - margin - text_advance(line.right, line.size)
-            outlined_text(painter, right_x, line.baseline, line.right, line.size, colors[line.right_color], outline)
+            outlined_text(
+                painter, right_x, line.baseline, line.right, line.size, colors[line.right_color], outline
+            )
         if line.tail:
             tail_x = text_x + text_advance(line.text, line.size)
-            outlined_text(painter, tail_x, line.baseline, line.tail, line.size, colors[line.tail_color], outline)
+            outlined_text(
+                painter, tail_x, line.baseline, line.tail, line.size, colors[line.tail_color], outline
+            )
 
 
 def _rgba(text):

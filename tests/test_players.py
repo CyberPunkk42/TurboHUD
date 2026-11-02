@@ -25,7 +25,7 @@ class FlagTests(unittest.TestCase):
     def test_codes_and_emoji(self):
         self.assertEqual(len(FLAGS), 222)
         self.assertEqual(flag_code(GERMANY), 'DE')
-        self.assertEqual(flag_emoji('DE'), '\U0001F1E9\U0001F1EA')
+        self.assertEqual(flag_emoji('DE'), '\U0001f1e9\U0001f1ea')
         self.assertIsNone(flag_code(0))
         self.assertIsNone(flag_code(999))
 
@@ -46,7 +46,9 @@ class RankingTests(unittest.TestCase):
         done_late = player('Late', [lap(0), lap(50_000)], laps=1, finished=True)
         done_early = player('Early', [lap(0), lap(45_000)], laps=1, finished=True)
         racing = player('Racing', [lap(0), lap(40_000), lap(80_000, count=2)], laps=2)
-        self.assertEqual([p.name for p in race.ranked([racing, done_late, done_early])], ['Early', 'Late', 'Racing'])
+        self.assertEqual(
+            [p.name for p in race.ranked([racing, done_late, done_early])], ['Early', 'Late', 'Racing']
+        )
 
 
 class GapTests(unittest.TestCase):
@@ -75,11 +77,16 @@ class RowsTests(unittest.TestCase):
         ahead = player('Ahead', [lap(0), lap(38_000)], in_pit=True)
         rows = race.players_rows([me, ahead])
         self.assertEqual([r.text for r in rows], ['1. Ahead', '2. Me'])
-        self.assertEqual((rows[0].flag, rows[0].tail, rows[0].right, rows[0].right_color), ('DE', '  PIT', '-0.200', 'behind'))
+        self.assertEqual(
+            (rows[0].flag, rows[0].tail, rows[0].right, rows[0].right_color),
+            ('DE', '  PIT', '-0.200', 'behind'),
+        )
         self.assertEqual((rows[1].color, rows[1].right), ('accent', ''))
 
     def test_many_players_show_the_leader_and_those_around_me(self):
-        players = [player(f'P{i}', [lap(0), lap(40_000 + i * 100, count=3)], local=(i == 12)) for i in range(20)]
+        players = [
+            player(f'P{i}', [lap(0), lap(40_000 + i * 100, count=3)], local=(i == 12)) for i in range(20)
+        ]
         shown = race.shown_players(players)
         positions = [pos for pos, _p in shown]
         self.assertEqual(len(shown), race.MAX_PLAYER_ROWS)
@@ -129,7 +136,9 @@ class BlueFlagTests(unittest.TestCase):
         self.assertAlmostEqual(race.blue_flag([self.me, fast], now=422_000), 0.1)
 
     def test_gone_once_it_passed(self):
-        fast = player('Fast', [lap(0, 40_000), lap(160_000, 40_000), (405_000, 411_000, 421_000, 424_000)], laps=2)
+        fast = player(
+            'Fast', [lap(0, 40_000), lap(160_000, 40_000), (405_000, 411_000, 421_000, 424_000)], laps=2
+        )
         self.assertIsNone(race.blue_flag([self.me, fast], now=425_000))
 
     def test_a_car_on_the_same_lap_just_ahead_is_no_blue_flag(self):
@@ -161,12 +170,21 @@ class BlueFlagSectionTests(unittest.TestCase):
     def test_race_sections_carry_the_opacity_only_while_a_car_comes(self):
         me = player('Me', [lap(0), lap(400_000, 10_000, 3)], local=True)
         fast = player('Fast', [lap(0, 40_000), lap(160_000, 40_000), (405_000, 422_000)], laps=2)
-        state = race.LapState(lap_starts=(0, 400_000), laps_completed=1, laps_to_finish=5, clock=425_000,
-                              time_limit=0, checkpoints=(), players=(me, fast))
+        state = race.LapState(
+            lap_starts=(0, 400_000),
+            laps_completed=1,
+            laps_to_finish=5,
+            clock=425_000,
+            time_limit=0,
+            checkpoints=(),
+            players=(me, fast),
+        )
         snapshot = race.Snapshot(status=race.RACING, state=state, running=False, read_at=10.0, moved_at=10.0)
         sections = race.race_sections(snapshot, 10.5)
         self.assertAlmostEqual(sections['blue'], race.blue_flag_opacity(1.2))
-        alone = race.Snapshot(status=race.RACING, state=dataclasses.replace(state, players=(me,)), moved_at=10.0)
+        alone = race.Snapshot(
+            status=race.RACING, state=dataclasses.replace(state, players=(me,)), moved_at=10.0
+        )
         self.assertNotIn('blue', race.race_sections(alone, 10.5))
 
 
@@ -215,7 +233,9 @@ class RadarTests(unittest.TestCase):
         for step in range(steps):
             t = step * 0.05
             me = car('Me', (0.0, speed * t), local=True)
-            others = [car(name, (x, z + (speed * t if others_move else 0.0))) for name, (x, z) in others_at.items()]
+            others = [
+                car(name, (x, z + (speed * t if others_move else 0.0))) for name, (x, z) in others_at.items()
+            ]
             view = radar.update([me, *others], t)
         return view
 
@@ -297,15 +317,19 @@ class RadarSteadyTests(unittest.TestCase):
             t = step * 0.05
             view = radar.update([me(t), moving('Close', (3.0, 40.0 * t), (0.0, 40.0))], t)
         self.assertEqual(view.opacity, 1.0)
-        gone = [radar.update([me(t), moving('Close', (3.0, 40.0 * t - 60), (0.0, 40.0))], t)
-                for t in (0.2, 0.3, 0.4)]
+        gone = [
+            radar.update([me(t), moving('Close', (3.0, 40.0 * t - 60), (0.0, 40.0))], t)
+            for t in (0.2, 0.3, 0.4)
+        ]
         self.assertTrue(all(v is not None for v in gone))  # held
         self.assertLess(gone[-1].opacity, gone[0].opacity)  # fading
         self.assertIsNone(radar.update([me(0.8), moving('Close', (3.0, 40.0 * 0.8 - 60), (0.0, 40.0))], 0.8))
 
     def test_a_car_beside_shows_at_once_at_full(self):
         radar = race.Radar()
-        view = radar.update([moving('Me', (0.0, 0.0), (0.0, 40.0), local=True), moving('B', (3.0, 0.0), (0.0, 40.0))], 0.0)
+        view = radar.update(
+            [moving('Me', (0.0, 0.0), (0.0, 40.0), local=True), moving('B', (3.0, 0.0), (0.0, 40.0))], 0.0
+        )
         self.assertEqual(view.opacity, 1.0)
 
 
@@ -381,8 +405,18 @@ class LiveGapTests(unittest.TestCase):
 
 class LevelBarTests(unittest.TestCase):
     def test_fuel_tires_and_health_get_levels_with_colours(self):
-        car = race.CarState(True, 84_000, 168_000, True, int(race.MAX_TIRE_WEAR * 0.9), 30.0,
-                            fuel_per_lap=10_000, health=0.6, downforce_from=0.9, slowed_from=0.75)
+        car = race.CarState(
+            True,
+            84_000,
+            168_000,
+            True,
+            int(race.MAX_TIRE_WEAR * 0.9),
+            30.0,
+            fuel_per_lap=10_000,
+            health=0.6,
+            downforce_from=0.9,
+            slowed_from=0.75,
+        )
         levels = race.car_sections(car, laps_to_go=5)['levels']
         self.assertEqual(levels['fuel'], (0.5, 'ahead'))  # 8.4 laps left for 5 to go
         self.assertAlmostEqual(levels['tires'][0], 0.1)
@@ -395,6 +429,7 @@ class LevelBarTests(unittest.TestCase):
 
     def test_the_bar_sits_below_the_text_across_the_section(self):
         from turbohud.core import hud
+
         bar = hud.level_bar(300, 50, 1.0, 0.4, 'lift')
         self.assertEqual((bar.x, bar.y, bar.width, bar.height), (14, 43, 272, 8))
         self.assertEqual((bar.fill, bar.color), (0.4, 'lift'))
@@ -417,20 +452,35 @@ class DeadReckoningTests(unittest.TestCase):
 
     def test_the_next_line_starts_it_again(self):
         reckoning = race.DeadReckoning()
-        reckoning.position(client_car('Me', (0, 10_000), (0.0, 30.0), local=True), LINES, clock=19_000)  # drifted on
+        reckoning.position(
+            client_car('Me', (0, 10_000), (0.0, 30.0), local=True), LINES, clock=19_000
+        )  # drifted on
         car = client_car('Me', (0, 10_000, 20_000), (0.0, 10.0), local=True)
-        self.assertEqual(reckoning.position(car, LINES, clock=21_000), (0.0, 21.0))  # from line 2, not the drift
+        self.assertEqual(
+            reckoning.position(car, LINES, clock=21_000), (0.0, 21.0)
+        )  # from line 2, not the drift
 
     def test_filled_in_only_where_the_game_has_none_and_not_for_the_radar(self):
         reckoning = race.DeadReckoning()
-        known = race.PlayerState('Known', GERMANY, 0, ((0, 10_000),), position=(1.0, 12.0), velocity=(0.0, 10.0))
+        known = race.PlayerState(
+            'Known', GERMANY, 0, ((0, 10_000),), position=(1.0, 12.0), velocity=(0.0, 10.0)
+        )
         filled = reckoning.fill([known, client_car('Guess', (0, 10_000), (0.0, 10.0))], LINES, clock=12_000)
         self.assertEqual(filled[0].position, (1.0, 12.0))
         self.assertFalse(filled[0].estimated)
         self.assertEqual(filled[1].position, (0.0, 12.0))
         self.assertTrue(filled[1].estimated)
-        me = race.PlayerState('Me', GERMANY, 0, ((0,),), local=True, position=(0.0, 0.0), velocity=(0.0, 40.0),
-                              estimated=True, forward=(0.0, 1.0))
+        me = race.PlayerState(
+            'Me',
+            GERMANY,
+            0,
+            ((0,),),
+            local=True,
+            position=(0.0, 0.0),
+            velocity=(0.0, 40.0),
+            estimated=True,
+            forward=(0.0, 1.0),
+        )
         self.assertIsNone(race.Radar().update([me, filled[1]], 0.0))
 
     def test_the_live_delta_runs_between_checkpoints_with_it(self):
@@ -438,9 +488,16 @@ class DeadReckoningTests(unittest.TestCase):
         reckoning = race.DeadReckoning()
         me = client_car('Me', (40_000, 49_000), (0.0, 10.0), local=True)  # 1 s faster to line 1
         position = reckoning.position(me, LINES, clock=54_000)  # z = 15, halfway to line 2
-        state = race.LapState(clock=54_000, time_limit=0, laps_completed=1, laps_to_finish=3,
-                              lap_starts=[0, 40_000], checkpoints=(best, (40_000, 49_000)),
-                              position=position, gates=LINES)
+        state = race.LapState(
+            clock=54_000,
+            time_limit=0,
+            laps_completed=1,
+            laps_to_finish=3,
+            lap_starts=[0, 40_000],
+            checkpoints=(best, (40_000, 49_000)),
+            position=position,
+            gates=LINES,
+        )
         # The best lap was at z = 15 after 1.5 s; this lap after 1.4 s: 0.1 s ahead.
         self.assertEqual(state.delta_to_best, -1_000)
 
@@ -467,7 +524,10 @@ class DraftTests(unittest.TestCase):
     def test_meter_and_downforce_warning(self):
         sections = race.car_sections(self.car(0.727, 0.582))
         row = sections['draft'][0]
-        self.assertEqual((row.text, row.color, row.tail, row.tail_color), ('Draft 73%', 'draft', '  -58% downforce', 'lift'))
+        self.assertEqual(
+            (row.text, row.color, row.tail, row.tail_color),
+            ('Draft 73%', 'draft', '  -58% downforce', 'lift'),
+        )
         self.assertEqual(sections['levels']['draft'], (0.727, 'draft'))
 
     def test_out_of_the_draft(self):

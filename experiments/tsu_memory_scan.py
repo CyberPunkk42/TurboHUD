@@ -22,7 +22,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from turbohud.tsu import probe  # noqa: E402
+from turbohud.tsu import probe
 
 STATE = Path(__file__).resolve().parents[1] / '.buildtools' / 'memory_scan.json'
 UNITS_PER_SECOND = 10_000
@@ -107,7 +107,10 @@ def main(argv):
         wanted = [value for text in times for value in parse_lap_time(text)]
         header, _ = client.ask(op='search', patterns=int32_patterns(wanted), align=4)
         save_state({'addresses': header['hits']})
-        print(f'{len(header["hits"])} places hold {", ".join(times)}' + (' (capped)' if header['capped'] else ''))
+        print(
+            f'{len(header["hits"])} places hold {", ".join(times)}'
+            + (' (capped)' if header['capped'] else '')
+        )
     elif command == 'refine':
         if not times:
             sys.exit('Give the new lap time, e.g. 1:34.870')

@@ -137,8 +137,12 @@ def run(args, folder):
 
     else:
         layout = CLOCK_SECTIONS
+
         def contents():
-            return {'clock': session_rows(time.monotonic() - started), 'localtime': local_time_rows(time.localtime())}
+            return {
+                'clock': session_rows(time.monotonic() - started),
+                'localtime': local_time_rows(time.localtime()),
+            }
 
     started = time.monotonic()
     screens = [screen.geometry().getRect() for screen in QGuiApplication.screens()]
@@ -286,7 +290,9 @@ def run(args, folder):
         move_window(window, target, settle=True)
         mover.known[name] = target  # TurboHUD moved it: its group stays where it is
         mover.pending[name] = (target[:2], time.monotonic() + 1.0)
-        log.info('section %s centred%s%s at %s', name, ' across' if across else '', ' down' if down else '', target)
+        log.info(
+            'section %s centred%s%s at %s', name, ' across' if across else '', ' down' if down else '', target
+        )
 
     def set_wanted(name, wanted):
         windows[name].set_wanted(wanted)

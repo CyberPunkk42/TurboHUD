@@ -22,12 +22,12 @@ Check release ZIPs (or any files) before publishing them, including every file i
 
 import io
 import os
-from pathlib import Path
 import re
 import subprocess
 import sys
 import zipfile
 import zlib
+from pathlib import Path
 
 STEAM_BASE = 76561197960265728
 # The hook runs its own copy in .git/hooks, so it works on every branch.
@@ -81,7 +81,9 @@ def unlimited_folders():
     yield (Path(local).parent if local else home / 'AppData') / 'LocalLow' / 'Turbo Sliders' / 'Unlimited'
     yield home / '.config' / 'unity3d' / 'Turbo Sliders' / 'Unlimited'
     for steam in (home / '.steam' / 'steam', home / '.local' / 'share' / 'Steam'):
-        yield steam / 'steamapps' / 'compatdata' / '1478340' / 'pfx' / 'drive_c' / 'users' / 'steamuser' / tail
+        yield (
+            steam / 'steamapps' / 'compatdata' / '1478340' / 'pfx' / 'drive_c' / 'users' / 'steamuser' / tail
+        )
     bottles = home / 'Library' / 'Application Support' / 'CrossOver' / 'Bottles'
     yield from bottles.glob('*/drive_c/users/*/' + tail.as_posix())
 
@@ -135,7 +137,9 @@ def searcher(terms, allowed=()):
     pattern = re.compile('|'.join(re.escape(term) for term in terms).encode(), re.IGNORECASE)
     # Allowed public text is blanked out first; a term elsewhere in the text still counts.
     longest = sorted(allowed, key=len, reverse=True)
-    public = re.compile('|'.join(re.escape(text) for text in longest).encode(), re.IGNORECASE) if longest else None
+    public = (
+        re.compile('|'.join(re.escape(text) for text in longest).encode(), re.IGNORECASE) if longest else None
+    )
     return lambda data: pattern.search(public.sub(b'', data) if public else data)
 
 
@@ -189,7 +193,7 @@ def main(argv):
     extra, allowed = local_terms(terms_path())
     terms = sorted(set(personal_terms()) | extra)
     if not any(term.isdigit() for term in terms):
-        print('privacy check: no Steam ID known on this PC; add it to %s' % terms_path(), file=sys.stderr)
+        print(f'privacy check: no Steam ID known on this PC; add it to {terms_path()}', file=sys.stderr)
     if not terms:
         print('privacy check: no personal terms found on this PC; nothing to compare', file=sys.stderr)
         return 0
@@ -198,7 +202,7 @@ def main(argv):
         for item in found:
             print('PERSONAL DATA in: ' + item, file=sys.stderr)
         if not found:
-            print('privacy check: %d file(s) clean' % len(argv[1:]), file=sys.stderr)
+            print(f'privacy check: {len(argv[1:])} file(s) clean', file=sys.stderr)
         return 1 if found else 0
     if argv[:1] == ['--pre-push']:
         remote = argv[1] if len(argv) > 1 else 'origin'
@@ -213,7 +217,7 @@ def main(argv):
         for item in found:
             print('  ' + item, file=sys.stderr)
         return 1
-    print('privacy check: %d commit(s) clean' % len(commits), file=sys.stderr)
+    print(f'privacy check: {len(commits)} commit(s) clean', file=sys.stderr)
     return 0
 
 
