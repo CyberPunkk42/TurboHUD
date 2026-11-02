@@ -21,6 +21,7 @@ from turbohud.core.settings import (
 
 FRAME_MS = 50  # redraw interval: 20 times a second, as often as the race is read
 PLACEMENT_EVERY = 1.0  # seconds between position checks in move mode
+MIN_SECTION = 20  # pixels: the smallest a section gets from Smaller in the settings
 GROUP_EVERY = 0.2  # seconds between position checks in move mode while sections are grouped
 ICON = 'tsu_turbo_hud_00.png'  # in assets/, also the bundled app's icon
 log = logging.getLogger('turbohud')
@@ -93,7 +94,9 @@ def run(args, folder):
         session_rows,
     )
     from turbohud.overlay import HOTKEY_LOCK, HOTKEY_QUIT, native_for
+    from turbohud.overlay.settings_window import SettingsWindow
     from turbohud.overlay.window import MovePanel, SectionWindow
+    from turbohud.overlay.window import window_flags
 
     app = QApplication([sys.argv[0]])
     app.setApplicationName('TurboHUD')
@@ -263,7 +266,7 @@ def run(args, folder):
         if native_move is not None:
             native_move(window, place, settle)
         else:
-            window.move(*place[:2])
+            window.setGeometry(*place)
 
     def follow_groups(now):
         """Move mode: move the rest of a group along with the section being dragged; once
@@ -294,6 +297,43 @@ def run(args, folder):
             'section %s centred%s%s at %s', name, ' across' if across else '', ' down' if down else '', target
         )
 
+    def set_theme(theme):
+        """New colours from the settings window: every section draws with them."""
+        nonlocal settings
+        settings = replace(settings, theme=theme)
+        for window in windows.values():
+            window.theme = theme
+            window.update()
+        save()
+        log.info(
+            'colours: text %s, highlight %s, outline %s',
+            theme.text_color,
+            theme.accent_color,
+            theme.outline_color,
+        )
+
+    def resize_all(factor):
+        """Every section bigger or smaller by `factor`, from its top-left corner."""
+        for name, window in windows.items():
+            x, y, width, height = window.placement()
+            place = (x, y, max(MIN_SECTION, round(width * factor)), max(MIN_SECTION, round(height * factor)))
+            move_window(window, place, settle=True)
+            mover.known[name] = place  # TurboHUD resized it: not a drag
+        save()
+        log.info('all sections %s', 'bigger' if factor > 1 else 'smaller')
+
+    settings_window = None
+
+    def open_settings():
+        nonlocal settings_window
+        if settings_window is None:
+            settings_window = SettingsWindow(native, window_flags(), settings.theme)
+            settings_window.theme_changed.connect(set_theme)
+            settings_window.resize_requested.connect(resize_all)
+        if not settings_window.isVisible():
+            x, y = panel_spot()
+            settings_window.show_at(x + panel.width() + 20, y)
+
     def set_wanted(name, wanted):
         windows[name].set_wanted(wanted)
         log.info('section %s %s', name, 'shown' if wanted else 'hidden')
@@ -315,6 +355,9 @@ def run(args, folder):
     backdrop_action.setChecked(settings.backdrop)
     backdrop_action.triggered.connect(lambda checked: set_backdrop(checked))
     menu.addAction(backdrop_action)
+    settings_action = QAction('Settings…', menu)
+    settings_action.triggered.connect(lambda: open_settings())
+    menu.addAction(settings_action)
     menu.addSeparator()
     menu.addAction(quit_action)
     tray.setContextMenu(menu)
@@ -337,6 +380,7 @@ def run(args, folder):
     panel = MovePanel(native, layout, shortcuts, settings.speed_unit == 'mph', settings.backdrop)
     panel.mph_changed.connect(set_mph)
     panel.backdrop_changed.connect(set_backdrop)
+    panel.settings_requested.connect(open_settings)
     for name, window in windows.items():
         panel.set_wanted(name, window.wanted)
     panel.lock_requested.connect(lambda: set_locked(True))

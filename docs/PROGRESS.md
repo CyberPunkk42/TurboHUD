@@ -326,3 +326,8 @@ its "Recent changes".
   45%": a car behind within the reach and angle, from its own drag multiplier). Checked
   live as a client: all 14 cars' drag multipliers read (several drafting), settings
   read; not yet seen in the HUD.
+- 2026-11-02: Settings window (tray menu "Settings…", or the move-mode panel's
+  button): swatches for the text, highlight and outline colours, applied at once and
+  saved; "Smaller" / "Bigger" resize every section by 10 % from its top-left corner;
+  "Reset colours". Swatches instead of a colour dialog, which would be one more window
+  for Hyprland to place. Tested offscreen; not yet on the desktop.

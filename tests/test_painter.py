@@ -12,9 +12,9 @@ class TextPathTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
-        from PySide6.QtGui import QGuiApplication
+        from PySide6.QtWidgets import QApplication
 
-        cls.app = QGuiApplication.instance() or QGuiApplication([])
+        cls.app = QApplication.instance() or QApplication([])
 
     def test_overlapping_parts_of_a_letter_are_filled(self):
         # A plus is two overlapping bars in many fonts; filled odd-even, its centre was

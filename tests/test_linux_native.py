@@ -46,9 +46,9 @@ class LinuxNativeTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
-        from PySide6.QtGui import QGuiApplication
+        from PySide6.QtWidgets import QApplication
 
-        cls.app = QGuiApplication.instance() or QGuiApplication([])
+        cls.app = QApplication.instance() or QApplication([])
 
     def native(self, hypr):
         from turbohud.overlay.linux import Native

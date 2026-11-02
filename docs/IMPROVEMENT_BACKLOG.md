@@ -33,8 +33,6 @@ it. Other Wayland desktops (KDE, GNOME) ignore Qt's on-top hint: the layer-shell
 extension (KDE, Sway; not GNOME) would need a library outside PySide6.
 
 ## 5. More HUD features
-- A settings window for the look (colours, size), instead of editing `settings.json`
-  (being built 2026-11-02).
 - Open questions: the radar's car size (4.5 x 2 is an estimate); what happens to the
   game if the probe stops while it runs.
 

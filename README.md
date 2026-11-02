@@ -87,6 +87,8 @@ Clear the launch option to start TSU without the probe. The probe writes what it
   **locked**: clicks go through them to the game.
 - The **blue flag** is a navy bar that shows when a car about to lap you is within 2
   seconds behind: faint at 2 s, fully visible from 0.5 s, gone once it has passed.
+- **Settings…** (TurboHUD icon's menu, or the move-mode panel) picks the text,
+  highlight and outline colours, and makes all sections bigger or smaller at once.
 - **Light tint behind the sections** (TurboHUD icon's menu, or the move-mode panel) puts
   a faint dark box behind each section's text, for reading it on bright tracks.
 - The **proximity radar** shows your car and the cars around you when one is within

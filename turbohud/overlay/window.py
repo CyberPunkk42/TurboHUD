@@ -78,7 +78,7 @@ RADAR_SAMPLE = (
 log = logging.getLogger(__name__)
 
 
-def _flags():
+def window_flags():
     flags = Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint
     if sys.platform != 'darwin':
         flags |= Qt.Tool  # no taskbar button; on the Mac a tool window hides when inactive
@@ -99,7 +99,7 @@ def _set_input(widget, native, transparent):
 
 class SectionWindow(QWidget):
     def __init__(self, native, theme, section):
-        super().__init__(None, _flags())
+        super().__init__(None, window_flags())
         self.native = native
         self.theme = theme
         self.section = section
@@ -365,6 +365,7 @@ class MovePanel(QWidget):
 
     lock_requested = Signal()
     quit_requested = Signal()
+    settings_requested = Signal()
     wanted_changed = Signal(str, bool)  # section name, shown
     group_changed = Signal(str, str)  # section name, group ('' for none)
     align_requested = Signal(str, bool, bool)  # section name, centre across, centre down
@@ -374,7 +375,7 @@ class MovePanel(QWidget):
     focusable = True  # it takes clicks on its tick boxes and buttons
 
     def __init__(self, native, sections, shortcuts, mph=False, backdrop=False):
-        super().__init__(None, _flags())
+        super().__init__(None, window_flags())
         self.native = native
         self.setWindowTitle('TurboHUD - move mode')
         self.setAttribute(Qt.WA_TranslucentBackground)
@@ -428,10 +429,13 @@ class MovePanel(QWidget):
         column.addWidget(self.backdrop)
         row = QHBoxLayout()
         lock = QPushButton('Lock')
+        settings = QPushButton('Settings…')
         quit_ = QPushButton('Quit TurboHUD')
         lock.clicked.connect(self.lock_requested)
+        settings.clicked.connect(self.settings_requested)
         quit_.clicked.connect(self.quit_requested)
         row.addWidget(lock)
+        row.addWidget(settings)
         row.addWidget(quit_)
         row.addStretch()
         column.addLayout(row)
