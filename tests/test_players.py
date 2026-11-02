@@ -437,3 +437,18 @@ class DeadReckoningTests(unittest.TestCase):
                               position=position, gates=LINES)
         # The best lap was at z = 15 after 1.5 s; this lap after 1.4 s: 0.1 s ahead.
         self.assertEqual(state.delta_to_best, -1_000)
+
+
+class SameStretchGapTests(unittest.TestCase):
+    def test_both_between_the_same_checkpoints(self):
+        # Both passed line 1 last; the leader at 1.0 s and now at z = 18, I at 1.4 s and
+        # at z = 12. Clock 2.0 s: the leader went 8 of 10 in 1 s, so it was at z = 12
+        # (a quarter of its way) at 1.25 s: 0.75 s ahead.
+        leader = driving('Leader', (0, 10_000), z=18.0)
+        me = driving('Me', (4_000, 14_000), z=12.0, local=True)
+        self.assertEqual(race.gap(leader, me, clock=20_000, gates=LINES), ('time', -7_500))
+
+    def test_no_live_gap_when_it_is_not_further_on(self):
+        leader = driving('Leader', (0, 10_000), z=11.0)
+        me = driving('Me', (4_000, 14_000), z=12.0, local=True)
+        self.assertIsNone(race.live_gap(leader, me, 20_000, LINES))

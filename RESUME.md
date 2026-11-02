@@ -52,6 +52,13 @@ See `docs/IMPROVEMENT_BACKLOG.md`. In short:
    Hyprland.
 
 ## Recent changes
+- 2026-11-02: Checked as an online client (someone else's server, 13 AI): with the
+  worked-out positions the delta ran live (138 values in 144 reads over 12 s, lap 2)
+  and the gaps changed every read. Added: a live gap while both cars are between the
+  same two checkpoints (the one ahead's share of the stretch since its time at the first
+  line), which had held still and then jumped about 1 s. Left: jumps of 0.3 to 0.5 s
+  right at some checkpoints, maybe because a client's checkpoint times come from the
+  server a little late against the local race clock.
 - 2026-11-02: Live delta and gaps as an online client. Joining someone else's server
   (or hosting online with only AI) the game keeps no car positions (they stay at (0, 0)),
   so the delta went in checkpoint steps. It does keep each car's velocity, so

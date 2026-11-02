@@ -269,3 +269,10 @@ its "Recent changes".
   its checkpoint time, and moves it on by its velocity until the next line (about a
   second). The delta, the fuel trend and the player gaps use it; the radar does not
   (where across the track a car is stays unknown). Not yet seen in a race.
+- 2026-11-02: Checked as an online client (someone else's server, 13 AI): with the
+  worked-out positions the delta ran live (138 values in 144 reads over 12 s, lap 2)
+  and the gaps changed every read. Added: a live gap while both cars are between the
+  same two checkpoints (the one ahead's share of the stretch since its time at the first
+  line), which had held still and then jumped about 1 s. Left: jumps of 0.3 to 0.5 s
+  right at some checkpoints, maybe because a client's checkpoint times come from the
+  server a little late against the local race clock.

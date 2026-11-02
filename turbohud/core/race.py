@@ -1069,8 +1069,10 @@ def live_gap(ahead, behind, clock, gates):
     lines = len(gates)
     first, second = ahead.passed, behind.passed
     k = len(second) - 1
-    if k < 0 or len(first) <= k + 1:
+    if k < 0 or len(first) < k + 1:
         return None
+    if len(first) == k + 1:
+        return _same_stretch_gap(ahead, behind, clock, gates)
     # As in LapState.stretch: a run of lines passed together starts the stretch, and a
     # line at the same spot as the one passed (same time for the car ahead) is skipped.
     start = k
@@ -1090,6 +1092,31 @@ def live_gap(ahead, behind, clock, gates):
         behind.position,
     )
     there = first[start] + share * (first[following] - first[start])
+    return max(round(clock - there), 0)
+
+
+def _same_stretch_gap(ahead, behind, clock, gates):
+    """live_gap while both cars are between the same two checkpoints (the one ahead
+    has not reached the next yet): it went from that stretch's first line, at its time
+    there, to where it is now; the moment it was where `behind` is now is that share of
+    the way. None without its position or when it is not further on."""
+    if ahead.position is None:
+        return None
+    lines = len(gates)
+    k = len(behind.passed) - 1
+    start = k
+    while start > 0 and behind.passed[start] == behind.passed[start - 1]:
+        start -= 1
+    passed_at = ahead.passed[start]
+    if passed_at == NO_CHECKPOINT or clock <= passed_at:
+        return None
+    back = [gates[i % lines] for i in range(start, k + 1)]
+    next_line = [gates[(k + 1) % lines]]
+    theirs = gate_share(back, next_line, ahead.position)
+    mine = gate_share(back, next_line, behind.position)
+    if theirs <= mine or theirs <= 0:
+        return None
+    there = passed_at + mine / theirs * (clock - passed_at)
     return max(round(clock - there), 0)
 
 
