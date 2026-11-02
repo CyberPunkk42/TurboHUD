@@ -23,6 +23,7 @@ group and centre them; their places are saved.
 | Fuel to finish | laps of fuel to spare (green) or missing (red) for the finish |
 | Tires | tire life left and the laps it lasts; a level bar |
 | Health | car health as the game counts it; yellow with less downforce, red when slowed; a level bar |
+| Draft | how strong the slipstream is (of the event's most), with a bar; the downforce it costs, in yellow |
 | Speed | km/h or mph, yellow while coasting; throttle and brake bars beside it |
 | Players | position, flag, name, PIT, and the live gap to you (or +1 L for laps) |
 | Blue flag | a navy bar that fades in when a car about to lap you is within 2 s |

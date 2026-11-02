@@ -104,7 +104,7 @@ class FakeGame:
 
 def build(lap_starts, laps_completed, clock, limit, local_index=0, finished=False, car=None, gates=(), pedals=None,
           name=None, online=False, clock_fn=None, health=None, pit_area=False, event_running=None,
-          recorded=None):
+          recorded=None, draft=False):
     """A fake race; `car` is the car's (x, z) and `gates` the checkpoint lines, both
     optional like in a game without them."""
     g = FakeGame()
@@ -113,7 +113,9 @@ def build(lap_starts, laps_completed, clock, limit, local_index=0, finished=Fals
     services_class = g.klass('TS', 'Services', [('sm_instance', 0, True), ('m_activeServer', 0x10, False)], statics)
     server_class = g.klass('TS', 'Server', [('m_eventListener', 0x18, False)])
     base_controller = g.klass('TS', 'EventController', [('m_eventState', 0x48, False)])
-    controller_class = g.klass('TS', 'HostEventController', [('m_server', 0x60, False)], parent=base_controller)
+    controller_class = g.klass(
+        'TS', 'HostEventController', [('m_server', 0x60, False), ('m_eventLogic', 0x70, False)], parent=base_controller
+    )
     state_class = g.klass('TS', 'EventState', [('players', 0x28, False), ('times', 0x58, False)])
     player_fields = [('m_stats', 0x30, False), ('m_localHumanIndex', 0x50, False)]
     if name is not None:
@@ -170,6 +172,16 @@ def build(lap_starts, laps_completed, clock, limit, local_index=0, finished=Fals
             g.recorder = recorder
     state = g.alloc_obj(state_class)
     g.q(controller + 0x48, state)
+    if draft:
+        logic = g.alloc_obj(g.klass('TS', 'RaceLogic', [('m_eventSettings', 0x10, False)]))
+        settings = g.alloc_obj(g.klass('TS', 'EventSettings', [('drafting', 0x10, False)]))
+        drafting = g.alloc_obj(g.klass('TS', 'DraftingSettings', [
+            ('draftingOn', 0x10, False, 0x02), ('draftingSpeedEffect', 0x14, False, 0x08),
+            ('draftingDownforceReduction', 0x18, False, 0x08)]))
+        g.put(drafting + 0x10, bytes([1]) + bytes(3) + struct.pack('<2i', 10, 80))
+        g.q(settings + 0x10, drafting)
+        g.q(logic + 0x10, settings)
+        g.q(controller + 0x70, logic)
     g.put(state + 0x58, struct.pack('<6i', clock // 200, clock, 10000, 10000, 10000, limit))
 
     stats = g.alloc_obj(stats_class)
@@ -217,7 +229,9 @@ def build(lap_starts, laps_completed, clock, limit, local_index=0, finished=Fals
             ('m_forwardSpeed', 0x60, False),
             ('m_gradualDamageEnabled', 0x70, False, 0x02),
             ('m_hitPointsToRelativeHealthMultiplierForDownforceLoss', 0x74, False, 0x0C),
-            ('m_hitPointsToRelativeHealthMultiplierForAcceleration', 0x78, False, 0x0C)]))
+            ('m_hitPointsToRelativeHealthMultiplierForAcceleration', 0x78, False, 0x0C),
+            ('m_draftingViscosityFactor', 0x7C, False, 0x0C), ('m_draftingDownforceFactor', 0x80, False, 0x0C)]))
+        g.put(updater + 0x7C, struct.pack('<2f', 0.927, 0.416))
         g.put(updater + 0x70, bytes([health is not None]))
         g.put(updater + 0x74, struct.pack('<2f', 1 / 450, 1 / 375))
         g.put(updater + 0x50, bytes([1, 1]))
@@ -678,6 +692,12 @@ class CarTests(unittest.TestCase):
         self.assertAlmostEqual(car.downforce_from, 0.9)
         self.assertAlmostEqual(car.slowed_from, 0.75)
         self.assertEqual(car.damage_effect, 'downforce')
+
+    def test_draft_from_the_cars_multipliers_and_the_events_settings(self):
+        reader = build([10_000], laps_completed=0, clock=20_000, limit=0, car=(1.0, 2.0), gates=STRAIGHT, draft=True)
+        car = reader.read().car
+        self.assertAlmostEqual(car.draft, 0.73, places=3)  # 1 - 0.927 of a 10 % effect
+        self.assertAlmostEqual(car.draft_downforce_loss, 0.584, places=3)
 
     def test_without_damage_there_is_no_health(self):
         reader = build([10_000], laps_completed=0, clock=20_000, limit=0, car=(1.0, 2.0), gates=STRAIGHT)

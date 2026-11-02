@@ -79,7 +79,7 @@ Clear the launch option to start TSU without the probe. The probe writes what it
 
 - The HUD is made of sections, each in its own small box: lap and time left, the running
   lap, the delta to your best lap, last and best lap, fuel and tires left (with the laps
-  they last), health (in events with damage), the fuel to spare or short for the finish, speed with throttle and brake
+  they last), health (in events with damage), the draft (slipstream) with the downforce it costs, the fuel to spare or short for the finish, speed with throttle and brake
   bars (km/h or mph), the player list with flags, pit status and gaps, the local time
   (on Windows and macOS for now the session clock and the local time), and a blue flag
   bar. On the first start they sit one below the other at the left of your largest

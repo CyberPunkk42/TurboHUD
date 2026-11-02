@@ -294,6 +294,8 @@ class CarState:
     health: float | None = None  # 0 to 1 (hit points of the most), None without damage
     downforce_from: float | None = None  # health under which the car loses downforce
     slowed_from: float | None = None  # health under which it is slower
+    draft: float | None = None  # 0 to 1: how strong the slipstream is, of the event's most; None: no drafting
+    draft_downforce_loss: float = 0.0  # 0 to 1: downforce lost to the slipstream now
 
     @property
     def damage_effect(self):
@@ -417,6 +419,8 @@ class LapReader:
         self.services_class = il2cpp.find_class('TS', 'Services')
         self._clock = clock
         self._reckoning = DeadReckoning()  # positions where the game keeps none (online client)
+        self._listener = None  # the race controller (TS.EventController) of the event state
+        self._draft = None  # the event's drafting settings, once read (False: none)
         self._player_indices = []
         self._recorder_tick, self._recorder_moved = None, 0
         self._client_class = None  # TS.ClientEventController, once looked up
@@ -439,11 +443,31 @@ class LapReader:
         static field leads to, so it is found by its class (see _online_event_state)."""
         services = self.il.static_ref(self.services_class, 'sm_instance')
         try:
-            return self.il.ref(services, 'm_activeServer', 'm_eventListener', 'm_eventState')
+            self._listener = self.il.ref(services, 'm_activeServer', 'm_eventListener')
+            return self.il.ref(self._listener, 'm_eventState')
         except NotFound as error:
             if 'm_activeServer is null' not in str(error):
                 raise
-            return self._online_event_state(error)
+            state = self._online_event_state(error)
+            self._listener = self._controller
+            return state
+
+    def _draft_settings(self):
+        """(speed effect, downforce reduction), each 0 to 1, of the event's drafting
+        (TS.EventSettings.drafting, through the race controller's event logic), or None
+        where drafting is off or not found. Read once per event."""
+        if self._draft is None:
+            self._draft = False
+            try:
+                settings = self.il.ref(self._listener, 'm_eventLogic', 'm_eventSettings', 'drafting')
+                if self._number('draft', settings, 'draftingOn'):
+                    speed = self._number('draft', settings, 'draftingSpeedEffect')
+                    downforce = self._number('draft', settings, 'draftingDownforceReduction')
+                    if speed > 0:
+                        self._draft = (speed / 100, downforce / 100)
+            except (NotFound, OSError):
+                pass
+        return self._draft or None
 
     def _online_event_state(self, error):
         """The online race's event state, from the controller found before while it is
@@ -521,6 +545,7 @@ class LapReader:
             self._state, self._offsets, self._laps, self._gates = state, {}, {}, None
             self._reckoning = DeadReckoning()
             self._recorder_tick, self._recorder_moved = None, 0
+            self._draft = None
             self._fuel_history, self._wear_history, self._fuel_marks, self._types = {}, {}, {}, {}
             self._player = self.local_player()[1]
         player = self._player
@@ -598,6 +623,7 @@ class LapReader:
             return None
         throttle, brake = self._pedals(updater)
         health, downforce_from, slowed_from = self._health(state, updater)
+        draft, downforce_loss = self._drafting(updater)
         trend = None
         if lap >= 0:
             self._fuel_history.setdefault(lap, fuel_used)
@@ -610,7 +636,26 @@ class LapReader:
             fuel_on=fuel_on, fuel_used=fuel_used, fuel_tank=tank, tires_on=tires_on, tire_wear=tire_wear,
             speed=speed, fuel_per_lap=per_lap(fuel_starts), wear_per_lap=per_lap(wear_starts), fuel_trend=trend,
             throttle=throttle, brake=brake, health=health, downforce_from=downforce_from, slowed_from=slowed_from,
+            draft=draft, draft_downforce_loss=downforce_loss,
         )
+
+    def _drafting(self, updater):
+        """(draft 0 to 1, downforce lost 0 to 1) of the local car, or (None, 0.0) without
+        drafting. TS.CarStateUpdater keeps the slipstream's effect as multipliers: on the
+        air resistance (m_draftingViscosityFactor, 1 - speed effect x draft) and on the
+        downforce (m_draftingDownforceFactor, 1 - downforce reduction x draft); checked
+        online: 0.927 and 0.418 at 10 % and 80 %, both a draft of 0.73."""
+        settings = self._draft_settings()
+        if settings is None:
+            return None, 0.0
+        speed_effect, _downforce = settings
+        try:
+            drag = self._number('updater', updater, 'm_draftingViscosityFactor')
+            downforce = self._number('updater', updater, 'm_draftingDownforceFactor')
+        except (NotFound, ReadError):
+            return None, 0.0
+        draft = min(max((1 - drag) / speed_effect, 0.0), 1.0)
+        return draft, min(max(1 - downforce, 0.0), 1.0)
 
     def _health(self, state, updater):
         """(health, downforce_from, slowed_from), each 0 to 1, or Nones in an event without
@@ -1075,11 +1120,18 @@ def car_sections(car, laps_to_go=None, speed_unit='kmh'):
         shown = math.ceil(round(car.health * 100, 6))
         sections['health'] = [Row(f'Health {shown}%', 'medium', color, tail=tail, tail_color=color)]
         levels['health'] = (car.health, {'slowed': 'behind', 'downforce': 'lift', None: 'ahead'}[effect])
+    if car.draft is not None:
+        warn = car.draft_downforce_loss >= DRAFT_DOWNFORCE_WARN
+        tail = f'  -{car.draft_downforce_loss * 100:.0f}% downforce' if warn else ''
+        color = 'draft' if car.draft > 0 else 'text'
+        sections['draft'] = [Row(f'Draft {car.draft * 100:.0f}%', 'medium', color, tail=tail, tail_color='lift')]
+        levels['draft'] = (car.draft, 'draft')
     if levels:
         sections['levels'] = levels  # {section: (0 to 1, colour)} for the bars below the text
     return sections
 
 
+DRAFT_DOWNFORCE_WARN = 0.05  # downforce lost to the slipstream from which the draft section warns
 LEVEL_LOW = 0.15  # below this the level bar is red
 LEVEL_HALF = 0.35  # below this it is yellow
 
@@ -1520,5 +1572,5 @@ class Radar:
 def race_rows(snapshot, now):
     """All sections' rows in one list, top to bottom (for the terminal and tests)."""
     sections = race_sections(snapshot, now)
-    order = ('lap', 'current', 'delta', 'times', 'fuel', 'fuelfinish', 'tires', 'health', 'speed', 'players')
+    order = ('lap', 'current', 'delta', 'times', 'fuel', 'fuelfinish', 'tires', 'health', 'draft', 'speed', 'players')
     return [row for name in order for row in sections.get(name, [])]

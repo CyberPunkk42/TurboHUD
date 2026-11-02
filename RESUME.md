@@ -52,6 +52,15 @@ See `docs/IMPROVEMENT_BACKLOG.md`. In short:
    Hyprland.
 
 ## Recent changes
+- 2026-11-02: Draft section (slipstream). "Draft 73%" with a cyan level bar: how strong
+  the slipstream is, of the most this event allows, from the car's own multipliers
+  (CarStateUpdater.m_draftingViscosityFactor = 1 - speed effect x draft) and the event's
+  settings read from memory (EventController.m_eventLogic.m_eventSettings.drafting; that
+  server: 10 % speed effect, 80 % downforce reduction, unlike the local
+  eventsettings.json of the last hosted event). A yellow "-58% downforce" while the
+  slipstream takes 5 % or more (m_draftingDownforceFactor). Checked live: settings read,
+  0 % out of the draft; the 73 % / 58 % match values measured while drafting earlier.
+  Shown only in events with drafting on.
 - 2026-11-02: The radar also reacts to cars ahead. It reacted only to cars behind or
   beside (as first asked), so closing in on a car ahead showed nothing until it was
   level. Now a car ahead counts the same way (nose to tail over the local speed: faint

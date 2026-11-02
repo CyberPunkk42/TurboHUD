@@ -12,6 +12,7 @@ from turbohud.core.hud import FLAG_WIDTH, MARGIN
 AHEAD_COLOR = '#5ee07a'  # the delta when faster than the best lap
 BAR_OFF = (110, 110, 110, 170)  # a pedal bar with no input: grey
 LIFT_COLOR = '#ffe14d'  # the speed while lifting (no throttle, no brake)
+DRAFT_COLOR = '#5ec8ff'  # the slipstream (draft section)
 BEHIND_COLOR = '#ff6b6b'  # and when slower
 LINUX_FAMILIES = ['Noto Sans', 'DejaVu Sans', 'Liberation Sans', 'Cantarell', 'Ubuntu', 'Arial']
 
@@ -75,7 +76,8 @@ def draw_bars(painter, bars):
 
 def draw_level(painter, bar):
     """A level bar from turbohud.core.hud.level_bar: grey, lit from the left."""
-    colors = {'ahead': QColor(AHEAD_COLOR), 'behind': QColor(BEHIND_COLOR), 'lift': QColor(LIFT_COLOR)}
+    colors = {'ahead': QColor(AHEAD_COLOR), 'behind': QColor(BEHIND_COLOR), 'lift': QColor(LIFT_COLOR),
+              'draft': QColor(DRAFT_COLOR)}
     radius = min(bar.height / 2, 3)
     painter.setPen(QPen(QColor(0, 0, 0, 160), 1))
     painter.setBrush(QColor(*BAR_OFF))
@@ -122,6 +124,7 @@ def draw_hud(painter, lines, theme, scale=None, left=0, width=None):
         'ahead': QColor(AHEAD_COLOR),
         'behind': QColor(BEHIND_COLOR),
         'lift': QColor(LIFT_COLOR),
+        'draft': QColor(DRAFT_COLOR),
     }
     outline = _rgba(theme.outline_color)
     margin = round(MARGIN * (theme.scale if scale is None else scale))

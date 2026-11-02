@@ -458,3 +458,21 @@ class SameStretchGapTests(unittest.TestCase):
         leader = driving('Leader', (0, 10_000), z=11.0)
         me = driving('Me', (4_000, 14_000), z=12.0, local=True)
         self.assertIsNone(race.live_gap(leader, me, 20_000, LINES))
+
+
+class DraftTests(unittest.TestCase):
+    def car(self, draft, loss):
+        return race.CarState(False, 0, 0, False, 0, 40.0, draft=draft, draft_downforce_loss=loss)
+
+    def test_meter_and_downforce_warning(self):
+        sections = race.car_sections(self.car(0.727, 0.582))
+        row = sections['draft'][0]
+        self.assertEqual((row.text, row.color, row.tail, row.tail_color), ('Draft 73%', 'draft', '  -58% downforce', 'lift'))
+        self.assertEqual(sections['levels']['draft'], (0.727, 'draft'))
+
+    def test_out_of_the_draft(self):
+        row = race.car_sections(self.car(0.0, 0.0))['draft'][0]
+        self.assertEqual((row.text, row.color, row.tail), ('Draft 0%', 'text', ''))
+
+    def test_no_section_without_drafting(self):
+        self.assertNotIn('draft', race.car_sections(self.car(None, 0.0)))

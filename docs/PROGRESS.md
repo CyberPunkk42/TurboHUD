@@ -292,3 +292,12 @@ its "Recent changes".
   car 0.5 s ahead at full speed is in view. Before that, checked as an online client:
   real positions in every read, delta steps at most 0.18 s, radar shown once, no
   blinking.
+- 2026-11-02: Draft section (slipstream). "Draft 73%" with a cyan level bar: how strong
+  the slipstream is, of the most this event allows, from the car's own multipliers
+  (CarStateUpdater.m_draftingViscosityFactor = 1 - speed effect x draft) and the event's
+  settings read from memory (EventController.m_eventLogic.m_eventSettings.drafting; that
+  server: 10 % speed effect, 80 % downforce reduction, unlike the local
+  eventsettings.json of the last hosted event). A yellow "-58% downforce" while the
+  slipstream takes 5 % or more (m_draftingDownforceFactor). Checked live: settings read,
+  0 % out of the draft; the 73 % / 58 % match values measured while drafting earlier.
+  Shown only in events with drafting on.

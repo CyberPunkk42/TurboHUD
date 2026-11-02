@@ -156,7 +156,7 @@ class PedalBarTests(unittest.TestCase):
 class SectionTests(unittest.TestCase):
     def test_race_sections_have_distinct_names(self):
         names = [section.name for section in hud.RACE_SECTIONS]
-        self.assertEqual(names, ['lap', 'current', 'delta', 'times', 'fuel', 'fuelfinish', 'tires', 'health', 'speed', 'localtime', 'players', 'blueflag', 'radar'])
+        self.assertEqual(names, ['lap', 'current', 'delta', 'times', 'fuel', 'fuelfinish', 'tires', 'health', 'draft', 'speed', 'localtime', 'players', 'blueflag', 'radar'])
         self.assertEqual(len(set(names)), len(names))
 
     def test_content_size_fits_the_text(self):
