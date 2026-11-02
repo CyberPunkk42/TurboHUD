@@ -69,6 +69,18 @@ def _libc():
     return libc
 
 
+def read_into(pid, address, target, size):
+    """Read `size` bytes at `address` in process `pid` into the ctypes buffer `target`;
+    the number of bytes read. Raises OSError when refused."""
+    local = IoVec(ctypes.cast(target, ctypes.c_void_p), size)
+    remote = IoVec(ctypes.c_void_p(address), size)
+    count = _libc().process_vm_readv(pid, ctypes.byref(local), 1, ctypes.byref(remote), 1, 0)
+    if count < 0:
+        error = ctypes.get_errno()
+        raise OSError(error, os.strerror(error))
+    return count
+
+
 def read_memory(pid, address, size):
     """Read `size` bytes at `address` in process `pid`. Raises OSError when refused."""
     buffer = ctypes.create_string_buffer(size)
@@ -167,27 +179,44 @@ def searchable(region):
     return perms.startswith('rw') and perms.endswith('p') and not path.startswith(('/dev/', '['))
 
 
+_buffers = threading.local()
+
+
+def _search_buffer(size):
+    """(bytearray, ctypes view of it) of at least `size` bytes for this thread."""
+    found = getattr(_buffers, 'pair', None)
+    if found is None or len(found[0]) < size:
+        data = bytearray(size)
+        found = (data, (ctypes.c_char * size).from_buffer(data))
+        _buffers.pair = found
+    return found
+
+
 def search(pid, regions, patterns, align=4):
     """Addresses in `regions` of `pid` where any of `patterns` (bytes) starts."""
     hits = []
     longest = max(len(pattern) for pattern in patterns)
+    # One buffer per connection's thread, kept from search to search and read into in
+    # place: a new 16 MB block for every chunk left the probe holding gigabytes (memory
+    # the allocator does not give back).
+    data, target = _search_buffer(CHUNK + longest - 1)
     for start, end, *_ in regions:
         address = start
         while address < end:
-            size = min(CHUNK + longest - 1, end - address)
+            size = min(len(data), end - address)
             try:
-                data = read_memory(pid, address, size)
+                count = read_into(pid, address, target, size)
             except OSError:
                 address += CHUNK
                 continue
             for pattern in patterns:
-                index = data.find(pattern)
+                index = data.find(pattern, 0, count)
                 while index != -1:
                     if index < CHUNK and (address + index) % align == 0:
                         hits.append(address + index)
                         if len(hits) >= MAX_HITS:
                             return sorted(hits)
-                    index = data.find(pattern, index + 1)
+                    index = data.find(pattern, index + 1, count)
             address += CHUNK
     return sorted(hits)
 

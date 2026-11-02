@@ -140,3 +140,16 @@ class HyprlandTests(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class GroupMoveTests(unittest.TestCase):
+    def test_all_places_in_one_request_floating_only(self):
+        fake = FakeHyprctl()
+        found = hyprland.Hyprland(fake).geometries({'0xaaa', '0xddd'})
+        self.assertEqual(found, {'0xaaa': (40, 50, 420, 194)})  # 0xddd is tiled
+        self.assertEqual(fake.calls, [['-j', 'clients']])
+
+    def test_move_is_a_single_request_for_that_window(self):
+        fake = FakeHyprctl(lua=False)
+        self.assertTrue(hyprland.Hyprland(fake).move('0xaaa', 70, 80))
+        self.assertEqual(fake.dispatched()[-1], 'movewindowpixel exact 70 80,address:0xaaa')

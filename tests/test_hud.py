@@ -59,13 +59,26 @@ class FirstLaunchTests(unittest.TestCase):
 
     def test_one_column_at_the_left_centred_in_1080_without_overlap(self):
         places = hud.first_launch(hud.RACE_SECTIONS, self.SIZES)
-        boxes = [places[s.name] for s in hud.RACE_SECTIONS]
+        boxes = [places[s.name] for s in hud.RACE_SECTIONS if not s.bar]
+        self.assertNotIn('blueflag', places)  # a bar: top centre instead
         self.assertTrue(all(x == 40 for x, *_ in boxes))
         for (_, y1, _, h1), (_, y2, _, _) in zip(boxes, boxes[1:]):
             self.assertGreaterEqual(y2, y1 + h1)  # below, not overlapping
         top, bottom = boxes[0][1], boxes[-1][1] + boxes[-1][3]
         self.assertAlmostEqual(top - 40, 1040 - bottom, delta=1)  # centred
         self.assertLessEqual(bottom, 1080 - 40)
+
+    def test_the_blue_flag_bar_goes_top_centre(self):
+        blue = next(s for s in hud.RACE_SECTIONS if s.name == 'blueflag')
+        size = hud.base_size(blue, 1.0, lambda text, size: len(text) * size)
+        self.assertEqual(size, (480, 24))
+        self.assertEqual(hud.top_centre(size, (0, 0, 1920, 1080)), (720, 40, 480, 24))
+        self.assertEqual(hud.top_centre(size, (100, -1440, 2560, 1440)), (1140, -1400, 480, 24))
+
+    def test_the_radar_starts_centred_below_the_middle(self):
+        radar = next(s for s in hud.RACE_SECTIONS if s.name == 'radar')
+        self.assertNotIn('radar', hud.first_launch(hud.RACE_SECTIONS, self.SIZES))
+        self.assertEqual(hud.drawing_place(radar, (160, 160), (0, 0, 1920, 1080)), (880, 648, 160, 160))
 
     def test_on_the_main_screen_from_its_corner(self):
         screens = [(1280, -1440, 2560, 1440), (0, 0, 5120, 1440)]  # the player's two monitors
@@ -143,7 +156,7 @@ class PedalBarTests(unittest.TestCase):
 class SectionTests(unittest.TestCase):
     def test_race_sections_have_distinct_names(self):
         names = [section.name for section in hud.RACE_SECTIONS]
-        self.assertEqual(names, ['lap', 'current', 'delta', 'times', 'fuel', 'fuelfinish', 'tires', 'speed', 'localtime'])
+        self.assertEqual(names, ['lap', 'current', 'delta', 'times', 'fuel', 'fuelfinish', 'tires', 'health', 'draft', 'speed', 'localtime', 'players', 'blueflag', 'radar'])
         self.assertEqual(len(set(names)), len(names))
 
     def test_content_size_fits_the_text(self):
@@ -186,3 +199,92 @@ class CoreIsQtFreeTests(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+MOVER_GROUPS = {'lap': 'A', 'delta': 'A', 'speed': 'A', 'fuel': 'B', 'tires': ''}
+
+
+class GroupMoverTests(unittest.TestCase):
+
+    def look(self, mover, seen, now):
+        return mover.follow(dict(seen), MOVER_GROUPS, now)
+
+    def start(self):
+        mover = hud.GroupMover()
+        seen = {'lap': (10, 10, 100, 40), 'delta': (10, 60, 100, 30), 'speed': (10, 100, 100, 30),
+                'fuel': (300, 10, 100, 30), 'tires': (300, 60, 100, 30)}
+        self.assertEqual(self.look(mover, seen, 0.0), {})  # first look: nothing to compare
+        return mover, seen
+
+    def test_dragging_one_moves_its_group_only(self):
+        mover, seen = self.start()
+        seen['delta'] = (60, 80, 100, 30)  # dragged 50 right, 20 down
+        moves = self.look(mover, seen, 0.2)
+        self.assertEqual(moves, {'lap': (60, 30, 100, 40), 'speed': (60, 120, 100, 30)})
+
+    def test_the_followers_arriving_is_not_taken_for_a_drag(self):
+        mover, seen = self.start()
+        seen['delta'] = (60, 80, 100, 30)
+        self.look(mover, seen, 0.2)
+        seen.update(lap=(60, 30, 100, 40), speed=(61, 120, 100, 30))  # arrived (within a pixel)
+        self.assertEqual(self.look(mover, seen, 0.4), {})
+        self.assertEqual(mover.pending, {})
+
+    def test_a_follower_on_its_way_is_not_a_drag_and_the_drag_goes_on(self):
+        mover, seen = self.start()
+        seen['delta'] = (60, 80, 100, 30)
+        self.look(mover, seen, 0.2)
+        seen['delta'] = (70, 80, 100, 30)  # still dragging; the others have not arrived yet
+        moves = self.look(mover, seen, 0.4)
+        self.assertEqual(moves, {'lap': (70, 30, 100, 40), 'speed': (70, 120, 100, 30)})
+
+    def test_a_follower_that_never_arrives_is_taken_where_it_is(self):
+        mover, seen = self.start()
+        seen['delta'] = (60, 80, 100, 30)
+        self.look(mover, seen, 0.2)
+        self.assertEqual(self.look(mover, seen, 2.0), {})  # lap and speed stayed: no pull back
+        self.assertEqual(mover.known['lap'], (10, 10, 100, 40))
+
+    def test_resizing_or_ungrouped_moves_nobody(self):
+        mover, seen = self.start()
+        seen['lap'] = (10, 10, 200, 80)  # resized at its corner
+        seen['tires'] = (400, 400, 100, 30)  # no group
+        self.assertEqual(self.look(mover, seen, 0.2), {})
+
+
+class FreeSpotTests(unittest.TestCase):
+    SCREEN = (0, 0, 5120, 1440)  # the player's main monitor
+
+    def test_the_wanted_spot_when_it_is_free(self):
+        self.assertEqual(hud.free_spot((400, 600), self.SCREEN, [(40, 300, 380, 60)], (2360, 480)), (2360, 480))
+
+    def test_moves_off_a_section_such_as_the_radar(self):
+        radar = (2480, 864, 160, 160)
+        x, y = hud.free_spot((400, 600), self.SCREEN, [radar], (2360, 480))
+        self.assertEqual(hud._overlap((x, y, 400, 600), radar), 0)
+        self.assertLess(abs(x - 2360) + abs(y - 480), 400)  # still near the middle
+
+    def test_stays_on_the_screen_and_covers_least_when_nothing_is_free(self):
+        everything = [(0, 0, 5120, 1440)]
+        x, y = hud.free_spot((400, 600), (0, 0, 1920, 1080), everything, (760, 360))
+        self.assertTrue(40 <= x <= 1920 - 40 - 400 and 40 <= y <= 1080 - 40 - 600)
+
+
+class CentreTests(unittest.TestCase):
+    SCREENS = [(1280, -1440, 2560, 1440), (0, 0, 5120, 1440)]  # the player's two monitors
+
+    def test_centre_across_down_or_both_on_its_own_screen(self):
+        radar = (300, 900, 160, 160)
+        screen = hud.screen_of(radar, self.SCREENS)
+        self.assertEqual(screen, (0, 0, 5120, 1440))
+        self.assertEqual(hud.centred(radar, screen, horizontal=True), (2480, 900, 160, 160))
+        self.assertEqual(hud.centred(radar, screen, vertical=True), (300, 640, 160, 160))
+        self.assertEqual(hud.centred(radar, screen, True, True), (2480, 640, 160, 160))
+
+    def test_on_the_upper_monitor(self):
+        flag = (1500, -1300, 480, 24)
+        screen = hud.screen_of(flag, self.SCREENS)
+        self.assertEqual(hud.centred(flag, screen, horizontal=True), (2320, -1300, 480, 24))
+
+    def test_only_the_drawings_have_centre_buttons(self):
+        self.assertEqual({s.name for s in hud.RACE_SECTIONS if s.drawing}, {'blueflag', 'radar'})

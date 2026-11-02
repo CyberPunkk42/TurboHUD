@@ -95,6 +95,34 @@ class Native:
                 self.last_placements[id(widget)] = seen
         return self.last_placements.get(id(widget))
 
+    def placements(self, widgets):
+        """{id(widget): place} for shown windows, with one question to Hyprland for all
+        of them (move mode asks a few times a second while sections are grouped)."""
+        if self.hypr is None:
+            return {id(w): (w.x(), w.y(), w.width(), w.height()) for w in widgets}
+        addresses = {self.addresses.get(id(w)): w for w in widgets if w.isVisible()}
+        addresses.pop(None, None)
+        for address, place in self.hypr.geometries(set(addresses)).items():
+            self.last_placements[id(addresses[address])] = place
+        return {id(w): self.last_placements[id(w)] for w in widgets if id(w) in self.last_placements}
+
+    def move_window(self, widget, place, settle=False):
+        """Move a window to `place` (x, y, width, height), for a group following a drag.
+        `settle` once the drag is over: on Hyprland it then also gets its workspace and pin
+        again, in case it went to another monitor."""
+        x, y, width, height = place
+        if self.hypr is None:
+            widget.move(x, y)
+            return
+        address = self.addresses.get(id(widget))
+        if address is None:
+            return
+        self.last_placements[id(widget)] = tuple(place)
+        if settle:
+            self.hypr.place(address, x, y, width, height, focusable=not getattr(widget, 'locked', True))
+        else:
+            self.hypr.move(address, x, y)
+
     def take_focus(self):
         pass
 

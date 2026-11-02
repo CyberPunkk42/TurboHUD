@@ -5,6 +5,7 @@ import logging
 import signal
 import sys
 import time
+from dataclasses import replace
 from pathlib import Path
 
 from turbohud import __version__
@@ -12,7 +13,6 @@ from turbohud.core.settings import (
     LOG_FILE,
     SETTINGS_FILE,
     SectionPlace,
-    Settings,
     fit_on_screens,
     load_settings,
     save_settings,
@@ -21,6 +21,7 @@ from turbohud.core.settings import (
 
 FRAME_MS = 50  # redraw interval: 20 times a second, as often as the race is read
 PLACEMENT_EVERY = 1.0  # seconds between position checks in move mode
+GROUP_EVERY = 0.2  # seconds between position checks in move mode while sections are grouped
 ICON = 'tsu_turbo_hud_00.png'  # in assets/, also the bundled app's icon
 log = logging.getLogger('turbohud')
 
@@ -77,8 +78,21 @@ def run(args, folder):
     from PySide6.QtGui import QAction, QGuiApplication, QIcon
     from PySide6.QtWidgets import QApplication, QMenu, QSystemTrayIcon
 
+    from turbohud.core.hud import (
+        CLOCK_SECTIONS,
+        RACE_SECTIONS,
+        GroupMover,
+        below,
+        centred,
+        drawing_place,
+        first_launch,
+        free_spot,
+        local_time_rows,
+        main_screen,
+        screen_of,
+        session_rows,
+    )
     from turbohud.overlay import HOTKEY_LOCK, HOTKEY_QUIT, native_for
-    from turbohud.core.hud import CLOCK_SECTIONS, RACE_SECTIONS, below, first_launch, local_time_rows, main_screen, session_rows
     from turbohud.overlay.window import MovePanel, SectionWindow
 
     app = QApplication([sys.argv[0]])
@@ -104,17 +118,19 @@ def run(args, folder):
     live = start_live_race()
     pad = None
     if live is not None:
-        from turbohud.core.race import race_sections, status_text, with_local_time
+        from turbohud.core.race import Radar, Standings, race_sections, status_text, with_local_time
 
         layout = RACE_SECTIONS
         from turbohud.tsu.controller import Pad, combined
 
         pad = Pad()
         pad.start()
+        standings = Standings()
+        radar = Radar()
 
         def contents():
             snapshot = live.snapshot()
-            current = race_sections(snapshot, time.monotonic())
+            current = race_sections(snapshot, time.monotonic(), settings.speed_unit, standings, radar)
             if 'pedals' in current:
                 current['pedals'] = combined(current['pedals'], pad.pedals())
             return with_local_time(current, snapshot, time.localtime())
@@ -135,17 +151,22 @@ def run(args, folder):
         for name, place in settings.sections.items()
         if name in windows
     }
-    new = [section for section in layout if section.name not in saved_places]
+    new = [section for section in layout if section.name not in saved_places and not section.bar]
     if saved_places and new:
         # Sections added in a later version: below the ones the player already placed.
         defaults.update(below(new, saved_places, first, screens))
+    for section in layout:
+        if section.bar:  # the blue flag and the radar: their own spots on the main screen
+            defaults[section.name] = drawing_place(section, first[section.name], screen or (0, 0, 1920, 1080))
     for name, window in windows.items():
         saved = settings.sections.get(name)
         place = (saved.x, saved.y, saved.width, saved.height) if saved else defaults[name]
         place = fit_on_screens(place, screens)
         window.setGeometry(*place)
+        window.backdrop = settings.backdrop
         window.show_on_top()
         window.set_wanted(saved.visible if saved else True)
+        window.group = saved.group if saved else ''
         log.info('section %s at %s%s', name, place, '' if window.wanted else ' (hidden)')
     shortcuts = False
     panel = None  # made once the shortcuts are known
@@ -156,21 +177,25 @@ def run(args, folder):
         places = {}
         for name, window in windows.items():
             x, y, width, height = window.placement()
-            places[name] = SectionPlace(x, y, width, height, window.wanted)
-        settings = Settings(placement=settings.placement, theme=settings.theme, sections=places)
+            places[name] = SectionPlace(x, y, width, height, window.wanted, window.group)
+        settings = replace(settings, sections=places)
         try:
             save_settings(path, settings)
         except OSError as error:
             log.warning('could not save the settings: %s', error)
 
     def panel_spot():
-        """Where the move-mode panel goes: a third down the screen that holds the first
-        shown section, in the middle."""
+        """Where the move-mode panel goes: on the screen that holds the first shown
+        section, near the middle a third down, but never over a shown section (it would
+        hide it from dragging)."""
         shown = [w for w in windows.values() if w.wanted] or list(windows.values())
-        x, y = shown[0].placement()[:2]
-        for sx, sy, sw, sh in screens:
+        boxes = [w.placement() for w in shown]
+        x, y = boxes[0][:2]
+        for screen in screens:
+            sx, sy, sw, sh = screen
             if sx <= x < sx + sw and sy <= y < sy + sh:
-                return sx + (sw - panel.width()) // 2, sy + sh // 3
+                wanted = (sx + (sw - panel.width()) // 2, sy + sh // 3)
+                return free_spot((panel.width(), panel.height()), screen, boxes, wanted)
         return x + 40, y + 40
 
     def set_locked(value):
@@ -188,9 +213,80 @@ def run(args, folder):
             save()
             log.info('locked')
         else:
+            mover.known.clear()  # compare from where the sections are now
+            mover.pending.clear()
             native.take_focus()
             panel.show_at(*panel_spot())
             log.info('move mode')
+
+    def set_mph(mph):
+        nonlocal settings
+        settings = replace(settings, speed_unit='mph' if mph else 'kmh')
+        mph_action.setChecked(mph)
+        panel.set_mph(mph)
+        save()
+        log.info('speed in %s', settings.speed_unit)
+
+    def set_backdrop(backdrop):
+        nonlocal settings
+        settings = replace(settings, backdrop=backdrop)
+        backdrop_action.setChecked(backdrop)
+        panel.set_backdrop(backdrop)
+        for window in windows.values():
+            window.backdrop = backdrop
+            window.update()
+        save()
+        log.info('tint behind the sections %s', 'on' if backdrop else 'off')
+
+    mover = GroupMover()
+    group_moving = False  # a group followed a drag at the last look
+
+    def set_group(name, group):
+        windows[name].group = group
+        mover.known.clear()  # start comparing afresh
+        save()
+        log.info('section %s in group %s', name, group or '(none)')
+
+    def placements():
+        batch = getattr(native, 'placements', None)
+        if batch is not None:
+            found = batch(list(windows.values()))
+            return {name: found[id(w)] for name, w in windows.items() if id(w) in found}
+        return {name: w.placement() for name, w in windows.items()}
+
+    def move_window(window, place, settle):
+        native_move = getattr(native, 'move_window', None)
+        if native_move is not None:
+            native_move(window, place, settle)
+        else:
+            window.move(*place[:2])
+
+    def follow_groups(now):
+        """Move mode: move the rest of a group along with the section being dragged; once
+        the drag is over, settle the moved ones (workspace and pin on Hyprland)."""
+        nonlocal group_moving
+        groups = {name: w.group for name, w in windows.items()}
+        moves = mover.follow(placements(), groups, now)
+        for name, place in moves.items():
+            move_window(windows[name], place, settle=False)
+        if group_moving and not moves:
+            for name, window in windows.items():
+                if window.group and name in mover.known:
+                    move_window(window, mover.known[name], settle=True)
+        group_moving = bool(moves)
+
+    def align(name, across, down):
+        """Centre a section on the screen that holds it (the panel's Centre buttons)."""
+        window = windows[name]
+        place = tuple(window.placement())
+        screen = screen_of(place, screens)
+        if screen is None:
+            return
+        target = centred(place, screen, across, down)
+        move_window(window, target, settle=True)
+        mover.known[name] = target  # TurboHUD moved it: its group stays where it is
+        mover.pending[name] = (target[:2], time.monotonic() + 1.0)
+        log.info('section %s centred%s%s at %s', name, ' across' if across else '', ' down' if down else '', target)
 
     def set_wanted(name, wanted):
         windows[name].set_wanted(wanted)
@@ -205,6 +301,14 @@ def run(args, folder):
     quit_action = QAction('Quit TurboHUD', menu)
     quit_action.triggered.connect(app.quit)
     menu.addAction(move_action)
+    mph_action = QAction('Speed in mph', menu, checkable=True)
+    mph_action.setChecked(settings.speed_unit == 'mph')
+    mph_action.triggered.connect(lambda checked: set_mph(checked))
+    menu.addAction(mph_action)
+    backdrop_action = QAction('Light tint behind the sections', menu, checkable=True)
+    backdrop_action.setChecked(settings.backdrop)
+    backdrop_action.triggered.connect(lambda checked: set_backdrop(checked))
+    menu.addAction(backdrop_action)
     menu.addSeparator()
     menu.addAction(quit_action)
     tray.setContextMenu(menu)
@@ -224,12 +328,18 @@ def run(args, folder):
 
     shortcuts = native.register_hotkeys(on_hotkey)
     log.info('Ctrl+Shift+L and Ctrl+Shift+Q registered' if shortcuts else 'no system-wide shortcuts')
-    panel = MovePanel(native, layout, shortcuts)
+    panel = MovePanel(native, layout, shortcuts, settings.speed_unit == 'mph', settings.backdrop)
+    panel.mph_changed.connect(set_mph)
+    panel.backdrop_changed.connect(set_backdrop)
     for name, window in windows.items():
         panel.set_wanted(name, window.wanted)
     panel.lock_requested.connect(lambda: set_locked(True))
     panel.quit_requested.connect(app.quit)
     panel.wanted_changed.connect(set_wanted)
+    panel.group_changed.connect(set_group)
+    panel.align_requested.connect(align)
+    for name, window in windows.items():
+        panel.set_group(name, window.group)
 
     was_active = False  # in move mode: whether TurboHUD has been the active app yet
 
@@ -262,13 +372,21 @@ def run(args, folder):
         for name, window in windows.items():
             window.rows = current.get(name, [])
             window.pedals = current.get('pedals')
+            window.opacity = current.get('blue')
+            window.radar = current.get('radar')
+            window.level = current.get('levels', {}).get(name)
             window.update()
-        if not locked and time.monotonic() - last_seen >= PLACEMENT_EVERY:
+        grouped = any(w.group for w in windows.values())
+        every = GROUP_EVERY if grouped else PLACEMENT_EVERY
+        if not locked and time.monotonic() - last_seen >= every:
             # In move mode, note where the sections are: on Wayland only the desktop
-            # knows, and it may no longer say once TurboHUD is quitting.
+            # knows, and it may no longer say once TurboHUD is quitting. Grouped
+            # sections follow the one being dragged.
             last_seen = time.monotonic()
-            for window in windows.values():
-                window.placement()
+            if grouped:
+                follow_groups(last_seen)
+            else:
+                placements()
         if args.seconds is not None and time.monotonic() - started >= args.seconds:
             log.info('time is up')
             app.quit()

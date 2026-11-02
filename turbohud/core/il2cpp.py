@@ -49,10 +49,13 @@ class Memory:
     """Reads the game's memory through a `read(address, size) -> bytes` callable.
     `regions` are (start, end, permissions, offset, path) from the game's memory map."""
 
-    def __init__(self, read, regions, read_many=None):
+    def __init__(self, read, regions, read_many=None, find_pointers=None):
         self.read = read
         self.regions = regions
         self._read_many = read_many
+        # (value) -> addresses holding it, searched where the memory is (the probe);
+        # None where only reads are possible.
+        self.find_pointers = find_pointers
 
     def read_many(self, addresses, size):
         """The same number of bytes at many addresses, in one request where the reader

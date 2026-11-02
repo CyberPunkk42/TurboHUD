@@ -1,5 +1,6 @@
 import struct
 import sys
+import time
 import unittest
 from pathlib import Path
 
@@ -26,7 +27,7 @@ class FakeGame:
         self.instance_type = self.alloc_heap(16)
         self.put(self.instance_type + il.TYPE_ATTRS, struct.pack('<H', 0))
         self.typed = {}
-        for code in (0x08, 0x0C):  # int, float
+        for code in (0x02, 0x08, 0x0C):  # bool, int, float
             record = self.alloc_heap(16)
             self.put(record + il.TYPE_ATTRS, struct.pack('<HB', 0, code))
             self.typed[code] = record
@@ -91,12 +92,19 @@ class FakeGame:
             raise OSError(14, 'Bad address')
         return bytes(self.mem.get(address + i, 0) for i in range(size))
 
+    def find_pointers(self, value):
+        self.searches = getattr(self, 'searches', 0) + 1
+        pattern = struct.pack('<Q', value)
+        return sorted(a for a in self.mem if a % 8 == 0 and self.read(a, 8) == pattern)
+
     def memory(self):
         regions = [(*HEAP, 'rw-p', 0, '[heap]'), (*MANAGED, 'rw-p', 0, '')]
-        return il.Memory(self.read, regions)
+        return il.Memory(self.read, regions, find_pointers=self.find_pointers)
 
 
-def build(lap_starts, laps_completed, clock, limit, local_index=0, finished=False, car=None, gates=(), pedals=None):
+def build(lap_starts, laps_completed, clock, limit, local_index=0, finished=False, car=None, gates=(), pedals=None,
+          name=None, online=False, clock_fn=None, health=None, pit_area=False, event_running=None,
+          recorded=None, draft=False):
     """A fake race; `car` is the car's (x, z) and `gates` the checkpoint lines, both
     optional like in a game without them."""
     g = FakeGame()
@@ -105,9 +113,13 @@ def build(lap_starts, laps_completed, clock, limit, local_index=0, finished=Fals
     services_class = g.klass('TS', 'Services', [('sm_instance', 0, True), ('m_activeServer', 0x10, False)], statics)
     server_class = g.klass('TS', 'Server', [('m_eventListener', 0x18, False)])
     base_controller = g.klass('TS', 'EventController', [('m_eventState', 0x48, False)])
-    controller_class = g.klass('TS', 'HostEventController', [('m_server', 0x60, False)], parent=base_controller)
+    controller_class = g.klass(
+        'TS', 'HostEventController', [('m_server', 0x60, False), ('m_eventLogic', 0x70, False)], parent=base_controller
+    )
     state_class = g.klass('TS', 'EventState', [('players', 0x28, False), ('times', 0x58, False)])
     player_fields = [('m_stats', 0x30, False), ('m_localHumanIndex', 0x50, False)]
+    if name is not None:
+        player_fields.append(('m_playerInfo', 0x40, False))
     if car is not None:
         player_fields += [('m_vehicle', 0x20, False), ('m_statsUpdater', 0x38, False)]
     player_class = g.klass('TS', 'EventPlayer', player_fields)
@@ -129,8 +141,47 @@ def build(lap_starts, laps_completed, clock, limit, local_index=0, finished=Fals
     g.q(services + 0x10, server)
     controller = g.alloc_obj(controller_class)
     g.q(server + 0x18, controller)
+    if online:
+        # An online race: no active server; the race is in a TS.ClientEventController.
+        g.q(services + 0x10, 0)
+        client_class = g.klass(
+            'TS', 'ClientEventController', [('m_client', 0x60, False), ('m_eventRecorder', 0x68, False)],
+            parent=base_controller,
+        )
+        g.alloc_obj(client_class)  # a stale one, of an earlier race: no event state
+        controller = g.alloc_obj(client_class)
+        g.client_controller = controller
+        if recorded is not None:
+            # The replay recorder: one quantized state per player, in the list's order
+            # (here the remote player first, then the local one).
+            recorder_class = g.klass('TS', 'EventRecorder', [
+                ('m_stateTick', 0x10, False), ('m_lastQuantizedVehicleStates', 0x18, False)])
+            state_class_q = g.klass('TS', 'QuantizedVehicleState', [('m_positionX', 0x10, False)])
+            recorder = g.alloc_obj(recorder_class)
+            g.put(recorder + 0x10, struct.pack('<i', 100))
+            array = g.alloc_obj(0)
+            g.q(array + il.ARRAY_LENGTH, 2)
+            for i, place in enumerate((None, recorded)):
+                element = g.alloc_obj(state_class_q)
+                if place is not None:
+                    x, z = place
+                    g.put(element + 0x10, struct.pack('<3I', int(x * 1024) + 2**20, 2**20, int(z * 1024) + 2**20))
+                g.q(array + il.ARRAY_DATA + 8 * i, element)
+            g.q(recorder + 0x18, array)
+            g.q(controller + 0x68, recorder)
+            g.recorder = recorder
     state = g.alloc_obj(state_class)
     g.q(controller + 0x48, state)
+    if draft:
+        logic = g.alloc_obj(g.klass('TS', 'RaceLogic', [('m_eventSettings', 0x10, False)]))
+        settings = g.alloc_obj(g.klass('TS', 'EventSettings', [('drafting', 0x10, False)]))
+        drafting = g.alloc_obj(g.klass('TS', 'DraftingSettings', [
+            ('draftingOn', 0x10, False, 0x02), ('draftingSpeedEffect', 0x14, False, 0x08),
+            ('draftingDownforceReduction', 0x18, False, 0x08)]))
+        g.put(drafting + 0x10, bytes([1]) + bytes(3) + struct.pack('<2i', 10, 80))
+        g.q(settings + 0x10, drafting)
+        g.q(logic + 0x10, settings)
+        g.q(controller + 0x70, logic)
     g.put(state + 0x58, struct.pack('<6i', clock // 200, clock, 10000, 10000, 10000, limit))
 
     stats = g.alloc_obj(stats_class)
@@ -150,18 +201,39 @@ def build(lap_starts, laps_completed, clock, limit, local_index=0, finished=Fals
     g.put(local + 0x50, struct.pack('<i', local_index))
     g.q(local + 0x30, stats)
     g.q(state + 0x28, g.list_of([remote, local]))
+    if name is not None:
+        info = g.alloc_obj(g.klass('TS', 'EventPlayerInfo', [('m_profile', 0x10, False)]))
+        profile = g.alloc_obj(g.klass('TS', 'PlayerProfile', [('m_name', 0x10, False), ('flag', 0x40, False)]))
+        text = g.alloc_obj(0, 0x14 + 2 * len(name) + 2)
+        g.put(text + 0x10, struct.pack('<i', len(name)) + name.encode('utf-16-le'))
+        g.q(profile + 0x10, text)
+        g.put(profile + 0x40, struct.pack('<i', 75))  # Germany
+        g.q(info + 0x10, profile)
+        g.q(local + 0x40, info)
+        g.q(remote + 0x40, 0)
     if car is not None:
         vehicle = g.alloc_obj(g.klass('TS', 'Vehicle', [
             ('m_state', 0x30, False), ('m_stateUpdater', 0x38, False), ('m_statsNewPosition', 0x64, False)]))
         g.put(vehicle + 0x64, struct.pack('<3f', car[0], 10.0, car[1]))
-        state = g.alloc_obj(g.klass('TS', 'VehicleState', [('fuelConsumption', 0x40, False), ('tireWear', 0x48, False)]))
+        state = g.alloc_obj(g.klass('TS', 'VehicleState', [
+            ('fuelConsumption', 0x40, False), ('tireWear', 0x48, False),
+            ('maxHitPoints', 0x50, False, 0x08), ('hitPoints', 0x54, False, 0x08), ('inPitArea', 0x58, False, 0x02)]))
         g.put(state + 0x40, struct.pack('<i', 42_000))
+        g.put(state + 0x50, struct.pack('<ii', 500, health if health is not None else 500))
+        g.put(state + 0x58, bytes([pit_area]))
         g.put(state + 0x48, struct.pack('<i', 576_000))
         g.q(vehicle + 0x30, state)
         updater = g.alloc_obj(g.klass('TS', 'CarStateUpdater', [
             ('m_fuelSettings', 0x18, False), ('m_controls', 0x28, False), ('m_fuelEnabled', 0x50, False),
             ('m_tireWearEnabled', 0x51, False),
-            ('m_forwardSpeed', 0x60, False)]))
+            ('m_forwardSpeed', 0x60, False),
+            ('m_gradualDamageEnabled', 0x70, False, 0x02),
+            ('m_hitPointsToRelativeHealthMultiplierForDownforceLoss', 0x74, False, 0x0C),
+            ('m_hitPointsToRelativeHealthMultiplierForAcceleration', 0x78, False, 0x0C),
+            ('m_draftingViscosityFactor', 0x7C, False, 0x0C), ('m_draftingDownforceFactor', 0x80, False, 0x0C)]))
+        g.put(updater + 0x7C, struct.pack('<2f', 0.927, 0.416))
+        g.put(updater + 0x70, bytes([health is not None]))
+        g.put(updater + 0x74, struct.pack('<2f', 1 / 450, 1 / 375))
         g.put(updater + 0x50, bytes([1, 1]))
         g.q(updater + 0x28, 0)  # no controls object unless given
         if pedals is not None:
@@ -201,7 +273,7 @@ def build(lap_starts, laps_completed, clock, limit, local_index=0, finished=Fals
     g.laps = laps
 
     runtime = il.Il2Cpp(g.memory(), g.strings, METADATA_BASE)
-    reader = race.LapReader(runtime)
+    reader = race.LapReader(runtime, clock=clock_fn or time.monotonic, event_running=event_running)
     reader.game = g
     return reader
 
@@ -543,6 +615,106 @@ class CarTests(unittest.TestCase):
         car = reader.read().car
         self.assertEqual((car.throttle, car.brake), (None, None))
 
+    def test_reader_reads_the_players(self):
+        reader = build([10_000, 944_595], laps_completed=1, clock=1_000_000, limit=0, name='Fahrer Ö')
+        players = reader.read().players
+        me = next(p for p in players if p.local)
+        self.assertEqual((me.name, me.flag, me.laps_completed), ('Fahrer Ö', 75, 1))
+        self.assertEqual(me.checkpoints[0][0], 10_000)
+        self.assertEqual(len(players), 1)  # the other one has no statistics: left out
+
+    def test_an_online_race_is_found_through_its_client_controller(self):
+        reader = build([10_000, 944_595], laps_completed=1, clock=1_000_000, limit=0, name='Host', online=True)
+        state = reader.read()
+        self.assertEqual(state.laps_completed, 1)
+        self.assertEqual([p.name for p in state.players], ['Host'])
+        searches = reader.game.searches
+        reader.read()
+        self.assertEqual(reader.game.searches, searches)  # found once, then kept
+
+    def test_without_an_online_race_the_search_waits_between_tries(self):
+        now = [100.0]
+        reader = build([10_000], laps_completed=0, clock=20_000, limit=0, online=True, clock_fn=lambda: now[0])
+        g = reader.game
+        g.q(g.client_controller + 0x48, 0)  # no race in it (menu, lobby)
+        with self.assertRaises(race.NotFound):
+            reader.read()
+        with self.assertRaises(race.NotFound):
+            reader.read()
+        self.assertEqual(g.searches, 1)  # not again before CLIENT_SEARCH_EVERY
+        now[0] += race.CLIENT_SEARCH_EVERY
+        with self.assertRaises(race.NotFound):
+            reader.read()
+        self.assertEqual(g.searches, 2)
+
+    def test_no_search_while_the_games_log_says_no_event_runs(self):
+        running = [False]
+        reader = build([10_000], laps_completed=0, clock=20_000, limit=0, name='A', online=True,
+                       event_running=lambda: running[0])
+        with self.assertRaises(race.NotFound):
+            reader.read()
+        self.assertEqual(getattr(reader.game, 'searches', 0), 0)  # menus, lobby: no search
+        running[0] = True
+        reader._next_search = 0.0
+        self.assertEqual(reader.read().laps_completed, 0)
+        self.assertEqual(reader.game.searches, 1)
+
+    def test_online_positions_come_from_the_replay_recorder(self):
+        now = [0.0]
+        reader = build([10_000], laps_completed=0, clock=20_000, limit=0, name='A', online=True,
+                       car=(0.0, 0.0), gates=STRAIGHT, recorded=(12.5, -40.25), clock_fn=lambda: now[0])
+        state = reader.read()
+        me = next(p for p in state.players if p.local)
+        self.assertEqual(me.position, (12.5, -40.25))
+        self.assertFalse(me.estimated)
+        self.assertEqual(state.position, (12.5, -40.25))  # the delta uses it too
+
+    def test_a_recorder_that_stands_still_is_not_used(self):
+        reader = build([10_000], laps_completed=0, clock=20_000, limit=0, name='A', online=True,
+                       car=(0.0, 0.0), gates=STRAIGHT, recorded=(12.5, -40.25))
+        reader.read()
+        g = reader.game
+        times = g.read(reader._state + 0x58, 24)
+        g.put(reader._state + 0x58, struct.pack('<6i', 0, 20_000 + race.RECORDER_STALE + 1, *struct.unpack('<6i', times)[2:]))
+        me = next(p for p in reader.read().players if p.local)
+        self.assertIsNone(me.position)  # its tick did not move for over a second
+
+    def test_online_the_unkept_position_counts_as_unknown(self):
+        reader = build([10_000], laps_completed=0, clock=20_000, limit=0, car=(0.0, 0.0), gates=STRAIGHT, name='A')
+        state = reader.read()
+        self.assertIsNone(state.position)
+        self.assertIsNone(next(p for p in state.players if p.local).position)
+
+    def test_reader_reads_health_with_the_games_limits(self):
+        reader = build([10_000], laps_completed=0, clock=20_000, limit=0, car=(1.0, 2.0), gates=STRAIGHT, health=420)
+        car = reader.read().car
+        self.assertAlmostEqual(car.health, 0.84)
+        self.assertAlmostEqual(car.downforce_from, 0.9)
+        self.assertAlmostEqual(car.slowed_from, 0.75)
+        self.assertEqual(car.damage_effect, 'downforce')
+
+    def test_draft_from_the_cars_multipliers_and_the_events_settings(self):
+        reader = build([10_000], laps_completed=0, clock=20_000, limit=0, car=(1.0, 2.0), gates=STRAIGHT, draft=True)
+        car = reader.read().car
+        self.assertAlmostEqual(car.draft, 0.73, places=3)  # 1 - 0.927 of a 10 % effect
+        self.assertAlmostEqual(car.draft_downforce_loss, 0.584, places=3)
+
+    def test_without_damage_there_is_no_health(self):
+        reader = build([10_000], laps_completed=0, clock=20_000, limit=0, car=(1.0, 2.0), gates=STRAIGHT)
+        self.assertIsNone(reader.read().car.health)
+        self.assertNotIn('health', race.car_sections(reader.read().car))
+
+    def test_pit_shows_in_the_whole_pit_area(self):
+        reader = build([10_000], laps_completed=0, clock=20_000, limit=0, car=(1.0, 2.0), gates=STRAIGHT, name='A',
+                       pit_area=True)
+        me = next(p for p in reader.read().players if p.local)
+        self.assertTrue(me.in_pit)
+
+    def test_reader_reads_each_cars_position_for_the_radar(self):
+        reader = build([10_000], laps_completed=0, clock=20_000, limit=0, car=(12.5, -3.0), gates=STRAIGHT, name='A')
+        me = next(p for p in reader.read().players if p.local)
+        self.assertEqual(me.position, (12.5, -3.0))
+
     def test_without_car_data_there_are_no_car_sections(self):
         reader = build([10_000], laps_completed=0, clock=20_000, limit=0)
         self.assertIsNone(reader.read().car)
@@ -652,6 +824,21 @@ class RowsTests(unittest.TestCase):
         rows = race.race_rows(racing(state), 0)
         self.assertTrue(rows[0].text.startswith('Finished'))
         self.assertEqual(rows[1].text, '1:20.000')
+
+    def test_after_the_finish_the_rest_of_the_hud_stays_while_others_race(self):
+        me = race.PlayerState('Me', 0, 2, ((0,), (900_000,), (1_700_000,)), finished=True, local=True)
+        other = race.PlayerState('Other', 0, 1, ((0,), (950_000,)))
+        car = race.CarState(True, 50_000, 168_000, False, 0, 20.0)
+        state = race.LapState(
+            clock=1_800_000, time_limit=0, laps_completed=2, laps_to_finish=2, lap_starts=[0, 900_000, 1_700_000],
+            finished=True, car=car, players=(me, other),
+        )
+        sections = race.race_sections(racing(state), 0)
+        self.assertTrue(sections['lap'][0].text.startswith('Finished'))
+        self.assertIn('players', sections)
+        self.assertIn('fuel', sections)
+        self.assertIn('speed', sections)
+        self.assertNotIn('delta', sections)  # no lap to compare any more
 
     def test_delta_row_is_green_ahead_and_red_behind(self):
         ahead = race.LapState(1, 0, 1, 13, [0, 900_000], checkpoints=((0, 300_000), (900_000, 1_199_000)))

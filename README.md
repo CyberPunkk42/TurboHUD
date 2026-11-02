@@ -60,7 +60,8 @@ runs, you see:
 Linux lets a program read another program's memory only if it started that program.
 So TurboHUD's small memory probe starts TSU: then it may read TSU's memory, and nothing
 else's, with no sudo and no change to the system. It only reads and never pauses the
-game.
+game. How it all works, and what it does to RAM and the game:
+[docs/HOW_IT_WORKS.md](docs/HOW_IT_WORKS.md).
 1. In Steam, right-click Turbo Sliders Unlimited > **Properties** > **General** >
    **Launch Options**, and enter (with the path to your copy of this folder):
    `python3 /home/<user>/Work/workspace/tsu_repositories/TurboHUD/experiments/tsu_memory_probe.py %command%`
@@ -78,11 +79,23 @@ Clear the launch option to start TSU without the probe. The probe writes what it
 
 - The HUD is made of sections, each in its own small box: lap and time left, the running
   lap, the delta to your best lap, last and best lap, fuel and tires left (with the laps
-  they last), the fuel to spare or short for the finish, speed with throttle and brake
-  bars, and the local time (on Windows and macOS for now the session clock and the local
-  time). On the first start they sit one below the other at the left of your largest
-  screen (laid out as on a 1920x1080 screen), **locked**: clicks go through them to the
-  game.
+  they last), health (in events with damage), the draft (slipstream) with the downforce it costs, the fuel to spare or short for the finish, speed with throttle and brake
+  bars (km/h or mph), the player list with flags, pit status and gaps, the local time
+  (on Windows and macOS for now the session clock and the local time), and a blue flag
+  bar. On the first start they sit one below the other at the left of your largest
+  screen (laid out as on a 1920x1080 screen), the blue flag at its top centre,
+  **locked**: clicks go through them to the game.
+- The **blue flag** is a navy bar that shows when a car about to lap you is within 2
+  seconds behind: faint at 2 s, fully visible from 0.5 s, gone once it has passed.
+- **Light tint behind the sections** (TurboHUD icon's menu, or the move-mode panel) puts
+  a faint dark box behind each section's text, for reading it on bright tracks.
+- The **proximity radar** shows your car and the cars around you when one is within
+  half a second behind or ahead (faint) up to alongside (fully visible): red beside you, yellow
+  closing in.
+- The blue flag and the radar have **Centre ↔** and **Centre ↕** buttons in the
+  move-mode panel: they centre it across or down the screen it is on.
+- **Groups:** in the move-mode panel, put sections in the same group (A to D). Dragging
+  one of them then moves the whole group; the others follow a moment later.
 - **Ctrl+Shift+L** (or **Move mode** in the TurboHUD icon's menu) switches to **move
   mode**: every section gets a blue tint and its name. Drag a section anywhere, for
   example to the edges of a wide screen. At its bottom-right corner, making it taller or

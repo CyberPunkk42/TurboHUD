@@ -1,6 +1,6 @@
 """What the HUD shows and where, as plain data that turbohud.hud draws."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 MARGIN = 14  # space between the box's edge and the text, before scaling
 MIN_WIDTH = 380  # the last and best lap line fits at scale 1
@@ -14,6 +14,9 @@ class Line:
     baseline: int  # y of the text's baseline, from the box's top
     tail: str = ''  # more text right after it, in its own colour
     tail_color: str = 'text'
+    flag: str = ''  # an ISO country code drawn as a flag before the text
+    right: str = ''  # text at the right edge of the box (a column that lines up)
+    right_color: str = 'text'
 
 
 @dataclass(frozen=True)
@@ -25,6 +28,13 @@ class Row:
     color: str = 'text'  # 'text', 'accent', 'ahead' (green), 'behind' (red) or 'lift' (yellow)
     tail: str = ''  # more text right after it, in its own colour
     tail_color: str = 'text'
+    flag: str = ''  # an ISO country code drawn as a flag before the text
+    right: str = ''  # text at the right edge of the box (a column that lines up)
+    right_color: str = 'text'
+
+
+FLAG_WIDTH = 1.5  # a flag's room before the text, in font sizes
+COLUMN_GAP = 1.0  # least room between the text and the right column, in font sizes
 
 
 @dataclass(frozen=True)
@@ -75,7 +85,7 @@ def _content(rows, sizes):
     for index, row in enumerate(rows):
         size = getattr(sizes, row.style)
         baseline += (sizes.gap if index else 0) + size
-        lines.append(Line(row.text, size, row.color, baseline, row.tail, row.tail_color))
+        lines.append(Line(row.text, size, row.color, baseline, row.tail, row.tail_color, row.flag, row.right, row.right_color))
     return lines, baseline
 
 
@@ -84,12 +94,22 @@ def hud_lines(rows, scale=1.0):
     return _content(rows, Sizes.for_scale(scale))[0]
 
 
+def line_width(line, measure):
+    """How wide a line is with its flag and its right column."""
+    width = measure(line.text + line.tail, line.size)
+    if line.flag:
+        width += FLAG_WIDTH * line.size
+    if line.right:
+        width += COLUMN_GAP * line.size + measure(line.right, line.size)
+    return width
+
+
 def content_size(rows, scale, measure):
     """(width, height) a section needs for `rows` at `scale`. `measure(text, size)` gives
     a text's width in pixels (Qt knows the font)."""
     sizes = Sizes.for_scale(scale)
     lines, bottom = _content(rows, sizes)
-    width = max((measure(line.text + line.tail, line.size) for line in lines), default=0)
+    width = max((line_width(line, measure) for line in lines), default=0)
     # Below the last baseline: room for letters such as g and p, then the margin.
     return round(width + 2 * sizes.margin), round(bottom + sizes.margin)
 
@@ -102,6 +122,9 @@ class Section:
     label: str  # how menus and move mode name it
     samples: tuple  # row lists it may show; the widest and tallest sets its size
     pedals: bool = False  # a throttle bar on its left and a brake bar on its right
+    bar: tuple = ()  # (width, height) at scale 1 for a drawing without text
+    drawing: str = ''  # what it draws instead of text: 'flag' (blue flag) or 'radar'
+    level: bool = False  # a bar below the text showing how much is left (fuel, tires, health)
 
 
 RACE_SECTIONS = (
@@ -112,11 +135,18 @@ RACE_SECTIONS = (
     Section('current', 'Running lap', ((Row('0:00.0', 'big'),), (Row('10:00.000', 'big'),))),
     Section('delta', 'Delta to best', ((Row('+00.000 vs best', 'medium'),),)),
     Section('times', 'Last and best lap', ((Row('Last 0:00.000   Best 0:00.000', 'medium'),),)),
-    Section('fuel', 'Fuel', ((Row('Fuel 100.0%', 'medium', tail='  ~10.0 laps  +0.00%'),),)),
+    Section('fuel', 'Fuel', ((Row('Fuel 100.0%', 'medium', tail='  ~10.0 laps  +0.00%'),),), level=True),
     Section('fuelfinish', 'Fuel to finish', ((Row('Finish +00.0 laps', 'medium'),),)),
-    Section('tires', 'Tires', ((Row('Tires 100%  ~10.0 laps', 'medium'),),)),
+    Section('tires', 'Tires', ((Row('Tires 100%  ~10.0 laps', 'medium'),),), level=True),
+    Section('health', 'Health', ((Row('Health 100%', 'medium', tail='  less downforce'),),), level=True),
+    Section('draft', 'Draft', ((Row('Draft 100%', 'medium', tail='  -80% downforce'),),), level=True),
     Section('speed', 'Speed', ((Row('000 km/h', 'medium'),),), pedals=True),
     Section('localtime', 'Local time', ((Row('00:00', 'medium'),),)),
+    Section('players', 'Players', (tuple(
+        Row(f'{n}. Playername1234567', 'small', tail='  PIT', flag='DE', right='+00.000') for n in range(10, 10 + 8)
+    ),)),
+    Section('blueflag', 'Blue flag', (), bar=(480, 24), drawing='flag'),
+    Section('radar', 'Proximity radar', (), bar=(160, 160), drawing='radar'),
 )
 CLOCK_SECTIONS = (
     Section('clock', 'Session time', ((Row('TurboHUD - session time', 'title'), Row('00:00', 'big')),)),
@@ -127,9 +157,29 @@ CLOCK_SECTIONS = (
 def base_size(section, scale, measure):
     """(width, height) of a section at scale 1 of its own: as wide as its usual content
     (the first sample, and its pedal bars) and as tall as its tallest."""
+    if section.bar:
+        return round(section.bar[0] * scale), round(section.bar[1] * scale)
     sizes = [content_size(rows, scale, measure) for rows in section.samples]
     extra = pedal_space(scale) if section.pedals else 0
-    return sizes[0][0] + extra, max(h for _w, h in sizes)
+    below = level_space(scale) if section.level else 0
+    return sizes[0][0] + extra, max(h for _w, h in sizes) + below
+
+
+LEVEL_HEIGHT = 8  # the level bar's height below the text, at scale 1
+
+
+def level_space(scale):
+    """The height the level bar adds below a section's text."""
+    return round(LEVEL_HEIGHT * scale)
+
+
+def level_bar(width, content_height, scale, fill, color):
+    """The level bar below a section's text: as wide as the section between its
+    margins, just under the text (whose height with margins is `content_height`), lit
+    from the left to `fill` (0 to 1) in `color` ('ahead', 'lift' or 'behind')."""
+    margin = round(MARGIN * scale)
+    top = content_height - margin // 2
+    return Bar(margin, top, max(width - 2 * margin, 1), max(level_space(scale), 2), min(max(fill, 0.0), 1.0), color)
 
 
 PEDAL_WIDTH = 10  # a pedal bar's width at scale 1
@@ -226,7 +276,9 @@ def first_launch(sections, sizes, origin=(0, 0), reference=REFERENCE_SCREEN, mar
     """{name: (x, y, width, height)} for a first launch: the sections one below the other
     at the left of a `reference`-sized screen whose top-left corner is `origin`,
     vertically centred, so the middle stays free. What does not fit in the height starts
-    another column to the right; nothing overlaps."""
+    another column to the right; nothing overlaps. Bars (the blue flag) are not in the
+    column: see top_centre."""
+    sections = [section for section in sections if not section.bar]
     room = reference[1] - 2 * margin
     columns, column, height = [], [], 0
     for section in sections:
@@ -249,3 +301,131 @@ def first_launch(sections, sizes, origin=(0, 0), reference=REFERENCE_SCREEN, mar
             y += section_height + gap
         x += max(sizes[s.name][0] for s in column) + gap
     return places
+
+
+def top_centre(size, screen, margin=LAYOUT_MARGIN):
+    """(x, y, width, height) of a `size` box at the top centre of `screen` (x, y, width,
+    height): where a bar such as the blue flag goes first."""
+    width, height = size
+    x, y, screen_width, _screen_height = screen
+    return (x + (screen_width - width) // 2, y + margin, width, height)
+
+
+RADAR_DOWN = 0.6  # the radar starts centred, this far down the screen (below the car)
+
+
+def drawing_place(section, size, screen):
+    """Where a drawing section goes first: the blue flag at the top centre, the radar
+    in the middle a little below the centre, where the eyes are while driving."""
+    if section.drawing == 'radar':
+        width, height = size
+        x, y, screen_width, screen_height = screen
+        return (x + (screen_width - width) // 2, y + round(screen_height * RADAR_DOWN), width, height)
+    return top_centre(size, screen)
+
+
+GROUP_TOLERANCE = 3  # pixels: a window this close to where TurboHUD moved it has arrived
+GROUP_PENDING = 1.0  # seconds a move TurboHUD asked for may take to arrive
+
+
+@dataclass
+class GroupMover:
+    """Moves a group's sections along when the player drags one of them (move mode).
+
+    The desktop moves the dragged window; TurboHUD only sees where windows are when it
+    looks (on Wayland only the desktop knows). So `follow` compares each look with the
+    one before: if exactly one section of a group has moved, the others are moved by
+    the same amount. Their own arrival is then expected, not taken for a drag.
+    """
+
+    known: dict = field(default_factory=dict)  # name -> (x, y, width, height) last seen or set
+    pending: dict = field(default_factory=dict)  # name -> ((x, y), until) moves asked for
+
+    def follow(self, seen, groups, now):
+        """{name: (x, y, width, height)} to move group mates to, for `seen` {name:
+        place} at monotonic time `now`; `groups` is {name: group or ''}."""
+        moved = {}
+        for name, place in seen.items():
+            before = self.known.get(name)
+            target = self.pending.get(name)
+            if target is not None:
+                (tx, ty), until = target
+                arrived = abs(place[0] - tx) <= GROUP_TOLERANCE and abs(place[1] - ty) <= GROUP_TOLERANCE
+                if arrived or now > until:
+                    # There (or it never got there): this is its place, not a drag.
+                    del self.pending[name]
+                    self.known[name] = place
+                continue  # else still on its way: neither a drag nor its new place
+            if before is not None and tuple(place[:2]) != tuple(before[:2]):
+                moved[name] = (place[0] - before[0], place[1] - before[1])
+            self.known[name] = place
+        moves = {}
+        for group in {g for g in groups.values() if g}:
+            members = [name for name in seen if groups.get(name) == group]
+            movers = [name for name in members if name in moved]
+            if len(movers) != 1:
+                continue  # nobody dragged, or several moved (not by one drag)
+            dx, dy = moved[movers[0]]
+            for name in members:
+                if name == movers[0] or name not in self.known:
+                    continue
+                x, y, width, height = self.known[name]
+                moves[name] = (x + dx, y + dy, width, height)
+        for name, place in moves.items():
+            self.known[name] = place
+            self.pending[name] = (place[:2], now + GROUP_PENDING)
+        return moves
+
+
+FREE_STEP = 40  # pixels between the spots free_spot tries
+FREE_GAP = 12  # room kept between the panel and a section
+
+
+def _overlap(a, b):
+    ax, ay, aw, ah = a
+    bx, by, bw, bh = b
+    return max(0, min(ax + aw, bx + bw) - max(ax, bx)) * max(0, min(ay + ah, by + bh) - max(ay, by))
+
+
+def free_spot(size, screen, boxes, wanted, margin=LAYOUT_MARGIN, step=FREE_STEP, gap=FREE_GAP):
+    """(x, y) for a box of `size` on `screen` (x, y, width, height) that covers none of
+    `boxes` (x, y, width, height), as near `wanted` (x, y) as possible; if every spot
+    covers something, the one covering least. For the move-mode panel, which must not
+    hide a section the player wants to drag."""
+    width, height = size
+    sx, sy, sw, sh = screen
+    padded = [(x - gap, y - gap, w + 2 * gap, h + 2 * gap) for x, y, w, h in boxes]
+    left, top = sx + margin, sy + margin
+    right, bottom = max(left, sx + sw - margin - width), max(top, sy + sh - margin - height)
+    xs = sorted({*range(left, right + 1, step), right, min(max(wanted[0], left), right)})
+    ys = sorted({*range(top, bottom + 1, step), bottom, min(max(wanted[1], top), bottom)})
+
+    def cost(spot):
+        covered = sum(_overlap((spot[0], spot[1], width, height), box) for box in padded)
+        return covered, abs(spot[0] - wanted[0]) + abs(spot[1] - wanted[1])
+
+    return min(((x, y) for x in xs for y in ys), key=cost)
+
+
+def screen_of(place, screens):
+    """The screen (x, y, width, height) that holds the middle of `place`, else the
+    largest; None without screens."""
+    x, y, width, height = place
+    cx, cy = x + width / 2, y + height / 2
+    for screen in screens:
+        sx, sy, sw, sh = screen
+        if sx <= cx < sx + sw and sy <= cy < sy + sh:
+            return screen
+    return main_screen(screens)
+
+
+def centred(place, screen, horizontal=False, vertical=False):
+    """`place` (x, y, width, height) centred on `screen` across (horizontal), down
+    (vertical) or both; its size stays."""
+    x, y, width, height = place
+    sx, sy, sw, sh = screen
+    if horizontal:
+        x = sx + (sw - width) // 2
+    if vertical:
+        y = sy + (sh - height) // 2
+    return (x, y, width, height)

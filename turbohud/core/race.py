@@ -26,8 +26,9 @@ import struct
 import time
 from dataclasses import dataclass
 
+from turbohud.core.flags import flag_code, flag_text
 from turbohud.core.hud import Row, clock, local_time_rows
-from turbohud.core.il2cpp import ARRAY_DATA, LIST_ITEMS, SIMPLE_TYPES, NotFound, ReadError
+from turbohud.core.il2cpp import ARRAY_DATA, ARRAY_LENGTH, LIST_ITEMS, SIMPLE_TYPES, NotFound, ReadError
 
 UNITS_PER_SECOND = 10_000
 # EventState.times: ticks, time, ..., time limit (int32 each).
@@ -57,6 +58,7 @@ class LapState:
     position: tuple | None = None  # the car's (x, z)
     gates: tuple = ()  # the checkpoint lines, ((x1, z1), (x2, z2)), in checkpoint order
     car: 'CarState | None' = None  # fuel, tires and speed, where the game has them
+    players: tuple = ()  # every player in the race (PlayerState), the local one included
 
     @property
     def lap_times(self):
@@ -242,6 +244,7 @@ def _passed(times, k):
 
 
 MAX_TIRE_WEAR = 5_760_000  # TS.TireWearSettings.MaxTireWear (a constant): worn out
+KMH_PER_MPH = 1.609344
 SPEED_TO_KMH = 3.6  # m_forwardSpeed is taken as metres per second (not yet compared in game)
 PER_LAP_LAPS = 3  # laps averaged for fuel and tire use per lap
 LIFT_MIN_KMH = 5  # slower than this is standing, not lifting
@@ -288,6 +291,22 @@ class CarState:
     fuel_trend: float | None = None  # this lap's use so far minus the recent laps' at the same checkpoint
     throttle: float | None = None  # 0 to 1, None where unknown
     brake: float | None = None
+    health: float | None = None  # 0 to 1 (hit points of the most), None without damage
+    downforce_from: float | None = None  # health under which the car loses downforce
+    slowed_from: float | None = None  # health under which it is slower
+    draft: float | None = None  # 0 to 1: how strong the slipstream is, of the event's most; None: no drafting
+    draft_downforce_loss: float = 0.0  # 0 to 1: downforce lost to the slipstream now
+
+    @property
+    def damage_effect(self):
+        """'slowed', 'downforce' or None: what the damage does to the car now."""
+        if self.health is None:
+            return None
+        if self.slowed_from is not None and self.health < self.slowed_from:
+            return 'slowed'
+        if self.downforce_from is not None and self.health < self.downforce_from:
+            return 'downforce'
+        return None
 
     @property
     def saving(self):
@@ -349,14 +368,64 @@ def per_lap(history, laps=PER_LAP_LAPS):
     return (recent[-1] - recent[0]) / (len(recent) - 1)
 
 
+CLIENT_SEARCH_EVERY = 10.0  # seconds between searches for an online race while there is none
+CLIENT_LOG_EVERY = 2.0  # seconds between looks at TSU's log while it says no event runs
+QUANTIZED_ZERO, QUANTIZED_SCALE = 1 << 20, 1024  # TS.QuantizedVehicleState positions
+RECORDER_STALE = 10_000  # race clock (1 s) without a new recorder tick: it does not run
+STRING_LENGTH, STRING_CHARS = 0x10, 0x14  # System.String: length, then UTF-16 text
+MAX_NAME = 64
+
+
+@dataclass(frozen=True)
+class PlayerState:
+    """One player in the race, for the player list."""
+
+    name: str
+    flag: int  # TS.Flag value (turbohud.core.flags), 0 for none
+    laps_completed: int
+    checkpoints: tuple  # per started lap, when each checkpoint was passed, 0.1 ms
+    finished: bool = False
+    in_pit: bool = False
+    local: bool = False
+    position: tuple | None = None  # the car's (x, z) on the ground plane, for the radar
+    velocity: tuple | None = None  # its (x, z) velocity, game units a second
+    forward: tuple | None = None  # the (x, z) way its nose points
+    estimated: bool = False  # the position is worked out (DeadReckoning), not read
+
+    @property
+    def passed(self):
+        """Every checkpoint time of the race in one row (laps one after another)."""
+        return tuple(time for lap in self.checkpoints for time in lap)
+
+    @property
+    def finish_time(self):
+        """When the last lap ended (the next lap's start), for a finished player."""
+        if not self.finished or len(self.checkpoints) <= self.laps_completed:
+            return None
+        return self.checkpoints[self.laps_completed][0]
+
+
 class LapReader:
     """Reads the race. What does not change during a race (field positions, the local
     player, finished laps, the track's checkpoint lines) is kept between reads, so a read
     asks the game only for what moves: about twenty small reads."""
 
-    def __init__(self, il2cpp):
+    def __init__(self, il2cpp, clock=time.monotonic, event_running=None):
+        """`event_running`: a callable saying whether TSU has an event running (True,
+        False, or None for not known), so the game's memory is only searched for an
+        online race while there is one (turbohud.tsu.gamelog)."""
         self.il = il2cpp
+        self._event_running = event_running
         self.services_class = il2cpp.find_class('TS', 'Services')
+        self._clock = clock
+        self._reckoning = DeadReckoning()  # positions where the game keeps none (online client)
+        self._listener = None  # the race controller (TS.EventController) of the event state
+        self._draft = None  # the event's drafting settings, once read (False: none)
+        self._player_indices = []
+        self._recorder_tick, self._recorder_moved = None, 0
+        self._client_class = None  # TS.ClientEventController, once looked up
+        self._controller = None  # the online race's event controller, once found
+        self._next_search = 0.0  # when to look for it again
         self._state = None  # the TS.EventState the caches below belong to
         self._offsets = {}  # (role, field) -> offset
         self._player = None
@@ -368,8 +437,75 @@ class LapReader:
         self._types = {}  # (role, field) -> (offset, type code)
 
     def event_state(self):
+        """The race's TS.EventState. A race the game runs itself (offline, hotlap) is
+        under TS.Services.m_activeServer. In an online race, also one the player hosts,
+        the game is a client: the race is then in a TS.ClientEventController that no
+        static field leads to, so it is found by its class (see _online_event_state)."""
         services = self.il.static_ref(self.services_class, 'sm_instance')
-        return self.il.ref(services, 'm_activeServer', 'm_eventListener', 'm_eventState')
+        try:
+            self._listener = self.il.ref(services, 'm_activeServer', 'm_eventListener')
+            return self.il.ref(self._listener, 'm_eventState')
+        except NotFound as error:
+            if 'm_activeServer is null' not in str(error):
+                raise
+            state = self._online_event_state(error)
+            self._listener = self._controller
+            return state
+
+    def _draft_settings(self):
+        """(speed effect, downforce reduction), each 0 to 1, of the event's drafting
+        (TS.EventSettings.drafting, through the race controller's event logic), or None
+        where drafting is off or not found. Read once per event."""
+        if self._draft is None:
+            self._draft = False
+            try:
+                settings = self.il.ref(self._listener, 'm_eventLogic', 'm_eventSettings', 'drafting')
+                if self._number('draft', settings, 'draftingOn'):
+                    speed = self._number('draft', settings, 'draftingSpeedEffect')
+                    downforce = self._number('draft', settings, 'draftingDownforceReduction')
+                    if speed > 0:
+                        self._draft = (speed / 100, downforce / 100)
+            except (NotFound, OSError):
+                pass
+        return self._draft or None
+
+    def _online_event_state(self, error):
+        """The online race's event state, from the controller found before while it is
+        still that controller; else, at most every CLIENT_SEARCH_EVERY seconds, from a
+        search of the game's data for objects of class TS.ClientEventController (one
+        request the probe answers in about 1.5 s). Raises `error` when there is none."""
+        il, memory = self.il, self.il.memory
+        if self._controller is not None:
+            try:
+                if memory.u64(self._controller) == self._client_class:
+                    state = il.ref(self._controller, 'm_eventState')
+                    if il.list_items(il.ref(state, 'players')):
+                        return state
+            except (NotFound, OSError):
+                pass
+            self._controller = None
+            self._next_search = 0.0  # gone (race over): look again at once
+        find = memory.find_pointers
+        if find is None or self._clock() < self._next_search:
+            raise error
+        if self._event_running is not None and self._event_running() is False:
+            # Menus and lobbies: no event, nothing to search for (a search reads all
+            # of the game's data and keeps a CPU core busy for over a second).
+            self._next_search = self._clock() + CLIENT_LOG_EVERY
+            raise error
+        self._next_search = self._clock() + CLIENT_SEARCH_EVERY
+        if self._client_class is None:
+            self._client_class = il.find_class('TS', 'ClientEventController')
+        for candidate in find(self._client_class):
+            try:
+                state = il.ref(candidate, 'm_eventState')
+                for player in il.list_items(il.ref(state, 'players')):
+                    if player and memory.i32(player + il.offset(player, 'm_localHumanIndex')) >= 0:
+                        self._controller = candidate
+                        return state
+            except (NotFound, OSError):
+                continue  # a freed controller of an earlier race
+        raise error
 
     def local_player(self):
         """(event state, local TS.EventPlayer); raises NotFound outside a race."""
@@ -407,9 +543,13 @@ class LapReader:
         if state != self._state:
             # A new event (or the first read): start the caches afresh.
             self._state, self._offsets, self._laps, self._gates = state, {}, {}, None
+            self._reckoning = DeadReckoning()
+            self._recorder_tick, self._recorder_moved = None, 0
+            self._draft = None
             self._fuel_history, self._wear_history, self._fuel_marks, self._types = {}, {}, {}, {}
             self._player = self.local_player()[1]
         player = self._player
+        state_object = state
         times = state + self._offset('state', state, 'times')
         span = struct.unpack('<5i', memory.read(times + TIMES_NOW, TIMES_LIMIT - TIMES_NOW + 4))
         clock, time_limit = span[0], span[-1]  # one read for the clock and the time limit
@@ -446,6 +586,20 @@ class LapReader:
             gates=gates,
             car=car,
         )
+        players = self._players(state_object)
+        if any(p.position is None for p in players):
+            recorded = self._recorded_positions(clock)
+            if recorded:
+                players = tuple(
+                    dataclasses.replace(p, position=recorded[i]) if p.position is None and i in recorded else p
+                    for p, i in zip(players, self._player_indices)
+                )
+        players = self._reckoning.fill(players, gates, clock)
+        if position is None:
+            # Online, as a client, the game keeps no position: the delta and the fuel
+            # trend use the worked-out one.
+            position = next((p.position for p in players if p.local), None)
+        state = dataclasses.replace(state, players=players, position=position)
         live = state.live_fuel_trend(self._fuel_marks, self._fuel_history)
         if live is not None:
             state = dataclasses.replace(state, car=dataclasses.replace(car, fuel_trend=live))
@@ -468,6 +622,8 @@ class LapReader:
         except NotFound:
             return None
         throttle, brake = self._pedals(updater)
+        health, downforce_from, slowed_from = self._health(state, updater)
+        draft, downforce_loss = self._drafting(updater)
         trend = None
         if lap >= 0:
             self._fuel_history.setdefault(lap, fuel_used)
@@ -479,8 +635,185 @@ class LapReader:
         return CarState(
             fuel_on=fuel_on, fuel_used=fuel_used, fuel_tank=tank, tires_on=tires_on, tire_wear=tire_wear,
             speed=speed, fuel_per_lap=per_lap(fuel_starts), wear_per_lap=per_lap(wear_starts), fuel_trend=trend,
-            throttle=throttle, brake=brake,
+            throttle=throttle, brake=brake, health=health, downforce_from=downforce_from, slowed_from=slowed_from,
+            draft=draft, draft_downforce_loss=downforce_loss,
         )
+
+    def _drafting(self, updater):
+        """(draft 0 to 1, downforce lost 0 to 1) of the local car, or (None, 0.0) without
+        drafting. TS.CarStateUpdater keeps the slipstream's effect as multipliers: on the
+        air resistance (m_draftingViscosityFactor, 1 - speed effect x draft) and on the
+        downforce (m_draftingDownforceFactor, 1 - downforce reduction x draft); checked
+        online: 0.927 and 0.418 at 10 % and 80 %, both a draft of 0.73."""
+        settings = self._draft_settings()
+        if settings is None:
+            return None, 0.0
+        speed_effect, _downforce = settings
+        try:
+            drag = self._number('updater', updater, 'm_draftingViscosityFactor')
+            downforce = self._number('updater', updater, 'm_draftingDownforceFactor')
+        except (NotFound, ReadError):
+            return None, 0.0
+        draft = min(max((1 - drag) / speed_effect, 0.0), 1.0)
+        return draft, min(max(1 - downforce, 0.0), 1.0)
+
+    def _health(self, state, updater):
+        """(health, downforce_from, slowed_from), each 0 to 1, or Nones in an event without
+        damage. Health is TS.VehicleState.hitPoints of maxHitPoints; the limits are the
+        game's own (CarStateUpdater: hit points to relative health multipliers, which are
+        1 / the hit points where the effect starts)."""
+        try:
+            most = self._number('vstate', state, 'maxHitPoints')
+            points = self._number('vstate', state, 'hitPoints')
+            enabled = self._number('updater', updater, 'm_gradualDamageEnabled')
+        except (NotFound, ReadError):
+            return None, None, None
+        if most <= 0 or not (enabled or points < most):
+            return None, None, None
+
+        def limit(name):
+            try:
+                multiplier = self._number('updater', updater, name)
+            except (NotFound, ReadError):
+                return None
+            return min(1 / multiplier / most, 1.0) if multiplier > 0 else None
+
+        return (
+            min(max(points / most, 0.0), 1.0),
+            limit('m_hitPointsToRelativeHealthMultiplierForDownforceLoss'),
+            limit('m_hitPointsToRelativeHealthMultiplierForAcceleration'),
+        )
+
+    def _string(self, address):
+        if not address:
+            return ''
+        length = self.il.memory.i32(address + STRING_LENGTH)
+        if not 0 <= length <= MAX_NAME:
+            return ''
+        return self.il.memory.read(address + STRING_CHARS, 2 * length).decode('utf-16-le', 'replace')
+
+    def _players(self, state):
+        """Every player of the race (PlayerState); empty where the game has no list."""
+        il = self.il
+        try:
+            players = il.list_items(self._ref('state', state, 'players'))
+        except (NotFound, OSError):
+            return ()
+        found, indices = [], []
+        for index, player in enumerate(players):
+            if not player:
+                continue
+            try:
+                found.append(self._player_state(player))
+                indices.append(index)
+            except (NotFound, OSError):
+                continue  # one unreadable player must not hide the others
+        self._player_indices = indices  # each one's place in the game's list
+        return tuple(found)
+
+    def _recorded_positions(self, clock):
+        """{place in the game's player list: (x, z)} from the replay recorder of an
+        online race the game runs as a client, which keeps no other car positions.
+
+        TS.EventRecorder.m_lastQuantizedVehicleStates holds each car's last recorded
+        state, in the order of the player list, with the position in whole numbers:
+        (value - 2**20) / 1024 (checked online: cars crossing a checkpoint line were
+        0.8 from it on average). Empty when the recorder does not run (its tick stands
+        still for RECORDER_STALE) or has no states."""
+        if self._controller is None:
+            return {}
+        memory = self.il.memory
+        try:
+            recorder = self._ref('client', self._controller, 'm_eventRecorder')
+            tick = memory.i32(recorder + self._offset('recorder', recorder, 'm_stateTick'))
+            states = self._ref('recorder', recorder, 'm_lastQuantizedVehicleStates')
+            count = memory.u64(states + ARRAY_LENGTH)
+            if not 0 < count <= 256:
+                return {}
+            elements = struct.unpack(f'<{count}Q', memory.read(states + ARRAY_DATA, 8 * count))
+            first = next((e for e in elements if e), None)
+            if first is None:
+                return {}
+            to_position = self._offset('qstate', first, 'm_positionX')
+        except (NotFound, OSError):  # optional: the race reads on without it
+            return {}
+        if tick != self._recorder_tick:
+            self._recorder_tick, self._recorder_moved = tick, clock
+        elif clock - self._recorder_moved > RECORDER_STALE:
+            return {}
+        found = {}
+        for index, (element, data) in enumerate(zip(elements, memory.read_many([e + to_position for e in elements], 12))):
+            if not element or data is None:
+                continue
+            x, _y, z = struct.unpack('<3I', data)
+            if x or z:
+                found[index] = ((x - QUANTIZED_ZERO) / QUANTIZED_SCALE, (z - QUANTIZED_ZERO) / QUANTIZED_SCALE)
+        return found
+
+    def _player_state(self, player):
+        il, memory = self.il, self.il.memory
+        local = memory.i32(player + self._offset('player', player, 'm_localHumanIndex')) >= 0
+        name, flag = '', 0
+        try:
+            profile = il.ref(self._ref('player', player, 'm_playerInfo'), 'm_profile')
+            name = self._string(memory.u64(profile + self._offset('profile', profile, 'm_name')))
+            flag = memory.i32(profile + self._offset('profile', profile, 'flag'))
+        except NotFound:
+            pass
+        stats = self._ref('player', player, 'm_stats')
+        laps_completed = memory.u16(stats + self._offset('stats', stats, 'm_lapsCompleted'))
+        try:
+            finished = bool(memory.u8(stats + self._offset('stats', stats, 'm_finished')))
+        except NotFound:
+            finished = False
+        checkpoints = []
+        for index, lap in enumerate(il.list_items(self._ref('stats', stats, 'm_checkpointTimesForLaps'))):
+            if not lap:
+                continue
+            passed = self._laps.get(lap)
+            if passed is None:
+                passed = self._u32_list(self._ref('lap', lap, 'm_times'))
+                if index < laps_completed:
+                    self._laps[lap] = passed
+            if passed:
+                checkpoints.append(passed)
+        in_pit, position, velocity, forward = False, None, None, None
+        try:
+            vehicle = self._ref('player', player, 'm_vehicle')
+        except NotFound:
+            vehicle = None
+        if vehicle is not None:
+            updater = None
+            try:
+                updater = self._ref('vehicle', vehicle, 'm_stateUpdater')
+                in_pit = bool(memory.u8(updater + self._offset('updater', updater, 'inPit')))
+            except (NotFound, ReadError):
+                pass
+            try:
+                # The whole pit area, from its entrance to its exit, not only the pit box.
+                state = self._ref('vehicle', vehicle, 'm_state')
+                in_pit = in_pit or bool(memory.u8(state + self._offset('vstate', state, 'inPitArea')))
+            except (NotFound, ReadError):
+                pass
+            if updater is not None:
+                velocity, forward = self._flat(updater, 'm_oldVelocity3d'), self._flat(updater, 'm_oldForwardDirection')
+            try:
+                where = vehicle + self._offset('vehicle', vehicle, 'm_statsNewPosition')
+                x, _y, z = struct.unpack('<3f', memory.read(where, 12))
+                position = _known_position(x, z)
+            except (NotFound, ReadError):
+                pass
+        return PlayerState(
+            name, flag, laps_completed, tuple(checkpoints), finished, in_pit, local, position, velocity, forward
+        )
+
+    def _flat(self, obj, name):
+        """A Vector3 field of a CarStateUpdater as (x, z), or None where it is missing."""
+        try:
+            x, _y, z = struct.unpack('<3f', self.il.memory.read(obj + self._offset('updater', obj, name), 12))
+        except (NotFound, ReadError):
+            return None
+        return (x, z) if math.isfinite(x) and math.isfinite(z) else None
 
     def _number(self, role, obj, name):
         """A simple field read by the type the game gives it (int, float, ...)."""
@@ -539,15 +872,63 @@ class LapReader:
     def _position_and_gates(self, player):
         """The car's (x, z) and the track's checkpoint lines, for the live delta; (None,
         ()) where the game does not have them."""
-        il, memory = self.il, self.il.memory
+        memory = self.il.memory
         try:
             vehicle = self._ref('player', player, 'm_vehicle')
             x, _y, z = struct.unpack('<3f', memory.read(vehicle + self._offset('vehicle', vehicle, 'm_statsNewPosition'), 12))
             if self._gates is None:
                 self._gates = self._read_gates(player)
-            return (x, z), self._gates
+            return _known_position(x, z), self._gates
         except NotFound:
             return None, ()
+
+
+class DeadReckoning:
+    """Positions for cars whose position the game does not keep (online, when the game
+    is a client: it stays at (0, 0)), worked out for the live delta and gaps. Each car
+    starts at the middle of the checkpoint line it passed last, at the moment it passed
+    it (its checkpoint time), and moves on by its velocity (which the game does keep)
+    until the next line resets it: about a second, so it cannot drift far. Where across
+    the track it is stays unknown, so the radar does not use these."""
+
+    def __init__(self):
+        self.cars = {}  # name -> (checkpoints passed, (x, z), race clock)
+
+    def position(self, player, gates, clock):
+        passed = player.passed
+        if player.velocity is None or not gates or not passed or passed[-1] == NO_CHECKPOINT:
+            return None
+        vx, vz = player.velocity
+        count = len(passed)
+        known = self.cars.get(player.name)
+        if known is not None and known[0] == count and clock >= known[2]:
+            _count, (x, z), since = known
+        else:
+            (x1, z1), (x2, z2) = gates[(count - 1) % len(gates)]
+            x, z, since = (x1 + x2) / 2, (z1 + z2) / 2, passed[-1]
+        seconds = max(clock - since, 0) / UNITS_PER_SECOND
+        x, z = x + vx * seconds, z + vz * seconds
+        self.cars[player.name] = (count, (x, z), clock)
+        return (x, z)
+
+    def fill(self, players, gates, clock):
+        """`players` with a worked-out position where the game gave none."""
+        filled = []
+        for player in players:
+            if player.position is None:
+                worked_out = self.position(player, gates, clock)
+                if worked_out is not None:
+                    player = dataclasses.replace(player, position=worked_out, estimated=True)
+            filled.append(player)
+        return tuple(filled)
+
+
+def _known_position(x, z):
+    """(x, z), or None where the game does not keep it: in online races the position
+    field stays at (0, 0), and the HUD then works without it."""
+    if not (math.isfinite(x) and math.isfinite(z)) or (x == 0.0 and z == 0.0):
+        return None
+    return (x, z)
 
 
 def format_time(units):
@@ -599,6 +980,14 @@ def current_lap_now(snapshot, now):
     return current + int(ahead * UNITS_PER_SECOND)
 
 
+def clock_now(snapshot, now):
+    """The race clock at monotonic time `now`, run on like current_lap_now."""
+    clock = snapshot.state.clock
+    if not snapshot.running:
+        return clock
+    return clock + int(min(max(now - snapshot.read_at, 0.0), MAX_EXTRAPOLATION) * UNITS_PER_SECOND)
+
+
 STILL_SECONDS = 2.0  # a race clock standing this long: not on the grid (lobby, pause)
 
 
@@ -624,19 +1013,41 @@ def status_text(snapshot):
     return 'waiting for a race'
 
 
-def race_sections(snapshot, now):
+def race_sections(snapshot, now, speed_unit='kmh', standings=None, radar=None):
     """{section name: rows} for a live-reader snapshot (see core.hud.RACE_SECTIONS); a
     section with nothing to show has no rows. Nothing before the grid: in the menus, the
-    lobby and while a race loads the HUD keeps out of the way (status_text says why)."""
+    lobby and while a race loads the HUD keeps out of the way (status_text says why).
+    `standings` (a Standings) holds the player list's order steady while cars pass;
+    `radar` (a Radar) follows the cars' movement for the proximity radar."""
     if not on_grid(snapshot, now):
         return {}
     state = snapshot.state
     if state.finished or state.laps_to_finish and state.laps_completed >= state.laps_to_finish:
-        return {
+        # Finished: the lap sections say so, and the rest stays (the player list above
+        # all) while the others race on, until the race is over and the clock stops.
+        sections = {
             'lap': [Row(f'Finished - {state.laps_completed} laps', 'title')],
             'current': [Row(format_time(state.best_lap), 'big', 'accent')],
             'times': [Row(f'Best lap   Last {format_time(state.last_lap)}', 'medium')],
         }
+    else:
+        sections = _racing_sections(snapshot, now)
+    sections.update(car_sections(state.car, state.laps_to_go, speed_unit))
+    if state.players:
+        order = standings.order(state.players, now) if standings is not None else None
+        sections['players'] = players_rows(state.players, order, state.clock, state.gates)
+        opacity = blue_flag_opacity(blue_flag(state.players, clock_now(snapshot, now)))
+        if opacity is not None:
+            sections['blue'] = opacity
+        view = radar.update(state.players, snapshot.read_at) if radar is not None else None
+        if view is not None:
+            sections['radar'] = view
+    return sections
+
+
+def _racing_sections(snapshot, now):
+    """The lap sections while the local player races."""
+    state = snapshot.state
     title = f'Lap {state.lap_number}/{state.laps_to_finish}' if state.laps_to_finish else f'Lap {state.lap_number}'
     left = state.time_left
     if left is not None:
@@ -647,14 +1058,12 @@ def race_sections(snapshot, now):
     else:
         color = 'text' if abs(delta) < EVEN else 'ahead' if delta < 0 else 'behind'
         delta_row = Row(f'{format_delta(delta)} vs best', 'medium', color)
-    sections = {
+    return {
         'lap': [Row(title, 'title')],
         'current': [Row(format_tenths(current_lap_now(snapshot, now)), 'big', 'accent')],
         'delta': [delta_row],
         'times': [Row(f'Last {format_time(state.last_lap)}   Best {format_time(state.best_lap)}', 'medium')],
     }
-    sections.update(car_sections(state.car, state.laps_to_go))
-    return sections
 
 
 def _laps_text(laps):
@@ -678,13 +1087,14 @@ def _balance_text(car):
     return f'  {"+" if balance >= 0 else "-"}{abs(balance):.2f}%'
 
 
-def car_sections(car, laps_to_go=None):
+def car_sections(car, laps_to_go=None, speed_unit='kmh'):
     """{section: rows} for fuel, tires and speed; empty where the event has none.
     `laps_to_go` (LapState.laps_to_go) gives the fuel margin to the finish."""
     if car is None:
         return {}
     speed_color = 'lift' if car.lifting else 'text'
-    sections = {'speed': [Row(f'{car.kmh:.0f} km/h', 'medium', speed_color)], 'pedals': (car.throttle, car.brake)}
+    speed = f'{car.kmh / KMH_PER_MPH:.0f} mph' if speed_unit == 'mph' else f'{car.kmh:.0f} km/h'
+    sections = {'speed': [Row(speed, 'medium', speed_color)], 'pedals': (car.throttle, car.brake)}
     if car.fuel_left is not None:
         color = {True: 'ahead', False: 'behind', None: 'text'}[car.saving]
         tail = _laps_text(car.fuel_laps) + _balance_text(car)
@@ -695,9 +1105,39 @@ def car_sections(car, laps_to_go=None):
             sections['fuelfinish'] = [Row('Finish -', 'medium')]
         else:
             sections['fuelfinish'] = [Row(f'Finish {margin:+.1f} laps', 'medium', 'ahead' if margin >= 0 else 'behind')]
+    levels = {}
+    if car.fuel_left is not None:
+        margin = fuel_margin(car, laps_to_go)
+        levels['fuel'] = (car.fuel_left, 'behind' if margin is not None and margin < 0 else _level_color(car.fuel_left))
     if car.tires_left is not None:
         sections['tires'] = [Row(f'Tires {car.tires_left * 100:.0f}%{_laps_text(car.tire_laps)}', 'medium')]
+        levels['tires'] = (car.tires_left, _level_color(car.tires_left))
+    if car.health is not None:
+        effect = car.damage_effect
+        color = {'slowed': 'behind', 'downforce': 'lift', None: 'text'}[effect]
+        tail = {'slowed': '  slowed', 'downforce': '  less downforce', None: ''}[effect]
+        # Rounded up as the game shows it (126 of 500 is 26 %): 0 % only when wrecked.
+        shown = math.ceil(round(car.health * 100, 6))
+        sections['health'] = [Row(f'Health {shown}%', 'medium', color, tail=tail, tail_color=color)]
+        levels['health'] = (car.health, {'slowed': 'behind', 'downforce': 'lift', None: 'ahead'}[effect])
+    if car.draft is not None:
+        warn = car.draft_downforce_loss >= DRAFT_DOWNFORCE_WARN
+        tail = f'  -{car.draft_downforce_loss * 100:.0f}% downforce' if warn else ''
+        color = 'draft' if car.draft > 0 else 'text'
+        sections['draft'] = [Row(f'Draft {car.draft * 100:.0f}%', 'medium', color, tail=tail, tail_color='lift')]
+        levels['draft'] = (car.draft, 'draft')
+    if levels:
+        sections['levels'] = levels  # {section: (0 to 1, colour)} for the bars below the text
     return sections
+
+
+DRAFT_DOWNFORCE_WARN = 0.05  # downforce lost to the slipstream from which the draft section warns
+LEVEL_LOW = 0.15  # below this the level bar is red
+LEVEL_HALF = 0.35  # below this it is yellow
+
+
+def _level_color(left):
+    return 'behind' if left < LEVEL_LOW else 'lift' if left < LEVEL_HALF else 'ahead'
 
 
 def with_local_time(sections, snapshot, now_struct):
@@ -708,8 +1148,429 @@ def with_local_time(sections, snapshot, now_struct):
     return {**sections, 'localtime': local_time_rows(now_struct)}
 
 
+MAX_PLAYER_ROWS = 8  # more players: the leader and those around the local player
+MAX_NAME_SHOWN = 18
+
+
+def ranked(players):
+    """Players in race order: finished ones by when they finished, then the others by
+    how many checkpoints they passed, and at the same checkpoint by who got there first."""
+    def key(player):
+        if player.finish_time is not None:
+            return (0, player.finish_time, 0)
+        passed = player.passed
+        return (1, -len(passed), passed[-1] if passed else 0)
+
+    return sorted(players, key=key)
+
+
+def live_gap(ahead, behind, clock, gates):
+    """How far (0.1 ms) `behind` is behind `ahead` right now, live like the delta to
+    the best lap: how far `behind` is from its last checkpoint to the next (by its
+    position and the checkpoint lines `gates`) gives the moment `ahead` was at the same
+    place, which is that long before `clock`. None without position or lines, or when
+    `ahead` has not passed that place's next checkpoint yet."""
+    if behind.position is None or not gates:
+        return None
+    lines = len(gates)
+    first, second = ahead.passed, behind.passed
+    k = len(second) - 1
+    if k < 0 or len(first) < k + 1:
+        return None
+    if len(first) == k + 1:
+        return _same_stretch_gap(ahead, behind, clock, gates)
+    # As in LapState.stretch: a run of lines passed together starts the stretch, and a
+    # line at the same spot as the one passed (same time for the car ahead) is skipped.
+    start = k
+    while start > 0 and second[start] == second[start - 1]:
+        start -= 1
+    following = k + 1
+    while following < len(first) and first[following] == first[k]:
+        following += 1
+    if following >= len(first) or NO_CHECKPOINT in (first[start], first[following]):
+        return None
+    end = following
+    while end + 1 < len(first) and first[end + 1] == first[following]:
+        end += 1
+    share = gate_share(
+        [gates[i % lines] for i in range(start, k + 1)],
+        [gates[i % lines] for i in range(following, end + 1)],
+        behind.position,
+    )
+    there = first[start] + share * (first[following] - first[start])
+    return max(round(clock - there), 0)
+
+
+def _same_stretch_gap(ahead, behind, clock, gates):
+    """live_gap while both cars are between the same two checkpoints (the one ahead
+    has not reached the next yet): it went from that stretch's first line, at its time
+    there, to where it is now; the moment it was where `behind` is now is that share of
+    the way. None without its position or when it is not further on."""
+    if ahead.position is None:
+        return None
+    lines = len(gates)
+    k = len(behind.passed) - 1
+    start = k
+    while start > 0 and behind.passed[start] == behind.passed[start - 1]:
+        start -= 1
+    passed_at = ahead.passed[start]
+    if passed_at == NO_CHECKPOINT or clock <= passed_at:
+        return None
+    back = [gates[i % lines] for i in range(start, k + 1)]
+    next_line = [gates[(k + 1) % lines]]
+    theirs = gate_share(back, next_line, ahead.position)
+    mine = gate_share(back, next_line, behind.position)
+    if theirs <= mine or theirs <= 0:
+        return None
+    there = passed_at + mine / theirs * (clock - passed_at)
+    return max(round(clock - there), 0)
+
+
+def gap(player, me, clock=None, gates=()):
+    """`player` against `me`: ('time', 0.1 ms; negative: they are ahead), or ('laps',
+    n) a lap or more apart (negative: ahead), or None before a comparison. Live (see
+    live_gap) with the race `clock` and the checkpoint lines `gates` where the cars'
+    positions are known; otherwise at the last checkpoint both passed."""
+    theirs, mine = player.passed, me.passed
+    lap_length = len(me.checkpoints[0]) if me.checkpoints and len(me.checkpoints) > 1 else 0
+    difference = len(theirs) - len(mine)
+    if lap_length and abs(difference) >= lap_length:
+        laps = abs(difference) // lap_length
+        return ('laps', -laps if difference > 0 else laps)
+    common = min(len(theirs), len(mine)) - 1
+    if common < 1:
+        return None
+    if clock is not None:
+        they_lead = difference > 0 or difference == 0 and theirs[-1] < mine[-1]
+        live = live_gap(player, me, clock, gates) if they_lead else live_gap(me, player, clock, gates)
+        if live is not None:
+            return ('time', -live if they_lead else live)
+    return ('time', theirs[common] - mine[common])
+
+
+def gap_text(found):
+    if found is None:
+        return ''
+    kind, value = found
+    if kind == 'laps':
+        return f'{value:+d} L'
+    return format_delta(value)
+
+
+SWAP_HOLD = 0.3  # seconds a new order must last before the player list shows it
+
+
+class Standings:
+    """The player list's order, held steady: a new order shows only once it has lasted
+    SWAP_HOLD. While two cars pass each other, or a checkpoint is written a moment late,
+    the order can change back and forth within a few reads; then the list keeps the
+    order it had and only takes the new one when it stays. A player joining or leaving
+    changes the list at once. The gaps next to the names stay live all the time."""
+
+    def __init__(self, hold=SWAP_HOLD):
+        self.hold = hold
+        self.shown = None  # names in the order shown
+        self.pending = None  # a different order, and since when it has lasted
+        self.since = 0.0
+
+    def order(self, players, now):
+        """The players in the order to show at monotonic time `now`."""
+        current = ranked(players)
+        names = tuple(p.name for p in current)
+        if self.shown is None or sorted(names) != sorted(self.shown) or len(set(names)) != len(names):
+            self.shown, self.pending = names, None
+            return current
+        if names == self.shown:
+            self.pending = None
+            return current
+        if names != self.pending:
+            self.pending, self.since = names, now
+        if now - self.since >= self.hold:
+            self.shown, self.pending = names, None
+            return current
+        by_name = {p.name: p for p in current}
+        return [by_name[name] for name in self.shown]
+
+
+def shown_players(players, max_rows=MAX_PLAYER_ROWS, order=None):
+    """(position, player) for the rows: everyone, or with more than `max_rows` the
+    leader and the players around the local one. `order` is the race order to use
+    (Standings.order), by default the current one."""
+    order = list(enumerate(ranked(players) if order is None else order, start=1))
+    if len(order) <= max_rows:
+        return order
+    me = next((i for i, (_pos, p) in enumerate(order) if p.local), 0)
+    around = max_rows - 1
+    first = min(max(me - around // 2, 1), len(order) - around)
+    return [order[0]] + order[first:first + around]
+
+
+def players_rows(players, order=None, clock=None, gates=()):
+    """The player list: position, flag, name, PIT, and the gap to the local player
+    (live with the race `clock` and the checkpoint lines `gates`, see gap)."""
+    me = next((p for p in players if p.local), None)
+    rows = []
+    for position, player in shown_players(players, order=order):
+        name = player.name or '?'
+        if len(name) > MAX_NAME_SHOWN:
+            name = name[: MAX_NAME_SHOWN - 1] + '…'
+        found = gap(player, me, clock, gates) if me is not None and not player.local else None
+        color = 'text' if found is None or found[1] == 0 else ('behind' if found[1] < 0 else 'ahead')
+        rows.append(Row(
+            f'{position}. {name}', 'small', 'accent' if player.local else 'text',
+            tail='  PIT' if player.in_pit else '', tail_color='lift',
+            flag=flag_code(player.flag) or flag_text(player.flag),
+            right=gap_text(found), right_color=color,
+        ))
+    return rows
+
+
+BLUE_FROM = 2.0  # seconds: a car about to lap the local player this close shows the flag
+BLUE_FULL = 0.5  # seconds: this close or closer, the flag is fully visible
+BLUE_FAINT = 0.2  # the flag's opacity at BLUE_FROM: faint, but visible
+
+
+def blue_flag(players, now):
+    """Seconds until the nearest car that is about to lap the local player reaches them
+    on the track, or None when no such car is within BLUE_FROM. `now` is the race clock.
+
+    A car is about to lap the local player when it is ahead in the race but behind on
+    the track: it has passed more checkpoints, and the difference, taken round a lap, is
+    more than half a lap (so it is nearer behind than ahead). Exactly whole laps ahead,
+    it stands at the local player's last checkpoint: behind if it got there after the
+    local player, else already past (driving just ahead), which is no flag. Any
+    car counts, not only the leader. The gap is how much later it passed the checkpoint
+    it last passed than the local player did; once the local player has passed the next
+    one and it has not, the gap is at least the time since then, so the flag fades as it
+    falls back. When it passes, it is a little ahead on the track and the flag goes."""
+    me = next((p for p in players if p.local), None)
+    if me is None or me.finished or me.in_pit:
+        return None
+    lap_length = next((len(p.checkpoints[0]) for p in players if len(p.checkpoints) > 1), 0)
+    if lap_length < 2:
+        return None  # no lap completed by anyone yet: nobody can lap anybody
+    mine = me.passed
+    nearest = None
+    for player in players:
+        if player.local or player.finished or player.in_pit:
+            continue
+        theirs = player.passed
+        ahead = len(theirs) - len(mine)
+        rest = ahead % lap_length
+        if ahead <= 0 or not (rest > lap_length // 2 or rest == 0):
+            continue
+        same = len(theirs) - 1 - -(-ahead // lap_length) * lap_length  # my index for their last checkpoint
+        if same < 0 or NO_CHECKPOINT in (theirs[-1], mine[same]):
+            continue
+        units = theirs[-1] - mine[same]
+        if units < 0:
+            # It got to that checkpoint before the local player: it is already past,
+            # driving just ahead (a whole lap ahead in count, but in front on the track).
+            continue
+        if same + 1 < len(mine) and mine[same + 1] != NO_CHECKPOINT:
+            units = max(units, now - mine[same + 1])
+        seconds = units / UNITS_PER_SECOND
+        if seconds <= BLUE_FROM and (nearest is None or seconds < nearest):
+            nearest = seconds
+    return nearest
+
+
+def blue_flag_opacity(seconds):
+    """How visible the blue flag is (0 to 1) for a car `seconds` behind: BLUE_FAINT at
+    BLUE_FROM, rising evenly to 1 at BLUE_FULL; None (no flag) without a car."""
+    if seconds is None or seconds > BLUE_FROM:
+        return None
+    share = min(max((BLUE_FROM - seconds) / (BLUE_FROM - BLUE_FULL), 0.0), 1.0)
+    return BLUE_FAINT + (1 - BLUE_FAINT) * share
+
+
+# Proximity radar. Positions and speeds are in the game's own unit, so the time gap
+# (distance / speed) needs no scale. The car's size is a guess (the game's unit looks
+# like metres: the car does about 56 a second at 205 km/h); check it in a race.
+CAR_LENGTH = 4.5
+CAR_WIDTH = 2.0
+RADAR_FROM = 0.5  # seconds behind or ahead: the radar appears, faint
+RADAR_FULL = 0.1  # seconds behind or alongside: fully visible
+RADAR_FAINT = 0.2  # its opacity at RADAR_FROM
+RADAR_SIDE = 8.0  # sideways reach: a car farther to the side (another part of the track) does not count
+RADAR_VIEW = 20.0  # the radar shows at least this far behind; more at speed (radar_view)
+RADAR_MIN_SPEED = 3.0  # slower (standing on the grid): no radar, the direction is unknown
+HEADING_SPAN = 0.3  # seconds of movement a car's direction and speed are taken from (no game values)
+MAX_CARRY = 0.25  # seconds a car's position is carried on along its velocity since its last update
+RADAR_HOLD = 0.4  # seconds the radar stays (fading) after the last car that counted
+RADAR_EASE = 0.35  # share of the way to a lower opacity it goes per read
+HEADING_KEEP = 1.0  # seconds of positions kept per car
+
+
+@dataclass(frozen=True)
+class Blip:
+    """Another car on the radar: `ahead` and `side` (right positive) from the middle
+    of the local car, in game units along its direction; `angle` its direction against
+    the local car's, in radians; `seconds` the time gap if it counts (behind, beside or ahead)."""
+
+    ahead: float
+    side: float
+    angle: float
+    seconds: float | None
+
+
+@dataclass(frozen=True)
+class RadarView:
+    opacity: float  # 0 to 1 for the whole radar
+    blips: tuple  # Blip
+    view: float = RADAR_VIEW  # how far behind the local car the radar reaches
+
+
+def radar_view(speed):
+    """How far behind (and ahead) the radar reaches at `speed`: a car RADAR_FROM away still shows,
+    with room to spare."""
+    return max(RADAR_VIEW, speed * RADAR_FROM + 2 * CAR_LENGTH)
+
+
+def _heading(history, now):
+    """(direction unit vector, speed) from a car's recent (time, (x, z)), or None."""
+    if len(history) < 2:
+        return None
+    last_time, last = history[-1]
+    first = next(((t, p) for t, p in history if last_time - t <= HEADING_SPAN), history[-2])
+    if first[0] >= last_time:
+        first = history[-2]
+    dt = last_time - first[0]
+    dx, dz = last[0] - first[1][0], last[1] - first[1][1]
+    length = math.hypot(dx, dz)
+    if dt <= 0 or length <= 0:
+        return None
+    return (dx / length, dz / length), length / dt
+
+
+def radar_opacity(seconds):
+    """How visible the radar is for the nearest counting car `seconds` away: None (not
+    shown) past RADAR_FROM, RADAR_FAINT there, rising evenly to 1 at RADAR_FULL."""
+    if seconds is None or seconds > RADAR_FROM:
+        return None
+    share = min(max((RADAR_FROM - seconds) / (RADAR_FROM - RADAR_FULL), 0.0), 1.0)
+    return RADAR_FAINT + (1 - RADAR_FAINT) * share
+
+
+def radar_blips(me, speed, others):
+    """Blips for `others` [(position, direction or None)] around the local car at `me`
+    ((x, z), direction) at `speed`. A car counts when it is no more than RADAR_SIDE to
+    the side, behind, beside or ahead: beside (overlapping in length) is 0 s, behind or
+    ahead is the gap between the two cars' ends over the local speed."""
+    (mx, mz), (fx, fz) = me
+    blips = []
+    for (x, z), direction in others:
+        dx, dz = x - mx, z - mz
+        ahead = dx * fx + dz * fz
+        side = dx * fz - dz * fx  # right of the direction of travel (x right, z forward)
+        if abs(ahead) > radar_view(speed) * 1.5 or abs(side) > radar_view(speed):
+            continue
+        angle = 0.0
+        if direction is not None:
+            angle = math.atan2(direction[0] * fz - direction[1] * fx, direction[0] * fx + direction[1] * fz)
+        seconds = None
+        if abs(side) <= RADAR_SIDE:
+            gap = abs(ahead) - CAR_LENGTH  # nose to tail; under 0: overlapping
+            seconds = max(gap, 0.0) / speed
+        blips.append(Blip(ahead, side, angle, seconds))
+    return tuple(blips)
+
+
+class Radar:
+    """Follows every car to give the proximity radar (a RadarView) for the latest read,
+    or None when no car is close enough behind, beside or ahead to show it.
+
+    The game moves a car's position on only every other read or so (about ten times a
+    second, seen on a hosted online race), so positions are carried on along each car's
+    velocity between its updates, and direction and speed come from the game's own
+    values (CarStateUpdater: forward direction and velocity) where it has them, else
+    from the car's movement. The radar shows at once when a car comes close; when none
+    counts any more it stays for RADAR_HOLD and fades, so it does not blink."""
+
+    def __init__(self):
+        self.tracks = {}  # player name -> [(read time, (x, z))], only when it changed
+        self.read_at = None
+        self.opacity = 0.0
+        self.counted_at = None  # read time a car last counted
+
+    def _record(self, players, read_at):
+        names = set()
+        for player in players:
+            if player.position is None:
+                continue
+            names.add(player.name)
+            track = self.tracks.setdefault(player.name, [])
+            if not track or track[-1][1] != player.position:
+                track.append((read_at, player.position))
+            while len(track) > 2 and read_at - track[0][0] > HEADING_KEEP:
+                track.pop(0)
+        for name in set(self.tracks) - names:
+            del self.tracks[name]
+
+    def _motion(self, player, now):
+        """(position now, direction, speed) of a car, or None without enough to go on."""
+        track = self.tracks.get(player.name)
+        if not track:
+            return None
+        changed_at, position = track[-1]
+        velocity = player.velocity
+        if velocity is None:
+            moved = _heading(track, now)
+            if moved is None:
+                return None
+            (fx, fz), speed = moved
+            velocity = (fx * speed, fz * speed)
+        speed = math.hypot(*velocity)
+        ahead = min(max(now - changed_at, 0.0), MAX_CARRY)
+        position = (position[0] + velocity[0] * ahead, position[1] + velocity[1] * ahead)
+        direction = player.forward
+        if direction is None or not any(direction):
+            if speed <= 0:
+                return None
+            direction = (velocity[0] / speed, velocity[1] / speed)
+        else:
+            length = math.hypot(*direction)
+            direction = (direction[0] / length, direction[1] / length)
+        return position, direction, speed
+
+    def update(self, players, read_at):
+        fresh = read_at != self.read_at
+        if fresh:
+            self.read_at = read_at
+            self._record(players, read_at)
+        players = [p for p in players if not p.estimated]  # not exact enough for the radar
+        me = next((p for p in players if p.local), None)
+        mine = None if me is None or me.in_pit or me.finished else self._motion(me, read_at)
+        if mine is None or mine[2] < RADAR_MIN_SPEED:
+            self.opacity, self.counted_at = 0.0, None
+            return None
+        position, direction, speed = mine
+        others = []
+        for player in players:
+            if player.local or player.in_pit or player.finished:
+                continue
+            theirs = self._motion(player, read_at)
+            if theirs is not None:
+                others.append((theirs[0], theirs[1]))
+        blips = radar_blips((position, direction), speed, others)
+        if fresh:
+            nearest = min((b.seconds for b in blips if b.seconds is not None), default=None)
+            target = radar_opacity(nearest)
+            if target is not None:
+                self.counted_at = read_at
+                # Up at once (a car beside matters now), down gently.
+                self.opacity = target if target >= self.opacity else self.opacity + (target - self.opacity) * RADAR_EASE
+            elif self.counted_at is not None and read_at - self.counted_at <= RADAR_HOLD:
+                self.opacity = max(RADAR_FAINT, self.opacity + (RADAR_FAINT - self.opacity) * RADAR_EASE)
+            else:
+                self.opacity, self.counted_at = 0.0, None
+        if self.opacity <= 0:
+            return None
+        return RadarView(self.opacity, blips, radar_view(speed))
+
+
 def race_rows(snapshot, now):
     """All sections' rows in one list, top to bottom (for the terminal and tests)."""
     sections = race_sections(snapshot, now)
-    order = ('lap', 'current', 'delta', 'times', 'fuel', 'fuelfinish', 'tires', 'speed')
+    order = ('lap', 'current', 'delta', 'times', 'fuel', 'fuelfinish', 'tires', 'health', 'draft', 'speed', 'players')
     return [row for name in order for row in sections.get(name, [])]

@@ -104,6 +104,25 @@ class SectionPlaceTests(unittest.TestCase):
             self.assertEqual(list(s.load_settings(path).sections), ['lap'])
 
 
+class SpeedUnitSettingTests(unittest.TestCase):
+    def test_kept_and_checked(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / 'settings.json'
+            s.save_settings(path, s.Settings(speed_unit='mph'))
+            self.assertEqual(s.load_settings(path).speed_unit, 'mph')
+            path.write_text(json.dumps({'speed_unit': 'knots'}))
+            self.assertEqual(s.load_settings(path).speed_unit, 'kmh')
+
+    def test_backdrop_option_round_trips_and_is_off_by_default(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / 'settings.json'
+            self.assertFalse(s.load_settings(path).backdrop)
+            s.save_settings(path, s.Settings(backdrop=True))
+            self.assertTrue(s.load_settings(path).backdrop)
+            path.write_text(json.dumps({'backdrop': 'yes'}))
+            self.assertFalse(s.load_settings(path).backdrop)
+
+
 class FitOnScreensTests(unittest.TestCase):
     screens = ((0, 0, 1920, 1080), (1920, 0, 1280, 1024))
 
@@ -122,3 +141,18 @@ class FitOnScreensTests(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class GroupSettingTests(unittest.TestCase):
+    def test_groups_round_trip_and_unknown_ones_are_dropped(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / 'settings.json'
+            places = {'lap': s.SectionPlace(1, 2, 300, 40, True, 'A'), 'fuel': s.SectionPlace(1, 50, 300, 40)}
+            s.save_settings(path, s.Settings(sections=places))
+            loaded = s.load_settings(path).sections
+            self.assertEqual(loaded['lap'].group, 'A')
+            self.assertEqual(loaded['fuel'].group, '')
+            data = json.loads(path.read_text())
+            data['sections']['lap']['group'] = 'Z'
+            path.write_text(json.dumps(data))
+            self.assertEqual(s.load_settings(path).sections['lap'].group, '')

@@ -40,7 +40,7 @@ def available(environ=None, which=shutil.which):
 
 
 def _run(args):
-    result = subprocess.run(['hyprctl', *args], capture_output=True, text=True, timeout=TIMEOUT)
+    result = subprocess.run(['hyprctl', *args], capture_output=True, text=True, timeout=TIMEOUT, check=False)
     return result.stdout.strip()
 
 
@@ -130,6 +130,23 @@ class Hyprland:
                 (x, y), (width, height) = client['at'], client['size']
                 return (x, y, width, height)
         return None
+
+    def geometries(self, addresses):
+        """{address: (x, y, width, height)} of those floating windows, in one request."""
+        found = {}
+        for client in self._json('clients') or []:
+            if client.get('address') in addresses and client.get('floating'):
+                (x, y), (width, height) = client['at'], client['size']
+                found[client['address']] = (x, y, width, height)
+        return found
+
+    def move(self, address, x, y):
+        """Move the window only (a group mate following a drag); True if taken."""
+        window = f'address:{address}'
+        return self.dispatch((
+            f"hl.dsp.window.move({{ x = {x}, y = {y}, window = '{window}' }})",
+            f'movewindowpixel exact {x} {y},{window}',
+        ))
 
     def workspace_at(self, x, y):
         """The id of the workspace shown on the monitor that holds the point, or None."""

@@ -34,6 +34,9 @@
   active again.
 - Tests: `/opt/homebrew/bin/python3.13 -B -m unittest discover -s tests` (Windows:
   `py -3 -B -m unittest discover -s tests`).
+- Lint and format: `.buildtools/ruff-venv/bin/ruff check turbohud tests` (Linux; a
+  separate tools environment, never part of the app). An older backlog of findings and
+  unformatted files remains for a chore branch.
 
 ## Next steps
 0. Linux: check by hand that TurboHUD stays on top of TSU in a race and lets clicks
@@ -49,6 +52,167 @@ See `docs/IMPROVEMENT_BACKLOG.md`. In short:
    Hyprland.
 
 ## Recent changes
+- 2026-11-02: The user believes the radar works as an online client too (not checked
+  in detail: car places, cars ahead).
+- 2026-11-02: Confirmed by the user in races: PIT over the whole pit area, health
+  (number, colours, bar), the HUD staying after the finish until the race is over, and
+  move mode (groups, centring, saved after a restart). Still to see: the radar as an
+  online client (car places, cars ahead).
+- 2026-11-02: The user confirmed the draft section works in an online race (meter and
+  downforce warning).
+- 2026-11-02: Draft section (slipstream). "Draft 73%" with a cyan level bar: how strong
+  the slipstream is, of the most this event allows, from the car's own multipliers
+  (CarStateUpdater.m_draftingViscosityFactor = 1 - speed effect x draft) and the event's
+  settings read from memory (EventController.m_eventLogic.m_eventSettings.drafting; that
+  server: 10 % speed effect, 80 % downforce reduction, unlike the local
+  eventsettings.json of the last hosted event). A yellow "-58% downforce" while the
+  slipstream takes 5 % or more (m_draftingDownforceFactor). Checked live: settings read,
+  0 % out of the draft; the 73 % / 58 % match values measured while drafting earlier.
+  Shown only in events with drafting on.
+- 2026-11-02: The radar also reacts to cars ahead. It reacted only to cars behind or
+  beside (as first asked), so closing in on a car ahead showed nothing until it was
+  level. Now a car ahead counts the same way (nose to tail over the local speed: faint
+  at 0.5 s, full from 0.1 s), and the local car sits in the middle of the radar so a
+  car 0.5 s ahead at full speed is in view. Before that, checked as an online client:
+  real positions in every read, delta steps at most 0.18 s, radar shown once, no
+  blinking.
+- 2026-11-02: Real car positions as an online client, from the replay recorder. TSU
+  records every race; the client's TS.EventRecorder.m_lastQuantizedVehicleStates holds
+  each car's last recorded state in player-list order, position as (value - 2**20) /
+  1024 (found live with 13 AI: cars crossing checkpoint lines were 0.82 from them on
+  average, max 2.8, against 2.1 for the next best scale). All 14 positions read; the
+  radar, the delta and the gaps use them (not estimated). Not used when the recorder's
+  tick stands still for 1 s (recording off): then the estimate (no radar). Left: the
+  delta still jumped up to 0.76 s once in 12 s (median step 0.015 s); maybe the recorder
+  stores a car's state only every few ticks. The radar has not been seen as a client.
+- 2026-11-02: Checked as an online client (someone else's server, 13 AI): with the
+  worked-out positions the delta ran live (138 values in 144 reads over 12 s, lap 2)
+  and the gaps changed every read. Added: a live gap while both cars are between the
+  same two checkpoints (the one ahead's share of the stretch since its time at the first
+  line), which had held still and then jumped about 1 s. Left: jumps of 0.3 to 0.5 s
+  right at some checkpoints, maybe because a client's checkpoint times come from the
+  server a little late against the local race clock.
+- 2026-11-02: Live delta and gaps as an online client. Joining someone else's server
+  (or hosting online with only AI) the game keeps no car positions (they stay at (0, 0)),
+  so the delta went in checkpoint steps. It does keep each car's velocity, so
+  race.DeadReckoning starts a car at the middle of the checkpoint line it passed last, at
+  its checkpoint time, and moves it on by its velocity until the next line (about a
+  second). The delta, the fuel trend and the player gaps use it; the radar does not
+  (where across the track a car is stays unknown). Not yet seen in a race.
+- 2026-11-01: docs/HOW_IT_WORKS.md: what TurboHUD shows, its three parts (game,
+  probe, overlay), the permission, how the race is found by name, online races, inputs,
+  the Hyprland windows, what it does to RAM, CPU and the game (with measurements), the
+  files it writes, and its limits.
+- 2026-11-01: Online search made light. Measured: in menus and lobbies (no active
+  server) TurboHUD searched the game's memory every 10 s for an online race, the probe
+  peaking at 58 % of a core and holding 4.4 GB of RAM (peak 5.4 GB) from a new 16 MB
+  buffer per chunk that the allocator kept. Now it searches only while TSU's own log
+  says an event runs (turbohud/tsu/gamelog.py: last "Event started." after the last
+  "Event ended."; the log is only read), and the probe reuses one buffer per connection
+  (checked: 16 MB once, flat over repeated searches). The probe change needs TSU to be
+  restarted (the probe starts with the game).
+- 2026-11-01: Level bars below fuel, tires and health: lit from the left to what is
+  left. Fuel red when it will not last to the finish, else (like tires) green, yellow
+  under 35 %, red under 15 %; health green, yellow with less downforce, red when slowed.
+  Saved section sizes stay, so their text gets a little smaller to make room (resize in
+  move mode to taste).
+- 2026-11-01: Health is rounded up as in the game: 126 of 500 hit points showed 25 %
+  where TSU says 26 % (checked live). The colours keep the exact value.
+- 2026-11-01: Live gaps in the player list, like the delta to the best lap. Where the
+  cars' positions are known (offline, hotlap, hosted online races with other players),
+  the car behind's place between two checkpoints gives the moment the car ahead was
+  there (race.live_gap, with the delta's handling of lines written together), and the
+  gap is the race clock since then. Without positions (online races with only AI: the
+  game is a client) it stays at the last checkpoint both passed. Not yet seen in a race.
+- 2026-11-01: The HUD stays after the local player finishes. It used to switch to the
+  three finish sections only (laps, best lap, last lap), so the player list and the rest
+  went away while others still raced. Now the lap sections show the finish and the rest
+  stays until the race is over (the clock stops: lobby); the delta goes, with no lap to
+  compare.
+- 2026-11-01: Health section and PIT for the whole pit area (Linux). The last online
+  event (3 laps, Laguna Seca, 3 players) had fuel, tire wear and collision damage on.
+  New "Health" section: TS.VehicleState.hitPoints of maxHitPoints (read live: 497 of
+  500), shown in events with damage (CarStateUpdater.m_gradualDamageEnabled); yellow
+  "less downforce" and red "slowed" below the game's own limits (1 / the updater's hit
+  points to relative health multipliers: 90 % and 75 % in that event, as in its settings).
+  The player list's PIT now also shows while a car is anywhere in the pit area
+  (VehicleState.inPitArea), not only in the pit box (inPit); not yet seen in the pits.
+- 2026-11-01: Blue flag no longer blinks behind a lapper. Seen online: the leader, a
+  lap ahead, drove just in front; each time the local player reached the checkpoint it
+  had just passed, both were exactly a lap apart in count, which was taken as "behind,
+  about to pass" (flag at full) until it passed the next one (17 switches in 15 s). At
+  the same count the one who got to the checkpoint first is now ahead; checked live
+  afterwards: no flag, no switches.
+- 2026-11-01: Radar flicker fixed. On a hosted online race (TSU runs the server: the
+  offline path, TS.HostEventController) car positions are read, but the game moves them
+  on only about every 0.1 s while TurboHUD reads every 0.05 s; with direction and speed
+  taken from the movement, every other read had none and the radar blinked. Now each
+  car's velocity and nose direction come from the game (CarStateUpdater.m_oldVelocity3d,
+  m_oldForwardDirection; checked online: matches the speedometer), positions are carried
+  on along the velocity between updates, and the radar shows at once but stays 0.4 s and
+  fades when no car counts any more. Online races with only AI drivers (the game is a
+  client there) still have no positions.
+- 2026-11-01: Online races (Linux), including ones the player hosts. Checked in a
+  self-hosted online race with 13 AI drivers: there TS.Services.m_activeServer is null
+  and the game is a client; the race is in a TS.ClientEventController, which no static
+  field leads to. The reader now finds it by its class (one probe search, about 1.7 s,
+  at most every 10 s while there is no race), keeps it while it lasts and reads on as
+  before: lap times, delta, players (names, flags, order), speed, pedals, blue flag all
+  read. The car positions stay (0, 0) online, so they count as unknown: the delta falls
+  back to checkpoint steps and the radar does not show online yet (positions are only
+  in Unity's own transform, still to find). Fuel and tires were empty in that event
+  (maybe off there).
+- 2026-11-01: Light tint fixes. The speed section's tint now reaches from the throttle
+  bar to the brake bar however wide the section is (the brake bar sat outside it), and
+  the tint is lighter (black at 16 % instead of 25 %).
+- 2026-11-01: Centre buttons for the blue flag and the radar. In the move-mode panel,
+  "Centre ↔" centres the section across the screen it is on and "Centre ↕" down it
+  (hud.centred); its size stays and its group stays where it is.
+- 2026-11-01: The move-mode panel no longer covers sections. It goes near the middle
+  of the screen a third down as before, but moves to the nearest spot that covers no
+  shown section (hud.free_spot); it had hidden the proximity radar. It can also be
+  dragged by its background.
+- 2026-11-01: Proximity radar (Linux). A new "Proximity radar" section (160 x 160,
+  centred a little below the middle of the main screen at first, shown by default): your
+  car in the middle heading up, the other cars around it in their directions. It appears
+  when a car is 0.5 s behind (faint, 20 %) and is fully visible from 0.1 s or alongside;
+  a car is red when beside or within 0.1 s, yellow when closing in behind, grey ahead.
+  Every car's position is read (TS.Vehicle.m_statsNewPosition); direction and speed come
+  from the last 0.15 s of positions, and the time gap is the distance from its nose to
+  your tail over your speed. Cars more than 8 to the side (another part of the track) or
+  in the pits do not count; standing still there is no radar. The car size (4.5 x 2) is
+  a guess, and whether the game updates the other cars' positions is not checked yet.
+- 2026-11-01: Section groups. In the move-mode panel each section can join group A, B,
+  C or D (saved per section); dragging one section of a group moves the others by the
+  same amount. TurboHUD looks where the sections are five times a second in move mode
+  while groups exist (one hyprctl request for all of them on Hyprland), moves the rest
+  with a single move request each, and once the drag stops places them fully again
+  (workspace and pin, for a move to another monitor). Logic in hud.GroupMover. Ruff
+  installed for the checks in its own tools environment, `.buildtools/ruff-venv`
+  (ruff 0.17.3); new findings in the changed files fixed, older ones left.
+- 2026-11-01: Light tint option, blue flag outline, steady player list (Linux). "Light
+  tint behind the sections" (tray menu and move-mode panel, saved as backdrop, off by
+  default): a faint dark box behind each section's text, only as large as the text (the
+  pedal bars and the player list's right column included); in move mode the blue move
+  tint replaces it. The blue flag now has a darker blue outline. The player list takes
+  a new order only once it has lasted 0.3 s (race.Standings), so cars passing each
+  other or a checkpoint written late do not make names jump back and forth; the gaps
+  stay live.
+- 2026-11-01: Blue flag (Linux). A new "Blue flag" section: a navy bar, at the top
+  centre of the main screen at first, shown by default and resizable in move mode. It
+  appears when a car that is about to lap you (any car, not only the leader) is within
+  2 s behind on the track: faint (20 %) at 2 s, fully visible from 0.5 s, gone once the
+  car passes. The gap is how much later the car passed the checkpoint it last passed,
+  and grows while it does not reach your next one (turbohud/core/race.py blue_flag).
+  Not yet checked in a race with other players.
+- 2026-11-01: Player list and mph (Linux). New "Players" section: position, flag (as a
+  colour emoji where such a font is installed, else the country code), name, PIT, and the
+  gap to the local player at the last checkpoint both passed (red ahead, green behind,
+  "+1 L" a lap or more apart); with more than 8 players the leader and those around the
+  local one. Read per player: m_playerInfo.m_profile (m_name, flag: TS.Flag, mapped to
+  ISO codes in turbohud/core/flags.py), m_stats, m_vehicle.m_stateUpdater.inPit. Speed
+  in km/h or mph (tray menu and move-mode panel, saved as speed_unit). Not yet checked
+  with other players in a race.
 - 2026-11-01: The race sections show from the grid on: once the race exists and its
   clock runs (it starts when the grid is set, before the lights). Not while TSU starts,
   in the menus, the lobby or while a race loads (no placeholders, no waiting texts), and

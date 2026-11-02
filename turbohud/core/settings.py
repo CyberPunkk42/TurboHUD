@@ -18,6 +18,7 @@ DEFAULT_PLACEMENT = (40, 40, 420, 190)  # x, y, width, height
 MIN_WIDTH = 240
 MIN_HEIGHT = 100
 MIN_SECTION_SIZE = 8  # a saved section smaller than this is broken
+SPEED_UNITS = ('kmh', 'mph')
 MIN_SCALE = 0.5
 MAX_SCALE = 3.0
 _COLOR = re.compile(r'#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?')
@@ -31,6 +32,9 @@ class Theme:
     scale: float = 1.0  # size of everything the HUD draws
 
 
+GROUPS = ('A', 'B', 'C', 'D')  # section groups; '' is none
+
+
 @dataclass(frozen=True)
 class SectionPlace:
     """Where one HUD section sits and whether it shows."""
@@ -40,6 +44,7 @@ class SectionPlace:
     width: int
     height: int
     visible: bool = True
+    group: str = ''  # sections with the same group (one of GROUPS) move together
 
 
 @dataclass(frozen=True)
@@ -47,6 +52,8 @@ class Settings:
     placement: tuple = DEFAULT_PLACEMENT  # the whole HUD before it had sections; new sections start here
     theme: Theme = field(default_factory=Theme)
     sections: dict = field(default_factory=dict)  # section name -> SectionPlace
+    speed_unit: str = 'kmh'  # 'kmh' or 'mph'
+    backdrop: bool = False  # a light tint behind each section's text while locked
 
 
 def settings_dir(platform=sys.platform, environ=None, home=None):
@@ -122,7 +129,9 @@ def _sections(data):
             continue
         if width < MIN_SECTION_SIZE or height < MIN_SECTION_SIZE:
             continue
-        places[str(name)] = SectionPlace(x, y, width, height, entry.get('visible', True) is not False)
+        group = entry.get('group', '')
+        group = group if group in GROUPS else ''
+        places[str(name)] = SectionPlace(x, y, width, height, entry.get('visible', True) is not False, group)
     return places
 
 
@@ -137,6 +146,8 @@ def load_settings(path):
         placement=_placement(data.get('placement')),
         theme=_theme(data.get('theme')),
         sections=_sections(data.get('sections')),
+        speed_unit=data.get('speed_unit') if data.get('speed_unit') in SPEED_UNITS else 'kmh',
+        backdrop=data.get('backdrop') is True,
     )
 
 
@@ -153,8 +164,17 @@ def save_settings(path, settings):
             'outline_color': settings.theme.outline_color,
             'scale': settings.theme.scale,
         },
+        'speed_unit': settings.speed_unit,
+        'backdrop': settings.backdrop,
         'sections': {
-            name: {'x': place.x, 'y': place.y, 'width': place.width, 'height': place.height, 'visible': place.visible}
+            name: {
+                'x': place.x,
+                'y': place.y,
+                'width': place.width,
+                'height': place.height,
+                'visible': place.visible,
+                'group': place.group,
+            }
             for name, place in settings.sections.items()
         },
     }

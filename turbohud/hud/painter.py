@@ -1,10 +1,10 @@
 import sys
 from functools import lru_cache
 
-from PySide6.QtCore import QRectF, Qt
+from PySide6.QtCore import QPointF, QRectF, Qt
 from PySide6.QtGui import QColor, QFont, QFontMetricsF, QPainterPath, QPen
 
-from turbohud.core.hud import MARGIN
+from turbohud.core.hud import FLAG_WIDTH, MARGIN
 
 # On Linux the desktop's default font may be a monospace or icon font; prefer a plain
 # sans-serif one. Qt uses the first that is installed. Windows and macOS keep their
@@ -12,6 +12,7 @@ from turbohud.core.hud import MARGIN
 AHEAD_COLOR = '#5ee07a'  # the delta when faster than the best lap
 BAR_OFF = (110, 110, 110, 170)  # a pedal bar with no input: grey
 LIFT_COLOR = '#ffe14d'  # the speed while lifting (no throttle, no brake)
+DRAFT_COLOR = '#5ec8ff'  # the slipstream (draft section)
 BEHIND_COLOR = '#ff6b6b'  # and when slower
 LINUX_FAMILIES = ['Noto Sans', 'DejaVu Sans', 'Liberation Sans', 'Cantarell', 'Ubuntu', 'Arial']
 
@@ -73,7 +74,48 @@ def draw_bars(painter, bars):
             painter.drawRoundedRect(QRectF(bar.x, bar.y + bar.height - lit, bar.width, lit), 3, 3)
 
 
-def draw_hud(painter, lines, theme, scale=None, left=0):
+def draw_level(painter, bar):
+    """A level bar from turbohud.core.hud.level_bar: grey, lit from the left."""
+    colors = {'ahead': QColor(AHEAD_COLOR), 'behind': QColor(BEHIND_COLOR), 'lift': QColor(LIFT_COLOR),
+              'draft': QColor(DRAFT_COLOR)}
+    radius = min(bar.height / 2, 3)
+    painter.setPen(QPen(QColor(0, 0, 0, 160), 1))
+    painter.setBrush(QColor(*BAR_OFF))
+    painter.drawRoundedRect(QRectF(bar.x, bar.y, bar.width, bar.height), radius, radius)
+    if bar.fill > 0:
+        painter.setBrush(colors[bar.color])
+        painter.drawRoundedRect(QRectF(bar.x, bar.y, bar.width * bar.fill, bar.height), radius, radius)
+
+
+EMOJI_FAMILIES = ['Noto Color Emoji', 'Apple Color Emoji', 'Segoe UI Emoji', 'Twemoji']
+
+
+@lru_cache(maxsize=1)
+def emoji_family():
+    """An installed colour emoji font for flags, or None (flags then show as codes)."""
+    from PySide6.QtGui import QFontDatabase
+
+    installed = set(QFontDatabase.families())
+    return next((family for family in EMOJI_FAMILIES if family in installed), None)
+
+
+def draw_flag(painter, x, baseline, code, size, outline):
+    """A country flag from its ISO code: as an emoji where a colour emoji font is
+    installed, else the code as text."""
+    from turbohud.core.flags import flag_emoji
+
+    family = emoji_family()
+    if family and len(code) == 2 and code.isalpha():
+        font = QFont(family)
+        font.setPixelSize(max(1, round(size * 1.1)))
+        painter.setFont(font)
+        painter.setPen(QColor('white'))
+        painter.drawText(QPointF(x, baseline), flag_emoji(code))
+    else:
+        outlined_text(painter, x, baseline, code, max(1, round(size * 0.55)), QColor('white'), outline)
+
+
+def draw_hud(painter, lines, theme, scale=None, left=0, width=None):
     """Draw the lines from turbohud.core.hud.hud_lines with the theme's colours, at
     `scale` (the theme's own by default)."""
     colors = {
@@ -82,13 +124,22 @@ def draw_hud(painter, lines, theme, scale=None, left=0):
         'ahead': QColor(AHEAD_COLOR),
         'behind': QColor(BEHIND_COLOR),
         'lift': QColor(LIFT_COLOR),
+        'draft': QColor(DRAFT_COLOR),
     }
     outline = _rgba(theme.outline_color)
-    x = left + round(MARGIN * (theme.scale if scale is None else scale))
+    margin = round(MARGIN * (theme.scale if scale is None else scale))
+    x = left + margin
     for line in lines:
-        outlined_text(painter, x, line.baseline, line.text, line.size, colors[line.color], outline)
+        text_x = x
+        if line.flag:
+            draw_flag(painter, x, line.baseline, line.flag, line.size, outline)
+            text_x = x + FLAG_WIDTH * line.size
+        outlined_text(painter, text_x, line.baseline, line.text, line.size, colors[line.color], outline)
+        if line.right and width is not None:
+            right_x = width - margin - text_advance(line.right, line.size)
+            outlined_text(painter, right_x, line.baseline, line.right, line.size, colors[line.right_color], outline)
         if line.tail:
-            tail_x = x + text_advance(line.text, line.size)
+            tail_x = text_x + text_advance(line.text, line.size)
             outlined_text(painter, tail_x, line.baseline, line.tail, line.size, colors[line.tail_color], outline)
 
 
