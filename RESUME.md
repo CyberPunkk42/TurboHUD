@@ -50,9 +50,16 @@ See `docs/IMPROVEMENT_BACKLOG.md`. In short:
    goes public, the privacy check, a licence and a README for players.
 4. Linux: shortcuts (for example a `TurboHUD --toggle` the player binds themselves) and
    other Wayland desktops.
-5. More features: a settings window for the look is being built (2026-11-02).
 
 ## Recent changes
+- 2026-11-02: The user tested the draft extras (cones, event line, lap share, who
+  drafts you) and the settings window (colours, Smaller/Bigger, saved): all seems to
+  work.
+- 2026-11-02: Settings window (tray menu "Settings…", or the move-mode panel's
+  button): swatches for the text, highlight and outline colours, applied at once and
+  saved; "Smaller" / "Bigger" resize every section by 10 % from its top-left corner;
+  "Reset colours". Swatches instead of a colour dialog, which would be one more window
+  for Hyprland to place. Tested offscreen; not yet on the desktop.
 - 2026-11-02: Draft extras. The radar draws the slipstream behind each car ahead (the
   event's reach and angle: maxDraftingDistance, maxDraftingAngle), brighter with a cyan
   outline on the car when the local car is in it. The draft section shows, below the

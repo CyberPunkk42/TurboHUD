@@ -114,7 +114,7 @@ class Native:
         again, in case it went to another monitor."""
         x, y, width, height = place
         if self.hypr is None:
-            widget.move(x, y)
+            widget.setGeometry(x, y, width, height)
             return
         address = self.addresses.get(id(widget))
         if address is None:
