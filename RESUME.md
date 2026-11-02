@@ -7,11 +7,15 @@
 - App skeleton in `turbohud/` (see `README.md` and the structure in `docs/STACK.md`): the
   overlay with locked and move mode, Ctrl+Shift+L / Ctrl+Shift+Q, a tray icon (the TSU
   TurboHUD image in `assets/`), saved placement and theme, tested by hand on the Mac.
-  On Linux, with TSU started through the memory probe (see Next steps), the HUD shows
-  live lap times: lap and time left, running lap, delta to the best lap, last and best
-  lap. On Windows and
-  macOS it still shows a session clock. Start from the source with
-  `run_turbohud.sh` / `run_turbohud.cmd`.
+  On Linux, with TSU started through the memory probe (README: "Live lap times on
+  Linux"), the HUD shows the live race in movable sections: lap and time left, running
+  lap, delta to the best lap, last and best lap, fuel, fuel to finish, tires, health,
+  draft, speed with pedal bars, the player list (flags, PIT, live gaps), blue flag,
+  proximity radar and local time. It works offline, in hotlaps, hosting online and as
+  an online client (guest, or hosting with only AI). How it works and what it does to
+  RAM and the game: `docs/HOW_IT_WORKS.md`. On Windows and macOS it still shows a
+  session clock and the local time. Start from the source with `run_turbohud.sh` /
+  `run_turbohud.cmd`.
 - Builds: `tools/build_app.py` (PyInstaller) makes a Windows ZIP, a Mac app ZIP and a
   Linux `.tar.gz`, run locally on each system. Nothing goes to GitHub any more; the
   old `.github/workflows/build.yml` is kept for reference only.
@@ -39,19 +43,20 @@
   unformatted files remains for a chore branch.
 
 ## Next steps
-0. Linux: check by hand that TurboHUD stays on top of TSU in a race and lets clicks
-   through; then fuel and speed from memory.
-   Later, when there is an event to join: check the lap data as a guest on someone
-   else's server (the event controller is then another class).
 See `docs/IMPROVEMENT_BACKLOG.md`. In short:
-1. Test TurboHUD and the probes on Windows over TSU in windowed, Fullscreen and
-   Fullscreen Exclusive.
-2. The first real HUD data (lap times, fuel estimate or minimap).
-3. A settings window for the look.
-4. Linux: shortcuts, AppImage, and staying on top on Wayland desktops other than
-   Hyprland.
+1. Windows: the overlay over TSU (windowed, Fullscreen, Fullscreen Exclusive), then
+   live data (reading memory as the same user, without a probe).
+2. macOS: what reading the game's memory inside CrossOver would take.
+3. Builds and release: bundled apps with the probe, an AppImage; before the repository
+   goes public, the privacy check, a licence and a README for players.
+4. Linux: shortcuts (for example a `TurboHUD --toggle` the player binds themselves) and
+   other Wayland desktops.
+5. More features: the draft extras and a settings window are being built (2026-11-02).
 
 ## Recent changes
+- 2026-11-02: Notes brought up to date: RESUME's current state and next steps, and the
+  backlog (Windows overlay and live data, macOS, builds and release, Linux shortcuts,
+  more features); fuel, speed, guest races and the rest are done.
 - 2026-11-02: The user believes the radar works as an online client too (not checked
   in detail: car places, cars ahead).
 - 2026-11-02: Confirmed by the user in races: PIT over the whole pit area, health

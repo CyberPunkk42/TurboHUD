@@ -309,3 +309,6 @@ its "Recent changes".
   online client (car places, cars ahead).
 - 2026-11-02: The user believes the radar works as an online client too (not checked
   in detail: car places, cars ahead).
+- 2026-11-02: Notes brought up to date: RESUME's current state and next steps, and the
+  backlog (Windows overlay and live data, macOS, builds and release, Linux shortcuts,
+  more features); fuel, speed, guest races and the rest are done.
