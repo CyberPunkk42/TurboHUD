@@ -222,7 +222,13 @@ class RadarTests(unittest.TestCase):
     def test_nothing_without_a_car_close_behind(self):
         self.assertIsNone(self.drive({}))
         self.assertIsNone(self.drive({'Far': (0.0, -40.0)}))  # 1 s behind
-        self.assertIsNone(self.drive({'Ahead': (0.0, 10.0)}))  # ahead does not count
+        self.assertIsNone(self.drive({'Far ahead': (0.0, 40.0)}))  # 0.9 s ahead
+
+    def test_a_car_close_ahead_counts_too(self):
+        # 10 ahead: nose to tail 5.5 at 40 a second, about 0.14 s.
+        view = self.drive({'Ahead': (0.0, 10.0)})
+        self.assertAlmostEqual(view.blips[0].seconds, 5.5 / 40, places=3)
+        self.assertGreater(view.opacity, 0.9)
 
     def test_faint_at_half_a_second_full_from_a_tenth(self):
         # Behind by 0.5 s: nose to tail 20 at 40 a second; centres are a car length more apart.

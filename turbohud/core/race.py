@@ -1337,7 +1337,7 @@ def blue_flag_opacity(seconds):
 # like metres: the car does about 56 a second at 205 km/h); check it in a race.
 CAR_LENGTH = 4.5
 CAR_WIDTH = 2.0
-RADAR_FROM = 0.5  # seconds behind: the radar appears, faint
+RADAR_FROM = 0.5  # seconds behind or ahead: the radar appears, faint
 RADAR_FULL = 0.1  # seconds behind or alongside: fully visible
 RADAR_FAINT = 0.2  # its opacity at RADAR_FROM
 RADAR_SIDE = 8.0  # sideways reach: a car farther to the side (another part of the track) does not count
@@ -1354,7 +1354,7 @@ HEADING_KEEP = 1.0  # seconds of positions kept per car
 class Blip:
     """Another car on the radar: `ahead` and `side` (right positive) from the middle
     of the local car, in game units along its direction; `angle` its direction against
-    the local car's, in radians; `seconds` the time gap if it counts (behind or beside)."""
+    the local car's, in radians; `seconds` the time gap if it counts (behind, beside or ahead)."""
 
     ahead: float
     side: float
@@ -1370,7 +1370,7 @@ class RadarView:
 
 
 def radar_view(speed):
-    """How far behind the radar reaches at `speed`: a car RADAR_FROM behind still shows,
+    """How far behind (and ahead) the radar reaches at `speed`: a car RADAR_FROM away still shows,
     with room to spare."""
     return max(RADAR_VIEW, speed * RADAR_FROM + 2 * CAR_LENGTH)
 
@@ -1402,9 +1402,9 @@ def radar_opacity(seconds):
 
 def radar_blips(me, speed, others):
     """Blips for `others` [(position, direction or None)] around the local car at `me`
-    ((x, z), direction) at `speed`. A car counts when it is behind or beside, no more
-    than RADAR_SIDE to the side: beside (overlapping in length) is 0 s, behind is the
-    gap from its nose to the local car's tail over the local speed."""
+    ((x, z), direction) at `speed`. A car counts when it is no more than RADAR_SIDE to
+    the side, behind, beside or ahead: beside (overlapping in length) is 0 s, behind or
+    ahead is the gap between the two cars' ends over the local speed."""
     (mx, mz), (fx, fz) = me
     blips = []
     for (x, z), direction in others:
@@ -1417,8 +1417,8 @@ def radar_blips(me, speed, others):
         if direction is not None:
             angle = math.atan2(direction[0] * fz - direction[1] * fx, direction[0] * fx + direction[1] * fz)
         seconds = None
-        if abs(side) <= RADAR_SIDE and ahead <= CAR_LENGTH:
-            gap = -ahead - CAR_LENGTH  # nose to tail; under 0: overlapping
+        if abs(side) <= RADAR_SIDE:
+            gap = abs(ahead) - CAR_LENGTH  # nose to tail; under 0: overlapping
             seconds = max(gap, 0.0) / speed
         blips.append(Blip(ahead, side, angle, seconds))
     return tuple(blips)
@@ -1426,7 +1426,7 @@ def radar_blips(me, speed, others):
 
 class Radar:
     """Follows every car to give the proximity radar (a RadarView) for the latest read,
-    or None when no car is close enough behind or beside to show it.
+    or None when no car is close enough behind, beside or ahead to show it.
 
     The game moves a car's position on only every other read or so (about ten times a
     second, seen on a hosted online race), so positions are carried on along each car's

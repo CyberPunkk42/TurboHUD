@@ -285,3 +285,10 @@ its "Recent changes".
   tick stands still for 1 s (recording off): then the estimate (no radar). Left: the
   delta still jumped up to 0.76 s once in 12 s (median step 0.015 s); maybe the recorder
   stores a car's state only every few ticks. The radar has not been seen as a client.
+- 2026-11-02: The radar also reacts to cars ahead. It reacted only to cars behind or
+  beside (as first asked), so closing in on a car ahead showed nothing until it was
+  level. Now a car ahead counts the same way (nose to tail over the local speed: faint
+  at 0.5 s, full from 0.1 s), and the local car sits in the middle of the radar so a
+  car 0.5 s ahead at full speed is in view. Before that, checked as an online client:
+  real positions in every read, delta steps at most 0.18 s, radar shown once, no
+  blinking.

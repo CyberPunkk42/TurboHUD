@@ -26,7 +26,7 @@ group and centre them; their places are saved.
 | Speed | km/h or mph, yellow while coasting; throttle and brake bars beside it |
 | Players | position, flag, name, PIT, and the live gap to you (or +1 L for laps) |
 | Blue flag | a navy bar that fades in when a car about to lap you is within 2 s |
-| Proximity radar | your car and the cars around you, when one is within 0.5 s behind or beside |
+| Proximity radar | your car and the cars around you, when one is within 0.5 s behind, beside or ahead |
 | Local time | the clock |
 
 The race sections appear once the cars are on the grid and go away in the lobby. In

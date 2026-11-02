@@ -90,7 +90,7 @@ Clear the launch option to start TSU without the probe. The probe writes what it
 - **Light tint behind the sections** (TurboHUD icon's menu, or the move-mode panel) puts
   a faint dark box behind each section's text, for reading it on bright tracks.
 - The **proximity radar** shows your car and the cars around you when one is within
-  half a second behind (faint) up to alongside (fully visible): red beside you, yellow
+  half a second behind or ahead (faint) up to alongside (fully visible): red beside you, yellow
   closing in.
 - The blue flag and the radar have **Centre ↔** and **Centre ↕** buttons in the
   move-mode panel: they centre it across or down the screen it is on.

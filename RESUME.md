@@ -52,6 +52,13 @@ See `docs/IMPROVEMENT_BACKLOG.md`. In short:
    Hyprland.
 
 ## Recent changes
+- 2026-11-02: The radar also reacts to cars ahead. It reacted only to cars behind or
+  beside (as first asked), so closing in on a car ahead showed nothing until it was
+  level. Now a car ahead counts the same way (nose to tail over the local speed: faint
+  at 0.5 s, full from 0.1 s), and the local car sits in the middle of the radar so a
+  car 0.5 s ahead at full speed is in view. Before that, checked as an online client:
+  real positions in every read, delta steps at most 0.18 s, radar shown once, no
+  blinking.
 - 2026-11-02: Real car positions as an online client, from the replay recorder. TSU
   records every race; the client's TS.EventRecorder.m_lastQuantizedVehicleStates holds
   each car's last recorded state in player-list order, position as (value - 2**20) /

@@ -52,12 +52,12 @@ PEDAL_INSET = 4  # pedal_bars' default inset
 BACKDROP = (0, 0, 0, 40)  # the light tint behind a section's text (option), RGBA
 BLUE_SAMPLE = 0.6  # the bar's opacity in move mode, to place it
 LEVEL_SAMPLE = (0.7, 'ahead')  # a level bar in move mode, to place the section
-RADAR_CAR_AT = 0.4  # the local car's height in the radar, from the top
+RADAR_CAR_AT = 0.5  # the local car's height in the radar, from the top: the middle
 RADAR_BACK = (10, 14, 22, 150)  # RGBA
 RADAR_EDGE = (120, 130, 150, 200)
 RADAR_LINES = (120, 130, 150, 90)
 RADAR_ME = '#f2f2f2'
-RADAR_OTHER = '#8c95a3'  # a car near but not behind or beside (ahead, or far to the side)
+RADAR_OTHER = '#8c95a3'  # a car near but not counting (far to the side, or further away)
 # In move mode: one car beside, one closing in behind, one ahead.
 RADAR_SAMPLE = (
     Blip(-1.0, 3.0, 0.0, 0.0),
@@ -247,8 +247,8 @@ class SectionWindow(QWidget):
         painter.setPen(QPen(QColor(*RADAR_EDGE), 1.5))
         painter.setBrush(QColor(*RADAR_BACK))
         painter.drawRoundedRect(box, 10, 10)
-        # The local car sits a little above the middle: more room behind, where the
-        # cars that count come from. view.view reaches from it to the bottom edge.
+        # The local car sits in the middle: cars ahead count as well as those behind.
+        # view.view reaches from it to the top and the bottom edge.
         centre = QPointF(box.center().x(), box.top() + box.height() * RADAR_CAR_AT)
         per_unit = box.height() * (1 - RADAR_CAR_AT) / view.view
         painter.setPen(QPen(QColor(*RADAR_LINES), 1))
