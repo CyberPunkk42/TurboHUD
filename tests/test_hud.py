@@ -84,6 +84,13 @@ class FirstLaunchTests(unittest.TestCase):
         self.assertNotIn('radar', hud.first_launch(hud.RACE_SECTIONS, self.SIZES))
         self.assertEqual(hud.drawing_place(radar, (160, 160), (0, 0, 1920, 1080)), (880, 648, 160, 160))
 
+    def test_the_track_map_starts_at_the_right_half_way_down(self):
+        track_map = next(s for s in hud.RACE_SECTIONS if s.name == 'trackmap')
+        self.assertEqual(hud.base_size(track_map, 1.0, lambda text, size: 0), (240, 240))
+        self.assertNotIn('trackmap', hud.first_launch(hud.RACE_SECTIONS, self.SIZES))
+        place = hud.drawing_place(track_map, (240, 240), (0, 0, 1920, 1080))
+        self.assertEqual(place, (1640, 420, 240, 240))
+
     def test_on_the_main_screen_from_its_corner(self):
         screens = [(1280, -1440, 2560, 1440), (0, 0, 5120, 1440)]  # the player's two monitors
         self.assertEqual(hud.main_screen(screens), (0, 0, 5120, 1440))
@@ -183,6 +190,7 @@ class SectionTests(unittest.TestCase):
                 'players',
                 'blueflag',
                 'radar',
+                'trackmap',
             ],
         )
         self.assertEqual(len(set(names)), len(names))
@@ -321,4 +329,4 @@ class CentreTests(unittest.TestCase):
         self.assertEqual(hud.centred(flag, screen, horizontal=True), (2320, -1300, 480, 24))
 
     def test_only_the_drawings_have_centre_buttons(self):
-        self.assertEqual({s.name for s in hud.RACE_SECTIONS if s.drawing}, {'blueflag', 'radar'})
+        self.assertEqual({s.name for s in hud.RACE_SECTIONS if s.drawing}, {'blueflag', 'radar', 'trackmap'})

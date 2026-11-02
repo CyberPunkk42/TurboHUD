@@ -358,3 +358,18 @@ its "Recent changes".
   as a straight mix turns grey halfway). Rows can now have a colour of their own
   ('#rrggbb') besides the theme's names.
 - 2026-11-02: The user confirmed in a race that the "drafts you" colour works.
+- 2026-11-03: Track map (Linux). A new "Track map" section (240 x 240 at first, at
+  the right edge of the main screen half way down; square, resizable in move mode, with
+  the Centre buttons): the track seen from above, drawn from the checkpoint lines
+  TurboHUD already reads (their middles, smoothed; lines at the same spot or in two
+  pieces count as one; a loop is closed, a point-to-point track is not), with a white
+  start line. No track file or editor export is needed, so it works on every track,
+  online too. Dots: you (white, largest), the race leader (gold), the next car ahead
+  (red) and the next car behind (green) in the player list's steady order, so the dots
+  change over cleanly when you pass; a leader right ahead gets a red ring. Smaller
+  bluish dots for backmarkers (more than half a lap behind in the race but ahead on the
+  road) between you and the next car ahead, or within half a lap when you lead; a
+  backmarker is never the "next car behind". Cars in the pits are dimmed. "Other cars
+  on the track map" (tray menu and move-mode panel, saved as map_others, off by
+  default) adds the rest as faint grey dots. Logic in turbohud/core/trackmap.py.
+  Tested with unit tests and offscreen drawing; not yet seen in a race.

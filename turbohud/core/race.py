@@ -1107,12 +1107,13 @@ def status_text(snapshot):
     return 'waiting for a race'
 
 
-def race_sections(snapshot, now, speed_unit='kmh', standings=None, radar=None):
+def race_sections(snapshot, now, speed_unit='kmh', standings=None, radar=None, track_map=None):
     """{section name: rows} for a live-reader snapshot (see core.hud.RACE_SECTIONS); a
     section with nothing to show has no rows. Nothing before the grid: in the menus, the
     lobby and while a race loads the HUD keeps out of the way (status_text says why).
     `standings` (a Standings) holds the player list's order steady while cars pass;
-    `radar` (a Radar) follows the cars' movement for the proximity radar."""
+    `radar` (a Radar) follows the cars' movement for the proximity radar; `track_map`
+    (a core.trackmap.TrackMap) gives the track map, in the player list's order."""
     if not on_grid(snapshot, now):
         return {}
     state = snapshot.state
@@ -1138,6 +1139,10 @@ def race_sections(snapshot, now, speed_unit='kmh', standings=None, radar=None):
         view = radar.update(state.players, snapshot.read_at, state.draft) if radar is not None else None
         if view is not None:
             sections['radar'] = view
+        if track_map is not None:
+            shown = track_map.update(state, order if order is not None else ranked(state.players))
+            if shown is not None:
+                sections['trackmap'] = shown
     return sections
 
 

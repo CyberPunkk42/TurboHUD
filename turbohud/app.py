@@ -185,12 +185,18 @@ def run(args, folder):
 
         pad = Pad()
         pad.start()
+        from turbohud.core.trackmap import TrackMap
+
         standings = Standings()
         radar = Radar()
+        track_map = TrackMap(settings.map_others)
 
         def contents():
             snapshot = live.snapshot()
-            current = race_sections(snapshot, time.monotonic(), settings.speed_unit, standings, radar)
+            track_map.others = settings.map_others
+            current = race_sections(
+                snapshot, time.monotonic(), settings.speed_unit, standings, radar, track_map
+            )
             if 'pedals' in current:
                 current['pedals'] = combined(current['pedals'], pad.pedals())
             return with_local_time(current, snapshot, time.localtime())
@@ -220,7 +226,7 @@ def run(args, folder):
         # Sections added in a later version: below the ones the player already placed.
         defaults.update(below(new, saved_places, first, screens))
     for section in layout:
-        if section.bar:  # the blue flag and the radar: their own spots on the main screen
+        if section.bar:  # the blue flag, the radar and the track map: their own spots
             defaults[section.name] = drawing_place(section, first[section.name], screen or (0, 0, 1920, 1080))
     for name, window in windows.items():
         saved = settings.sections.get(name)
@@ -301,6 +307,14 @@ def run(args, folder):
             window.update()
         save()
         log.info('tint behind the sections %s', 'on' if backdrop else 'off')
+
+    def set_map_others(others):
+        nonlocal settings
+        settings = replace(settings, map_others=others)
+        map_others_action.setChecked(others)
+        panel.set_map_others(others)
+        save()
+        log.info('other cars on the track map %s', 'on' if others else 'off')
 
     mover = GroupMover()
     group_moving = False  # a group followed a drag at the last look
@@ -412,6 +426,11 @@ def run(args, folder):
     backdrop_action.setChecked(settings.backdrop)
     backdrop_action.triggered.connect(lambda checked: set_backdrop(checked))
     menu.addAction(backdrop_action)
+    map_others_action = QAction('Other cars on the track map', menu, checkable=True)
+    map_others_action.setChecked(settings.map_others)
+    map_others_action.triggered.connect(lambda checked: set_map_others(checked))
+    if any(section.drawing == 'map' for section in layout):
+        menu.addAction(map_others_action)
     settings_action = QAction('Settings…', menu)
     settings_action.triggered.connect(lambda: open_settings())
     menu.addAction(settings_action)
@@ -454,9 +473,18 @@ def run(args, folder):
 
     commands = listen_for_commands(app, on_command)
     log.info('commands: run_turbohud.sh --toggle / --quit' if commands else 'no command socket')
-    panel = MovePanel(native, layout, shortcuts, settings.speed_unit == 'mph', settings.backdrop, commands)
+    panel = MovePanel(
+        native,
+        layout,
+        shortcuts,
+        settings.speed_unit == 'mph',
+        settings.backdrop,
+        commands,
+        settings.map_others,
+    )
     panel.mph_changed.connect(set_mph)
     panel.backdrop_changed.connect(set_backdrop)
+    panel.map_others_changed.connect(set_map_others)
     panel.settings_requested.connect(open_settings)
     for name, window in windows.items():
         panel.set_wanted(name, window.wanted)
@@ -501,6 +529,7 @@ def run(args, folder):
             window.pedals = current.get('pedals')
             window.opacity = current.get('blue')
             window.radar = current.get('radar')
+            window.trackmap = current.get('trackmap')
             window.level = current.get('levels', {}).get(name)
             window.update()
         grouped = any(w.group for w in windows.values())

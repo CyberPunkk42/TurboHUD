@@ -11,7 +11,7 @@
   Linux"), the HUD shows the live race in movable sections: lap and time left, running
   lap, delta to the best lap, last and best lap, fuel, fuel to finish, tires, health,
   draft, speed with pedal bars, the player list (flags, PIT, live gaps), blue flag,
-  proximity radar and local time. It works offline, in hotlaps, hosting online and as
+  proximity radar, track map and local time. It works offline, in hotlaps, hosting online and as
   an online client (guest, or hosting with only AI). How it works and what it does to
   RAM and the game: `docs/HOW_IT_WORKS.md`. On Windows and macOS it still shows a
   session clock and the local time. Start from the source with `run_turbohud.sh` /
@@ -51,6 +51,21 @@ See `docs/IMPROVEMENT_BACKLOG.md`. In short:
 4. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-03: Track map (Linux). A new "Track map" section (240 x 240 at first, at
+  the right edge of the main screen half way down; square, resizable in move mode, with
+  the Centre buttons): the track seen from above, drawn from the checkpoint lines
+  TurboHUD already reads (their middles, smoothed; lines at the same spot or in two
+  pieces count as one; a loop is closed, a point-to-point track is not), with a white
+  start line. No track file or editor export is needed, so it works on every track,
+  online too. Dots: you (white, largest), the race leader (gold), the next car ahead
+  (red) and the next car behind (green) in the player list's steady order, so the dots
+  change over cleanly when you pass; a leader right ahead gets a red ring. Smaller
+  bluish dots for backmarkers (more than half a lap behind in the race but ahead on the
+  road) between you and the next car ahead, or within half a lap when you lead; a
+  backmarker is never the "next car behind". Cars in the pits are dimmed. "Other cars
+  on the track map" (tray menu and move-mode panel, saved as map_others, off by
+  default) adds the rest as faint grey dots. Logic in turbohud/core/trackmap.py.
+  Tested with unit tests and offscreen drawing; not yet seen in a race.
 - 2026-11-02: The user confirmed in a race that the "drafts you" colour works.
 - 2026-11-02: "<name> drafts you" changes colour with the strength of that car's
   slipstream from the local player (the closer behind, the stronger): from the draft's

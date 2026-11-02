@@ -28,6 +28,7 @@ group and centre them; their places are saved.
 | Players | position, flag, name, PIT, and the live gap to you (or +1 L for laps) |
 | Blue flag | a navy bar that fades in when a car about to lap you is within 2 s |
 | Proximity radar | your car and the cars around you, when one is within 0.5 s behind, beside or ahead; the slipstream behind cars ahead |
+| Track map | the track from above, with you, the race leader (gold), the next car ahead (red), the next car behind (green), backmarkers between you and the car ahead (small, bluish), and as an option the other cars (faint grey) |
 | Local time | the clock |
 
 The race sections appear once the cars are on the grid and go away in the lobby. In
@@ -109,7 +110,9 @@ TS.Services.sm_instance          (a static field: always findable)
 A lap has 120 checkpoints on the tracks seen. Each player's list of checkpoint times is
 the backbone: lap times, the delta to your best lap, the player order and the gaps
 between players all come from it, made live between checkpoints by the cars'
-positions.
+positions. The checkpoint lines themselves (both ends of each) also give the
+track map its shape: their middles trace the track, so no track file is needed and
+the map works on every track, online too.
 
 What does not change during a race (field positions, finished laps, the track's
 checkpoint lines) is read once and kept. A normal update then needs about twenty small
@@ -190,7 +193,8 @@ effect for the probe the next time TSU is started.
 
 **Files TurboHUD writes**, all its own, in `~/.config/TurboHUD/`:
 
-- `settings.json`: section places, sizes, groups, shown or hidden, mph, light tint
+- `settings.json`: section places, sizes, groups, shown or hidden, mph, light tint,
+  other cars on the track map
 - `turbohud.log`: what TurboHUD did in this run (replaced at each start)
 - `memory_probe.log`: written by the probe: the game it found, errors
 
@@ -228,6 +232,7 @@ gives no control over the car.
 | `turbohud/tsu/controller.py` | reads the gamepad's triggers |
 | `turbohud/core/il2cpp.py` | finds classes and fields by name in an IL2CPP game |
 | `turbohud/core/race.py` | reads the race and works out what each section shows |
+| `turbohud/core/trackmap.py` | the track map: the track's shape and which cars show |
 | `turbohud/core/hud.py` | the sections, their sizes, places and layout |
 | `turbohud/overlay/` | the windows; Hyprland, Windows and macOS specifics |
 | `turbohud/app.py` | starts everything: settings, windows, tray menu, shortcuts |

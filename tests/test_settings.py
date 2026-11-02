@@ -131,6 +131,15 @@ class SpeedUnitSettingTests(unittest.TestCase):
             path.write_text(json.dumps({'backdrop': 'yes'}))
             self.assertFalse(s.load_settings(path).backdrop)
 
+    def test_other_cars_on_the_track_map_round_trip_and_are_off_by_default(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / 'settings.json'
+            self.assertFalse(s.load_settings(path).map_others)
+            s.save_settings(path, s.Settings(map_others=True))
+            self.assertTrue(s.load_settings(path).map_others)
+            path.write_text(json.dumps({'map_others': 1}))
+            self.assertFalse(s.load_settings(path).map_others)
+
 
 class FitOnScreensTests(unittest.TestCase):
     screens = ((0, 0, 1920, 1080), (1920, 0, 1280, 1024))
