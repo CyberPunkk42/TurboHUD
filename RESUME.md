@@ -52,6 +52,8 @@ See `docs/IMPROVEMENT_BACKLOG.md`. In short:
    Hyprland.
 
 ## Recent changes
+- 2026-11-02: The user confirmed the draft section works in an online race (meter and
+  downforce warning).
 - 2026-11-02: Draft section (slipstream). "Draft 73%" with a cyan level bar: how strong
   the slipstream is, of the most this event allows, from the car's own multipliers
   (CarStateUpdater.m_draftingViscosityFactor = 1 - speed effect x draft) and the event's

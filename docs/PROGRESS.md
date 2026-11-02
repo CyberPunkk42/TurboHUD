@@ -301,3 +301,5 @@ its "Recent changes".
   slipstream takes 5 % or more (m_draftingDownforceFactor). Checked live: settings read,
   0 % out of the draft; the 73 % / 58 % match values measured while drafting earlier.
   Shown only in events with drafting on.
+- 2026-11-02: The user confirmed the draft section works in an online race (meter and
+  downforce warning).
