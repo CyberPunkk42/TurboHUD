@@ -307,3 +307,5 @@ its "Recent changes".
   (number, colours, bar), the HUD staying after the finish until the race is over, and
   move mode (groups, centring, saved after a restart). Still to see: the radar as an
   online client (car places, cars ahead).
+- 2026-11-02: The user believes the radar works as an online client too (not checked
+  in detail: car places, cars ahead).
