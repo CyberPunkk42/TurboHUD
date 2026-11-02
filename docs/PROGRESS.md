@@ -357,3 +357,4 @@ its "Recent changes".
   cyan through blue, violet and magenta to red (hud.blend goes round the colour wheel,
   as a straight mix turns grey halfway). Rows can now have a colour of their own
   ('#rrggbb') besides the theme's names.
+- 2026-11-02: The user confirmed in a race that the "drafts you" colour works.
