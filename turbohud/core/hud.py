@@ -159,7 +159,18 @@ RACE_SECTIONS = (
     Section('fuelfinish', 'Fuel to finish', ((Row('Finish +00.0 laps', 'medium'),),)),
     Section('tires', 'Tires', ((Row('Tires 100%  ~10.0 laps', 'medium'),),), level=True),
     Section('health', 'Health', ((Row('Health 100%', 'medium', tail='  less downforce'),),), level=True),
-    Section('draft', 'Draft', ((Row('Draft 100%', 'medium', tail='  -80% downforce'),),), level=True),
+    Section(
+        'draft',
+        'Draft',
+        (
+            (
+                Row('Draft 100%', 'medium', tail='  -80% downforce'),
+                Row('Max -10% drag  -80% downforce  reach 30  20°', 'small'),
+                Row('Playername1234567 drafts you 100%', 'small'),
+            ),
+        ),
+        level=True,
+    ),
     Section('speed', 'Speed', ((Row('000 km/h', 'medium'),),), pedals=True),
     Section('localtime', 'Local time', ((Row('00:00', 'medium'),),)),
     Section(

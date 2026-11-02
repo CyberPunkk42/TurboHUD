@@ -50,9 +50,18 @@ See `docs/IMPROVEMENT_BACKLOG.md`. In short:
    goes public, the privacy check, a licence and a README for players.
 4. Linux: shortcuts (for example a `TurboHUD --toggle` the player binds themselves) and
    other Wayland desktops.
-5. More features: the draft extras and a settings window are being built (2026-11-02).
+5. More features: a settings window for the look is being built (2026-11-02).
 
 ## Recent changes
+- 2026-11-02: Draft extras. The radar draws the slipstream behind each car ahead (the
+  event's reach and angle: maxDraftingDistance, maxDraftingAngle), brighter with a cyan
+  outline on the car when the local car is in it. The draft section shows, below the
+  meter, the event's drafting for the first 20 s of the race clock ("Max -10% drag
+  -80% downforce reach 30 20°"), then "Last lap 23% in a slipstream" (race time with a
+  draft of 5 % or more), and in yellow who drafts the local player ("<name> drafts you
+  45%": a car behind within the reach and angle, from its own drag multiplier). Checked
+  live as a client: all 14 cars' drag multipliers read (several drafting), settings
+  read; not yet seen in the HUD.
 - 2026-11-02: Code formatted with Ruff throughout (16 files) and the remaining lint
   findings fixed: f-strings in the privacy check, pairwise and ClassVar in tests, the
   probe's two catch-all handlers marked as intended. No change in behaviour; all tests

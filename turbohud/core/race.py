@@ -59,6 +59,7 @@ class LapState:
     gates: tuple = ()  # the checkpoint lines, ((x1, z1), (x2, z2)), in checkpoint order
     car: 'CarState | None' = None  # fuel, tires and speed, where the game has them
     players: tuple = ()  # every player in the race (PlayerState), the local one included
+    draft: 'DraftSettings | None' = None  # the event's drafting, None where it is off
 
     @property
     def lap_times(self):
@@ -300,6 +301,7 @@ class CarState:
     slowed_from: float | None = None  # health under which it is slower
     draft: float | None = None  # 0 to 1: how strong the slipstream is, of the event's most; None: no drafting
     draft_downforce_loss: float = 0.0  # 0 to 1: downforce lost to the slipstream now
+    draft_last_lap: float | None = None  # 0 to 1: share of the last lap spent in a slipstream
 
     @property
     def damage_effect(self):
@@ -399,6 +401,7 @@ class PlayerState:
     velocity: tuple | None = None  # its (x, z) velocity, game units a second
     forward: tuple | None = None  # the (x, z) way its nose points
     estimated: bool = False  # the position is worked out (DeadReckoning), not read
+    draft_drag: float | None = None  # its air resistance multiplier: under 1 while it drafts
 
     @property
     def passed(self):
@@ -429,6 +432,8 @@ class LapReader:
         self._reckoning = DeadReckoning()  # positions where the game keeps none (online client)
         self._listener = None  # the race controller (TS.EventController) of the event state
         self._draft = None  # the event's drafting settings, once read (False: none)
+        self._draft_time = {}  # lap index -> race time spent in a slipstream (0.1 ms)
+        self._draft_clock = None  # race clock at the read before, for that time
         self._player_indices = []
         self._recorder_tick, self._recorder_moved = None, 0
         self._client_class = None  # TS.ClientEventController, once looked up
@@ -461,9 +466,9 @@ class LapReader:
             return state
 
     def _draft_settings(self):
-        """(speed effect, downforce reduction), each 0 to 1, of the event's drafting
-        (TS.EventSettings.drafting, through the race controller's event logic), or None
-        where drafting is off or not found. Read once per event."""
+        """The event's DraftSettings (TS.EventSettings.drafting, through the race
+        controller's event logic), or None where drafting is off or not found. Read once
+        per event."""
         if self._draft is None:
             self._draft = False
             try:
@@ -471,8 +476,13 @@ class LapReader:
                 if self._number('draft', settings, 'draftingOn'):
                     speed = self._number('draft', settings, 'draftingSpeedEffect')
                     downforce = self._number('draft', settings, 'draftingDownforceReduction')
+                    try:
+                        reach = self._number('draft', settings, 'maxDraftingDistance')
+                        angle = self._number('draft', settings, 'maxDraftingAngle')
+                    except (NotFound, OSError):
+                        reach = angle = None
                     if speed > 0:
-                        self._draft = (speed / 100, downforce / 100)
+                        self._draft = DraftSettings(speed / 100, downforce / 100, reach, angle)
             except (NotFound, OSError):
                 pass
         return self._draft or None
@@ -553,7 +563,7 @@ class LapReader:
             self._state, self._offsets, self._laps, self._gates = state, {}, {}, None
             self._reckoning = DeadReckoning()
             self._recorder_tick, self._recorder_moved = None, 0
-            self._draft = None
+            self._draft, self._draft_time, self._draft_clock = None, {}, None
             self._fuel_history, self._wear_history, self._fuel_marks, self._types = {}, {}, {}, {}
             self._player = self.local_player()[1]
         player = self._player
@@ -609,11 +619,28 @@ class LapReader:
             # Online, as a client, the game keeps no position: the delta and the fuel
             # trend use the worked-out one.
             position = next((p.position for p in players if p.local), None)
-        state = dataclasses.replace(state, players=players, position=position)
+        state = dataclasses.replace(state, players=players, position=position, draft=self._draft_settings())
         live = state.live_fuel_trend(self._fuel_marks, self._fuel_history)
         if live is not None:
             state = dataclasses.replace(state, car=dataclasses.replace(car, fuel_trend=live))
+        if state.car is not None and state.car.draft is not None:
+            share = self._count_draft(state)
+            state = dataclasses.replace(state, car=dataclasses.replace(state.car, draft_last_lap=share))
         return state
+
+    def _count_draft(self, state):
+        """Add the race time since the last read to this lap's time in a slipstream (when
+        the draft is at least DRAFT_COUNTS); the share of the last lap spent in one, or
+        None before a lap is done."""
+        lap = len(state.checkpoints) - 1
+        last_clock, self._draft_clock = self._draft_clock, state.clock
+        moved = last_clock is not None and 0 < state.clock - last_clock <= UNITS_PER_SECOND
+        if moved and lap >= 0 and state.car.draft >= DRAFT_COUNTS:
+            self._draft_time[lap] = self._draft_time.get(lap, 0) + state.clock - last_clock
+        times = state.lap_times
+        if lap < 1 or len(times) < lap or times[lap - 1] <= 0:
+            return None
+        return min(self._draft_time.get(lap - 1, 0) / times[lap - 1], 1.0)
 
     def _car(self, player, lap, checkpoint):
         """Fuel, tires and speed of the local car, or None where the game lacks them."""
@@ -670,7 +697,7 @@ class LapReader:
         settings = self._draft_settings()
         if settings is None:
             return None, 0.0
-        speed_effect, _downforce = settings
+        speed_effect = settings.speed_effect
         try:
             drag = self._number('updater', updater, 'm_draftingViscosityFactor')
             downforce = self._number('updater', updater, 'm_draftingDownforceFactor')
@@ -804,7 +831,7 @@ class LapReader:
                     self._laps[lap] = passed
             if passed:
                 checkpoints.append(passed)
-        in_pit, position, velocity, forward = False, None, None, None
+        in_pit, position, velocity, forward, draft_drag = False, None, None, None, None
         try:
             vehicle = self._ref('player', player, 'm_vehicle')
         except NotFound:
@@ -827,6 +854,10 @@ class LapReader:
                     self._flat(updater, 'm_oldVelocity3d'),
                     self._flat(updater, 'm_oldForwardDirection'),
                 )
+                try:
+                    draft_drag = self._number('updater', updater, 'm_draftingViscosityFactor')
+                except (NotFound, ReadError):
+                    pass
             try:
                 where = vehicle + self._offset('vehicle', vehicle, 'm_statsNewPosition')
                 x, _y, z = struct.unpack('<3f', memory.read(where, 12))
@@ -844,6 +875,7 @@ class LapReader:
             position,
             velocity,
             forward,
+            draft_drag=draft_drag,
         )
 
     def _flat(self, obj, name):
@@ -931,6 +963,18 @@ class LapReader:
             return _known_position(x, z), self._gates
         except NotFound:
             return None, ()
+
+
+@dataclass(frozen=True)
+class DraftSettings:
+    """An event's drafting (TS.DraftingSettings): the most it takes off the air
+    resistance and the downforce (0 to 1), and how far behind and how far off a car's
+    line (degrees) the slipstream reaches (None where not read)."""
+
+    speed_effect: float
+    downforce: float
+    reach: float | None = None
+    angle: float | None = None
 
 
 class DeadReckoning:
@@ -1083,13 +1127,15 @@ def race_sections(snapshot, now, speed_unit='kmh', standings=None, radar=None):
     else:
         sections = _racing_sections(snapshot, now)
     sections.update(car_sections(state.car, state.laps_to_go, speed_unit))
+    if 'draft' in sections and state.draft is not None:
+        sections['draft'] = sections['draft'] + draft_rows(state)
     if state.players:
         order = standings.order(state.players, now) if standings is not None else None
         sections['players'] = players_rows(state.players, order, state.clock, state.gates)
         opacity = blue_flag_opacity(blue_flag(state.players, clock_now(snapshot, now)))
         if opacity is not None:
             sections['blue'] = opacity
-        view = radar.update(state.players, snapshot.read_at) if radar is not None else None
+        view = radar.update(state.players, snapshot.read_at, state.draft) if radar is not None else None
         if view is not None:
             sections['radar'] = view
     return sections
@@ -1193,6 +1239,10 @@ def car_sections(car, laps_to_go=None, speed_unit='kmh'):
 
 
 DRAFT_DOWNFORCE_WARN = 0.05  # downforce lost to the slipstream from which the draft section warns
+DRAFT_COUNTS = 0.05  # a draft at least this strong counts as time in a slipstream
+DRAFT_CARD_SECONDS = 20  # the race clock up to which the draft section shows the event's settings
+DRAFTED_FROM = 0.05  # a car behind drafting at least this strongly shows as drafting you
+DRAFT_ANGLE_SPARE = 5  # degrees beyond the event's angle still taken as behind (positions lag a little)
 LEVEL_LOW = 0.15  # below this the level bar is red
 LEVEL_HALF = 0.35  # below this it is yellow
 
@@ -1480,6 +1530,7 @@ class Blip:
     side: float
     angle: float
     seconds: float | None
+    in_cone: bool | None = None  # a car ahead's slipstream: whether the local car is in it; None: not drawn
 
 
 @dataclass(frozen=True)
@@ -1487,6 +1538,7 @@ class RadarView:
     opacity: float  # 0 to 1 for the whole radar
     blips: tuple  # Blip
     view: float = RADAR_VIEW  # how far behind the local car the radar reaches
+    cone: tuple | None = None  # (reach, angle in degrees) of the slipstream behind cars ahead
 
 
 def radar_view(speed):
@@ -1520,12 +1572,85 @@ def radar_opacity(seconds):
     return RADAR_FAINT + (1 - RADAR_FAINT) * share
 
 
-def radar_blips(me, speed, others):
+def in_slipstream(ahead, side, angle, draft):
+    """Whether the local car (at the radar's middle) is in the slipstream of a car
+    `ahead` and `side` from it, heading `angle` against it: within the event's reach
+    behind that car's tail and its angle off that car's line."""
+    back = (-math.sin(angle), -math.cos(angle))  # behind that car, in the local car's frame
+    tail = (side + back[0] * CAR_LENGTH / 2, ahead + back[1] * CAR_LENGTH / 2)
+    to_me = (-tail[0], -tail[1])
+    distance = math.hypot(*to_me)
+    if distance == 0:
+        return True
+    if distance > draft.reach:
+        return False
+    off_line = math.degrees(
+        math.acos(max(-1.0, min(1.0, (to_me[0] * back[0] + to_me[1] * back[1]) / distance)))
+    )
+    return off_line <= draft.angle
+
+
+def drafted_by(players, draft):
+    """(name, strength 0 to 1) of the strongest car behind the local player that is
+    in its slipstream (within the event's reach and angle behind it) and drafting, or
+    None. Only cars with read positions count."""
+    me = next((p for p in players if p.local), None)
+    if draft is None or draft.reach is None or me is None or me.position is None or me.estimated:
+        return None
+    heading = me.forward or me.velocity
+    if heading is None or not any(heading):
+        return None
+    length = math.hypot(*heading)
+    fx, fz = heading[0] / length, heading[1] / length
+    found = None
+    for player in players:
+        if player.local or player.position is None or player.estimated or player.draft_drag is None:
+            continue
+        strength = min(max((1 - player.draft_drag) / draft.speed_effect, 0.0), 1.0)
+        if strength < DRAFTED_FROM:
+            continue
+        dx, dz = player.position[0] - me.position[0], player.position[1] - me.position[1]
+        behind = -(dx * fx + dz * fz) - CAR_LENGTH / 2  # from my tail
+        side = dx * fz - dz * fx
+        if behind <= 0 or behind > draft.reach + CAR_LENGTH:
+            continue
+        if math.degrees(math.atan2(abs(side), behind)) > draft.angle + DRAFT_ANGLE_SPARE:
+            continue
+        if found is None or strength > found[1]:
+            found = (player.name, strength)
+    return found
+
+
+def draft_rows(state):
+    """The draft section's small rows below the meter: the event's drafting at the
+    start, then the last lap's time in a slipstream; and who drafts the local player."""
+    draft, car = state.draft, state.car
+    rows = []
+    if state.clock < DRAFT_CARD_SECONDS * UNITS_PER_SECOND:
+        text = f'Max -{draft.speed_effect * 100:.0f}% drag  -{draft.downforce * 100:.0f}% downforce'
+        if draft.reach is not None and draft.angle is not None:
+            text += f'  reach {draft.reach:g}  {draft.angle:g}°'
+        rows.append(Row(text, 'small'))
+    elif car is not None and car.draft_last_lap is not None:
+        rows.append(Row(f'Last lap {car.draft_last_lap * 100:.0f}% in a slipstream', 'small'))
+    who = drafted_by(state.players, draft)
+    if who is not None:
+        name, strength = who
+        if len(name) > MAX_NAME_SHOWN:
+            name = name[: MAX_NAME_SHOWN - 1] + '…'
+        rows.append(Row(f'{name} drafts you {strength * 100:.0f}%', 'small', 'lift'))
+    return rows
+
+
+def radar_blips(me, speed, others, draft=None):
     """Blips for `others` [(position, direction or None)] around the local car at `me`
     ((x, z), direction) at `speed`. A car counts when it is no more than RADAR_SIDE to
     the side, behind, beside or ahead: beside (overlapping in length) is 0 s, behind or
-    ahead is the gap between the two cars' ends over the local speed."""
+    ahead is the gap between the two cars' ends over the local speed. With the event's
+    `draft` (DraftSettings with reach and angle), cars ahead get their slipstream drawn,
+    and whether the local car is in it."""
     (mx, mz), (fx, fz) = me
+    cone = draft is not None and draft.reach is not None and draft.angle is not None
     blips = []
     for (x, z), direction in others:
         dx, dz = x - mx, z - mz
@@ -1540,7 +1665,8 @@ def radar_blips(me, speed, others):
         if abs(side) <= RADAR_SIDE:
             gap = abs(ahead) - CAR_LENGTH  # nose to tail; under 0: overlapping
             seconds = max(gap, 0.0) / speed
-        blips.append(Blip(ahead, side, angle, seconds))
+        in_cone = in_slipstream(ahead, side, angle, draft) if cone and ahead > CAR_LENGTH / 2 else None
+        blips.append(Blip(ahead, side, angle, seconds, in_cone))
     return tuple(blips)
 
 
@@ -1601,7 +1727,7 @@ class Radar:
             direction = (direction[0] / length, direction[1] / length)
         return position, direction, speed
 
-    def update(self, players, read_at):
+    def update(self, players, read_at, draft=None):
         fresh = read_at != self.read_at
         if fresh:
             self.read_at = read_at
@@ -1620,7 +1746,7 @@ class Radar:
             theirs = self._motion(player, read_at)
             if theirs is not None:
                 others.append((theirs[0], theirs[1]))
-        blips = radar_blips((position, direction), speed, others)
+        blips = radar_blips((position, direction), speed, others, draft)
         if fresh:
             nearest = min((b.seconds for b in blips if b.seconds is not None), default=None)
             target = radar_opacity(nearest)
@@ -1636,7 +1762,8 @@ class Radar:
                 self.opacity, self.counted_at = 0.0, None
         if self.opacity <= 0:
             return None
-        return RadarView(self.opacity, blips, radar_view(speed))
+        cone = (draft.reach, draft.angle) if draft is not None and draft.reach is not None else None
+        return RadarView(self.opacity, blips, radar_view(speed), cone)
 
 
 def race_rows(snapshot, now):
