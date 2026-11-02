@@ -81,7 +81,7 @@ MAP_ROAD = (205, 212, 224, 210)
 MAP_ROAD_EDGE = (0, 0, 0, 170)
 MAP_START = '#ffffff'
 MAP_PADDING = 0.08  # room round the track, as a share of the map
-MAP_DOT = 0.034  # a car's dot radius, as a share of the map
+MAP_DOT = 0.026  # a car's dot radius, as a share of the map
 MAP_COLORS = {
     'me': '#ffffff',
     'leader': '#ffc61a',  # gold
@@ -90,9 +90,10 @@ MAP_COLORS = {
     'backmarker': '#5b8cff',  # bluish: about to be lapped
     'other': '#8c95a3',
 }
-MAP_SIZES = {'me': 1.3, 'leader': 1.0, 'ahead': 1.0, 'behind': 1.0, 'backmarker': 0.65, 'other': 0.55}
+MAP_SIZES = {'me': 1.15, 'leader': 1.0, 'ahead': 1.0, 'behind': 1.0, 'backmarker': 0.65, 'other': 0.55}
 MAP_OTHER_ALPHA = 150  # the other cars are faint
 MAP_PIT_OPACITY = 0.4  # a car in the pits is dimmed
+MAP_RING = 0.4  # the local player's ring: its width, as a share of its radius
 
 
 def _sample_map():
@@ -423,6 +424,15 @@ class SectionWindow(QWidget):
                     painter.setPen(Qt.NoPen)
                     painter.setBrush(QColor(MAP_COLORS['ahead']))
                     painter.drawEllipse(at(dot.position), r + 3, r + 3)
+                if dot.role == 'me':
+                    # A ring, open in the middle: a car under it still shows.
+                    ring = max(1.5, r * MAP_RING)
+                    painter.setBrush(Qt.NoBrush)
+                    painter.setPen(QPen(QColor(0, 0, 0, 200), ring + 2))
+                    painter.drawEllipse(at(dot.position), r, r)
+                    painter.setPen(QPen(color, ring))
+                    painter.drawEllipse(at(dot.position), r, r)
+                    continue
                 painter.setPen(QPen(QColor(0, 0, 0, 200), 1.5))
                 painter.setBrush(color)
                 painter.drawEllipse(at(dot.position), r, r)

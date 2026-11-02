@@ -112,7 +112,7 @@ Clear the launch option to start TSU without the probe. The probe writes what it
 - The **proximity radar** shows your car and the cars around you when one is within
   half a second behind or ahead (faint) up to alongside (fully visible): red beside you, yellow
   closing in.
-- The **track map** shows the track from above with you (white), the race leader
+- The **track map** shows the track from above with you (a white ring), the race leader
   (gold), the next car ahead (red) and the next car behind (green); when you pass a
   car, the next one ahead takes the red dot. Smaller bluish dots are backmarkers (cars
   you are about to lap) on the road between you and the car ahead. **Other cars on the

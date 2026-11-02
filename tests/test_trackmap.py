@@ -268,6 +268,26 @@ class MapWindowTests(unittest.TestCase):
         self.assertTrue(found)
         self.assertTrue(all(30 <= x <= 270 for x, _y in found))  # inside the square
 
+    def test_a_car_under_the_local_player_still_shows(self):
+        from PySide6.QtGui import QColor
+
+        from turbohud.overlay.window import MAP_COLORS
+
+        window = self.window()
+        # The leader a whole lap ahead, at the same spot as the local player.
+        window.trackmap = view_of([car('Leader', 21), car('Me', 13, local=True)])
+        me = next(d for d in window.trackmap.dots if d.role == 'me')
+        self.assertEqual(me.position, window.trackmap.dots[0].position)
+        image = window.grab().toImage()
+        gold = QColor(MAP_COLORS['leader']).rgb()
+        self.assertTrue(
+            any(
+                image.pixelColor(x, y).rgb() == gold
+                for x in range(image.width())
+                for y in range(image.height())
+            )
+        )
+
     def test_nothing_when_locked_without_a_race_and_a_sample_in_move_mode(self):
         window = self.window()
         image = window.grab().toImage()

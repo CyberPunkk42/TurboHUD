@@ -51,13 +51,17 @@ See `docs/IMPROVEMENT_BACKLOG.md`. In short:
 4. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-03: Track map: your own marker covered cars at the same spot (seen by the
+  user in a race, where the map otherwise works). It is now a white ring, open in the
+  middle and drawn on top, so a car under it still shows; all dots are a little smaller
+  (2.6 % of the map instead of 3.4 %).
 - 2026-11-03: Track map (Linux). A new "Track map" section (240 x 240 at first, at
   the right edge of the main screen half way down; square, resizable in move mode, with
   the Centre buttons): the track seen from above, drawn from the checkpoint lines
   TurboHUD already reads (their middles, smoothed; lines at the same spot or in two
   pieces count as one; a loop is closed, a point-to-point track is not), with a white
   start line. No track file or editor export is needed, so it works on every track,
-  online too. Dots: you (white, largest), the race leader (gold), the next car ahead
+  online too. Dots: you (a white ring), the race leader (gold), the next car ahead
   (red) and the next car behind (green) in the player list's steady order, so the dots
   change over cleanly when you pass; a leader right ahead gets a red ring. Smaller
   bluish dots for backmarkers (more than half a lap behind in the race but ahead on the

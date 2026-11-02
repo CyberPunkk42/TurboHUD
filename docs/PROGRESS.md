@@ -364,7 +364,7 @@ its "Recent changes".
   TurboHUD already reads (their middles, smoothed; lines at the same spot or in two
   pieces count as one; a loop is closed, a point-to-point track is not), with a white
   start line. No track file or editor export is needed, so it works on every track,
-  online too. Dots: you (white, largest), the race leader (gold), the next car ahead
+  online too. Dots: you (a white ring), the race leader (gold), the next car ahead
   (red) and the next car behind (green) in the player list's steady order, so the dots
   change over cleanly when you pass; a leader right ahead gets a red ring. Smaller
   bluish dots for backmarkers (more than half a lap behind in the race but ahead on the
@@ -373,3 +373,7 @@ its "Recent changes".
   on the track map" (tray menu and move-mode panel, saved as map_others, off by
   default) adds the rest as faint grey dots. Logic in turbohud/core/trackmap.py.
   Tested with unit tests and offscreen drawing; not yet seen in a race.
+- 2026-11-03: Track map: your own marker covered cars at the same spot (seen by the
+  user in a race, where the map otherwise works). It is now a white ring, open in the
+  middle and drawn on top, so a car under it still shows; all dots are a little smaller
+  (2.6 % of the map instead of 3.4 %).

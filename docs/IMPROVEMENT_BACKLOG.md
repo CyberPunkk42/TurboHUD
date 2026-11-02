@@ -31,7 +31,7 @@ through. If XWayland is not enough there, the layer-shell extension (KDE, Sway; 
 GNOME) would need a library outside PySide6.
 
 ## 5. Track map: check in races
-Seen only in tests and offscreen drawings. Check in a race: the track's shape (tight
+The user saw it work in a race (2026-11-03). Still to check: the track's shape (tight
 hairpins, tracks that cross themselves, point-to-point tracks), the road's width, the
 dots changing over at an overtake, backmarkers, and as an online client. Possible
 later: an arrow for the direction of travel, the pit lane.
