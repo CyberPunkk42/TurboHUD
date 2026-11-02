@@ -634,9 +634,9 @@ class LapReader:
         None before a lap is done."""
         lap = len(state.checkpoints) - 1
         last_clock, self._draft_clock = self._draft_clock, state.clock
-        if last_clock is not None and 0 < state.clock - last_clock <= UNITS_PER_SECOND and lap >= 0:
-            if state.car.draft >= DRAFT_COUNTS:
-                self._draft_time[lap] = self._draft_time.get(lap, 0) + state.clock - last_clock
+        moved = last_clock is not None and 0 < state.clock - last_clock <= UNITS_PER_SECOND
+        if moved and lap >= 0 and state.car.draft >= DRAFT_COUNTS:
+            self._draft_time[lap] = self._draft_time.get(lap, 0) + state.clock - last_clock
         times = state.lap_times
         if lap < 1 or len(times) < lap or times[lap - 1] <= 0:
             return None
