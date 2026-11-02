@@ -161,7 +161,9 @@ files (below).
 **The game.** The game is never paused, stopped, hooked or changed. Its memory is only
 copied from. If TurboHUD or the probe hits an error, the game keeps running: the probe
 answers errors with an error message and never ends the game, and TurboHUD keeps its
-windows up and tries again.
+windows up and tries again. Tested: if the probe itself is killed or crashes while
+you play, the game keeps running (TurboHUD then shows "waiting" until the next start).
+When Steam stops the game, the probe passes the stop on and ends with it.
 
 **Measured on the development PC** (Linux, 5120 x 1440, in an online race):
 
@@ -203,7 +205,8 @@ gives no control over the car.
   records every race and keeps each car's last recorded position). If recording is
   off, it works them out from the last checkpoint and the velocity, for a live delta
   and gaps, and the radar does not show.
-- The car size on the radar (4.5 x 2 units) is an estimate.
+- The car size on the radar (4.0 x 1.4 units) was measured with one car model (Tatuus
+  FA01); other models may differ a little.
 - A game update can rename classes or fields. TurboHUD then shows "waiting" instead of
   wrong numbers, and the names need updating.
 
