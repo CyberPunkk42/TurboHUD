@@ -61,9 +61,12 @@ runs, you see:
 
    Starting TurboHUD again while it runs opens no second copy: it switches the running
    one to move mode. To have a key for it, bind the command in your desktop's own key
-   settings yourself (TurboHUD changes none). On Hyprland, for example, a line like
-   `bind = SUPER SHIFT, H, exec, sh /home/<user>/<folder>/TurboHUD/run_turbohud.sh --toggle`
-   in your own bindings file (on Omarchy `~/.config/hypr/bindings.conf`).
+   settings yourself (TurboHUD changes none), on a combination that is still free
+   (`hyprctl binds` lists the taken ones). On Omarchy, whose bindings are in Lua, a line
+   in `~/.config/hypr/bindings.lua`:
+   `o.bind("SUPER + SHIFT + H", "TurboHUD move mode", "sh /home/<user>/<folder>/TurboHUD/run_turbohud.sh --toggle")`.
+   With a classic `hyprland.conf`:
+   `bind = SUPER SHIFT, H, exec, sh /home/<user>/<folder>/TurboHUD/run_turbohud.sh --toggle`.
    Where the desktop has no tray, TurboHUD starts in move mode, so **Close** quits it.
 4. On Hyprland (for example Omarchy), TurboHUD asks Hyprland to float and pin its own
    window above the game, without a frame and without taking the keyboard focus; your
