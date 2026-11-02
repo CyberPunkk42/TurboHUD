@@ -331,3 +331,6 @@ its "Recent changes".
   saved; "Smaller" / "Bigger" resize every section by 10 % from its top-left corner;
   "Reset colours". Swatches instead of a colour dialog, which would be one more window
   for Hyprland to place. Tested offscreen; not yet on the desktop.
+- 2026-11-02: The user tested the draft extras (cones, event line, lap share, who
+  drafts you) and the settings window (colours, Smaller/Bigger, saved): all seems to
+  work.

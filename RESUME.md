@@ -52,6 +52,9 @@ See `docs/IMPROVEMENT_BACKLOG.md`. In short:
    other Wayland desktops.
 
 ## Recent changes
+- 2026-11-02: The user tested the draft extras (cones, event line, lap share, who
+  drafts you) and the settings window (colours, Smaller/Bigger, saved): all seems to
+  work.
 - 2026-11-02: Settings window (tray menu "Settings…", or the move-mode panel's
   button): swatches for the text, highlight and outline colours, applied at once and
   saved; "Smaller" / "Bigger" resize every section by 10 % from its top-left corner;
