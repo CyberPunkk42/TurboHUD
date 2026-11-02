@@ -276,3 +276,12 @@ its "Recent changes".
   line), which had held still and then jumped about 1 s. Left: jumps of 0.3 to 0.5 s
   right at some checkpoints, maybe because a client's checkpoint times come from the
   server a little late against the local race clock.
+- 2026-11-02: Real car positions as an online client, from the replay recorder. TSU
+  records every race; the client's TS.EventRecorder.m_lastQuantizedVehicleStates holds
+  each car's last recorded state in player-list order, position as (value - 2**20) /
+  1024 (found live with 13 AI: cars crossing checkpoint lines were 0.82 from them on
+  average, max 2.8, against 2.1 for the next best scale). All 14 positions read; the
+  radar, the delta and the gaps use them (not estimated). Not used when the recorder's
+  tick stands still for 1 s (recording off): then the estimate (no radar). Left: the
+  delta still jumped up to 0.76 s once in 12 s (median step 0.015 s); maybe the recorder
+  stores a car's state only every few ticks. The radar has not been seen as a client.

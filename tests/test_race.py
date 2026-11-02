@@ -103,7 +103,8 @@ class FakeGame:
 
 
 def build(lap_starts, laps_completed, clock, limit, local_index=0, finished=False, car=None, gates=(), pedals=None,
-          name=None, online=False, clock_fn=None, health=None, pit_area=False, event_running=None):
+          name=None, online=False, clock_fn=None, health=None, pit_area=False, event_running=None,
+          recorded=None):
     """A fake race; `car` is the car's (x, z) and `gates` the checkpoint lines, both
     optional like in a game without them."""
     g = FakeGame()
@@ -141,10 +142,32 @@ def build(lap_starts, laps_completed, clock, limit, local_index=0, finished=Fals
     if online:
         # An online race: no active server; the race is in a TS.ClientEventController.
         g.q(services + 0x10, 0)
-        client_class = g.klass('TS', 'ClientEventController', [('m_client', 0x60, False)], parent=base_controller)
+        client_class = g.klass(
+            'TS', 'ClientEventController', [('m_client', 0x60, False), ('m_eventRecorder', 0x68, False)],
+            parent=base_controller,
+        )
         g.alloc_obj(client_class)  # a stale one, of an earlier race: no event state
         controller = g.alloc_obj(client_class)
         g.client_controller = controller
+        if recorded is not None:
+            # The replay recorder: one quantized state per player, in the list's order
+            # (here the remote player first, then the local one).
+            recorder_class = g.klass('TS', 'EventRecorder', [
+                ('m_stateTick', 0x10, False), ('m_lastQuantizedVehicleStates', 0x18, False)])
+            state_class_q = g.klass('TS', 'QuantizedVehicleState', [('m_positionX', 0x10, False)])
+            recorder = g.alloc_obj(recorder_class)
+            g.put(recorder + 0x10, struct.pack('<i', 100))
+            array = g.alloc_obj(0)
+            g.q(array + il.ARRAY_LENGTH, 2)
+            for i, place in enumerate((None, recorded)):
+                element = g.alloc_obj(state_class_q)
+                if place is not None:
+                    x, z = place
+                    g.put(element + 0x10, struct.pack('<3I', int(x * 1024) + 2**20, 2**20, int(z * 1024) + 2**20))
+                g.q(array + il.ARRAY_DATA + 8 * i, element)
+            g.q(recorder + 0x18, array)
+            g.q(controller + 0x68, recorder)
+            g.recorder = recorder
     state = g.alloc_obj(state_class)
     g.q(controller + 0x48, state)
     g.put(state + 0x58, struct.pack('<6i', clock // 200, clock, 10000, 10000, 10000, limit))
@@ -621,6 +644,26 @@ class CarTests(unittest.TestCase):
         reader._next_search = 0.0
         self.assertEqual(reader.read().laps_completed, 0)
         self.assertEqual(reader.game.searches, 1)
+
+    def test_online_positions_come_from_the_replay_recorder(self):
+        now = [0.0]
+        reader = build([10_000], laps_completed=0, clock=20_000, limit=0, name='A', online=True,
+                       car=(0.0, 0.0), gates=STRAIGHT, recorded=(12.5, -40.25), clock_fn=lambda: now[0])
+        state = reader.read()
+        me = next(p for p in state.players if p.local)
+        self.assertEqual(me.position, (12.5, -40.25))
+        self.assertFalse(me.estimated)
+        self.assertEqual(state.position, (12.5, -40.25))  # the delta uses it too
+
+    def test_a_recorder_that_stands_still_is_not_used(self):
+        reader = build([10_000], laps_completed=0, clock=20_000, limit=0, name='A', online=True,
+                       car=(0.0, 0.0), gates=STRAIGHT, recorded=(12.5, -40.25))
+        reader.read()
+        g = reader.game
+        times = g.read(reader._state + 0x58, 24)
+        g.put(reader._state + 0x58, struct.pack('<6i', 0, 20_000 + race.RECORDER_STALE + 1, *struct.unpack('<6i', times)[2:]))
+        me = next(p for p in reader.read().players if p.local)
+        self.assertIsNone(me.position)  # its tick did not move for over a second
 
     def test_online_the_unkept_position_counts_as_unknown(self):
         reader = build([10_000], laps_completed=0, clock=20_000, limit=0, car=(0.0, 0.0), gates=STRAIGHT, name='A')

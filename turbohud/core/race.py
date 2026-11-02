@@ -28,7 +28,7 @@ from dataclasses import dataclass
 
 from turbohud.core.flags import flag_code, flag_text
 from turbohud.core.hud import Row, clock, local_time_rows
-from turbohud.core.il2cpp import ARRAY_DATA, LIST_ITEMS, SIMPLE_TYPES, NotFound, ReadError
+from turbohud.core.il2cpp import ARRAY_DATA, ARRAY_LENGTH, LIST_ITEMS, SIMPLE_TYPES, NotFound, ReadError
 
 UNITS_PER_SECOND = 10_000
 # EventState.times: ticks, time, ..., time limit (int32 each).
@@ -368,6 +368,8 @@ def per_lap(history, laps=PER_LAP_LAPS):
 
 CLIENT_SEARCH_EVERY = 10.0  # seconds between searches for an online race while there is none
 CLIENT_LOG_EVERY = 2.0  # seconds between looks at TSU's log while it says no event runs
+QUANTIZED_ZERO, QUANTIZED_SCALE = 1 << 20, 1024  # TS.QuantizedVehicleState positions
+RECORDER_STALE = 10_000  # race clock (1 s) without a new recorder tick: it does not run
 STRING_LENGTH, STRING_CHARS = 0x10, 0x14  # System.String: length, then UTF-16 text
 MAX_NAME = 64
 
@@ -415,6 +417,8 @@ class LapReader:
         self.services_class = il2cpp.find_class('TS', 'Services')
         self._clock = clock
         self._reckoning = DeadReckoning()  # positions where the game keeps none (online client)
+        self._player_indices = []
+        self._recorder_tick, self._recorder_moved = None, 0
         self._client_class = None  # TS.ClientEventController, once looked up
         self._controller = None  # the online race's event controller, once found
         self._next_search = 0.0  # when to look for it again
@@ -516,6 +520,7 @@ class LapReader:
             # A new event (or the first read): start the caches afresh.
             self._state, self._offsets, self._laps, self._gates = state, {}, {}, None
             self._reckoning = DeadReckoning()
+            self._recorder_tick, self._recorder_moved = None, 0
             self._fuel_history, self._wear_history, self._fuel_marks, self._types = {}, {}, {}, {}
             self._player = self.local_player()[1]
         player = self._player
@@ -556,7 +561,15 @@ class LapReader:
             gates=gates,
             car=car,
         )
-        players = self._reckoning.fill(self._players(state_object), gates, clock)
+        players = self._players(state_object)
+        if any(p.position is None for p in players):
+            recorded = self._recorded_positions(clock)
+            if recorded:
+                players = tuple(
+                    dataclasses.replace(p, position=recorded[i]) if p.position is None and i in recorded else p
+                    for p, i in zip(players, self._player_indices)
+                )
+        players = self._reckoning.fill(players, gates, clock)
         if position is None:
             # Online, as a client, the game keeps no position: the delta and the fuel
             # trend use the worked-out one.
@@ -641,15 +654,56 @@ class LapReader:
             players = il.list_items(self._ref('state', state, 'players'))
         except (NotFound, OSError):
             return ()
-        found = []
-        for player in players:
+        found, indices = [], []
+        for index, player in enumerate(players):
             if not player:
                 continue
             try:
                 found.append(self._player_state(player))
+                indices.append(index)
             except (NotFound, OSError):
                 continue  # one unreadable player must not hide the others
+        self._player_indices = indices  # each one's place in the game's list
         return tuple(found)
+
+    def _recorded_positions(self, clock):
+        """{place in the game's player list: (x, z)} from the replay recorder of an
+        online race the game runs as a client, which keeps no other car positions.
+
+        TS.EventRecorder.m_lastQuantizedVehicleStates holds each car's last recorded
+        state, in the order of the player list, with the position in whole numbers:
+        (value - 2**20) / 1024 (checked online: cars crossing a checkpoint line were
+        0.8 from it on average). Empty when the recorder does not run (its tick stands
+        still for RECORDER_STALE) or has no states."""
+        if self._controller is None:
+            return {}
+        memory = self.il.memory
+        try:
+            recorder = self._ref('client', self._controller, 'm_eventRecorder')
+            tick = memory.i32(recorder + self._offset('recorder', recorder, 'm_stateTick'))
+            states = self._ref('recorder', recorder, 'm_lastQuantizedVehicleStates')
+            count = memory.u64(states + ARRAY_LENGTH)
+            if not 0 < count <= 256:
+                return {}
+            elements = struct.unpack(f'<{count}Q', memory.read(states + ARRAY_DATA, 8 * count))
+            first = next((e for e in elements if e), None)
+            if first is None:
+                return {}
+            to_position = self._offset('qstate', first, 'm_positionX')
+        except (NotFound, OSError):  # optional: the race reads on without it
+            return {}
+        if tick != self._recorder_tick:
+            self._recorder_tick, self._recorder_moved = tick, clock
+        elif clock - self._recorder_moved > RECORDER_STALE:
+            return {}
+        found = {}
+        for index, (element, data) in enumerate(zip(elements, memory.read_many([e + to_position for e in elements], 12))):
+            if not element or data is None:
+                continue
+            x, _y, z = struct.unpack('<3I', data)
+            if x or z:
+                found[index] = ((x - QUANTIZED_ZERO) / QUANTIZED_SCALE, (z - QUANTIZED_ZERO) / QUANTIZED_SCALE)
+        return found
 
     def _player_state(self, player):
         il, memory = self.il, self.il.memory
