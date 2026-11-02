@@ -11,7 +11,7 @@ import math
 import sys
 
 from PySide6.QtCore import QPointF, QRectF, Qt, Signal
-from PySide6.QtGui import QColor, QPainter, QPen
+from PySide6.QtGui import QColor, QPainter, QPen, QPolygonF
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -38,7 +38,15 @@ from turbohud.core.hud import (
 )
 from turbohud.core.race import CAR_LENGTH, CAR_WIDTH, RADAR_FROM, RADAR_FULL, Blip, RadarView
 from turbohud.core.settings import GROUPS
-from turbohud.hud.painter import BEHIND_COLOR, LIFT_COLOR, draw_bars, draw_hud, draw_level, text_width
+from turbohud.hud.painter import (
+    BEHIND_COLOR,
+    DRAFT_COLOR,
+    LIFT_COLOR,
+    draw_bars,
+    draw_hud,
+    draw_level,
+    text_width,
+)
 
 TINT = (23, 56, 97, 153)  # move mode's background: red, green, blue, opacity (0-255)
 BORDER = (120, 170, 230)
@@ -53,6 +61,8 @@ BACKDROP = (0, 0, 0, 40)  # the light tint behind a section's text (option), RGB
 BLUE_SAMPLE = 0.6  # the bar's opacity in move mode, to place it
 LEVEL_SAMPLE = (0.7, 'ahead')  # a level bar in move mode, to place the section
 RADAR_CAR_AT = 0.5  # the local car's height in the radar, from the top: the middle
+CONE_STEPS = 8  # points along a slipstream cone's far edge
+CONE_OUT, CONE_IN = 30, 80  # a slipstream cone's opacity (0-255): elsewhere, local car in it
 RADAR_BACK = (10, 14, 22, 150)  # RGBA
 RADAR_EDGE = (120, 130, 150, 200)
 RADAR_LINES = (120, 130, 150, 90)
@@ -62,7 +72,7 @@ RADAR_OTHER = '#8c95a3'  # a car near but not counting (far to the side, or furt
 RADAR_SAMPLE = (
     Blip(-1.0, 3.0, 0.0, 0.0),
     Blip(-9.5, -1.0, 0.1, 0.3),
-    Blip(11.0, 0.5, -0.05, None),
+    Blip(11.0, 0.5, -0.05, None, False),
 )
 
 log = logging.getLogger(__name__)
@@ -239,7 +249,7 @@ class SectionWindow(QWidget):
         In move mode a sample, with a border and its name."""
         view = self.radar
         if not self.locked and view is None:
-            view = RadarView(BLUE_SAMPLE, RADAR_SAMPLE)
+            view = RadarView(BLUE_SAMPLE, RADAR_SAMPLE, cone=(30, 20))
         if view is None:
             return
         size = min(self.width(), self.height())
@@ -267,6 +277,29 @@ class SectionWindow(QWidget):
             painter.drawRoundedRect(QRectF(-w / 2, -h / 2, w, h), w / 4, w / 4)
             painter.restore()
 
+        def cone(blip):
+            """The slipstream behind a car ahead: from its tail, the event's reach long
+            and its angle to each side; brighter when the local car is in it."""
+            reach, spread = view.cone
+            painter.save()
+            painter.translate(centre.x() + blip.side * per_unit, centre.y() - blip.ahead * per_unit)
+            painter.rotate(math.degrees(blip.angle))
+            tail, radius = CAR_LENGTH * per_unit / 2, reach * per_unit
+            points = [QPointF(0, tail)]
+            for step in range(CONE_STEPS + 1):
+                turn = math.radians(-spread + 2 * spread * step / CONE_STEPS)
+                points.append(QPointF(radius * math.sin(turn), tail + radius * math.cos(turn)))
+            color = QColor(DRAFT_COLOR)
+            color.setAlpha(CONE_IN if blip.in_cone else CONE_OUT)
+            painter.setPen(Qt.NoPen)
+            painter.setBrush(color)
+            painter.drawPolygon(QPolygonF(points))
+            painter.restore()
+
+        if view.cone is not None:
+            for blip in view.blips:
+                if blip.in_cone is not None:
+                    cone(blip)
         for blip in view.blips:
             if blip.seconds is not None and blip.seconds <= RADAR_FULL:
                 color = BEHIND_COLOR
@@ -275,6 +308,15 @@ class SectionWindow(QWidget):
             else:
                 color = RADAR_OTHER
             car(blip.ahead, blip.side, blip.angle, color)
+            if blip.in_cone:  # the car being drafted: a cyan outline
+                painter.save()
+                painter.translate(centre.x() + blip.side * per_unit, centre.y() - blip.ahead * per_unit)
+                painter.rotate(math.degrees(blip.angle))
+                w, h = CAR_WIDTH * per_unit, CAR_LENGTH * per_unit
+                painter.setPen(QPen(QColor(DRAFT_COLOR), 2))
+                painter.setBrush(Qt.NoBrush)
+                painter.drawRoundedRect(QRectF(-w / 2 - 1, -h / 2 - 1, w + 2, h + 2), w / 4, w / 4)
+                painter.restore()
         car(0.0, 0.0, 0.0, RADAR_ME)
         painter.setClipping(False)
         painter.setOpacity(1.0)

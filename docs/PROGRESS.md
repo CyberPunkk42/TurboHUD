@@ -317,3 +317,12 @@ its "Recent changes".
   probe's two catch-all handlers marked as intended. No change in behaviour; all tests
   pass, the privacy check runs as before. `ruff check .` and `ruff format --check .`
   now pass.
+- 2026-11-02: Draft extras. The radar draws the slipstream behind each car ahead (the
+  event's reach and angle: maxDraftingDistance, maxDraftingAngle), brighter with a cyan
+  outline on the car when the local car is in it. The draft section shows, below the
+  meter, the event's drafting for the first 20 s of the race clock ("Max -10% drag
+  -80% downforce reach 30 20°"), then "Last lap 23% in a slipstream" (race time with a
+  draft of 5 % or more), and in yellow who drafts the local player ("<name> drafts you
+  45%": a car behind within the reach and angle, from its own drag multiplier). Checked
+  live as a client: all 14 cars' drag multipliers read (several drafting), settings
+  read; not yet seen in the HUD.

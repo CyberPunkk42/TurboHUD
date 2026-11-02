@@ -536,3 +536,79 @@ class DraftTests(unittest.TestCase):
 
     def test_no_section_without_drafting(self):
         self.assertNotIn('draft', race.car_sections(self.car(None, 0.0)))
+
+
+SERVER_DRAFT = race.DraftSettings(0.10, 0.80, 30, 20)  # the online server's: 10 %, 80 %, reach 30, 20°
+
+
+def heading_north(name, position, local=False, drag=None):
+    return race.PlayerState(
+        name,
+        GERMANY,
+        1,
+        ((0, 10_000),),
+        local=local,
+        position=position,
+        velocity=(0.0, 40.0),
+        forward=(0.0, 1.0),
+        draft_drag=drag,
+    )
+
+
+class DraftExtrasTests(unittest.TestCase):
+    def test_a_car_close_behind_in_line_and_drafting_drafts_you(self):
+        me = heading_north('Me', (0.0, 100.0), local=True)
+        chaser = heading_north('Chaser', (1.0, 85.0), drag=0.95)  # 15 behind, half the effect
+        self.assertEqual(race.drafted_by([me, chaser], SERVER_DRAFT), ('Chaser', 0.5000000000000004))
+
+    def test_not_when_off_line_too_far_or_not_drafting(self):
+        me = heading_north('Me', (0.0, 100.0), local=True)
+        self.assertIsNone(race.drafted_by([me, heading_north('Side', (12.0, 88.0), drag=0.95)], SERVER_DRAFT))
+        self.assertIsNone(race.drafted_by([me, heading_north('Far', (0.0, 50.0), drag=0.95)], SERVER_DRAFT))
+        self.assertIsNone(race.drafted_by([me, heading_north('Free', (0.0, 90.0), drag=1.0)], SERVER_DRAFT))
+
+    def test_rows_card_at_the_start_then_the_last_lap(self):
+        car = race.CarState(False, 0, 0, False, 0, 40.0, draft=0.3, draft_last_lap=0.234)
+        start = race.LapState(
+            clock=50_000,
+            time_limit=0,
+            laps_completed=0,
+            laps_to_finish=3,
+            lap_starts=[0],
+            car=car,
+            draft=SERVER_DRAFT,
+        )
+        self.assertEqual(
+            [r.text for r in race.draft_rows(start)], ['Max -10% drag  -80% downforce  reach 30  20°']
+        )
+        later = dataclasses.replace(start, clock=900_000)
+        self.assertEqual([r.text for r in race.draft_rows(later)], ['Last lap 23% in a slipstream'])
+
+    def test_the_radar_draws_the_slipstream_of_cars_ahead(self):
+        # A car 12 ahead in line: its tail is 9.75 ahead, well within the reach of 30.
+        blips = race.radar_blips(((0.0, 0.0), (0.0, 1.0)), 40.0, [((0.0, 12.0), (0.0, 1.0))], SERVER_DRAFT)
+        self.assertTrue(blips[0].in_cone)
+        aside = race.radar_blips(((0.0, 0.0), (0.0, 1.0)), 40.0, [((8.0, 12.0), (0.0, 1.0))], SERVER_DRAFT)
+        self.assertFalse(aside[0].in_cone)  # 39° off its line
+        behind = race.radar_blips(((0.0, 0.0), (0.0, 1.0)), 40.0, [((0.0, -12.0), (0.0, 1.0))], SERVER_DRAFT)
+        self.assertIsNone(behind[0].in_cone)  # cars behind get no cone
+
+
+class DraftTimeTests(unittest.TestCase):
+    def test_time_in_a_slipstream_per_lap(self):
+        reader = race.LapReader.__new__(race.LapReader)
+        reader._draft_time, reader._draft_clock = {}, None
+        car = lambda draft: race.CarState(False, 0, 0, False, 0, 40.0, draft=draft)
+        state = lambda clock, draft, starts: race.LapState(
+            clock=clock,
+            time_limit=0,
+            laps_completed=len(starts) - 1,
+            laps_to_finish=3,
+            lap_starts=starts,
+            checkpoints=tuple((s,) for s in starts),
+            car=car(draft),
+        )
+        self.assertIsNone(reader._count_draft(state(10_000, 0.5, [0])))
+        for clock in range(15_000, 100_001, 5_000):  # in a slipstream from 1 to 10 s: 9 s of a 100 s lap
+            reader._count_draft(state(clock, 0.5, [0]))
+        self.assertAlmostEqual(reader._count_draft(state(1_000_000, 0.0, [0, 1_000_000])), 0.09)

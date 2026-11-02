@@ -33,9 +33,6 @@ it. Other Wayland desktops (KDE, GNOME) ignore Qt's on-top hint: the layer-shell
 extension (KDE, Sway; not GNOME) would need a library outside PySide6.
 
 ## 5. More HUD features
-- Draft extras (being built 2026-11-02): the draft cone on the radar, a warning when a
-  car behind drafts you, the event's draft settings at the start, time in the draft
-  per lap.
 - A settings window for the look (colours, size), instead of editing `settings.json`
   (being built 2026-11-02).
 - Open questions: the radar's car size (4.5 x 2 is an estimate); what happens to the
