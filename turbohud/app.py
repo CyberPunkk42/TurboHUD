@@ -2,6 +2,7 @@
 
 import argparse
 import logging
+import os
 import signal
 import sys
 import time
@@ -39,7 +40,20 @@ def parse_args(argv):
         prog='TurboHUD', description='A HUD overlay for Turbo Sliders Unlimited.'
     )
     parser.add_argument('--version', action='version', version=f'TurboHUD {__version__}')
-    parser.add_argument('--move', action='store_true', help='start in move mode instead of locked')
+    parser.add_argument(
+        '--move',
+        action='store_true',
+        help='start in move mode instead of locked (or switch a running TurboHUD to it)',
+    )
+    commands = parser.add_mutually_exclusive_group()
+    commands.add_argument(
+        '--toggle', action='store_true', help='switch a running TurboHUD\'s move mode on or off'
+    )
+    commands.add_argument('--lock', action='store_true', help='end a running TurboHUD\'s move mode')
+    commands.add_argument(
+        '--settings', action='store_true', help='open a running TurboHUD\'s settings window'
+    )
+    commands.add_argument('--quit', action='store_true', help='quit a running TurboHUD')
     parser.add_argument('--seconds', type=float, help='quit after this many seconds (for tests)')
     args = parser.parse_args(argv)
     if args.seconds is not None and args.seconds <= 0:
@@ -73,6 +87,45 @@ def start_live_race(platform=sys.platform):
     return live
 
 
+def listen_for_commands(app, on_command):
+    """Answer commands from turbohud.control on its socket; True if listening."""
+    from PySide6.QtNetwork import QLocalServer
+
+    from turbohud import control
+
+    path = control.control_path()
+    if path is None:
+        return False
+    try:
+        control.prepare_folder(path)
+    except OSError as error:
+        log.info('no command socket: %s', error)
+        return False
+    QLocalServer.removeServer(str(path))  # left behind by a TurboHUD that is gone (none answered)
+    server = QLocalServer(app)
+    if not server.listen(str(path)):
+        log.info('no command socket: %s', server.errorString())
+        return False
+
+    def connected():
+        conn = server.nextPendingConnection()
+
+        def read():
+            if not conn.canReadLine():
+                return
+            command = bytes(conn.readLine()).decode('utf-8', 'replace').strip()
+            conn.write((on_command(command) + '\n').encode())
+            conn.flush()
+            conn.disconnectFromServer()
+
+        conn.readyRead.connect(read)
+        conn.disconnected.connect(conn.deleteLater)
+
+    server.newConnection.connect(connected)
+    app.aboutToQuit.connect(server.close)
+    return True
+
+
 def run(args, folder):
     import PySide6
     from PySide6.QtCore import Qt, QTimer
@@ -93,11 +146,16 @@ def run(args, folder):
         screen_of,
         session_rows,
     )
-    from turbohud.overlay import HOTKEY_LOCK, HOTKEY_QUIT, native_for
+    from turbohud.overlay import HOTKEY_LOCK, HOTKEY_QUIT, choose_platform, native_for
     from turbohud.overlay.settings_window import SettingsWindow
     from turbohud.overlay.window import MovePanel, SectionWindow, window_flags
 
+    platform = choose_platform()
+    if platform is not None:
+        os.environ['QT_QPA_PLATFORM'] = platform
     app = QApplication([sys.argv[0]])
+    if platform is not None:
+        log.info('Wayland without Hyprland: running through XWayland, where staying on top works')
     app.setApplicationName('TurboHUD')
     app.setQuitOnLastWindowClosed(False)
     icon = QIcon(str(asset_path(ICON)))
@@ -376,7 +434,27 @@ def run(args, folder):
 
     shortcuts = native.register_hotkeys(on_hotkey)
     log.info('Ctrl+Shift+L and Ctrl+Shift+Q registered' if shortcuts else 'no system-wide shortcuts')
-    panel = MovePanel(native, layout, shortcuts, settings.speed_unit == 'mph', settings.backdrop)
+
+    def on_command(command):
+        """A command from the command line (turbohud.control): 'ok' or an error text."""
+        actions = {
+            'ping': lambda: None,
+            'toggle': lambda: set_locked(not locked),
+            'move': lambda: set_locked(False),
+            'lock': lambda: set_locked(True),
+            'settings': open_settings,
+            'quit': app.quit,
+        }
+        action = actions.get(command)
+        if action is None:
+            return f'unknown command {command!r}'
+        log.info('command: %s', command)
+        QTimer.singleShot(0, action)  # answer first, then act
+        return 'ok'
+
+    commands = listen_for_commands(app, on_command)
+    log.info('commands: run_turbohud.sh --toggle / --quit' if commands else 'no command socket')
+    panel = MovePanel(native, layout, shortcuts, settings.speed_unit == 'mph', settings.backdrop, commands)
     panel.mph_changed.connect(set_mph)
     panel.backdrop_changed.connect(set_backdrop)
     panel.settings_requested.connect(open_settings)
@@ -461,8 +539,44 @@ def run(args, folder):
     return 0
 
 
+def command_of(args):
+    """The command for a running TurboHUD that the arguments ask for, or None."""
+    for name in ('toggle', 'lock', 'settings', 'quit'):
+        if getattr(args, name):
+            return name
+    return None
+
+
+def tell_running(args, send=None):
+    """Pass a command to a running TurboHUD (see turbohud.control). Returns an exit code
+    when that is all there is to do, or None to start TurboHUD: no command and none
+    running, or --move with none running."""
+    from turbohud import control
+
+    send = send or control.send
+    command = command_of(args)
+    if command is None:
+        # A plain start (or --move) while TurboHUD runs: move mode there, no second copy.
+        if send('ping') != 'ok':
+            return None
+        send('move')
+        print('TurboHUD is already running: switched it to move mode (quit it with --quit).')
+        return 0
+    answer = send(command)
+    if answer is None:
+        print('TurboHUD is not running.', file=sys.stderr)
+        return 1
+    if answer != 'ok':
+        print(f'TurboHUD: {answer}', file=sys.stderr)
+        return 1
+    return 0
+
+
 def main(argv=None):
     args = parse_args(sys.argv[1:] if argv is None else argv)
+    code = tell_running(args)
+    if code is not None:
+        return code
     try:
         import PySide6  # noqa: F401 - only checks that Qt is there
     except ImportError:
