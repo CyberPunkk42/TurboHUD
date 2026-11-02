@@ -2,40 +2,44 @@
 
 Open items, most valuable first. Finished items move to `docs/PROGRESS.md`.
 
-## 1. TurboHUD and the probes on Windows
+## 1. Windows: the overlay, then live data
 Over TSU on Windows, in windowed, Fullscreen and Fullscreen Exclusive: the built app
-(`TurboHUD.exe` from the Windows build of `.github/workflows/build.yml`), the Qt probe
-(`experiments/run_qt_overlay_probe.cmd`) and the original probe. Add the results to
-`experiments/README.md`. Check the shortcuts especially: the Windows hotkey code has only
-run on a build machine. Expected: windowed and Fullscreen work; Exclusive may not, and an
-overlay that injects into the game is out of scope.
+(`tools/build_app.py`), the Qt probe (`experiments/run_qt_overlay_probe.cmd`) and the
+original probe. Add the results to `experiments/README.md`. Check the shortcuts
+especially: the Windows hotkey code has only run on a build machine. Expected: windowed
+and Fullscreen work; Exclusive may not, and an overlay that injects into the game is out
+of scope.
+Then live data: Windows lets a program read another of the same user
+(`OpenProcess` with `PROCESS_VM_READ`, `ReadProcessMemory`), so no probe or launch
+option should be needed; the lookup by name (`turbohud/core`) stays as it is.
 
-## 2. More HUD data: fuel and speed, then Windows and macOS
-Lap times are live on Linux (from TSU's memory, through the memory probe). Next: fuel
-(left, per lap, laps it lasts) and speed, found the same way. Windows and macOS still
-show the session clock: reading memory there needs its own permission route. Later,
-with an event to join: the lap data as a guest on someone else's server.
-Done on Linux since: fuel, tires, speed and pedals, the player list, mph, and the blue
-flag (still to check in a race with other players).
+## 2. macOS: live data in CrossOver
+TSU runs as a Windows game in a CrossOver bottle. Reading its memory from outside needs
+`task_for_pid`, which macOS allows only with special rights. Find out what is possible
+without weakening the system; until then the Mac shows the session clock.
 
-## 3. Customising the look in the app
-A small settings window (from the tray menu) for the theme's colours and scale, instead
-of editing `settings.json` by hand.
+## 3. Builds and release
+Bundled apps from `tools/build_app.py` with the probe and clear launch-option steps for
+Linux; an AppImage instead of the `.tar.gz`. Before the repository goes public for the
+TSU community: the privacy check (pre-push hook), a licence, a README for players.
 
-## 4. Linux: shortcuts, AppImage, other Wayland desktops
-On top of the game on Hyprland is done (2026-11-01: runtime requests for TurboHUD's own
-window; move mode no longer ends when the mouse moves there). Still to check by hand:
-over TSU in a race, and that clicks go through while locked. Other Wayland desktops
-(KDE, GNOME) still ignore Qt's on-top hint: the layer-shell extension (KDE, Sway; not
-GNOME) would need a library outside PySide6.
+## 4. Linux: shortcuts, other Wayland desktops
+On top of the game on Hyprland works (runtime requests for TurboHUD's own windows).
+Shortcuts: Linux has none yet (Ctrl+Shift+L and Ctrl+Shift+Q do nothing there); the tray
+menu switches move mode. Options: X11 key grabs under XWayland; on Wayland, a command
+such as `TurboHUD --toggle` that tells the running TurboHUD what to do, which the
+player binds to a key themselves, or the GlobalShortcuts portal where the desktop has
+it. Other Wayland desktops (KDE, GNOME) ignore Qt's on-top hint: the layer-shell
+extension (KDE, Sway; not GNOME) would need a library outside PySide6.
 
-Shortcuts: Linux has none yet (Ctrl+Shift+L and Ctrl+Shift+Q do nothing there), and on
-Omarchy it was not clear how to switch move mode or quit. Options: X11 key grabs under
-XWayland; on Wayland, the desktop's own key bindings starting a command such as
-`TurboHUD --toggle` that tells the running TurboHUD what to do (for Hyprland, a `bind`
-line in `hyprland.conf`), or the GlobalShortcuts portal where the desktop has it. Until
-then, say clearly on screen how to unlock and quit without shortcuts.
-Also: an AppImage instead of the `.tar.gz`.
+## 5. More HUD features
+- Draft extras (being built 2026-11-02): the draft cone on the radar, a warning when a
+  car behind drafts you, the event's draft settings at the start, time in the draft
+  per lap.
+- A settings window for the look (colours, size), instead of editing `settings.json`
+  (being built 2026-11-02).
+- Open questions: the radar's car size (4.5 x 2 is an estimate); what happens to the
+  game if the probe stops while it runs.
 
 ## Design notes for the real overlay
 - Move mode is a short, deliberate step: while the overlay takes the mouse, the game gets
