@@ -389,3 +389,12 @@ its "Recent changes".
   learnt within about a lap, cars 2.3 units from the line on average, 12 at most
   (about the road's width). Dots outside the learnt track (a road from the grid) stay
   inside the map's square.
+- 2026-11-03: Worked-out positions (online, race not recorded) settle onto the road.
+  They started each car at the middle of the checkpoint line it passed, which on some
+  tracks lies far off the road. Now a car followed from line to line goes on from where
+  its worked-out place meets the new line (keeping where across the road it is): the
+  error shrinks at every line and in every bend, so it settles within about a lap. Cars
+  followed for a whole lap teach each line an anchor (where cars cross it), where a car
+  seen for the first time starts. Checked live by hiding the real positions in the AI
+  event: median 1.8 units from the real place after about 45 s (90 % within 3.4),
+  against 7 (and 15) the old way. The delta and gaps use these when recording is off.

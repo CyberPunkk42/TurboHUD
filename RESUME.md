@@ -51,6 +51,15 @@ See `docs/IMPROVEMENT_BACKLOG.md`. In short:
 4. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-03: Worked-out positions (online, race not recorded) settle onto the road.
+  They started each car at the middle of the checkpoint line it passed, which on some
+  tracks lies far off the road. Now a car followed from line to line goes on from where
+  its worked-out place meets the new line (keeping where across the road it is): the
+  error shrinks at every line and in every bend, so it settles within about a lap. Cars
+  followed for a whole lap teach each line an anchor (where cars cross it), where a car
+  seen for the first time starts. Checked live by hiding the real positions in the AI
+  event: median 1.8 units from the real place after about 45 s (90 % within 3.4),
+  against 7 (and 15) the old way. The delta and gaps use these when recording is off.
 - 2026-11-03: Track map learnt from where the cars drive. In an AI event the map's
   track did not match where the dots went (seen by the user): on that track the
   checkpoint lines are long (up to 300 units) and set off to one side, so a line through

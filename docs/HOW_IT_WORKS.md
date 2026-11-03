@@ -226,7 +226,10 @@ gives no control over the car.
   race has them. TurboHUD takes them from the game's replay recorder instead (TSU
   records every race and keeps each car's last recorded position). If recording is
   off, it works them out from the last checkpoint and the velocity, for a live delta
-  and gaps, and the radar does not show.
+  and gaps, and the radar does not show. Each car goes on from where its worked-out
+  place meets each new checkpoint line, so it settles onto the road within about a lap
+  even where the lines are long and off to one side (checked live: about 2 units from
+  the real place, against about 7 from the lines' middles).
 - The car size on the radar (4.0 x 1.4 units) was measured with one car model (Tatuus
   FA01); other models may differ a little.
 - A game update can rename classes or fields. TurboHUD then shows "waiting" instead of
