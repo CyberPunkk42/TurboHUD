@@ -43,11 +43,28 @@ class RankingTests(unittest.TestCase):
         self.assertEqual([p.name for p in race.ranked([c, b, a])], ['A', 'B', 'C'])
 
     def test_finished_players_lead_by_finish_time(self):
-        done_late = player('Late', [lap(0), lap(50_000)], laps=1, finished=True)
-        done_early = player('Early', [lap(0), lap(45_000)], laps=1, finished=True)
-        racing = player('Racing', [lap(0), lap(40_000), lap(80_000, count=2)], laps=2)
+        # A 2-lap race: two are in, one is still on its last lap.
+        done_late = player('Late', [lap(0), lap(40_000), lap(90_000, count=1)], laps=2, finished=True)
+        done_early = player('Early', [lap(0), lap(40_000), lap(85_000, count=1)], laps=2, finished=True)
+        racing = player('Racing', [lap(0), lap(42_000, count=3)], laps=1)
         self.assertEqual(
             [p.name for p in race.ranked([racing, done_late, done_early])], ['Early', 'Late', 'Racing']
+        )
+
+    def test_a_lapped_car_finishing_behind_the_winner_stays_behind_the_lead_lap(self):
+        # A 3-lap race seen in a drive: the winner is in, and the lapped car (2 laps)
+        # finishes right after, before the others on the lead lap come in.
+        winner = player(
+            'Winner', [lap(0), lap(40_000), lap(80_000), lap(120_000, count=1)], laps=3, finished=True
+        )
+        lapped = player('Lapped', [lap(0), lap(60_000), lap(121_000, count=1)], laps=2, finished=True)
+        second = player(
+            'Second', [lap(0), lap(41_000), lap(81_000), lap(125_000, count=1)], laps=3, finished=True
+        )
+        third = player('Third', [lap(0), lap(42_000), lap(82_000, count=3)], laps=2)
+        self.assertEqual(
+            [p.name for p in race.ranked([lapped, third, second, winner])],
+            ['Winner', 'Second', 'Third', 'Lapped'],
         )
 
 

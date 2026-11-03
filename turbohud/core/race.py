@@ -1334,14 +1334,20 @@ MAX_NAME_SHOWN = 18
 
 
 def ranked(players):
-    """Players in race order: finished ones by when they finished, then the others by
-    how many checkpoints they passed, and at the same checkpoint by who got there first."""
+    """Players in race order: by how far they got (checkpoints passed, a finish
+    counting as the next lap's start line), and as far by who got there first. So a
+    lapped car that finishes right after the winner (once the winner is in, everyone
+    finishes at their next crossing) stays behind the cars on the lead lap, finished or
+    not, rather than coming second."""
 
     def key(player):
-        if player.finish_time is not None:
-            return (0, player.finish_time, 0)
+        finish = player.finish_time
+        if finish is not None:
+            # Up to the finish line only: the laps done, and the finish itself.
+            reached = sum(len(lap) for lap in player.checkpoints[: player.laps_completed]) + 1
+            return (-reached, finish)
         passed = player.passed
-        return (1, -len(passed), passed[-1] if passed else 0)
+        return (-len(passed), passed[-1] if passed else 0)
 
     return sorted(players, key=key)
 

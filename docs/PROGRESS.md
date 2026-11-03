@@ -410,3 +410,10 @@ its "Recent changes".
   as they are now (it showed the first skeleton of 2026-10-24), docs/HOW_IT_WORKS.md
   names the command socket (turbohud/control.py), and experiments/README.md says the
   Steam launch option runs `tsu_memory_probe.py` from there.
+- 2026-11-03: Fixed: the player list put a lapped car that finished right after
+  the winner second (seen by the user in an online race with 17 drivers: last, shown
+  second). Finished drivers were ordered by finish time alone; once the winner is in,
+  a lapped car finishes at its next crossing, before the cars on the lead lap come in.
+  Now everyone is ordered by how far they got (a finish counts as the next lap's start
+  line), then by who got there first. The track map's leader and the cars ahead and
+  behind use the same order.
