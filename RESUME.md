@@ -61,6 +61,13 @@ See `docs/IMPROVEMENT_BACKLOG.md`. In short:
   section is drawn again only when its content changed, and each text's outline is
   kept as a shape to fill (about five times quicker): 8 ms in the worst frame, when
   all 17 running laps change at once. Measured offscreen; not yet in a race.
+- 2026-11-03: Fixed: the player list put a lapped car that finished right after
+  the winner second (seen by the user in an online race with 17 drivers: last, shown
+  second). Finished drivers were ordered by finish time alone; once the winner is in,
+  a lapped car finishes at its next crossing, before the cars on the lead lap come in.
+  Now everyone is ordered by how far they got (a finish counts as the next lap's start
+  line), then by who got there first. The track map's leader and the cars ahead and
+  behind use the same order.
 - 2026-11-03: Lap times list (Linux), asked for by the user. A new "Lap times"
   section beside the player list: a heading, then every driver in race order (up to
   16; with more, the leader and those around you) with flag and name, their best lap

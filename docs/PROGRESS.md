@@ -418,6 +418,13 @@ its "Recent changes".
   start-line passes, as for your own laps. Rows can now have a middle column, lined up
   just before the right one. Tested with unit tests and offscreen drawing; not yet
   seen in a race.
+- 2026-11-03: Fixed: the player list put a lapped car that finished right after
+  the winner second (seen by the user in an online race with 17 drivers: last, shown
+  second). Finished drivers were ordered by finish time alone; once the winner is in,
+  a lapped car finishes at its next crossing, before the cars on the lead lap come in.
+  Now everyone is ordered by how far they got (a finish counts as the next lap's start
+  line), then by who got there first. The track map's leader and the cars ahead and
+  behind use the same order.
 - 2026-11-03: Fixed: every section stuttered once the lap times list was on
   (seen by the user in an online race; TurboHUD averaged 96 % of a core). Every
   section was drawn again 20 times a second, changed or not, and each text's dark
