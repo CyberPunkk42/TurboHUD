@@ -159,7 +159,7 @@ class Section:
     samples: tuple  # row lists it may show; the widest and tallest sets its size
     pedals: bool = False  # a throttle bar on its left and a brake bar on its right
     bar: tuple = ()  # (width, height) at scale 1 for a drawing without text
-    drawing: str = ''  # what it draws instead of text: 'flag' (blue flag) or 'radar'
+    drawing: str = ''  # what it draws instead of text: 'flag' (blue flag), 'radar' or 'map'
     level: bool = False  # a bar below the text showing how much is left (fuel, tires, health)
 
 
@@ -205,6 +205,7 @@ RACE_SECTIONS = (
     ),
     Section('blueflag', 'Blue flag', (), bar=(480, 24), drawing='flag'),
     Section('radar', 'Proximity radar', (), bar=(160, 160), drawing='radar'),
+    Section('trackmap', 'Track map', (), bar=(240, 240), drawing='map'),
 )
 CLOCK_SECTIONS = (
     Section('clock', 'Session time', ((Row('TurboHUD - session time', 'title'), Row('00:00', 'big')),)),
@@ -377,9 +378,14 @@ def top_centre(size, screen, margin=LAYOUT_MARGIN):
 RADAR_DOWN = 0.6  # the radar starts centred, this far down the screen (below the car)
 
 
-def drawing_place(section, size, screen):
+def drawing_place(section, size, screen, margin=LAYOUT_MARGIN):
     """Where a drawing section goes first: the blue flag at the top centre, the radar
-    in the middle a little below the centre, where the eyes are while driving."""
+    in the middle a little below the centre, where the eyes are while driving, and the
+    track map at the right edge, half way down (the other sections start at the left)."""
+    if section.drawing == 'map':
+        width, height = size
+        x, y, screen_width, screen_height = screen
+        return (x + screen_width - margin - width, y + (screen_height - height) // 2, width, height)
     if section.drawing == 'radar':
         width, height = size
         x, y, screen_width, screen_height = screen

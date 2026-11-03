@@ -54,6 +54,7 @@ class Settings:
     sections: dict = field(default_factory=dict)  # section name -> SectionPlace
     speed_unit: str = 'kmh'  # 'kmh' or 'mph'
     backdrop: bool = False  # a light tint behind each section's text while locked
+    map_others: bool = False  # the track map also shows the other cars, as faint grey dots
 
 
 def settings_dir(platform=sys.platform, environ=None, home=None):
@@ -148,6 +149,7 @@ def load_settings(path):
         sections=_sections(data.get('sections')),
         speed_unit=data.get('speed_unit') if data.get('speed_unit') in SPEED_UNITS else 'kmh',
         backdrop=data.get('backdrop') is True,
+        map_others=data.get('map_others') is True,
     )
 
 
@@ -166,6 +168,7 @@ def save_settings(path, settings):
         },
         'speed_unit': settings.speed_unit,
         'backdrop': settings.backdrop,
+        'map_others': settings.map_others,
         'sections': {
             name: {
                 'x': place.x,

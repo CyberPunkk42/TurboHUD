@@ -28,6 +28,7 @@ group and centre them; their places are saved.
 | Players | position, flag, name, PIT, and the live gap to you (or +1 L for laps) |
 | Blue flag | a navy bar that fades in when a car about to lap you is within 2 s |
 | Proximity radar | your car and the cars around you, when one is within 0.5 s behind, beside or ahead; the slipstream behind cars ahead |
+| Track map | the track from above, with you, the race leader (gold), the next car ahead (red), the next car behind (green), backmarkers between you and the car ahead (small, bluish), and as an option the other cars (faint grey) |
 | Local time | the clock |
 
 The race sections appear once the cars are on the grid and go away in the lobby. In
@@ -115,6 +116,16 @@ What does not change during a race (field positions, finished laps, the track's
 checkpoint lines) is read once and kept. A normal update then needs about twenty small
 reads and takes about 10 ms.
 
+### The track map
+
+The track map's shape is learnt from where the cars drive, not from the checkpoint
+lines: on some tracks those are long and set off to one side, far from the road.
+TurboHUD records each car's path, and once any car has driven a whole lap (not through
+the pits), that lap is the track. Until then the map shows the longest stretch driven so
+far; with AI or other players on track it is learnt within about a lap. The learnt
+track is saved (see the files below), so the next race on that track has its map at
+once. No track file of the game is read, so it works on every track, online too.
+
 ### Online races
 
 When you join an online race, or host one that only has AI drivers, your game runs as
@@ -190,7 +201,10 @@ effect for the probe the next time TSU is started.
 
 **Files TurboHUD writes**, all its own, in `~/.config/TurboHUD/`:
 
-- `settings.json`: section places, sizes, groups, shown or hidden, mph, light tint
+- `settings.json`: section places, sizes, groups, shown or hidden, mph, light tint,
+  other cars on the track map
+- `tracks/`: the track map's learnt tracks, one small file per track (the line it
+  draws, and the start line), named from the track's checkpoint lines
 - `turbohud.log`: what TurboHUD did in this run (replaced at each start)
 - `memory_probe.log`: written by the probe: the game it found, errors
 
@@ -212,7 +226,10 @@ gives no control over the car.
   race has them. TurboHUD takes them from the game's replay recorder instead (TSU
   records every race and keeps each car's last recorded position). If recording is
   off, it works them out from the last checkpoint and the velocity, for a live delta
-  and gaps, and the radar does not show.
+  and gaps, and the radar does not show. Each car goes on from where its worked-out
+  place meets each new checkpoint line, so it settles onto the road within about a lap
+  even where the lines are long and off to one side (checked live: about 2 units from
+  the real place, against about 7 from the lines' middles).
 - The car size on the radar (4.0 x 1.4 units) was measured with one car model (Tatuus
   FA01); other models may differ a little.
 - A game update can rename classes or fields. TurboHUD then shows "waiting" instead of
@@ -228,6 +245,7 @@ gives no control over the car.
 | `turbohud/tsu/controller.py` | reads the gamepad's triggers |
 | `turbohud/core/il2cpp.py` | finds classes and fields by name in an IL2CPP game |
 | `turbohud/core/race.py` | reads the race and works out what each section shows |
+| `turbohud/core/trackmap.py` | the track map: the track's shape and which cars show |
 | `turbohud/core/hud.py` | the sections, their sizes, places and layout |
 | `turbohud/overlay/` | the windows; Hyprland, Windows and macOS specifics |
 | `turbohud/app.py` | starts everything: settings, windows, tray menu, shortcuts |

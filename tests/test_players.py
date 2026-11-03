@@ -460,6 +460,48 @@ class DeadReckoningTests(unittest.TestCase):
             reckoning.position(car, LINES, clock=21_000), (0.0, 21.0)
         )  # from line 2, not the drift
 
+    def test_anchors_move_from_off_road_line_middles_onto_the_road(self):
+        # A round road (radius 100), its 8 checkpoint lines long and all off to the
+        # outside: their middles lie 100 units off the road, as on some real tracks.
+        import math
+
+        lines, radius, lap_seconds = 8, 100.0, 30.0
+        gates = tuple(
+            (
+                (radius * math.cos(2 * math.pi * k / lines), radius * math.sin(2 * math.pi * k / lines)),
+                (
+                    3 * radius * math.cos(2 * math.pi * k / lines),
+                    3 * radius * math.sin(2 * math.pi * k / lines),
+                ),
+            )
+            for k in range(lines)
+        )
+        speed = 2 * math.pi / lap_seconds  # radians a second
+
+        def car_at(seconds):
+            turn = speed * seconds
+            passed = math.floor(turn / (2 * math.pi / lines)) + 1
+            times = tuple(round(k * lap_seconds / lines * 10_000) for k in range(passed))
+            laps = tuple(times[i : i + lines] for i in range(0, passed, lines))
+            velocity = (-radius * speed * math.sin(turn), radius * speed * math.cos(turn))
+            truth = (radius * math.cos(turn), radius * math.sin(turn))
+            return race.PlayerState('Guess', GERMANY, len(laps) - 1, laps, velocity=velocity), truth
+
+        reckoning = race.DeadReckoning()
+        errors = []
+        for step in range(round(3 * lap_seconds * 20)):  # three laps, 20 reads a second
+            seconds = step / 20
+            player, truth = car_at(seconds)
+            position = reckoning.position(player, gates, round(seconds * 10_000))
+            errors.append(math.dist(position, truth))
+        first_line = errors[: round(lap_seconds / lines * 20)]
+        self.assertGreater(min(first_line), 90)  # from the line's middle: far off the road
+        third_lap = errors[round(2 * lap_seconds * 20) :]
+        self.assertLess(max(third_lap), 3)  # on the road
+        for index in range(lines):
+            # Where a new car starts: near the road (it began 100 off), still settling.
+            self.assertAlmostEqual(math.hypot(*reckoning.anchor(gates, index)), radius, delta=5)
+
     def test_filled_in_only_where_the_game_has_none_and_not_for_the_radar(self):
         reckoning = race.DeadReckoning()
         known = race.PlayerState(

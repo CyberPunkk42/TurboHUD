@@ -99,8 +99,8 @@ Clear the launch option to start TSU without the probe. The probe writes what it
   lap, the delta to your best lap, last and best lap, fuel and tires left (with the laps
   they last), health (in events with damage), the draft (slipstream) with the downforce it costs, the fuel to spare or short for the finish, speed with throttle and brake
   bars (km/h or mph), the player list with flags, pit status and gaps, the local time
-  (on Windows and macOS for now the session clock and the local time), and a blue flag
-  bar. On the first start they sit one below the other at the left of your largest
+  (on Windows and macOS for now the session clock and the local time), a blue flag
+  bar, a proximity radar and a track map. On the first start they sit one below the other at the left of your largest
   screen (laid out as on a 1920x1080 screen), the blue flag at its top centre,
   **locked**: clicks go through them to the game.
 - The **blue flag** is a navy bar that shows when a car about to lap you is within 2
@@ -112,8 +112,17 @@ Clear the launch option to start TSU without the probe. The probe writes what it
 - The **proximity radar** shows your car and the cars around you when one is within
   half a second behind or ahead (faint) up to alongside (fully visible): red beside you, yellow
   closing in.
-- The blue flag and the radar have **Centre ↔** and **Centre ↕** buttons in the
-  move-mode panel: they centre it across or down the screen it is on.
+- The **track map** shows the track from above with you (a white ring), the race leader
+  (gold), the next car ahead (red) and the next car behind (green); when you pass a
+  car, the next one ahead takes the red dot. Smaller bluish dots are backmarkers (cars
+  you are about to lap) on the road between you and the car ahead. **Other cars on the
+  track map** (TurboHUD icon's menu, or the move-mode panel) adds everyone else as faint
+  grey dots. It is square; resize it at its corner in move mode. The track's shape
+  is learnt from where the cars drive: on a track new to TurboHUD the map grows during
+  the first lap and is complete once any car has driven a whole lap; after that it is
+  saved and shows at once.
+- The blue flag, the radar and the track map have **Centre ↔** and **Centre ↕**
+  buttons in the move-mode panel: they centre it across or down the screen it is on.
 - **Groups:** in the move-mode panel, put sections in the same group (A to D). Dragging
   one of them then moves the whole group; the others follow a moment later.
 - **Ctrl+Shift+L** (or **Move mode** in the TurboHUD icon's menu) switches to **move

@@ -30,6 +30,14 @@ top should work. Still to try on KDE and GNOME: on top over the game, clicks goi
 through. If XWayland is not enough there, the layer-shell extension (KDE, Sway; not
 GNOME) would need a library outside PySide6.
 
+## 5. Track map: check in races
+The user saw it work in a race (2026-11-03), and the track is now learnt from the cars
+(checked live in an AI event; the user confirmed it works). Still to check: the track's shape (tight
+hairpins, tracks that cross themselves, point-to-point tracks), the road's width, the
+dots changing over at an overtake, backmarkers, and as an online client. Possible
+later: an arrow for the direction of travel, the pit lane, a hotlap alone (the map
+then needs one whole lap of your own first).
+
 ## Design notes for the real overlay
 - Move mode is a short, deliberate step: while the overlay takes the mouse, the game gets
   no mouse input under it. On the Mac, end move mode as soon as the game becomes active

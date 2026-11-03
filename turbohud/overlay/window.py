@@ -11,7 +11,7 @@ import math
 import sys
 
 from PySide6.QtCore import QPointF, QRectF, Qt, Signal
-from PySide6.QtGui import QColor, QPainter, QPen, QPolygonF
+from PySide6.QtGui import QColor, QPainter, QPainterPath, QPen, QPolygonF
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -38,7 +38,9 @@ from turbohud.core.hud import (
 )
 from turbohud.core.race import CAR_LENGTH, CAR_WIDTH, RADAR_FROM, RADAR_FULL, Blip, RadarView
 from turbohud.core.settings import GROUPS
+from turbohud.core.trackmap import MapDot, TrackMapView, map_transform, outline_from_path, road_width
 from turbohud.hud.painter import (
+    AHEAD_COLOR,
     BEHIND_COLOR,
     DRAFT_COLOR,
     LIFT_COLOR,
@@ -74,6 +76,38 @@ RADAR_SAMPLE = (
     Blip(-9.5, -1.0, 0.1, 0.3),
     Blip(11.0, 0.5, -0.05, None, False),
 )
+MAP_BACK = (10, 14, 22, 110)  # behind the track map, RGBA
+MAP_ROAD = (205, 212, 224, 210)
+MAP_ROAD_EDGE = (0, 0, 0, 170)
+MAP_START = '#ffffff'
+MAP_PADDING = 0.08  # room round the track, as a share of the map
+MAP_DOT = 0.026  # a car's dot radius, as a share of the map
+MAP_COLORS = {
+    'me': '#ffffff',
+    'leader': '#ffc61a',  # gold
+    'ahead': BEHIND_COLOR,  # red, as a gap ahead in the player list
+    'behind': AHEAD_COLOR,  # green, as a gap behind
+    'backmarker': '#5b8cff',  # bluish: about to be lapped
+    'other': '#8c95a3',
+}
+MAP_SIZES = {'me': 1.15, 'leader': 1.0, 'ahead': 1.0, 'behind': 1.0, 'backmarker': 0.65, 'other': 0.55}
+MAP_OTHER_ALPHA = 150  # the other cars are faint
+MAP_PIT_OPACITY = 0.4  # a car in the pits is dimmed
+MAP_RING = 0.4  # the local player's ring: its width, as a share of its radius
+
+
+def _sample_map():
+    """A track map to place the section in move mode: an oval with a car of each kind."""
+
+    def at(step):
+        turn = 2 * math.pi * step / 40
+        return (100 * math.cos(turn), 60 * math.sin(turn))
+
+    outline = outline_from_path([at(step) for step in range(40)], True, (at(0), (0.0, 1.0)))
+
+    roles = (('leader', 30), ('backmarker', 9), ('ahead', 13), ('behind', 2), ('me', 6))
+    return TrackMapView(outline, tuple(MapDot(at(step), role) for role, step in roles))
+
 
 log = logging.getLogger(__name__)
 
@@ -107,6 +141,7 @@ class SectionWindow(QWidget):
         self.pedals = None  # (throttle, brake), 0 to 1, for a section with pedal bars
         self.opacity = None  # the blue flag's opacity, 0 to 1; None: not shown
         self.radar = None  # the radar's turbohud.core.race.RadarView; None: not shown
+        self.trackmap = None  # the track map's turbohud.core.trackmap.TrackMapView; None: not shown
         self.level = None  # (0 to 1, colour) for a section with a level bar
         self.backdrop = False  # a light tint behind the text while locked (option)
         self.locked = True
@@ -180,6 +215,10 @@ class SectionWindow(QWidget):
         painter.setRenderHint(QPainter.Antialiasing)
         if self.section.drawing == 'radar':
             self._paint_radar(painter)
+            painter.end()
+            return
+        if self.section.drawing == 'map':
+            self._paint_map(painter)
             painter.end()
             return
         if self.section.bar:
@@ -332,6 +371,82 @@ class SectionWindow(QWidget):
                 self.rect().adjusted(6, 0, -20, -3), Qt.AlignBottom | Qt.AlignLeft, self.section.label
             )
 
+    def _paint_map(self, painter):
+        """The track map: the road seen from above in a square, its start line, and
+        the cars as dots (see turbohud.core.trackmap). In move mode a sample oval, with
+        a border and its name."""
+        view = self.trackmap
+        if not self.locked and view is None:
+            view = _sample_map()
+        if view is not None:
+            size = min(self.width(), self.height())
+            left, top = (self.width() - size) / 2, (self.height() - size) / 2
+            box = QRectF(left, top, size, size).adjusted(1, 1, -1, -1)
+            painter.setPen(Qt.NoPen)
+            painter.setBrush(QColor(*MAP_BACK))
+            painter.drawRoundedRect(box, 10, 10)
+            outline = view.outline
+            scale, x_off, y_off = map_transform(outline.bounds, (size, size), size * MAP_PADDING)
+
+            def at(point):
+                return QPointF(left + x_off + point[0] * scale, top + y_off - point[1] * scale)
+
+            path = QPainterPath(at(outline.points[0]))
+            for point in outline.points[1:]:
+                path.lineTo(at(point))
+            if outline.closed:
+                path.closeSubpath()
+            road = road_width(size)
+            painter.setBrush(Qt.NoBrush)
+            painter.setPen(QPen(QColor(*MAP_ROAD_EDGE), road + 3, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin))
+            painter.drawPath(path)
+            painter.setPen(QPen(QColor(*MAP_ROAD), road, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin))
+            painter.drawPath(path)
+            if outline.start is not None:
+                # The start line: across the road, a little wider than it.
+                (sx, sz), (fx, fz) = outline.start
+                reach = (road * 0.8 + 2) / scale
+                ux, uz = -fz * reach, fx * reach  # across the direction of travel
+                painter.setPen(QPen(QColor(MAP_START), max(2.0, road / 3), Qt.SolidLine, Qt.FlatCap))
+                painter.drawLine(at((sx - ux, sz - uz)), at((sx + ux, sz + uz)))
+            radius = max(2.5, size * MAP_DOT)
+            painter.setClipRect(box)  # a car off the learnt track (a road from the grid) stays inside
+            for dot in view.dots:
+                painter.setOpacity(MAP_PIT_OPACITY if dot.in_pit else 1.0)
+                color = QColor(MAP_COLORS[dot.role])
+                if dot.role == 'other':
+                    color.setAlpha(MAP_OTHER_ALPHA)
+                r = radius * MAP_SIZES[dot.role]
+                if dot.ahead_too:  # the leader is also the next car ahead: a red ring
+                    painter.setPen(Qt.NoPen)
+                    painter.setBrush(QColor(MAP_COLORS['ahead']))
+                    painter.drawEllipse(at(dot.position), r + 3, r + 3)
+                if dot.role == 'me':
+                    # A ring, open in the middle: a car under it still shows.
+                    ring = max(1.5, r * MAP_RING)
+                    painter.setBrush(Qt.NoBrush)
+                    painter.setPen(QPen(QColor(0, 0, 0, 200), ring + 2))
+                    painter.drawEllipse(at(dot.position), r, r)
+                    painter.setPen(QPen(color, ring))
+                    painter.drawEllipse(at(dot.position), r, r)
+                    continue
+                painter.setPen(QPen(QColor(0, 0, 0, 200), 1.5))
+                painter.setBrush(color)
+                painter.drawEllipse(at(dot.position), r, r)
+            painter.setClipping(False)
+            painter.setOpacity(1.0)
+        if not self.locked:
+            painter.setPen(QPen(QColor(*BORDER), 2))
+            painter.setBrush(Qt.NoBrush)
+            painter.drawRoundedRect(QRectF(self.rect()).adjusted(1, 1, -1, -1), 8, 8)
+            painter.setPen(QColor(*LABEL_COLOR))
+            font = painter.font()
+            font.setPixelSize(11)
+            painter.setFont(font)
+            painter.drawText(
+                self.rect().adjusted(6, 0, -20, -3), Qt.AlignBottom | Qt.AlignLeft, self.section.label
+            )
+
     def _paint_bar(self, painter):
         """A plain bar filling the window (the blue flag), at its opacity; in move mode
         with a border and its name, so it can be placed while no flag is out."""
@@ -371,10 +486,13 @@ class MovePanel(QWidget):
     align_requested = Signal(str, bool, bool)  # section name, centre across, centre down
     mph_changed = Signal(bool)
     backdrop_changed = Signal(bool)
+    map_others_changed = Signal(bool)
 
     focusable = True  # it takes clicks on its tick boxes and buttons
 
-    def __init__(self, native, sections, shortcuts, mph=False, backdrop=False, commands=False):
+    def __init__(
+        self, native, sections, shortcuts, mph=False, backdrop=False, commands=False, map_others=False
+    ):
         super().__init__(None, window_flags())
         self.native = native
         self.setWindowTitle('TurboHUD - move mode')
@@ -402,7 +520,7 @@ class MovePanel(QWidget):
             )
             grid.addWidget(group, row, 1)
             self.groups[section.name] = group
-            if section.drawing:  # the blue flag and the radar can be centred on the screen
+            if section.drawing:  # the blue flag, the radar and the track map can be centred
                 for column_, (text, tip, across, down) in enumerate(
                     (
                         ('Centre ↔', 'Centre across the screen', True, False),
@@ -427,6 +545,11 @@ class MovePanel(QWidget):
         self.backdrop.setChecked(backdrop)
         self.backdrop.toggled.connect(self.backdrop_changed)
         column.addWidget(self.backdrop)
+        self.map_others = QCheckBox('Other cars on the track map')
+        self.map_others.setChecked(map_others)
+        self.map_others.toggled.connect(self.map_others_changed)
+        if any(section.drawing == 'map' for section in sections):
+            column.addWidget(self.map_others)
         row = QHBoxLayout()
         lock = QPushButton('Lock')
         settings = QPushButton('Settings…')
@@ -467,6 +590,12 @@ class MovePanel(QWidget):
             self.backdrop.blockSignals(True)
             self.backdrop.setChecked(backdrop)
             self.backdrop.blockSignals(False)
+
+    def set_map_others(self, others):
+        if self.map_others.isChecked() != others:
+            self.map_others.blockSignals(True)
+            self.map_others.setChecked(others)
+            self.map_others.blockSignals(False)
 
     def mousePressEvent(self, event):
         # Dragged by its background, out of the way of a section if need be.

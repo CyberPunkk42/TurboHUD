@@ -977,16 +977,67 @@ class DraftSettings:
     angle: float | None = None
 
 
+ANCHOR_WEIGHT = 0.4  # how much a checkpoint line's anchor moves to the newest crossing
+
+
+def _on_segment(gate, point):
+    """The point of a checkpoint line piece nearest to `point`."""
+    (x1, z1), (x2, z2) = gate
+    dx, dz = x2 - x1, z2 - z1
+    length = dx * dx + dz * dz
+    along = 0.0 if not length else min(max(((point[0] - x1) * dx + (point[1] - z1) * dz) / length, 0.0), 1.0)
+    return (x1 + along * dx, z1 + along * dz)
+
+
 class DeadReckoning:
     """Positions for cars whose position the game does not keep (online, when the game
-    is a client: it stays at (0, 0)), worked out for the live delta and gaps. Each car
-    starts at the middle of the checkpoint line it passed last, at the moment it passed
-    it (its checkpoint time), and moves on by its velocity (which the game does keep)
-    until the next line resets it: about a second, so it cannot drift far. Where across
-    the track it is stays unknown, so the radar does not use these."""
+    is a client and the race is not recorded: it stays at (0, 0)), worked out for the
+    live delta and gaps. Each car starts at the checkpoint line it passed last, at the
+    moment it passed it (its checkpoint time), and moves on by its velocity (which the
+    game does keep) until the next line starts it again: about a second, so it cannot
+    drift far. Where across the track it is stays unsure, so the radar does not use
+    these.
+
+    Where on the line: a car followed from its last line goes on from where its
+    worked-out position meets the new line (the line's nearest point). That removes
+    the error across the line's direction at every line, and the error along a line
+    shrinks in every bend (the next line points another way), so a car's place settles
+    onto the road within about a lap, even where the lines are long and set off to one
+    side (on some tracks their middles lie far off the road). Once a car has been
+    followed for a whole lap, each of its crossings also moves the line's anchor towards
+    it (recent ones count most); a car seen for the
+    first time, or after missing lines, starts at the anchor, which is the line's middle
+    until cars have crossed it."""
 
     def __init__(self):
-        self.cars = {}  # name -> (checkpoints passed, (x, z), race clock)
+        self.cars = {}  # name -> (checkpoints passed, (x, z), race clock, lines followed in a row)
+        self.anchors = {}  # line index -> (x, z): where cars cross it, recent crossings counting most
+
+    def anchor(self, gates, index):
+        """Where cars cross checkpoint line `index` (0 to len(gates) - 1)."""
+        known = self.anchors.get(index)
+        if known is not None:
+            return known
+        (x1, z1), (x2, z2) = gates[index]
+        return ((x1 + x2) / 2, (z1 + z2) / 2)
+
+    def _learn(self, gates, index, point, settled):
+        """Where a car followed from its last line meets line `index`. A car followed
+        for a whole lap (`settled`) has settled onto the road: the line's anchor moves
+        towards where it crosses."""
+        crossed = _on_segment(gates[index], point)
+        if not settled:
+            return crossed
+        known = self.anchors.get(index)
+        if known is None:
+            self.anchors[index] = crossed
+        else:
+            ax, az = known
+            self.anchors[index] = (
+                ax + (crossed[0] - ax) * ANCHOR_WEIGHT,
+                az + (crossed[1] - az) * ANCHOR_WEIGHT,
+            )
+        return crossed
 
     def position(self, player, gates, clock):
         passed = player.passed
@@ -995,14 +1046,26 @@ class DeadReckoning:
         vx, vz = player.velocity
         count = len(passed)
         known = self.cars.get(player.name)
+        followed = known[3] if known is not None else 0
         if known is not None and known[0] == count and clock >= known[2]:
-            _count, (x, z), since = known
+            _count, (x, z), since, _followed = known
         else:
-            (x1, z1), (x2, z2) = gates[(count - 1) % len(gates)]
-            x, z, since = (x1 + x2) / 2, (z1 + z2) / 2, passed[-1]
+            index = (count - 1) % len(gates)
+            if known is not None and known[0] == count - 1:
+                # Followed from its last line to this one: it goes on from where its
+                # worked-out place meets the line (which keeps where across the road it
+                # is), and that teaches the line's anchor.
+                _count, (x, z), since, _followed = known
+                seconds = (passed[-1] - since) / UNITS_PER_SECOND
+                followed += 1
+                x, z = self._learn(gates, index, (x + vx * seconds, z + vz * seconds), followed > len(gates))
+            else:
+                x, z = self.anchor(gates, index)  # new, or lines missed: where cars cross
+                followed = 0
+            since = passed[-1]
         seconds = max(clock - since, 0) / UNITS_PER_SECOND
         x, z = x + vx * seconds, z + vz * seconds
-        self.cars[player.name] = (count, (x, z), clock)
+        self.cars[player.name] = (count, (x, z), clock, followed)
         return (x, z)
 
     def fill(self, players, gates, clock):
@@ -1107,12 +1170,13 @@ def status_text(snapshot):
     return 'waiting for a race'
 
 
-def race_sections(snapshot, now, speed_unit='kmh', standings=None, radar=None):
+def race_sections(snapshot, now, speed_unit='kmh', standings=None, radar=None, track_map=None):
     """{section name: rows} for a live-reader snapshot (see core.hud.RACE_SECTIONS); a
     section with nothing to show has no rows. Nothing before the grid: in the menus, the
     lobby and while a race loads the HUD keeps out of the way (status_text says why).
     `standings` (a Standings) holds the player list's order steady while cars pass;
-    `radar` (a Radar) follows the cars' movement for the proximity radar."""
+    `radar` (a Radar) follows the cars' movement for the proximity radar; `track_map`
+    (a core.trackmap.TrackMap) gives the track map, in the player list's order."""
     if not on_grid(snapshot, now):
         return {}
     state = snapshot.state
@@ -1138,6 +1202,10 @@ def race_sections(snapshot, now, speed_unit='kmh', standings=None, radar=None):
         view = radar.update(state.players, snapshot.read_at, state.draft) if radar is not None else None
         if view is not None:
             sections['radar'] = view
+        if track_map is not None:
+            shown = track_map.update(state, order if order is not None else ranked(state.players))
+            if shown is not None:
+                sections['trackmap'] = shown
     return sections
 
 

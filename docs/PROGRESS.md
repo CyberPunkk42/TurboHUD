@@ -358,3 +358,45 @@ its "Recent changes".
   as a straight mix turns grey halfway). Rows can now have a colour of their own
   ('#rrggbb') besides the theme's names.
 - 2026-11-02: The user confirmed in a race that the "drafts you" colour works.
+- 2026-11-03: Track map (Linux). A new "Track map" section (240 x 240 at first, at
+  the right edge of the main screen half way down; square, resizable in move mode, with
+  the Centre buttons): the track seen from above, drawn from the checkpoint lines
+  TurboHUD already reads (their middles, smoothed; lines at the same spot or in two
+  pieces count as one; a loop is closed, a point-to-point track is not), with a white
+  start line. No track file or editor export is needed, so it works on every track,
+  online too. Dots: you (a white ring), the race leader (gold), the next car ahead
+  (red) and the next car behind (green) in the player list's steady order, so the dots
+  change over cleanly when you pass; a leader right ahead gets a red ring. Smaller
+  bluish dots for backmarkers (more than half a lap behind in the race but ahead on the
+  road) between you and the next car ahead, or within half a lap when you lead; a
+  backmarker is never the "next car behind". Cars in the pits are dimmed. "Other cars
+  on the track map" (tray menu and move-mode panel, saved as map_others, off by
+  default) adds the rest as faint grey dots. Logic in turbohud/core/trackmap.py.
+  Tested with unit tests and offscreen drawing; not yet seen in a race.
+- 2026-11-03: Track map: your own marker covered cars at the same spot (seen by the
+  user in a race, where the map otherwise works). It is now a white ring, open in the
+  middle and drawn on top, so a car under it still shows; all dots are a little smaller
+  (2.6 % of the map instead of 3.4 %).
+- 2026-11-03: Track map learnt from where the cars drive. In an AI event the map's
+  track did not match where the dots went (seen by the user): on that track the
+  checkpoint lines are long (up to 300 units) and set off to one side, so a line through
+  their middles lay up to 67 units from the road. Now TurboHUD records each car's path
+  (real positions only, not in the pits, starting afresh after a jump) and, once any car
+  has driven a whole lap, that lap is the track; before that the longest stretch driven
+  so far shows. The start mark is where that lap crosses line 0. A learnt track is saved
+  in `~/.config/TurboHUD/tracks/` (named from its checkpoint lines), so the next race
+  there has its map at once. Checked live on a 63-checkpoint track in the AI event:
+  learnt within about a lap, cars 2.3 units from the line on average, 12 at most
+  (about the road's width). Dots outside the learnt track (a road from the grid) stay
+  inside the map's square.
+- 2026-11-03: Worked-out positions (online, race not recorded) settle onto the road.
+  They started each car at the middle of the checkpoint line it passed, which on some
+  tracks lies far off the road. Now a car followed from line to line goes on from where
+  its worked-out place meets the new line (keeping where across the road it is): the
+  error shrinks at every line and in every bend, so it settles within about a lap. Cars
+  followed for a whole lap teach each line an anchor (where cars cross it), where a car
+  seen for the first time starts. Checked live by hiding the real positions in the AI
+  event: median 1.8 units from the real place after about 45 s (90 % within 3.4),
+  against 7 (and 15) the old way. The delta and gaps use these when recording is off.
+- 2026-11-03: The user confirmed in a race that the learnt track map and the
+  settled worked-out positions seem to work.
