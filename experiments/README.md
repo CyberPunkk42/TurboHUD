@@ -1,7 +1,9 @@
 # Experiments
 
 Throwaway probes that answer one question each before TurboHUD's design is fixed.
-They are not part of the app.
+They are not part of the app, with one exception: `tsu_memory_probe.py` is what the
+Steam launch option runs on Linux (it only starts the app's probe, see below), so it
+must stay where it is.
 
 ## Overlay probe (`overlay_probe.py`)
 

@@ -95,28 +95,48 @@ Without paid code signing, each system warns once on first start:
 
 ## Suggested structure
 
-Built on 2026-10-24 as:
+Built on 2026-10-24; as of 2026-11-03:
 
 ```
 launch_turbohud.py      start file; the bundles run the same code
-run_turbohud.sh/.cmd    start from the source, setting up PySide6 in .buildtools/venv
+run_turbohud.sh/.cmd    start from the source, setting up PySide6 in .buildtools/venv;
+                        also --toggle, --move, --lock, --settings, --quit (Linux, macOS)
 requirements.txt        PySide6, pinned; requirements-build.txt adds PyInstaller
 turbohud/
-  app.py                start-up: settings, log, window, shortcuts, tray icon
-  core/                 shared, no Qt: settings and themes, HUD layout (later: game
-                        paths, reading game files, HUD maths)
-  hud/painter.py        Qt drawing of the HUD
+  app.py                start-up: settings, log, section windows, tray menu, shortcuts,
+                        commands, the live race
+  control.py            the command socket (run_turbohud.sh --toggle and the rest)
+  core/                 shared, no Qt
+    settings.py         settings and theme, where they live on each system
+    hud.py              the sections, their sizes, places and first-launch layout
+    il2cpp.py           finds the game's classes and fields by name
+    race.py             reads the race and works out what each section shows
+    trackmap.py         the track map: the learnt track and which cars show
+    flags.py            TSU's flags as country codes
+  tsu/                  Linux: the game
+    probe.py            the memory probe (started with TSU by the launch option)
+    client.py           talks to the probe, reads the race in a background thread
+    gamelog.py          TSU's log: whether an event runs
+    controller.py       the gamepad's triggers
+  hud/painter.py        Qt drawing of text, bars and flags
   overlay/
-    window.py           Qt window: move mode, locked mode, position and size
+    window.py           the section windows (drawings: blue flag, radar, track map) and
+                        the move-mode panel
+    settings_window.py  colours and size
     windows.py          Win32: RegisterHotKey, focus hand-back
     macos.py            Cocoa: window level above Fullscreen, all Spaces; Carbon hotkeys
-    linux.py            Qt only for now (later: X11 hotkeys)
+    linux.py            Linux: Hyprland or XWayland, no shortcuts
+    hyprland.py         asks Hyprland to float, place and pin TurboHUD's own windows
+experiments/            the probes that settled the design; tsu_memory_probe.py is what
+                        the Steam launch option runs
 tools/build_app.py      PyInstaller build, archive and smoke test for this system
+tools/privacy_check.py  the pre-push hook that keeps personal data out of commits
 tests/                  unit tests on any system
 ```
 
-A tray icon (the menu bar on the Mac) offers Move mode and Quit, which also covers
-Linux until it has shortcuts. First build sizes: Windows 40 MB ZIP, Mac 28 MB ZIP (75 MB
+A tray icon (the menu bar on the Mac) offers Move mode, Settings…, the options and Quit;
+on Linux, which has no shortcuts, the commands above can be bound to a key in the
+desktop's own settings. First build sizes: Windows 40 MB ZIP, Mac 28 MB ZIP (75 MB
 unpacked), Linux 74 MB `.tar.gz` (with Qt's X11 libraries packed in).
 
 ## Still to check
