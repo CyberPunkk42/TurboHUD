@@ -448,4 +448,6 @@ its "Recent changes".
   `sh experiments/run_bottle_memory_probe_mac.sh`) shows it: TSU's memory listed and
   read, about 225 µs a read, TurboHUD's lookup by name unchanged (TS.Services found in
   1.7 s), and a native Mac program reaches one in the bottle over 127.0.0.1 in 78 µs.
-  Checked in TSU's menu; race reads not yet.
+  In a race alone the HUD's own race reader works there unchanged: laps, clock,
+  position and car read, 17 ms a read (median), so 20 reads a second fit. Not yet
+  checked: an online race as a client.

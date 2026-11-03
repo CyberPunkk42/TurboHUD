@@ -371,7 +371,16 @@ It prints no player names or IDs.
 - TurboHUD's lookup unchanged: `TS.Services` found in 1.7 s (the class records are in
   Windows' private heap memory, used where Linux has `[heap]`), its 17 fields and
   `sm_instance` read. The IL2CPP layouts match the Linux build.
-- No race was on (`m_activeServer is null`): race reads are still to check.
+- No race was on (`m_activeServer is null`). A race the game runs as a client (online,
+  or hosted with only AI) is found by a search, which the probe first left out.
+
+**The same, in a race alone (2026-11-04, 1 player, lap 2 of 3):** memory 2.01 GiB,
+`TS.Services` found in 4.6 s. 40 race reads at 20 a second through `LapReader`,
+unchanged: median 17.2 ms, the first (with the lookups it keeps) 559 ms. Laps, race
+clock, the car's position and its state (fuel, tires, speed) all read. A read costs the
+same up to 4 KiB, and a race read makes about 70 small ones, so reading larger blocks
+(and serving small reads from them) should make it several times quicker. Not yet
+checked: the online search as a client, other players.
 
 A native Mac program can talk to one in the bottle over TCP on 127.0.0.1 (Wine uses the
 Mac's own sockets): 78 µs per round trip, measured with a small echo server.
