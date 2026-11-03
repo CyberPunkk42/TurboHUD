@@ -707,12 +707,13 @@ class LapTimesTests(unittest.TestCase):
     def test_rows_show_best_and_running_lap_in_race_order(self):
         me = player('Me', [lap(0), lap(42_000), lap(80_000, count=2)], laps=2, local=True)
         ahead = player('Ahead', [lap(0), lap(39_000), lap(78_000, count=3)], laps=2)
-        done = player('Done', [lap(0), lap(37_000), lap(75_000, count=1)], laps=2, finished=True)
+        # A 3-lap race: Done is in (laps of 3.0, 3.0 and 2.9 s); the others are on their last lap.
+        done = player('Done', [lap(0), lap(30_000), lap(60_000), lap(89_000, count=1)], laps=3, finished=True)
         fresh = player('Fresh', [lap(0, count=2)], laps=0)
         rows = race.lap_times_rows([me, fresh, ahead, done], clock=90_000)
         self.assertEqual((rows[0].text, rows[0].middle, rows[0].right), ('Driver', 'Best', 'Lap'))
         self.assertEqual([r.text for r in rows[1:]], ['1. Done', '2. Ahead', '3. Me', '4. Fresh'])
-        self.assertEqual([r.middle for r in rows[1:]], ['0:03.700', '0:03.900', '0:03.800', '-'])
+        self.assertEqual([r.middle for r in rows[1:]], ['0:02.900', '0:03.900', '0:03.800', '-'])
         self.assertEqual([r.right for r in rows[1:]], ['Fin', '0:01.2', '0:01.0', '0:09.0'])
         # The race's fastest lap is green; my name in the accent colour.
         self.assertEqual([r.middle_color for r in rows[1:]], ['ahead', 'text', 'text', 'text'])
