@@ -21,6 +21,8 @@ against the game's own lap times on 2026-11-01: they match exactly.
 """
 
 import dataclasses
+import functools
+import itertools
 import math
 import struct
 import time
@@ -403,10 +405,13 @@ class PlayerState:
     estimated: bool = False  # the position is worked out (DeadReckoning), not read
     draft_drag: float | None = None  # its air resistance multiplier: under 1 while it drafts
 
-    @property
+    @functools.cached_property
     def passed(self):
-        """Every checkpoint time of the race in one row (laps one after another)."""
-        return tuple(time for lap in self.checkpoints for time in lap)
+        """Every checkpoint time of the race in one row (laps one after another). Worked
+        out once per read and kept: it grows by a lap's checkpoints every lap, and the
+        order, gaps and blue flag ask for it many times a frame (rebuilt each time, it
+        took 7 ms a frame after an hour's race)."""
+        return tuple(itertools.chain.from_iterable(self.checkpoints))
 
     @property
     def finish_time(self):

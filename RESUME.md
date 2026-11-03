@@ -51,6 +51,14 @@ See `docs/IMPROVEMENT_BACKLOG.md`. In short:
 4. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-03: Long races (asked by the user: an hour or more). Each frame rebuilt
+  every driver's whole list of passed checkpoints about 70 times (for the order, the
+  gaps and the blue flag), and that list grows by a lap's checkpoints every lap: with
+  17 drivers it took 7 ms a frame after an hour and 15 ms after two, still growing.
+  Now it is worked out once per read and kept: 0.8 ms a frame after an hour, 1.7 ms
+  after two, measured with made-up races. The rest does not grow with the race: the
+  game's finished laps are read once, the track map keeps at most a lap of each car's
+  path, the radar only its last moments.
 - 2026-11-03: Code layout notes brought up to date: docs/STACK.md lists the modules
   as they are now (it showed the first skeleton of 2026-10-24), docs/HOW_IT_WORKS.md
   names the command socket (turbohud/control.py), and experiments/README.md says the
