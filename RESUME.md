@@ -10,7 +10,8 @@
   On Linux, with TSU started through the memory probe (README: "Live lap times on
   Linux"), the HUD shows the live race in movable sections: lap and time left, running
   lap, delta to the best lap, last and best lap, fuel, fuel to finish, tires, health,
-  draft, speed with pedal bars, the player list (flags, PIT, live gaps), blue flag,
+  draft, speed with pedal bars, the player list (flags, PIT, live gaps), the lap times
+  list (best and running lap of every driver), blue flag,
   proximity radar, track map and local time. It works offline, in hotlaps, hosting online and as
   an online client (guest, or hosting with only AI). How it works and what it does to
   RAM and the game: `docs/HOW_IT_WORKS.md`. On Windows and macOS it still shows a
@@ -43,6 +44,8 @@
 
 ## Next steps
 See `docs/IMPROVEMENT_BACKLOG.md`. In short:
+0. Tests: keep them from reaching a running TurboHUD (until then run them with
+   `XDG_RUNTIME_DIR` set to an empty private folder).
 1. Windows: the overlay over TSU (windowed, Fullscreen, Fullscreen Exclusive), then
    live data (reading memory as the same user, without a probe).
 2. macOS: what reading the game's memory inside CrossOver would take.
@@ -51,6 +54,14 @@ See `docs/IMPROVEMENT_BACKLOG.md`. In short:
 4. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-03: Lap times list (Linux), asked for by the user. A new "Lap times"
+  section beside the player list: a heading, then every driver in race order (up to
+  16; with more, the leader and those around you) with flag and name, their best lap
+  and the running time of their current lap ("Fin" once finished). The race's fastest
+  lap is green, your name in the highlight colour. Lap times come from each driver's
+  start-line passes, as for your own laps. Rows can now have a middle column, lined up
+  just before the right one. Tested with unit tests and offscreen drawing; not yet
+  seen in a race.
 - 2026-11-03: Code layout notes brought up to date: docs/STACK.md lists the modules
   as they are now (it showed the first skeleton of 2026-10-24), docs/HOW_IT_WORKS.md
   names the command socket (turbohud/control.py), and experiments/README.md says the

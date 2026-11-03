@@ -26,6 +26,7 @@ group and centre them; their places are saved.
 | Draft | how strong the slipstream is (of the event's most), with a bar; the downforce it costs; the event's drafting at the start, then the last lap's time in a slipstream; who drafts you |
 | Speed | km/h or mph, yellow while coasting; throttle and brake bars beside it |
 | Players | position, flag, name, PIT, and the live gap to you (or +1 L for laps) |
+| Lap times | every driver in race order with flag and name, their best lap (the race's fastest in green) and their running lap, or Fin |
 | Blue flag | a navy bar that fades in when a car about to lap you is within 2 s |
 | Proximity radar | your car and the cars around you, when one is within 0.5 s behind, beside or ahead; the slipstream behind cars ahead |
 | Track map | the track from above, with you, the race leader (gold), the next car ahead (red), the next car behind (green), backmarkers between you and the car ahead (small, bluish), and as an option the other cars (faint grey) |

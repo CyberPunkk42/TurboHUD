@@ -4,7 +4,7 @@ from functools import lru_cache
 from PySide6.QtCore import QPointF, QRectF, Qt
 from PySide6.QtGui import QColor, QFont, QFontMetricsF, QPainterPath, QPen
 
-from turbohud.core.hud import FLAG_WIDTH, MARGIN
+from turbohud.core.hud import FLAG_WIDTH, MARGIN, middle_right
 
 # On Linux the desktop's default font may be a monospace or icon font; prefer a plain
 # sans-serif one. Qt uses the first that is installed. Windows and macOS keep their
@@ -133,6 +133,7 @@ def draw_hud(painter, lines, theme, scale=None, left=0, width=None):
     outline = _rgba(theme.outline_color)
     margin = round(MARGIN * (theme.scale if scale is None else scale))
     x = left + margin
+    middle_end = middle_right(lines, width, margin, text_advance) if width is not None else None
     for line in lines:
         text_x = x
         if line.flag:
@@ -150,6 +151,16 @@ def draw_hud(painter, lines, theme, scale=None, left=0, width=None):
                 line.right,
                 line.size,
                 _pick(colors, line.right_color),
+                outline,
+            )
+        if line.middle and middle_end is not None:
+            outlined_text(
+                painter,
+                middle_end - text_advance(line.middle, line.size),
+                line.baseline,
+                line.middle,
+                line.size,
+                _pick(colors, line.middle_color),
                 outline,
             )
         if line.tail:

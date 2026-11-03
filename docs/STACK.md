@@ -12,7 +12,7 @@ From the two overlay probes (`experiments/README.md`) and the user's priorities:
   no packages, no command line for the player.
 - **The overlay window is different on each system.**
   - Windows: an always-on-top, click-through window. Tested on the Mac inside CrossOver
-    so far; the test on Windows itself is backlog item 1.
+    so far; the test on Windows itself is backlog item 2.
   - Mac: a native macOS window outside CrossOver, at a window level above 26 (TSU's in
     Fullscreen). A window from inside the bottle never shows over TSU's Fullscreen.
 - **The same behaviour everywhere:** move mode (tinted, draggable, resizable) and locked
@@ -79,7 +79,7 @@ Costs accepted:
 Each release is a ready-to-run app with Python and Qt inside, built by PyInstaller:
 - **Windows:** a ZIP with `TurboHUD.exe`. Unpack and run.
 - **macOS:** `TurboHUD.app` in a ZIP or disk image. Drag to Applications.
-- **Linux:** a `.tar.gz` for now (an AppImage is planned, backlog item 3). Unpack and
+- **Linux:** a `.tar.gz` for now (an AppImage is planned, backlog item 4). Unpack and
   run.
 
 PyInstaller builds only for the system it runs on, so each release is built locally
@@ -140,7 +140,7 @@ desktop's own settings. First build sizes: Windows 40 MB ZIP, Mac 28 MB ZIP (75 
 unpacked), Linux 74 MB `.tar.gz` (with Qt's X11 libraries packed in).
 
 ## Still to check
-1. The overlay probe on Windows itself (backlog item 1), especially over Fullscreen
+1. The overlay probe on Windows itself (backlog item 2), especially over Fullscreen
    Exclusive.
 2. The Qt overlay probe (`experiments/qt_overlay_probe.py`) over TSU on Windows. On the
    Mac it works in Fullscreen and Fullscreen Exclusive (2026-10-24).

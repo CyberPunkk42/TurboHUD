@@ -410,3 +410,11 @@ its "Recent changes".
   as they are now (it showed the first skeleton of 2026-10-24), docs/HOW_IT_WORKS.md
   names the command socket (turbohud/control.py), and experiments/README.md says the
   Steam launch option runs `tsu_memory_probe.py` from there.
+- 2026-11-03: Lap times list (Linux), asked for by the user. A new "Lap times"
+  section beside the player list: a heading, then every driver in race order (up to
+  16; with more, the leader and those around you) with flag and name, their best lap
+  and the running time of their current lap ("Fin" once finished). The race's fastest
+  lap is green, your name in the highlight colour. Lap times come from each driver's
+  start-line passes, as for your own laps. Rows can now have a middle column, lined up
+  just before the right one. Tested with unit tests and offscreen drawing; not yet
+  seen in a race.
