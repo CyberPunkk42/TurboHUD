@@ -36,6 +36,7 @@ MEM_COMMIT = 0x1000
 MEM_PRIVATE, MEM_MAPPED, MEM_IMAGE = 0x20000, 0x40000, 0x1000000
 PAGE_NOACCESS, PAGE_GUARD = 0x01, 0x100
 READABLE = 0x02 | 0x04 | 0x08 | 0x20 | 0x40 | 0x80  # R, RW, WC, XR, XRW, XWC
+WRITABLE = 0x04 | 0x08 | 0x40 | 0x80
 
 kernel32 = ctypes.WinDLL('kernel32', use_last_error=True)
 psapi = ctypes.WinDLL('psapi', use_last_error=True)
@@ -216,7 +217,18 @@ def main():
     # TurboHUD's lookup expects Linux-style regions; class records are in the C heap,
     # which on Windows is private memory.
     as_linux = [(s, e, 'r', 0, '[heap]' if t == MEM_PRIVATE else p) for s, e, t, _p, p in regions]
-    memory = Memory(process.read, as_linux)
+    # The online race is found by a search of the game's data for objects of a class:
+    # writable private memory, as the Linux probe searches.
+    data = [(s, e) for s, e, t, protect, _p in regions if t == MEM_PRIVATE and protect & WRITABLE]
+    searches = []
+
+    def find_pointers(value):
+        started = time.perf_counter()
+        hits = memory.search(data, value)
+        searches.append(time.perf_counter() - started)
+        return hits
+
+    memory = Memory(process.read, as_linux, find_pointers=find_pointers)
     il = Il2Cpp(memory, metadata, metadata_base)
     print('4. TurboHUD lookup by name:')
     started = time.perf_counter()
@@ -242,6 +254,8 @@ def main():
             break
         times.append(time.perf_counter() - started)
         time.sleep(0.05)
+    if searches:
+        print(f'   Online race searched for {len(searches)} time(s), {sum(searches):.1f} s in all.')
     if times:
         times.sort()
         print(
