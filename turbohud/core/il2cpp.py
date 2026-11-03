@@ -57,13 +57,16 @@ class Memory:
     """Reads the game's memory through a `read(address, size) -> bytes` callable.
     `regions` are (start, end, permissions, offset, path) from the game's memory map."""
 
-    def __init__(self, read, regions, read_many=None, find_pointers=None):
+    def __init__(self, read, regions, read_many=None, find_pointers=None, searcher=None):
         self.read = read
         self.regions = regions
         self._read_many = read_many
         # (value) -> addresses holding it, searched where the memory is (the probe);
         # None where only reads are possible.
         self.find_pointers = find_pointers
+        # (regions, value) -> addresses holding it, for a reader that searches in its
+        # own way (on Windows and in CrossOver: in paced pieces); None reads here.
+        self._searcher = searcher
 
     def read_many(self, addresses, size):
         """The same number of bytes at many addresses, in one request where the reader
@@ -101,6 +104,8 @@ class Memory:
 
     def search(self, regions, value, chunk=32 << 20):
         """Addresses (8-aligned) in `regions` that hold the 64-bit `value`."""
+        if self._searcher is not None:
+            return self._searcher(regions, value)
         pattern = struct.pack('<Q', value)
         hits = []
         for start, end in regions:
