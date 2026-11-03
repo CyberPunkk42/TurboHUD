@@ -118,6 +118,7 @@ turbohud/
     client.py           talks to the probe, reads the race in a background thread
     gamelog.py          TSU's log: whether an event runs
     controller.py       the gamepad's triggers
+    winmemory.py        Windows and CrossOver: reading TSU as a Windows program
   hud/painter.py        Qt drawing of text, bars and flags
   overlay/
     window.py           the section windows (drawings: blue flag, radar, track map) and
