@@ -688,3 +688,41 @@ class DraftedColourTests(unittest.TestCase):
         red = lambda c: int(c[1:3], 16) - int(c[5:7], 16)  # red over blue
         self.assertLess(red(weak), 0)  # still bluish
         self.assertGreater(red(strong), 150)  # nearly red
+
+
+class LapTimesTests(unittest.TestCase):
+    def test_finished_laps_and_the_running_one(self):
+        # Laps start at 0, 40_000 and 78_000: two laps done (4.0 s and 3.8 s), a third running.
+        p = player('P', [lap(0), lap(40_000), lap(78_000, count=2)], laps=2)
+        self.assertEqual(race.player_lap_times(p), [40_000, 38_000])
+        self.assertEqual(race.player_current_lap(p, 90_000), 12_000)
+
+    def test_missed_start_lines_and_finished_players(self):
+        p = player('P', [lap(0), (race.NO_CHECKPOINT, 50_000), lap(80_000, count=1)], laps=2)
+        self.assertEqual(race.player_lap_times(p), [])
+        done = player('Done', [lap(0), lap(40_000)], laps=1, finished=True)
+        self.assertIsNone(race.player_current_lap(done, 60_000))
+        self.assertIsNone(race.player_current_lap(player('Grid', []), 1_000))
+
+    def test_rows_show_best_and_running_lap_in_race_order(self):
+        me = player('Me', [lap(0), lap(42_000), lap(80_000, count=2)], laps=2, local=True)
+        ahead = player('Ahead', [lap(0), lap(39_000), lap(78_000, count=3)], laps=2)
+        done = player('Done', [lap(0), lap(37_000), lap(75_000, count=1)], laps=2, finished=True)
+        fresh = player('Fresh', [lap(0, count=2)], laps=0)
+        rows = race.lap_times_rows([me, fresh, ahead, done], clock=90_000)
+        self.assertEqual((rows[0].text, rows[0].middle, rows[0].right), ('Driver', 'Best', 'Lap'))
+        self.assertEqual([r.text for r in rows[1:]], ['1. Done', '2. Ahead', '3. Me', '4. Fresh'])
+        self.assertEqual([r.middle for r in rows[1:]], ['0:03.700', '0:03.900', '0:03.800', '-'])
+        self.assertEqual([r.right for r in rows[1:]], ['Fin', '0:01.2', '0:01.0', '0:09.0'])
+        # The race's fastest lap is green; my name in the accent colour.
+        self.assertEqual([r.middle_color for r in rows[1:]], ['ahead', 'text', 'text', 'text'])
+        self.assertEqual(rows[3].color, 'accent')
+
+    def test_at_most_sixteen_drivers(self):
+        players = [
+            player(f'P{i}', [lap(0), lap(40_000 + i * 100, count=3)], local=(i == 18)) for i in range(20)
+        ]
+        rows = race.lap_times_rows(players, clock=50_000)
+        self.assertEqual(len(rows), 1 + race.MAX_LAP_TIME_ROWS)
+        self.assertEqual(rows[1].text, '1. P0')
+        self.assertIn('19. P18', [r.text for r in rows])

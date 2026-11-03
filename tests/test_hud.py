@@ -59,7 +59,7 @@ class NewSectionsWithOthersOnAnotherMonitorTests(unittest.TestCase):
 
 
 class FirstLaunchTests(unittest.TestCase):
-    SIZES: ClassVar[dict] = {s.name: (300, 70) for s in hud.RACE_SECTIONS}
+    SIZES: ClassVar[dict] = {s.name: (300, 60) for s in hud.RACE_SECTIONS}
 
     def test_one_column_at_the_left_centred_in_1080_without_overlap(self):
         places = hud.first_launch(hud.RACE_SECTIONS, self.SIZES)
@@ -188,12 +188,28 @@ class SectionTests(unittest.TestCase):
                 'speed',
                 'localtime',
                 'players',
+                'laptimes',
                 'blueflag',
                 'radar',
                 'trackmap',
             ],
         )
         self.assertEqual(len(set(names)), len(names))
+
+    def test_a_middle_column_lines_up_before_the_right_one(self):
+        rows = [
+            hud.Row('Driver', 'small', middle='Best', right='Lap'),
+            hud.Row('1. Somebody', 'small', middle='1:23.456', right='0:12.3'),
+        ]
+        lines = hud.hud_lines(rows)
+        size = lines[0].size
+        gap = hud.COLUMN_GAP * size
+        expected = (
+            measure('1. Somebody', size) + gap + measure('1:23.456', size) + gap + measure('0:12.3', size)
+        )
+        self.assertEqual(hud.lines_width(lines, measure), expected)
+        # The middle column ends one gap before the widest right column.
+        self.assertEqual(hud.middle_right(lines, 500, 14, measure), 500 - 14 - measure('0:12.3', size) - gap)
 
     def test_content_size_fits_the_text(self):
         width, height = hud.content_size([hud.Row('0:00.0', 'big')], 1, measure)

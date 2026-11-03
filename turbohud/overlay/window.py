@@ -170,6 +170,16 @@ class SectionWindow(QWidget):
         self.show()
         log.info('%s: %s', self.section.name, self.native.raise_window(self))
 
+    def show_content(self, rows, pedals=None, opacity=None, radar=None, trackmap=None, level=None):
+        """Take the latest content; True if it differs from what is shown, so the
+        section needs drawing again. Locking, showing, the theme and the tint ask for a
+        redraw themselves."""
+        content = (rows, pedals, opacity, radar, trackmap, level)
+        if content == (self.rows, self.pedals, self.opacity, self.radar, self.trackmap, self.level):
+            return False
+        self.rows, self.pedals, self.opacity, self.radar, self.trackmap, self.level = content
+        return True
+
     def set_locked(self, locked):
         if locked == self.locked:
             return

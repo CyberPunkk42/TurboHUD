@@ -21,6 +21,7 @@ against the game's own lap times on 2026-11-01: they match exactly.
 """
 
 import dataclasses
+import itertools
 import math
 import struct
 import time
@@ -1196,6 +1197,7 @@ def race_sections(snapshot, now, speed_unit='kmh', standings=None, radar=None, t
     if state.players:
         order = standings.order(state.players, now) if standings is not None else None
         sections['players'] = players_rows(state.players, order, state.clock, state.gates)
+        sections['laptimes'] = lap_times_rows(state.players, order, clock_now(snapshot, now))
         opacity = blue_flag_opacity(blue_flag(state.players, clock_now(snapshot, now)))
         if opacity is not None:
             sections['blue'] = opacity
@@ -1508,6 +1510,69 @@ def players_rows(players, order=None, clock=None, gates=()):
                 flag=flag_code(player.flag) or flag_text(player.flag),
                 right=gap_text(found),
                 right_color=color,
+            )
+        )
+    return rows
+
+
+MAX_LAP_TIME_ROWS = 16  # drivers in the lap times list; more: the leader and those around me
+
+
+def player_lap_times(player):
+    """A player's finished laps, 0.1 ms each: from one pass of the start line (each
+    lap's first checkpoint) to the next. Laps with a missed start line are left out."""
+    starts = [lap[0] if lap else NO_CHECKPOINT for lap in player.checkpoints[: player.laps_completed + 1]]
+    return [
+        end - start
+        for start, end in itertools.pairwise(starts)
+        if NO_CHECKPOINT not in (start, end) and end > start
+    ]
+
+
+def player_current_lap(player, clock):
+    """How long `player` has been on its current lap at race `clock`, or None (finished,
+    before its first start line, or a missed one)."""
+    if player.finished or not player.checkpoints or not player.checkpoints[-1]:
+        return None
+    start = player.checkpoints[-1][0]
+    if start == NO_CHECKPOINT or start > clock:
+        return None
+    return clock - start
+
+
+def lap_times_rows(players, order=None, clock=0):
+    """The lap times list: a heading, then each driver in race order with flag and name,
+    their best lap and the running time of their current lap ('Fin' once finished) at
+    race `clock`. The race's fastest lap is green. Up to MAX_LAP_TIME_ROWS drivers."""
+    shown = shown_players(players, MAX_LAP_TIME_ROWS, order)
+    bests = {id(player): min(player_lap_times(player), default=None) for _pos, player in shown}
+    fastest = min((best for best in bests.values() if best is not None), default=None)
+    rows = [
+        Row(
+            'Driver',
+            'small',
+            'accent',
+            middle='Best',
+            middle_color='accent',
+            right='Lap',
+            right_color='accent',
+        )
+    ]
+    for position, player in shown:
+        name = player.name or '?'
+        if len(name) > MAX_NAME_SHOWN:
+            name = name[: MAX_NAME_SHOWN - 1] + '…'
+        best = bests[id(player)]
+        running = player_current_lap(player, clock)
+        rows.append(
+            Row(
+                f'{position}. {name}',
+                'small',
+                'accent' if player.local else 'text',
+                flag=flag_code(player.flag) or flag_text(player.flag),
+                middle=format_time(best),
+                middle_color='ahead' if best is not None and best == fastest else 'text',
+                right='Fin' if player.finished else format_tenths(running) if running is not None else '-',
             )
         )
     return rows

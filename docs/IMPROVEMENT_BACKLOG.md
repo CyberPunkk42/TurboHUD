@@ -2,7 +2,14 @@
 
 Open items, most valuable first. Finished items move to `docs/PROGRESS.md`.
 
-## 1. Windows: the overlay, then live data
+## 1. Tests must not reach a running TurboHUD
+Running the tests while TurboHUD runs (found 2026-11-03, mid-race) switched the real
+one to move mode: a test starts the app's main path, which finds the running copy
+through the command socket in `$XDG_RUNTIME_DIR` and sends it "move". Until fixed, run
+the tests with `XDG_RUNTIME_DIR` set to an empty private folder. Fix: give that test
+its own runtime folder (or a fake `send`).
+
+## 2. Windows: the overlay, then live data
 Over TSU on Windows, in windowed, Fullscreen and Fullscreen Exclusive: the built app
 (`tools/build_app.py`), the Qt probe (`experiments/run_qt_overlay_probe.cmd`) and the
 original probe. Add the results to `experiments/README.md`. Check the shortcuts
@@ -13,24 +20,24 @@ Then live data: Windows lets a program read another of the same user
 (`OpenProcess` with `PROCESS_VM_READ`, `ReadProcessMemory`), so no probe or launch
 option should be needed; the lookup by name (`turbohud/core`) stays as it is.
 
-## 2. macOS: live data in CrossOver
+## 3. macOS: live data in CrossOver
 TSU runs as a Windows game in a CrossOver bottle. Reading its memory from outside needs
 `task_for_pid`, which macOS allows only with special rights. Find out what is possible
 without weakening the system; until then the Mac shows the session clock.
 
-## 3. Builds and release
+## 4. Builds and release
 Bundled apps from `tools/build_app.py` with the probe and clear launch-option steps for
 Linux; an AppImage instead of the `.tar.gz`. Before the repository goes public for the
 TSU community: the privacy check (pre-push hook), a licence, a README for players.
 
-## 4. Linux: other desktops
+## 5. Linux: other desktops
 Commands for the running TurboHUD (`run_turbohud.sh --toggle` and so on) are done, and
 on Wayland desktops other than Hyprland TurboHUD runs through XWayland, where staying on
 top should work. Still to try on KDE and GNOME: on top over the game, clicks going
 through. If XWayland is not enough there, the layer-shell extension (KDE, Sway; not
 GNOME) would need a library outside PySide6.
 
-## 5. Track map: check in races
+## 6. Track map: check in races
 The user saw it work in a race (2026-11-03), and the track is now learnt from the cars
 (checked live in an AI event; the user confirmed it works). Still to check: the track's shape (tight
 hairpins, tracks that cross themselves, point-to-point tracks), the road's width, the

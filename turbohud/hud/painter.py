@@ -2,9 +2,9 @@ import sys
 from functools import lru_cache
 
 from PySide6.QtCore import QPointF, QRectF, Qt
-from PySide6.QtGui import QColor, QFont, QFontMetricsF, QPainterPath, QPen
+from PySide6.QtGui import QColor, QFont, QFontMetricsF, QPainterPath, QPainterPathStroker, QPen
 
-from turbohud.core.hud import FLAG_WIDTH, MARGIN
+from turbohud.core.hud import FLAG_WIDTH, MARGIN, middle_right
 
 # On Linux the desktop's default font may be a monospace or icon font; prefer a plain
 # sans-serif one. Qt uses the first that is installed. Windows and macOS keep their
@@ -32,7 +32,7 @@ def text_advance(text, size):
     return QFontMetricsF(hud_font(size)).horizontalAdvance(text)
 
 
-@lru_cache(maxsize=256)
+@lru_cache(maxsize=512)
 def text_path(text, size):
     """The outline of a line of text, with its baseline at y 0.
 
@@ -47,12 +47,25 @@ def text_path(text, size):
     return path.simplified()
 
 
+@lru_cache(maxsize=512)
+def outline_path(text, size):
+    """The dark outline round a line of text, as a shape to fill. Stroking the text
+    each time it is drawn took most of a frame with many texts (the lap times list);
+    filling a kept shape is about five times quicker."""
+    stroker = QPainterPathStroker()
+    stroker.setWidth(max(2.0, size / 10))
+    stroker.setCapStyle(Qt.RoundCap)
+    stroker.setJoinStyle(Qt.RoundJoin)
+    return stroker.createStroke(text_path(text, size))
+
+
 def outlined_text(painter, x, y, text, size, color, outline):
     """Text with a dark outline, readable over any part of the game."""
-    path = text_path(text, size).translated(x, y)
-    width = max(2.0, size / 10)
-    painter.strokePath(path, QPen(outline, width, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin))
-    painter.fillPath(path, color)
+    painter.save()
+    painter.translate(x, y)
+    painter.fillPath(outline_path(text, size), outline)
+    painter.fillPath(text_path(text, size), color)
+    painter.restore()
 
 
 def text_width(text, size):
@@ -133,6 +146,7 @@ def draw_hud(painter, lines, theme, scale=None, left=0, width=None):
     outline = _rgba(theme.outline_color)
     margin = round(MARGIN * (theme.scale if scale is None else scale))
     x = left + margin
+    middle_end = middle_right(lines, width, margin, text_advance) if width is not None else None
     for line in lines:
         text_x = x
         if line.flag:
@@ -150,6 +164,16 @@ def draw_hud(painter, lines, theme, scale=None, left=0, width=None):
                 line.right,
                 line.size,
                 _pick(colors, line.right_color),
+                outline,
+            )
+        if line.middle and middle_end is not None:
+            outlined_text(
+                painter,
+                middle_end - text_advance(line.middle, line.size),
+                line.baseline,
+                line.middle,
+                line.size,
+                _pick(colors, line.middle_color),
                 outline,
             )
         if line.tail:

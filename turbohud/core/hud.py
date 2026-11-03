@@ -18,6 +18,8 @@ class Line:
     flag: str = ''  # an ISO country code drawn as a flag before the text
     right: str = ''  # text at the right edge of the box (a column that lines up)
     right_color: str = 'text'
+    middle: str = ''  # a second column, lined up on the right just before `right`
+    middle_color: str = 'text'
 
 
 @dataclass(frozen=True)
@@ -32,6 +34,8 @@ class Row:
     flag: str = ''  # an ISO country code drawn as a flag before the text
     right: str = ''  # text at the right edge of the box (a column that lines up)
     right_color: str = 'text'
+    middle: str = ''  # a second column, lined up on the right just before `right`
+    middle_color: str = 'text'
 
 
 FLAG_WIDTH = 1.5  # a flag's room before the text, in font sizes
@@ -120,6 +124,8 @@ def _content(rows, sizes):
                 row.flag,
                 row.right,
                 row.right_color,
+                row.middle,
+                row.middle_color,
             )
         )
     return lines, baseline
@@ -130,14 +136,45 @@ def hud_lines(rows, scale=1.0):
     return _content(rows, Sizes.for_scale(scale))[0]
 
 
-def line_width(line, measure):
-    """How wide a line is with its flag and its right column."""
+def _left_width(line, measure):
+    """How wide a line's text is with its flag, without the columns."""
     width = measure(line.text + line.tail, line.size)
     if line.flag:
         width += FLAG_WIDTH * line.size
+    return width
+
+
+def line_width(line, measure):
+    """How wide a line is with its flag and its columns."""
+    width = _left_width(line, measure)
+    if line.middle:
+        width += COLUMN_GAP * line.size + measure(line.middle, line.size)
     if line.right:
         width += COLUMN_GAP * line.size + measure(line.right, line.size)
     return width
+
+
+def lines_width(lines, measure):
+    """How wide `lines` are together. With a middle column, the columns line up: the
+    widest text, the widest middle and the widest right column side by side."""
+    if not any(line.middle for line in lines):
+        return max((line_width(line, measure) for line in lines), default=0)
+    gap = max(COLUMN_GAP * line.size for line in lines)
+    return (
+        max(_left_width(line, measure) for line in lines)
+        + gap
+        + max((measure(line.middle, line.size) for line in lines if line.middle), default=0)
+        + gap
+        + max((measure(line.right, line.size) for line in lines if line.right), default=0)
+    )
+
+
+def middle_right(lines, width, margin, measure):
+    """Where the middle column ends (it is right-aligned there) in a box `width` wide:
+    before the widest right column, with a gap."""
+    right = max((measure(line.right, line.size) for line in lines if line.middle and line.right), default=0)
+    gap = max((COLUMN_GAP * line.size for line in lines if line.middle), default=0)
+    return width - margin - right - gap
 
 
 def content_size(rows, scale, measure):
@@ -145,7 +182,7 @@ def content_size(rows, scale, measure):
     a text's width in pixels (Qt knows the font)."""
     sizes = Sizes.for_scale(scale)
     lines, bottom = _content(rows, sizes)
-    width = max((line_width(line, measure) for line in lines), default=0)
+    width = lines_width(lines, measure)
     # Below the last baseline: room for letters such as g and p, then the margin.
     return round(width + 2 * sizes.margin), round(bottom + sizes.margin)
 
@@ -200,6 +237,17 @@ RACE_SECTIONS = (
             tuple(
                 Row(f'{n}. Playername1234567', 'small', tail='  PIT', flag='DE', right='+00.000')
                 for n in range(10, 10 + 8)
+            ),
+        ),
+    ),
+    Section(
+        'laptimes',
+        'Lap times',
+        (
+            (Row('Driver', 'small', 'accent', middle='Best', right='Lap'),)
+            + tuple(
+                Row(f'{n}. Playername1234567', 'small', flag='DE', middle='0:00.000', right='0:00.0')
+                for n in range(10, 10 + 16)
             ),
         ),
     ),
