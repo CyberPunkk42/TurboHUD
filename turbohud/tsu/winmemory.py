@@ -103,13 +103,14 @@ class PageCache:
 
 def search(read, regions, value, align=8, chunk=CHUNK, share=1.0, sleep=time.sleep, clock=time.perf_counter):
     """Addresses (multiples of `align`) in `regions` that hold the 64-bit `value`,
-    reading `chunk` bytes at a time. With `share` below 1, it pauses after each piece
-    so that reading takes about that share of the time (0.25: four times as long, the
-    rest left to the game)."""
+    lowest first, reading `chunk` bytes at a time. A generator: it reads on only as far
+    as its hits are taken, so a lookup that stops at the first good one reads little
+    (in TSU the class records and the online race lie in the first fifth of its data).
+    With `share` below 1, it pauses after each piece so that reading takes about that
+    share of the time (0.25: four times as long, the rest left to the game)."""
     pattern = struct.pack('<Q', value)
     overlap = len(pattern) - 1
-    hits = []
-    for start, end, *_ in regions:
+    for start, end, *_ in sorted(regions):
         address = start
         while address < end:
             size = min(chunk + overlap, end - address)
@@ -118,6 +119,7 @@ def search(read, regions, value, align=8, chunk=CHUNK, share=1.0, sleep=time.sle
                 data = read(address, size)
             except OSError:
                 data = b''
+            hits = []
             index = data.find(pattern)
             while index != -1:
                 if index < chunk and (address + index) % align == 0:
@@ -126,7 +128,7 @@ def search(read, regions, value, align=8, chunk=CHUNK, share=1.0, sleep=time.sle
             address += chunk
             if share < 1.0:
                 sleep((clock() - began) * (1.0 - share) / share)
-    return hits
+            yield from hits
 
 
 def under_wine():

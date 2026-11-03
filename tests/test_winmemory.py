@@ -100,40 +100,53 @@ class SearchTests(unittest.TestCase):
 
     def test_finds_aligned_values_only(self):
         memory = self.memory_with(0x10, 0x23, 0x800)
-        hits = wm.search(memory.read, [(0x100000, 0x110000)], self.VALUE, chunk=4096)
+        hits = list(wm.search(memory.read, [(0x100000, 0x110000)], self.VALUE, chunk=4096))
         self.assertEqual(hits, [0x100010, 0x100800])
 
     def test_finds_a_value_across_two_pieces_once(self):
         memory = self.memory_with(4096 - 4)
-        hits = wm.search(memory.read, [(0x100000, 0x110000)], self.VALUE, align=4, chunk=4096)
+        hits = list(wm.search(memory.read, [(0x100000, 0x110000)], self.VALUE, align=4, chunk=4096))
         self.assertEqual(hits, [0x100000 + 4096 - 4])
 
     def test_skips_what_cannot_be_read(self):
         memory = self.memory_with(0x40)
-        hits = wm.search(memory.read, [(0x0, 0x2000), (0x100000, 0x110000)], self.VALUE, chunk=4096)
+        hits = list(wm.search(memory.read, [(0x0, 0x2000), (0x100000, 0x110000)], self.VALUE, chunk=4096))
         self.assertEqual(hits, [0x100040])
 
     def test_pauses_so_reading_takes_its_share_of_the_time(self):
         memory = self.memory_with()
         ticks = iter([0.0, 0.002, 1.0, 1.002])  # each piece takes 2 ms to read
         slept = []
-        wm.search(
-            memory.read,
-            [(0x100000, 0x102000)],
-            self.VALUE,
-            chunk=4096,
-            share=0.25,
-            sleep=slept.append,
-            clock=lambda: next(ticks),
+        list(
+            wm.search(
+                memory.read,
+                [(0x100000, 0x102000)],
+                self.VALUE,
+                chunk=4096,
+                share=0.25,
+                sleep=slept.append,
+                clock=lambda: next(ticks),
+            )
         )
         self.assertEqual(len(slept), 2)
         for pause in slept:
             self.assertAlmostEqual(pause, 0.006)  # 2 ms reading, 6 ms left to the game
 
+    def test_reads_only_as_far_as_hits_are_taken(self):
+        memory = self.memory_with(0x10, 0x8000)
+        hits = wm.search(memory.read, [(0x100000, 0x110000)], self.VALUE, chunk=4096)
+        self.assertEqual(next(hits), 0x100010)
+        self.assertEqual(len(memory.calls), 1)  # the first piece only, of 16
+
+    def test_lowest_regions_first(self):
+        memory = self.memory_with(0x10, 0x8000)
+        hits = wm.search(memory.read, [(0x108000, 0x110000), (0x100000, 0x108000)], self.VALUE, chunk=4096)
+        self.assertEqual(list(hits), [0x100010, 0x108000])
+
     def test_no_pauses_at_full_share(self):
         memory = self.memory_with()
         slept = []
-        wm.search(memory.read, [(0x100000, 0x102000)], self.VALUE, chunk=4096, sleep=slept.append)
+        list(wm.search(memory.read, [(0x100000, 0x102000)], self.VALUE, chunk=4096, sleep=slept.append))
         self.assertEqual(slept, [])
 
 

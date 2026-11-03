@@ -387,7 +387,21 @@ clock, laps, positions (from the replay recorder) and the car read. The first re
 9 s (the search and the lookups it keeps). After that a race read took 113 ms
 (median): too slow for 20 a second. It made 451 small reads, but on only 72 pages of
 4 KiB, so reading each page once per race read would bring it to about 72 reads, some
-18 ms. That page cache is needed before the Mac HUD reads online races.
+18 ms. That page cache is needed before the Mac HUD reads online races. The searches
+(about 4 s each, reading all the game's data at once) made TSU stutter.
+
+**With TurboHUD's Windows reader (`turbohud/tsu/winmemory.py`, same online event type,
+2026-11-04):** the probe now connects as the app will.
+- Page cache (each 4 KiB page read once per race read): 74 to 77 reads of the game
+  per race read instead of 451, 19.7 ms (median, slowest 26 ms) instead of 113 ms.
+- Paced search (1 MiB pieces, reading a quarter of the time, so the Wine server is
+  never held long): no stutter noticed for sure, but searching all 1.61 GiB took
+  about 35 s, three times over, so the race showed only after about 110 s.
+- Where the hits are, in address order: the TS.Services class record within the first
+  0.04 GiB of the searched memory, TS.ClientEventController's within 0.11 GiB, the
+  online race controller within 0.31 GiB. So the search now goes from the lowest
+  address up and stops at the first good hit: connected in 1.0 s, the online race read
+  after 14 s, and 60 reads at 19.7 ms.
 
 A native Mac program can talk to one in the bottle over TCP on 127.0.0.1 (Wine uses the
 Mac's own sockets): 78 µs per round trip, measured with a small echo server.

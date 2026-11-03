@@ -25,17 +25,19 @@ Answered 2026-11-04 (`experiments/README.md`, "Memory inside the CrossOver bottl
 macOS refuses `task_for_pid` on CrossOver's signed Wine loader, but a Windows program
 inside the bottle can read TSU with `ReadProcessMemory`, and TurboHUD's lookup by name
 works there unchanged, race reads too: alone 17 ms a read; online as a client (13 AI)
-the search finds the race in 4.1 s, but a read takes 113 ms. Next:
-- Quicker reads, needed online: a read in the bottle costs about 250 µs up to 4 KiB,
-  and an online race read makes 451 reads on only 72 pages. Read each page once per
-  race read and serve the small reads from it (about 18 ms expected).
+the race is found after about 15 s and read in about 20 ms
+(`turbohud/tsu/winmemory.py`: page cache, paced search that stops at the first good
+hit). Next:
+- Listen for stutter while the reader searches (in an online event, the first 15 s;
+  a search of all the data at once made TSU stutter, the paced one was not noticed for
+  sure). If there is none, a larger share than a quarter finds the race sooner.
 - A bottle reader in place of the Linux probe: the same read-only questions (`maps`,
-  `read`, `read_many`, `search`) over a local socket that only this user can use
-  (TCP on 127.0.0.1 with a secret in a private file), shared with the Windows reader
-  of item 2.
-- How it starts: by hand, or by TurboHUD through CrossOver's `wine --bottle` (finding
-  CrossOver and the bottle), and which Windows Python or build runs it.
-- TSU's log in the bottle (`gamelog.py` reads the Linux folder) for the online search.
+  `read`, `read_many`, `search`), with the search and the regions from `winmemory`,
+  answered over its standard input and output. TurboHUD starts it, so only TurboHUD
+  holds the pipe: no port, no secret. The page cache then sits on the Mac side.
+- Starting it: TurboHUD looks for `TSU.exe` among the running programs, finds
+  CrossOver and the bottle, and runs the reader there with a portable Windows Python
+  (pinned and checked, as for the probes) shipped in the Mac app; it ends with TSU.
 
 ## 4. Builds and release
 Bundled apps from `tools/build_app.py` with the probe and clear launch-option steps for

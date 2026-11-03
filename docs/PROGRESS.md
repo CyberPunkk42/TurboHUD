@@ -454,3 +454,13 @@ its "Recent changes".
   the race in 4.1 s and all 14 players read, but a read took 113 ms: 451 small reads
   on only 72 pages of 4 KiB, so a cache of the pages each read touches is needed
   (about 18 ms expected).
+- 2026-11-04: Windows memory reader (`turbohud/tsu/winmemory.py`), for Windows and for
+  TSU inside CrossOver: it opens TSU for reading, lists its memory in the form the
+  lookup by name takes, and `connect()` gives `LiveRace` a race reader as the Linux
+  probe does. Inside the bottle each read costs about 250 µs, so it reads each 4 KiB
+  page once per race read (an online race read with 13 AI: 77 reads instead of 451,
+  20 ms instead of 113). Its search pauses after every 1 MiB, so it reads a quarter of
+  the time (a search of all the data at once made TSU stutter), and stops at the first
+  good hit, from the lowest address up: the race showed after 15 s instead of 110.
+  TSU's log is read in the bottle too, so it does not search in menus. Checked live
+  in online events with 13 AI; unit tests with fake memory. Not yet used by the app.

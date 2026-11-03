@@ -48,14 +48,24 @@ See `docs/IMPROVEMENT_BACKLOG.md`. In short:
    `XDG_RUNTIME_DIR` set to an empty private folder).
 1. Windows: the overlay over TSU (windowed, Fullscreen, Fullscreen Exclusive), then
    live data (reading memory as the same user, without a probe).
-2. macOS: live data through a reader inside the CrossOver bottle (shown to work on
-   2026-11-04, race reads included; the reader and how TurboHUD talks to it still to
-   do).
+2. macOS: live data through a reader inside the CrossOver bottle. Its reading code
+   is done (`turbohud/tsu/winmemory.py`, checked live online); still to do: the bottle
+   reader that answers over a pipe, and the Mac app starting it and drawing.
 3. Builds and release: bundled apps with the probe, an AppImage; before the repository
    goes public, the privacy check, a licence and a README for players.
 4. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-04: Windows memory reader (`turbohud/tsu/winmemory.py`), for Windows and for
+  TSU inside CrossOver: it opens TSU for reading, lists its memory in the form the
+  lookup by name takes, and `connect()` gives `LiveRace` a race reader as the Linux
+  probe does. Inside the bottle each read costs about 250 µs, so it reads each 4 KiB
+  page once per race read (an online race read with 13 AI: 77 reads instead of 451,
+  20 ms instead of 113). Its search pauses after every 1 MiB, so it reads a quarter of
+  the time (a search of all the data at once made TSU stutter), and stops at the first
+  good hit, from the lowest address up: the race showed after 15 s instead of 110.
+  TSU's log is read in the bottle too, so it does not search in menus. Checked live
+  in online events with 13 AI; unit tests with fake memory. Not yet used by the app.
 - 2026-11-04: macOS live data: the way found. From outside, macOS refuses
   `task_for_pid` on TSU (CrossOver's Wine loader is signed with the hardened runtime);
   only turning off System Integrity Protection or signing CrossOver again would allow
