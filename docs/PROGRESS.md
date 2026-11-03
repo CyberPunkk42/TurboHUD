@@ -432,3 +432,11 @@ its "Recent changes".
   section is drawn again only when its content changed, and each text's outline is
   kept as a shape to fill (about five times quicker): 8 ms in the worst frame, when
   all 17 running laps change at once. Measured offscreen; not yet in a race.
+- 2026-11-03: Long races (asked by the user: an hour or more). Each frame rebuilt
+  every driver's whole list of passed checkpoints about 70 times (for the order, the
+  gaps and the blue flag), and that list grows by a lap's checkpoints every lap: with
+  17 drivers it took 7 ms a frame after an hour and 15 ms after two, still growing.
+  Now it is worked out once per read and kept: 0.8 ms a frame after an hour, 1.7 ms
+  after two, measured with made-up races. The rest does not grow with the race: the
+  game's finished laps are read once, the track map keeps at most a lap of each car's
+  path, the radar only its last moments.

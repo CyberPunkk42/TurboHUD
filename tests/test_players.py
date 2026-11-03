@@ -68,6 +68,16 @@ class RankingTests(unittest.TestCase):
         )
 
 
+class PassedTests(unittest.TestCase):
+    def test_every_checkpoint_in_one_row_worked_out_once(self):
+        p = player('P', [lap(0), lap(40_000, count=2)])
+        self.assertEqual(p.passed, (0, 10_000, 20_000, 30_000, 40_000, 50_000))
+        self.assertIs(p.passed, p.passed)  # kept: the frame asks for it many times
+        # A new read (a changed copy) works it out afresh.
+        later = dataclasses.replace(p, checkpoints=(lap(0), lap(40_000, count=3)))
+        self.assertEqual(len(later.passed), 7)
+
+
 class GapTests(unittest.TestCase):
     def test_at_the_last_checkpoint_both_passed(self):
         me = player('Me', [lap(0), lap(40_000, count=3)], local=True)

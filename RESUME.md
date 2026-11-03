@@ -54,6 +54,14 @@ See `docs/IMPROVEMENT_BACKLOG.md`. In short:
 4. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-03: Long races (asked by the user: an hour or more). Each frame rebuilt
+  every driver's whole list of passed checkpoints about 70 times (for the order, the
+  gaps and the blue flag), and that list grows by a lap's checkpoints every lap: with
+  17 drivers it took 7 ms a frame after an hour and 15 ms after two, still growing.
+  Now it is worked out once per read and kept: 0.8 ms a frame after an hour, 1.7 ms
+  after two, measured with made-up races. The rest does not grow with the race: the
+  game's finished laps are read once, the track map keeps at most a lap of each car's
+  path, the radar only its last moments.
 - 2026-11-03: Fixed: every section stuttered once the lap times list was on
   (seen by the user in an online race; TurboHUD averaged 96 % of a core). Every
   section was drawn again 20 times a second, changed or not, and each text's dark
