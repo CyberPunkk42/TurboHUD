@@ -21,9 +21,19 @@ Then live data: Windows lets a program read another of the same user
 option should be needed; the lookup by name (`turbohud/core`) stays as it is.
 
 ## 3. macOS: live data in CrossOver
-TSU runs as a Windows game in a CrossOver bottle. Reading its memory from outside needs
-`task_for_pid`, which macOS allows only with special rights. Find out what is possible
-without weakening the system; until then the Mac shows the session clock.
+Answered 2026-11-04 (`experiments/README.md`, "Memory inside the CrossOver bottle"):
+macOS refuses `task_for_pid` on CrossOver's signed Wine loader, but a Windows program
+inside the bottle can read TSU with `ReadProcessMemory`, and TurboHUD's lookup by name
+works there unchanged (checked in TSU's menu). Next:
+- Check race reads in the bottle (`sh experiments/run_bottle_memory_probe_mac.sh` with
+  a race on): lap times, positions, how long a read takes.
+- A bottle reader in place of the Linux probe: the same read-only questions (`maps`,
+  `read`, `read_many`, `search`) over a local socket that only this user can use
+  (TCP on 127.0.0.1 with a secret in a private file), shared with the Windows reader
+  of item 2.
+- How it starts: by hand, or by TurboHUD through CrossOver's `wine --bottle` (finding
+  CrossOver and the bottle), and which Windows Python or build runs it.
+- TSU's log in the bottle (`gamelog.py` reads the Linux folder) for the online search.
 
 ## 4. Builds and release
 Bundled apps from `tools/build_app.py` with the probe and clear launch-option steps for

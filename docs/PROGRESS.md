@@ -440,3 +440,12 @@ its "Recent changes".
   after two, measured with made-up races. The rest does not grow with the race: the
   game's finished laps are read once, the track map keeps at most a lap of each car's
   path, the radar only its last moments.
+- 2026-11-04: macOS live data: the way found. From outside, macOS refuses
+  `task_for_pid` on TSU (CrossOver's Wine loader is signed with the hardened runtime);
+  only turning off System Integrity Protection or signing CrossOver again would allow
+  it. Inside the bottle a Windows program may read TSU (`ReadProcessMemory`), and
+  `experiments/bottle_memory_probe.py` (run with
+  `sh experiments/run_bottle_memory_probe_mac.sh`) shows it: TSU's memory listed and
+  read, about 225 µs a read, TurboHUD's lookup by name unchanged (TS.Services found in
+  1.7 s), and a native Mac program reaches one in the bottle over 127.0.0.1 in 78 µs.
+  Checked in TSU's menu; race reads not yet.

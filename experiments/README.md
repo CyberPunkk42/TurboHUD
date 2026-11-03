@@ -331,3 +331,55 @@ input to thirds. Sampled together with the Steam Input virtual pad (`/dev/input/
 0.97), brake axis 2 (left trigger, 0.8); triggers run from -32767 to 32767.
 While a race is set up the reader reports `m_eventListener is null`; in the menu
 `m_activeServer is null`.
+
+## Memory inside the CrossOver bottle (`bottle_memory_probe.py`, macOS)
+
+Question: can TurboHUD read TSU's memory on the Mac, where TSU runs as a Windows game
+in a CrossOver bottle, without weakening the system?
+
+From outside the bottle, no. TSU's Mac process is CrossOver's `wineloader`, signed by
+CodeWeavers with the hardened runtime and without `get-task-allow`, so macOS refuses
+`task_for_pid` on it (checked: KERN_FAILURE, 5) unless System Integrity Protection is
+turned off or CrossOver is signed again. Neither is acceptable.
+
+From inside the bottle, yes. There every program is a Windows program under the same
+Wine server, which already holds each bottle process's task port, so `OpenProcess`
+(PROCESS_VM_READ) and `ReadProcessMemory` work as on Windows, for programs of the same
+bottle only. TSU's own `UnityCrashHandler64.exe` and Steam's overlay already do this.
+
+The probe runs in the bottle with the portable Windows Python of the overlay probe. It
+only reads: finds TSU.exe, lists its memory (VirtualQueryEx), finds the mapped
+`global-metadata.dat`, times reads, then runs TurboHUD's own lookup by name
+(`turbohud/core/il2cpp.py`, `race.py`) and, if a race is on, reads it as the HUD would.
+It prints no player names or IDs.
+
+### Run it
+1. Start TSU in CrossOver (any screen; for the race reads, drive onto a track).
+2. `sh experiments/run_bottle_memory_probe_mac.sh` (`--reads N` for the number of race
+   reads, 40 by default). Bottle `Steam` unless `TURBOHUD_BOTTLE` names another.
+
+### Results
+**macOS 27.2, CrossOver 26.3, TSU in its main menu (2026-11-04):**
+- TSU.exe found and opened for reading; 1040 readable regions, 0.93 GiB, listed in
+  0.12 s.
+- `global-metadata.dat`: Wine gives no mapped file name, so it is found by its first
+  bytes; its first 4 KiB match the file in the game's folder.
+- Reads: about 225 µs each whatever the size up to 4 KiB (a round trip through the Wine
+  server), 0.7 to 0.9 GiB/s for large ones. A race read (about twenty small reads) so
+  comes to about 5 ms, fine at 20 a second; the online search reads 1 GiB in about
+  1.5 s.
+- TurboHUD's lookup unchanged: `TS.Services` found in 1.7 s (the class records are in
+  Windows' private heap memory, used where Linux has `[heap]`), its 17 fields and
+  `sm_instance` read. The IL2CPP layouts match the Linux build.
+- No race was on (`m_activeServer is null`): race reads are still to check.
+
+A native Mac program can talk to one in the bottle over TCP on 127.0.0.1 (Wine uses the
+Mac's own sockets): 78 µs per round trip, measured with a small echo server.
+
+**So live data on the Mac can work like on Linux:** a small reader inside the bottle (in
+place of the Linux probe) answers the same read-only questions over a local socket, and
+the native TurboHUD asks them and draws, with no system change. The same Windows reading
+code serves TurboHUD on Windows itself, there without a socket. To settle: a socket
+only this user can use (TCP on 127.0.0.1 is open to every local user, so a secret in a
+private file), and how the reader starts (with TSU, or started by TurboHUD with CrossOver's
+`wine --bottle`).
