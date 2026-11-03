@@ -525,13 +525,15 @@ def run(args, folder):
                 tray.setToolTip(f'TurboHUD - {text}')
                 shown_status = text
         for name, window in windows.items():
-            window.rows = current.get(name, [])
-            window.pedals = current.get('pedals')
-            window.opacity = current.get('blue')
-            window.radar = current.get('radar')
-            window.trackmap = current.get('trackmap')
-            window.level = current.get('levels', {}).get(name)
-            window.update()
+            if window.show_content(
+                current.get(name, []),
+                current.get('pedals'),
+                current.get('blue'),
+                current.get('radar'),
+                current.get('trackmap'),
+                current.get('levels', {}).get(name),
+            ):
+                window.update()  # only what changed: drawing every section each frame stutters
         grouped = any(w.group for w in windows.values())
         every = GROUP_EVERY if grouped else PLACEMENT_EVERY
         if not locked and time.monotonic() - last_seen >= every:

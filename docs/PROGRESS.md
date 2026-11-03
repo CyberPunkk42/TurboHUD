@@ -418,3 +418,10 @@ its "Recent changes".
   start-line passes, as for your own laps. Rows can now have a middle column, lined up
   just before the right one. Tested with unit tests and offscreen drawing; not yet
   seen in a race.
+- 2026-11-03: Fixed: every section stuttered once the lap times list was on
+  (seen by the user in an online race; TurboHUD averaged 96 % of a core). Every
+  section was drawn again 20 times a second, changed or not, and each text's dark
+  outline was stroked anew each time: the list's 50 texts took 17 ms a frame. Now a
+  section is drawn again only when its content changed, and each text's outline is
+  kept as a shape to fill (about five times quicker): 8 ms in the worst frame, when
+  all 17 running laps change at once. Measured offscreen; not yet in a race.

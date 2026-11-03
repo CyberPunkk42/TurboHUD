@@ -2,7 +2,7 @@ import sys
 from functools import lru_cache
 
 from PySide6.QtCore import QPointF, QRectF, Qt
-from PySide6.QtGui import QColor, QFont, QFontMetricsF, QPainterPath, QPen
+from PySide6.QtGui import QColor, QFont, QFontMetricsF, QPainterPath, QPainterPathStroker, QPen
 
 from turbohud.core.hud import FLAG_WIDTH, MARGIN, middle_right
 
@@ -32,7 +32,7 @@ def text_advance(text, size):
     return QFontMetricsF(hud_font(size)).horizontalAdvance(text)
 
 
-@lru_cache(maxsize=256)
+@lru_cache(maxsize=512)
 def text_path(text, size):
     """The outline of a line of text, with its baseline at y 0.
 
@@ -47,12 +47,25 @@ def text_path(text, size):
     return path.simplified()
 
 
+@lru_cache(maxsize=512)
+def outline_path(text, size):
+    """The dark outline round a line of text, as a shape to fill. Stroking the text
+    each time it is drawn took most of a frame with many texts (the lap times list);
+    filling a kept shape is about five times quicker."""
+    stroker = QPainterPathStroker()
+    stroker.setWidth(max(2.0, size / 10))
+    stroker.setCapStyle(Qt.RoundCap)
+    stroker.setJoinStyle(Qt.RoundJoin)
+    return stroker.createStroke(text_path(text, size))
+
+
 def outlined_text(painter, x, y, text, size, color, outline):
     """Text with a dark outline, readable over any part of the game."""
-    path = text_path(text, size).translated(x, y)
-    width = max(2.0, size / 10)
-    painter.strokePath(path, QPen(outline, width, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin))
-    painter.fillPath(path, color)
+    painter.save()
+    painter.translate(x, y)
+    painter.fillPath(outline_path(text, size), outline)
+    painter.fillPath(text_path(text, size), color)
+    painter.restore()
 
 
 def text_width(text, size):
