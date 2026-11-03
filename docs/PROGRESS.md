@@ -400,3 +400,9 @@ its "Recent changes".
   against 7 (and 15) the old way. The delta and gaps use these when recording is off.
 - 2026-11-03: The user confirmed in a race that the learnt track map and the
   settled worked-out positions seem to work.
+- 2026-11-03: Outdated notes fixed. README: the intro lists what the Linux HUD shows
+  now (it still called fuel, speed and a minimap planned), and "Live lap times on
+  Linux" points to the sections under Use. docs/STACK.md: TSU's native Linux build
+  (not Proton), how the Linux overlay was built, local builds instead of GitHub
+  Actions, the `.tar.gz` until an AppImage. docs/HOW_IT_WORKS.md: dated 2026-11-03,
+  and its online section explains the replay recorder's positions.
