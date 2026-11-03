@@ -32,7 +32,7 @@ GNOME) would need a library outside PySide6.
 
 ## 5. Track map: check in races
 The user saw it work in a race (2026-11-03), and the track is now learnt from the cars
-(checked live in an AI event). Still to check: the track's shape (tight
+(checked live in an AI event; the user confirmed it works). Still to check: the track's shape (tight
 hairpins, tracks that cross themselves, point-to-point tracks), the road's width, the
 dots changing over at an overtake, backmarkers, and as an online client. Possible
 later: an arrow for the direction of travel, the pit lane, a hotlap alone (the map

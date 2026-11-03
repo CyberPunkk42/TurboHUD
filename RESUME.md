@@ -51,6 +51,8 @@ See `docs/IMPROVEMENT_BACKLOG.md`. In short:
 4. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-03: The user confirmed in a race that the learnt track map and the
+  settled worked-out positions seem to work.
 - 2026-11-03: Worked-out positions (online, race not recorded) settle onto the road.
   They started each car at the middle of the checkpoint line it passed, which on some
   tracks lies far off the road. Now a car followed from line to line goes on from where

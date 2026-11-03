@@ -398,3 +398,5 @@ its "Recent changes".
   seen for the first time starts. Checked live by hiding the real positions in the AI
   event: median 1.8 units from the real place after about 45 s (90 % within 3.4),
   against 7 (and 15) the old way. The delta and gaps use these when recording is off.
+- 2026-11-03: The user confirmed in a race that the learnt track map and the
+  settled worked-out positions seem to work.
