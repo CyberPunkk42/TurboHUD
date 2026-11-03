@@ -406,3 +406,7 @@ its "Recent changes".
   (not Proton), how the Linux overlay was built, local builds instead of GitHub
   Actions, the `.tar.gz` until an AppImage. docs/HOW_IT_WORKS.md: dated 2026-11-03,
   and its online section explains the replay recorder's positions.
+- 2026-11-03: Code layout notes brought up to date: docs/STACK.md lists the modules
+  as they are now (it showed the first skeleton of 2026-10-24), docs/HOW_IT_WORKS.md
+  names the command socket (turbohud/control.py), and experiments/README.md says the
+  Steam launch option runs `tsu_memory_probe.py` from there.

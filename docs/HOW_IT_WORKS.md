@@ -255,3 +255,4 @@ gives no control over the car.
 | `turbohud/core/hud.py` | the sections, their sizes, places and layout |
 | `turbohud/overlay/` | the windows; Hyprland, Windows and macOS specifics |
 | `turbohud/app.py` | starts everything: settings, windows, tray menu, shortcuts |
+| `turbohud/control.py` | the command socket for `run_turbohud.sh --toggle` and the rest |

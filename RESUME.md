@@ -51,6 +51,10 @@ See `docs/IMPROVEMENT_BACKLOG.md`. In short:
 4. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-03: Code layout notes brought up to date: docs/STACK.md lists the modules
+  as they are now (it showed the first skeleton of 2026-10-24), docs/HOW_IT_WORKS.md
+  names the command socket (turbohud/control.py), and experiments/README.md says the
+  Steam launch option runs `tsu_memory_probe.py` from there.
 - 2026-11-03: Outdated notes fixed. README: the intro lists what the Linux HUD shows
   now (it still called fuel, speed and a minimap planned), and "Live lap times on
   Linux" points to the sections under Use. docs/STACK.md: TSU's native Linux build
