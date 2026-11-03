@@ -19,15 +19,21 @@ From the two overlay probes (`experiments/README.md`) and the user's priorities:
   mode (background hidden, click-through), the shortcuts Ctrl+Shift+L and Ctrl+Shift+Q
   without Alt, remembered position and size.
 - **Everything else can be shared:** finding TSU's data folder (on the Mac inside the
-  bottle, on Linux inside Proton's prefix), reading the game's files, the HUD's maths,
-  and what the HUD shows where.
-- **Linux later.** TSU runs there through Steam's Proton. Whether an overlay can sit on
-  top depends on the desktop more than on the stack:
+  bottle; on Linux TSU has a native build with its data in
+  `~/.config/unity3d/Turbo Sliders/Unlimited/<SteamID>/`), reading the game's files, the
+  HUD's maths, and what the HUD shows where.
+- **Linux.** Written when Linux was planned for later and thought to run TSU through
+  Proton; TSU has a native Linux build, and Linux is now where TurboHUD shows live race
+  data (2026-11-03). Whether an overlay can sit on top depends on the desktop more than
+  on the stack:
   - X11, and X11 apps under Wayland (XWayland): an always-on-top, click-through window
     is possible. Whether it shows over a full-screen game needs testing, as on the Mac.
   - Native Wayland: an ordinary app can neither stay on top nor place itself. Only the
     layer-shell extension allows it (KDE, Sway, Hyprland; not GNOME). System-wide
-    shortcuts need the GlobalShortcuts portal.
+    shortcuts need the GlobalShortcuts portal. As built: on Hyprland TurboHUD asks
+    Hyprland at runtime to float and pin its own windows; on other Wayland desktops it
+    runs through XWayland; instead of shortcuts, `run_turbohud.sh --toggle` and the
+    other commands can be bound to a key in the desktop's own settings.
   - Steam Deck in Game Mode (gamescope): outside windows do not show over the game.
 
   These limits are the same for every option below.
@@ -73,10 +79,13 @@ Costs accepted:
 Each release is a ready-to-run app with Python and Qt inside, built by PyInstaller:
 - **Windows:** a ZIP with `TurboHUD.exe`. Unpack and run.
 - **macOS:** `TurboHUD.app` in a ZIP or disk image. Drag to Applications.
-- **Linux:** an AppImage. Make it executable and run.
+- **Linux:** a `.tar.gz` for now (an AppImage is planned, backlog item 3). Unpack and
+  run.
 
-PyInstaller builds only for the system it runs on, so GitHub Actions builds all three,
-one runner per system, from `main` after a release tag.
+PyInstaller builds only for the system it runs on, so each release is built locally
+with `tools/build_app.py` on each system, from `main`. (A GitHub Actions workflow was
+planned for this; it is kept in `.github/workflows/build.yml` for reference but no
+longer runs, as nothing goes to GitHub.)
 
 Without paid code signing, each system warns once on first start:
 - Windows SmartScreen: **More info**, then **Run anyway**.
@@ -115,7 +124,7 @@ unpacked), Linux 74 MB `.tar.gz` (with Qt's X11 libraries packed in).
    Exclusive.
 2. The Qt overlay probe (`experiments/qt_overlay_probe.py`) over TSU on Windows. On the
    Mac it works in Fullscreen and Fullscreen Exclusive (2026-10-24).
-3. Linux on X11 and XWayland, once there is a Linux machine with TSU to test on.
+3. Linux on X11 and XWayland (KDE, GNOME). Hyprland on Wayland works (2026-11-01).
 4. Reading the player's controls on the Mac from a background app, once a feature needs
    it.
 

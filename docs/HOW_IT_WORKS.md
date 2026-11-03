@@ -5,7 +5,7 @@ top of the game that show race information the game does not show itself, or not
 clearly. This document explains what it shows, where the data comes from, and what it
 does (and does not do) to the game, to your RAM and to your system.
 
-State: 2026-11-01. Live race data works on Linux (the native TSU build). On Windows
+State: 2026-11-03. Live race data works on Linux (the native TSU build). On Windows
 and macOS TurboHUD so far shows only a session clock and the local time.
 
 ## What it shows
@@ -132,6 +132,12 @@ When you join an online race, or host one that only has AI drivers, your game ru
 a client: the race is then in a `TS.ClientEventController` that no static field leads
 to. TurboHUD finds it by its class, with one `search` of the game's memory, then keeps
 using the object it found until the race ends.
+
+As a client the game keeps no car positions where the offline race has them. TSU
+records every race for its replays, though, and its recorder
+(`TS.EventRecorder.m_lastQuantizedVehicleStates`) holds each car's last recorded
+position, which TurboHUD reads instead. If recording is off, it works the positions
+out from the checkpoints and each car's velocity (see the limits below).
 
 A search reads all of the game's data once (about 1.5 to 2 seconds, one CPU core
 busy). So TurboHUD searches only when it has to: when there is no offline or hosted

@@ -4,10 +4,12 @@ A HUD overlay for Turbo Sliders Unlimited (TSU): it sits on top of the running g
 lets every click through, and shows information while you race. It works with TSU's
 Fullscreen mode too.
 
-Early version. On Linux the HUD shows live lap times (lap and time left, the running
-lap, the delta to your best lap, last and best lap) when TSU is started through TurboHUD's memory probe, see
-[Live lap times on Linux](#live-lap-times-on-linux). On Windows and macOS it shows a
-session clock for now. Fuel estimate, speed and minimap are planned.
+Early version. On Linux, with TSU started through TurboHUD's memory probe (see
+[Live lap times on Linux](#live-lap-times-on-linux)), the HUD shows the live race: lap
+times and the delta to your best lap, fuel, tires, health, the draft, speed with pedal
+bars, the player list with gaps, a blue flag, a proximity radar and a track map (see
+[Use](#use)). It works offline, in hotlaps and online. On Windows and macOS it shows a
+session clock and the local time for now.
 
 ## Install and first start
 
@@ -86,9 +88,8 @@ game. How it all works, and what it does to RAM and the game:
 2. Start TSU from Steam, and start TurboHUD (before or after; it finds the game).
 3. The race sections appear when the cars stand on the grid, before the lights; in the
    menus, the lobby and while a race loads only the local time shows (hover over the
-   TurboHUD icon to see what it waits for). In a race it shows the lap
-   and time left, the running lap time, how far ahead (green) or behind (red) your best
-   lap you are at the last checkpoint, and the last and best lap.
+   TurboHUD icon to see what it waits for). In a race the sections described under
+   [Use](#use) show, and stay after you finish until the race is over.
 
 Clear the launch option to start TSU without the probe. The probe writes what it did to
 `~/.config/TurboHUD/memory_probe.log`.
