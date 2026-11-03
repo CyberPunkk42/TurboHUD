@@ -243,6 +243,18 @@ def main():
     instance = il.static_ref(services, 'sm_instance')
     print(f'   TS.Services.sm_instance read: {bool(instance)}')
 
+    # Count each race read's reads and the 4 KiB pages they touch: a read costs the
+    # same up to 4 KiB, so pages are what a block cache would read.
+    counted = {'reads': 0, 'pages': set()}
+    plain_read = memory.read
+
+    def counting_read(address, size):
+        counted['reads'] += 1
+        counted['pages'].update(range(address >> 12, (address + size - 1 >> 12) + 1))
+        return plain_read(address, size)
+
+    memory.read = counting_read
+    per_read = []
     reader = LapReader(il, event_running=lambda: True)
     times, state = [], None
     for _ in range(args.reads):
@@ -253,9 +265,15 @@ def main():
             print(f'   No race to read: {error}')
             break
         times.append(time.perf_counter() - started)
+        per_read.append((counted['reads'], len(counted['pages'])))
+        counted['reads'], counted['pages'] = 0, set()
         time.sleep(0.05)
     if searches:
         print(f'   Online race searched for {len(searches)} time(s), {sum(searches):.1f} s in all.')
+    if per_read[1:]:
+        later = sorted(per_read[1:])
+        reads, pages = later[len(later) // 2]
+        print(f'   A race read (median, after the first): {reads} reads on {pages} pages of 4 KiB.')
     if times:
         times.sort()
         print(

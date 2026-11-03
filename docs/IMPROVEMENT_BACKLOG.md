@@ -24,10 +24,11 @@ option should be needed; the lookup by name (`turbohud/core`) stays as it is.
 Answered 2026-11-04 (`experiments/README.md`, "Memory inside the CrossOver bottle"):
 macOS refuses `task_for_pid` on CrossOver's signed Wine loader, but a Windows program
 inside the bottle can read TSU with `ReadProcessMemory`, and TurboHUD's lookup by name
-works there unchanged, race reads too (17 ms a read alone in a race). Next:
-- Check an online race as a client (the search for the race) with the probe.
-- Quicker reads: a read in the bottle costs about 230 µs up to 4 KiB, so read larger
-  blocks and serve the small reads from them.
+works there unchanged, race reads too: alone 17 ms a read; online as a client (13 AI)
+the search finds the race in 4.1 s, but a read takes 113 ms. Next:
+- Quicker reads, needed online: a read in the bottle costs about 250 µs up to 4 KiB,
+  and an online race read makes 451 reads on only 72 pages. Read each page once per
+  race read and serve the small reads from it (about 18 ms expected).
 - A bottle reader in place of the Linux probe: the same read-only questions (`maps`,
   `read`, `read_many`, `search`) over a local socket that only this user can use
   (TCP on 127.0.0.1 with a secret in a private file), shared with the Windows reader

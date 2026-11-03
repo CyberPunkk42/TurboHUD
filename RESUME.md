@@ -66,7 +66,10 @@ See `docs/IMPROVEMENT_BACKLOG.md`. In short:
   1.7 s), and a native Mac program reaches one in the bottle over 127.0.0.1 in 78 µs.
   In a race alone the HUD's own race reader works there unchanged: laps, clock,
   position and car read, 17 ms a read (median), so 20 reads a second fit. Not yet
-  checked: an online race as a client.
+  checked: an online race as a client. Online, hosting with 13 AI, the search found
+  the race in 4.1 s and all 14 players read, but a read took 113 ms: 451 small reads
+  on only 72 pages of 4 KiB, so a cache of the pages each read touches is needed
+  (about 18 ms expected).
 - 2026-11-03: Long races (asked by the user: an hour or more). Each frame rebuilt
   every driver's whole list of passed checkpoints about 70 times (for the order, the
   gaps and the blue flag), and that list grows by a lap's checkpoints every lap: with

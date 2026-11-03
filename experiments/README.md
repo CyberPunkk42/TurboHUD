@@ -379,8 +379,15 @@ It prints no player names or IDs.
 unchanged: median 17.2 ms, the first (with the lookups it keeps) 559 ms. Laps, race
 clock, the car's position and its state (fuel, tires, speed) all read. A read costs the
 same up to 4 KiB, and a race read makes about 70 small ones, so reading larger blocks
-(and serving small reads from them) should make it several times quicker. Not yet
-checked: the online search as a client, other players.
+(and serving small reads from them) should make it several times quicker.
+
+**Online, hosting with 13 AI (the game a client; 2026-11-04):** the search found the
+race (`TS.ClientEventController`) in 4.1 s over 1.78 GiB; all 14 players, the race
+clock, laps, positions (from the replay recorder) and the car read. The first read took
+9 s (the search and the lookups it keeps). After that a race read took 113 ms
+(median): too slow for 20 a second. It made 451 small reads, but on only 72 pages of
+4 KiB, so reading each page once per race read would bring it to about 72 reads, some
+18 ms. That page cache is needed before the Mac HUD reads online races.
 
 A native Mac program can talk to one in the bottle over TCP on 127.0.0.1 (Wine uses the
 Mac's own sockets): 78 µs per round trip, measured with a small echo server.
