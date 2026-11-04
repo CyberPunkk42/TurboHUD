@@ -3,6 +3,7 @@
 import argparse
 import logging
 import os
+import shutil
 import signal
 import sys
 import time
@@ -10,7 +11,9 @@ from dataclasses import replace
 from pathlib import Path
 
 from turbohud import __version__
+from turbohud.core.hud import CLOCK_SECTIONS, RACE_SECTIONS, tight_place
 from turbohud.core.settings import (
+    LAYOUT_VERSION,
     LOG_FILE,
     SETTINGS_FILE,
     SectionPlace,
@@ -26,6 +29,30 @@ MIN_SECTION = 20  # pixels: the smallest a section gets from Smaller in the sett
 GROUP_EVERY = 0.2  # seconds between position checks in move mode while sections are grouped
 ICON = 'tsu_turbo_hud_00.png'  # in assets/, also the bundled app's icon
 log = logging.getLogger('turbohud')
+
+
+def upgrade_layout(settings, path, ink):
+    """The settings with sections saved in an older layout converted, once, and written
+    back; the file as it was stays beside it. `ink` is turbohud.hud.painter.text_ink."""
+    if settings.layout_version >= LAYOUT_VERSION:
+        return settings
+    known = {section.name: section for section in (*RACE_SECTIONS, *CLOCK_SECTIONS)}
+    places = {}
+    for name, place in settings.sections.items():
+        if name in known:
+            box = (place.x, place.y, place.width, place.height)
+            x, y, width, height = tight_place(known[name], box, settings.theme.scale, ink)
+            place = replace(place, x=x, y=y, width=width, height=height)
+        places[name] = place
+    settings = replace(settings, sections=places, layout_version=LAYOUT_VERSION)
+    if places:
+        try:
+            shutil.copy2(path, path.with_name(f'{path.stem}.before-layout-{LAYOUT_VERSION}{path.suffix}'))
+            save_settings(path, settings)
+            log.info('section sizes converted to layout %d', LAYOUT_VERSION)
+        except OSError as error:
+            log.warning('could not save the converted section sizes: %s', error)
+    return settings
 
 
 def asset_path(name, bundle=None):
@@ -156,6 +183,7 @@ def run(args, folder):
         screen_of,
         session_rows,
     )
+    from turbohud.hud.painter import text_ink
     from turbohud.overlay import HOTKEY_LOCK, HOTKEY_QUIT, choose_platform, native_for
     from turbohud.overlay.settings_window import SettingsWindow
     from turbohud.overlay.window import MovePanel, SectionWindow, window_flags
@@ -223,6 +251,7 @@ def run(args, folder):
 
     started = time.monotonic()
     screens = [screen.geometry().getRect() for screen in QGuiApplication.screens()]
+    settings = upgrade_layout(settings, path, text_ink)
     windows = {section.name: SectionWindow(native, settings.theme, section) for section in layout}
     first = {name: window.base for name, window in windows.items()}
     screen = main_screen(screens)

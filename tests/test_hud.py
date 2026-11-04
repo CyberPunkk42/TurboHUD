@@ -56,43 +56,63 @@ def ink(_text, size):
     return size * 0.7, 0
 
 
-class ShrinkingTests(unittest.TestCase):
+class TightBoxTests(unittest.TestCase):
     TIME: ClassVar = next(section for section in hud.RACE_SECTIONS if section.name == 'localtime')
     FUEL: ClassVar = next(section for section in hud.RACE_SECTIONS if section.name == 'fuel')
+    SPEED: ClassVar = next(section for section in hud.RACE_SECTIONS if section.name == 'speed')
+    LAP: ClassVar = next(section for section in hud.RACE_SECTIONS if section.name == 'lap')
 
-    def test_a_tight_box_fits_closely_round_the_text(self):
+    def test_the_box_fits_closely_round_the_text(self):
         # A 20 px font: from 20 to 34, and 3 px of room at each edge.
         self.assertEqual(hud.ink_span(self.TIME, 1.0, ink), (20.0, 34))
         self.assertEqual(hud.tight_height(self.TIME, 1.0, ink), 20)
 
-    def test_a_tight_box_includes_the_level_bar(self):
+    def test_the_box_includes_the_level_bar(self):
         self.assertEqual(hud.ink_span(self.FUEL, 1.0, ink), (20.0, 49))
 
-    def test_the_text_keeps_its_size_until_the_box_is_tight(self):
-        for height in (62, 50, 30, 20):
-            with self.subTest(height=height):
-                self.assertEqual(hud.section_scale((500, height), 62, tight=20), 1.0)
+    def test_room_is_kept_for_letters_below_the_line_where_there_are_letters(self):
+        def hanging(text, size):
+            return size * 0.7, size * 0.2 if 'g' in text else 0
 
-    def test_then_it_shrinks_with_the_box(self):
-        self.assertEqual(hud.section_scale((500, 15), 62, tight=20), 0.75)
-        self.assertEqual(hud.section_scale((500, 1), 62, tight=20), 0.3)
+        self.assertEqual(hud.ink_span(self.TIME, 1.0, hanging)[1], 34)  # digits only
+        self.assertEqual(hud.ink_span(self.LAP, 1.0, hanging)[1], 30 + 16 * 0.2)
 
-    def test_taller_still_makes_it_bigger(self):
-        self.assertEqual(hud.section_scale((500, 124), 62, tight=20), 2.0)
+    def test_rounding_cannot_make_a_long_list_stick_out(self):
+        times = next(section for section in hud.RACE_SECTIONS if section.name == 'laptimes')
+        normal = hud.tight_height(times, 1.0, ink)
+        for share in (0.45, 0.6, 0.77, 1.3, 2.2):
+            with self.subTest(share=share):
+                height = round(normal * share)
+                top, bottom = hud.ink_span(times, hud.fitted_scale(times, height, share, ink), ink)
+                self.assertLessEqual(bottom - top + hud.FIT_ROOM, height)
 
-    def test_a_narrow_box_still_shrinks_the_text(self):
-        self.assertEqual(hud.section_scale((50, 40), 62, needed_width=100, tight=20), 0.5)
+    def test_content_that_fits_keeps_its_scale(self):
+        self.assertEqual(hud.fitted_scale(self.TIME, 100, 1.0, ink), 1.0)
 
-    def test_the_text_moves_up_evenly_as_the_box_closes_in(self):
-        def shift(height, scale=1.0):
-            return hud.shrink_shift(self.TIME, height, 62, 20, scale, ink)
+    def test_the_content_is_centred_in_its_box(self):
+        self.assertEqual(hud.content_shift(self.TIME, 20, 1.0, ink), -17)  # 3 px left above
+        self.assertEqual(hud.content_shift(self.TIME, 54, 1.0, ink), 0)
+        self.assertEqual(hud.content_shift(self.TIME, 10, 0.5, ink), -8)
 
-        self.assertEqual(shift(100), 0)
-        self.assertEqual(shift(62), 0)
-        self.assertEqual(shift(41), -8)  # half way, half of the 17 px
-        self.assertEqual(shift(20), -17)  # 3 px are left above the digits
-        # Smaller still: the room above stays in step with the text.
-        self.assertEqual(shift(10, 0.5), -8)
+    def test_a_saved_box_becomes_tight_with_the_text_as_it_was(self):
+        # Local time at 2.5 times its old normal height of 62: a 50 px font, from 50 to 85.
+        x, y, width, height = hud.tight_place(self.TIME, (100, 200, 300, 155), 1.0, ink)
+        self.assertEqual((x, width, height), (100, 300, 50))
+        self.assertEqual(height / hud.tight_height(self.TIME, 1.0, ink), 2.5)
+        # It is drawn with 8 px left above the digits now: they stay where they were.
+        drawn = 2.5
+        top = hud.ink_span(self.TIME, drawn, ink)[0]
+        self.assertEqual(top, 50.0)
+        self.assertEqual(y + top + hud.content_shift(self.TIME, height, drawn, ink), 200 + top)
+
+    def test_a_saved_speed_box_keeps_its_middle(self):
+        x, y, width, height = hud.tight_place(self.SPEED, (100, 200, 300, 155), 1.0, ink)
+        self.assertAlmostEqual(y + height / 2, 200 + 155 / 2, delta=1)
+        self.assertEqual((x, width), (100, 300))
+
+    def test_a_drawing_keeps_its_place(self):
+        radar = next(section for section in hud.RACE_SECTIONS if section.name == 'radar')
+        self.assertEqual(hud.tight_place(radar, (1, 2, 316, 316), 1.0, ink), (1, 2, 316, 316))
 
 
 class NewSectionPlaceTests(unittest.TestCase):

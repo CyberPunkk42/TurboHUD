@@ -2,8 +2,9 @@
 small panel that shows in move mode.
 
 Locked, a section lets every click through and shows only its content. In move mode it
-gets a tint and its name, can be dragged, and resized at its corner: shorter closes in
-on its content and then scales it down, taller scales it up. The panel says what to do, shows or hides sections, and locks or quits.
+gets a tint, can be dragged, and resized at its corner, which scales its content. A text
+section's box fits closely round its text, so its name shows only when the pointer rests
+on it; the others show their name. The panel says what to do, shows or hides sections, and locks or quits.
 """
 
 import logging
@@ -28,16 +29,16 @@ from turbohud.core.hud import (
     MARGIN,
     base_size,
     centred_text,
+    content_shift,
     content_size,
+    fitted_scale,
     help_lines,
     hud_lines,
-    ink_span,
     level_bar,
     level_space,
     pedal_bars,
     pedal_space,
     section_scale,
-    shrink_shift,
     tight_height,
 )
 from turbohud.core.race import CAR_LENGTH, CAR_WIDTH, RADAR_FROM, RADAR_FULL, Blip, RadarView
@@ -59,10 +60,8 @@ from turbohud.hud.painter import (
 TINT = (23, 56, 97, 153)  # move mode's background: red, green, blue, opacity (0-255)
 BORDER = (120, 170, 230)
 LABEL_COLOR = (200, 220, 245)
-LABEL_SPACE = 14  # room below the content for the section's name in move mode, at scale 1
 MIN_WIDTH = 40
 MIN_HEIGHT = 10  # a text section's box: any shorter and there is nothing left to grab
-NAME_HEIGHT = 16  # room a section's name needs below the content in move mode
 BLUE_FLAG = (0, 0, 128)  # navy
 BLUE_FLAG_EDGE = (0, 0, 64)  # its outline, a darker blue
 BLUE_FLAG_EDGE_WIDTH = 2
@@ -169,19 +168,18 @@ class SectionWindow(QWidget):
         self.setAttribute(Qt.WA_ShowWithoutActivating)
         self.setWindowFlag(Qt.WindowTransparentForInput, True)
         width, height = base_size(section, theme.scale, text_width)
-        self.base = (width, height + (0 if section.bar else round(LABEL_SPACE * theme.scale)))
+        if not section.bar:
+            height = tight_height(section, theme.scale, text_ink)
+            self.setToolTip(section.label)  # no room for its name in the box (move mode)
+        self.base = (width, height)
         self.grip = QSizeGrip(self)
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.addStretch()
         layout.addWidget(self.grip, 0, Qt.AlignBottom | Qt.AlignRight)
         self.grip.setVisible(False)
-        if section.bar:
-            self.tight = None
-            self.setMinimumSize(MIN_WIDTH, round(self.base[1] * 0.3))
-        else:
-            self.tight = tight_height(section, theme.scale, text_ink)
-            self.setMinimumSize(MIN_WIDTH, max(round(self.tight * 0.3), MIN_HEIGHT))
+        lowest = round(self.base[1] * 0.3)
+        self.setMinimumSize(MIN_WIDTH, lowest if section.bar else max(lowest, MIN_HEIGHT))
 
     def placement(self):
         # On Wayland only the desktop knows where the window is; ask it where possible.
@@ -265,11 +263,10 @@ class SectionWindow(QWidget):
             rows = rows or list(self.section.samples[0])  # something to place, also before a race
         bars = pedal_space(self.theme.scale) if self.section.pedals else 0
         needed = content_size(rows, self.theme.scale, text_width)[0] + bars if rows else None
-        scale = self.theme.scale * section_scale(
-            (self.width(), self.height()), self.base[1], needed, tight=self.tight
-        )
+        scale = self.theme.scale * section_scale((self.width(), self.height()), self.base[1], needed)
+        scale = fitted_scale(self.section, self.height(), scale, text_ink)
         left = 0
-        down = shrink_shift(self.section, self.height(), self.base[1], self.tight, scale, text_ink)
+        down = content_shift(self.section, self.height(), scale, text_ink)
         if self.locked and self.backdrop and rows:
             self._paint_backdrop(painter, rows, scale, bars, down)
         if self.section.pedals and rows:  # no bars without a speed (menu, no game)
@@ -287,16 +284,6 @@ class SectionWindow(QWidget):
                 content_height = content_size(rows, scale, text_width)[1]
                 draw_level(painter, level_bar(self.width(), content_height, scale, *level))
         painter.translate(0, -down)
-        # The section's name, where it fits below the content: a tight box has no room.
-        content_bottom = ink_span(self.section, scale, text_ink)[1] + down
-        if not self.locked and self.height() - content_bottom >= NAME_HEIGHT:
-            painter.setPen(QColor(*LABEL_COLOR))
-            font = painter.font()
-            font.setPixelSize(11)
-            painter.setFont(font)
-            painter.drawText(
-                self.rect().adjusted(6, 0, -20, -3), Qt.AlignBottom | Qt.AlignLeft, self.section.label
-            )
         painter.end()
 
     def _paint_backdrop(self, painter, rows, scale, bars, down=0):

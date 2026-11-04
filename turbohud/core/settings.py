@@ -21,6 +21,7 @@ MIN_SECTION_SIZE = 8  # a saved section smaller than this is broken
 SPEED_UNITS = ('kmh', 'mph')
 MIN_SCALE = 0.5
 MAX_SCALE = 3.0
+LAYOUT_VERSION = 2  # 2: a text section's box fits closely round its text
 _COLOR = re.compile(r'#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?')
 
 
@@ -55,6 +56,7 @@ class Settings:
     speed_unit: str = 'kmh'  # 'kmh' or 'mph'
     backdrop: bool = False  # a light tint behind each section's text while locked
     map_others: bool = False  # the track map also shows the other cars, as faint grey dots
+    layout_version: int = 1  # how to read the section sizes: LAYOUT_VERSION is the latest
 
 
 def settings_dir(platform=sys.platform, environ=None, home=None):
@@ -136,6 +138,10 @@ def _sections(data):
     return places
 
 
+def _layout_version(value):
+    return value if isinstance(value, int) and not isinstance(value, bool) and value >= 1 else 1
+
+
 def load_settings(path):
     try:
         data = json.loads(Path(path).read_text(encoding='utf-8'))
@@ -150,6 +156,7 @@ def load_settings(path):
         speed_unit=data.get('speed_unit') if data.get('speed_unit') in SPEED_UNITS else 'kmh',
         backdrop=data.get('backdrop') is True,
         map_others=data.get('map_others') is True,
+        layout_version=_layout_version(data.get('layout_version')),
     )
 
 
@@ -169,6 +176,7 @@ def save_settings(path, settings):
         'speed_unit': settings.speed_unit,
         'backdrop': settings.backdrop,
         'map_others': settings.map_others,
+        'layout_version': settings.layout_version,
         'sections': {
             name: {
                 'x': place.x,

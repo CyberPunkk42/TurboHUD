@@ -9,8 +9,55 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from turbohud import app, control
-from turbohud.core import hud
+from turbohud.core import hud, settings
 from turbohud.overlay import choose_platform
+
+
+class UpgradeLayoutTests(unittest.TestCase):
+    def setUp(self):
+        self.path = Path(tempfile.mkdtemp()) / settings.SETTINGS_FILE
+
+    @staticmethod
+    def ink(_text, size):
+        return size * 0.7, 0
+
+    def saved(self, **fields):
+        place = settings.SectionPlace(100, 200, 300, 155, visible=False, group='A')
+        return settings.Settings(sections={'localtime': place}, **fields)
+
+    def test_old_sizes_are_converted_once_and_the_old_file_is_kept(self):
+        settings.save_settings(self.path, self.saved())
+        old = self.path.read_bytes()
+        upgraded = app.upgrade_layout(settings.load_settings(self.path), self.path, self.ink)
+        place = upgraded.sections['localtime']
+        self.assertEqual(place.height, 50)
+        self.assertEqual((place.visible, place.group), (False, 'A'))
+        self.assertEqual(settings.load_settings(self.path), upgraded)
+        self.assertEqual(self.path.with_name('settings.before-layout-2.json').read_bytes(), old)
+        # A second start finds them converted.
+        self.assertEqual(app.upgrade_layout(upgraded, self.path, self.ink), upgraded)
+
+    def test_converted_sizes_stay(self):
+        current = self.saved(layout_version=settings.LAYOUT_VERSION)
+        self.assertEqual(app.upgrade_layout(current, self.path, self.ink), current)
+        self.assertFalse(self.path.exists())
+
+    def test_a_first_start_has_nothing_to_convert(self):
+        upgraded = app.upgrade_layout(settings.Settings(), self.path, self.ink)
+        self.assertEqual(upgraded.layout_version, settings.LAYOUT_VERSION)
+        self.assertFalse(self.path.exists())
+
+    def test_a_section_it_does_not_know_stays_as_it_was(self):
+        place = settings.SectionPlace(1, 2, 300, 155)
+        settings.save_settings(self.path, settings.Settings(sections={'unknown': place}))
+        upgraded = app.upgrade_layout(settings.load_settings(self.path), self.path, self.ink)
+        self.assertEqual(upgraded.sections['unknown'], place)
+
+    def test_a_file_that_cannot_be_written_still_gives_the_converted_sizes(self):
+        missing = self.path.parent / 'none' / settings.SETTINGS_FILE
+        with self.assertLogs('turbohud', level='WARNING'):
+            upgraded = app.upgrade_layout(self.saved(), missing, self.ink)
+        self.assertEqual(upgraded.sections['localtime'].height, 50)
 
 
 class FakeTurboHUD:

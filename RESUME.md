@@ -58,6 +58,13 @@ See `docs/IMPROVEMENT_BACKLOG.md`. In short:
 4. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-05: A text section's box now fits closely round its text at every size, and its
+  height sets the text's size, so the edges are never far from the text (asked for by the
+  user, replacing the closing-in box from earlier today, which did not help enlarged
+  sections). Saved sizes are converted once, with the text the same size and in the same
+  spot; `settings.before-layout-2.json` keeps the file as it was. The speed's pedal bars
+  get shorter with the box. In a text box the name no longer fits: it shows when the
+  pointer rests on the box in move mode.
 - 2026-11-05: Shortening a text section below its normal height first closes the box in
   on the text, which keeps its size; only a box that fits it tightly makes it smaller
   (asked for by the user: local time shrank with the edges still far from it). Above the

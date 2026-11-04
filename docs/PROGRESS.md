@@ -509,3 +509,10 @@ its "Recent changes".
   normal height, the height still sets the text's size, so an enlarged section still
   shrinks at once down to normal size. A section's name shows in move mode only where it
   fits. The shortest text box is now 10 px, as a shorter one could not be grabbed.
+- 2026-11-05: A text section's box now fits closely round its text at every size, and its
+  height sets the text's size, so the edges are never far from the text (asked for by the
+  user, replacing the closing-in box from earlier today, which did not help enlarged
+  sections). Saved sizes are converted once, with the text the same size and in the same
+  spot; `settings.before-layout-2.json` keeps the file as it was. The speed's pedal bars
+  get shorter with the box. In a text box the name no longer fits: it shows when the
+  pointer rests on the box in move mode.

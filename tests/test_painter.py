@@ -110,7 +110,7 @@ class RedrawTests(unittest.TestCase):
         (left, _top, _right, _bottom), _size = self.text_box('localtime', [Row('12:34', 'medium')], 0.5)
         self.assertLessEqual(left, MARGIN + 3)
 
-    def test_the_text_keeps_its_size_while_the_box_closes_in(self):
+    def test_the_text_shrinks_with_the_box(self):
         from turbohud.core.hud import Row
 
         rows = [Row('12:34', 'medium')]
@@ -119,26 +119,22 @@ class RedrawTests(unittest.TestCase):
             (_left, top, _right, bottom), _size = self.text_box('localtime', rows, share)
             return bottom - top
 
-        self.assertEqual(tall(0.8), tall(1.0))
-        self.assertEqual(tall(0.5), tall(1.0))
-        self.assertLess(tall(0.2), tall(1.0))
+        self.assertGreater(tall(2.0), tall(1.0))
+        self.assertLess(tall(0.7), tall(1.0))
 
-    def test_every_text_section_stays_inside_a_tight_box(self):
-        from turbohud.core.hud import RACE_SECTIONS, tight_height
-        from turbohud.core.settings import Theme
-        from turbohud.hud.painter import text_ink
+    def test_every_text_section_fits_closely_in_its_box(self):
+        from turbohud.core.hud import RACE_SECTIONS
 
         for section in RACE_SECTIONS:
             if section.bar:
                 continue
-            with self.subTest(section=section.name):
-                tight = tight_height(section, Theme().scale, text_ink)
-                (_left, top, _right, bottom), (_width, height) = self.text_box(
-                    section.name, list(section.samples[0]), height=tight
-                )
-                self.assertEqual(height, tight)
-                self.assertGreaterEqual(top, 1)
-                self.assertLessEqual(bottom, height - 2)
+            for share in (1.0, 2.0, 0.6):
+                with self.subTest(section=section.name, share=share):
+                    (_left, top, _right, bottom), (_width, height) = self.text_box(
+                        section.name, list(section.samples[0]), share
+                    )
+                    self.assertGreaterEqual(top, 1)
+                    self.assertLessEqual(bottom, height - 2)
 
 
 if __name__ == '__main__':
