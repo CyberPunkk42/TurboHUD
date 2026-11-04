@@ -175,7 +175,8 @@ out from the checkpoints and each car's velocity (see the limits below).
 A search reads all of the game's data once (about 1.5 to 2 seconds, one CPU core
 busy). So TurboHUD searches only when it has to: when there is no offline or hosted
 race, and TSU's own log file says an event is running (TSU writes "Event started." and
-"Event ended." into `Logs/log.*.txt` as it happens; TurboHUD only reads that file). In
+"Event ended." into `log.txt` as it happens, with dated copies in `Logs/`; TurboHUD only
+reads them, and goes by the newest). In
 menus and lobbies it does not search at all. While an event runs without a race found
 yet, it waits 10 seconds after each search before the next.
 

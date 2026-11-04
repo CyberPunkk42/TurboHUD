@@ -58,6 +58,10 @@ See `docs/IMPROVEMENT_BACKLOG.md`. In short:
 4. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-04: A running game's log is read. TSU's live log is `log.txt`; only the dated
+  copies in `Logs/` were read, so during a run with no new copy yet a running event looked
+  ended and no search for the online race started (found live while spectating). The newest
+  of both counts now. Checked on the real log: it now says an event runs.
 - 2026-11-04: Spectator HUD, asked for by the user. A race without a local player (found
   while spectating an online session with 12 players) used to keep the HUD hidden. Now it
   is read without a car: "Spectating" with the leader's lap and the time left, the player

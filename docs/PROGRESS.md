@@ -494,3 +494,7 @@ its "Recent changes".
   Tested with a fake game and drawn offscreen with 12 made-up drivers; not yet seen with a
   real race (TSU had quit). To check: whether a spectator's replay recorder gives real
   positions, and what fun-mode events show.
+- 2026-11-04: A running game's log is read. TSU's live log is `log.txt`; only the dated
+  copies in `Logs/` were read, so during a run with no new copy yet a running event looked
+  ended and no search for the online race started (found live while spectating). The newest
+  of both counts now. Checked on the real log: it now says an event runs.
