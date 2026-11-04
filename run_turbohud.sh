@@ -28,4 +28,11 @@ if ! cmp -s "$requirements" "$venv/requirements.txt"; then
     cp "$requirements" "$venv/requirements.txt"
 fi
 
+# On the Mac, live race data needs a Windows Python to run in TSU's CrossOver bottle. Without
+# it (no network on the first start) the HUD still starts, and its tray icon says what is
+# missing.
+if [ "$(uname -s)" = Darwin ]; then
+    sh "$repo/tools/get_windows_python.sh" || echo "No Windows Python: no live race data for now." >&2
+fi
+
 exec "$venv/bin/python" -B "$repo/launch_turbohud.py" "$@"

@@ -11,7 +11,9 @@ the server also serves the game. Two things follow:
   (about 2 GiB) does not hold the server for seconds at a time (TSU stuttered then).
 
 Only reads: nothing here can change the game. The pure parts (regions, cache, search)
-run and test on any system; the Win32 calls load only when a process is opened.
+run and test on any system; the Win32 calls load only when a process is opened. The
+reader in the bottle (`bottle_reader.py`) uses only those parts, so `connect` alone
+loads the race logic.
 """
 
 import ctypes
@@ -19,10 +21,6 @@ import os
 import struct
 import time
 from pathlib import Path
-
-from turbohud.core.il2cpp import Il2Cpp, Memory, NotFound
-from turbohud.core.race import LapReader
-from turbohud.tsu.gamelog import EventLog
 
 PAGE = 4096
 CHUNK = 1 << 20  # bytes a search reads at once
@@ -32,6 +30,7 @@ TH32CS_SNAPPROCESS = 0x2
 MEM_COMMIT = 0x1000
 MEM_IMAGE, MEM_MAPPED, MEM_PRIVATE = 0x1000000, 0x40000, 0x20000
 PAGE_GUARD = 0x100
+STILL_ACTIVE = 259
 # Page protections: which allow reading, writing, running.
 READ = {0x02, 0x04, 0x08, 0x20, 0x40, 0x80}
 WRITE = {0x04, 0x08, 0x40, 0x80}
@@ -192,6 +191,7 @@ def _win32():
         ctypes.c_size_t,
     ]
     k.QueryFullProcessImageNameW.argtypes = [w.HANDLE, w.DWORD, w.LPWSTR, ctypes.POINTER(w.DWORD)]
+    k.GetExitCodeProcess.argtypes = [w.HANDLE, ctypes.POINTER(w.DWORD)]
     psapi.GetMappedFileNameW.argtypes = [w.HANDLE, ctypes.c_void_p, w.LPWSTR, w.DWORD]
     return k, psapi, PROCESSENTRY32W, MEMORY_BASIC_INFORMATION
 
@@ -238,6 +238,16 @@ class WindowsProcess:
         ):
             raise OSError(f'cannot read {size} bytes at {address:#x} (error {ctypes.get_last_error()})')
         return buffer.raw[:size]
+
+    def alive(self):
+        """False once the program has quit: a read then fails for good, unlike a read
+        of a stale pointer."""
+        from ctypes import wintypes
+
+        code = wintypes.DWORD()
+        if not self._k.GetExitCodeProcess(self.handle, ctypes.byref(code)):
+            return False
+        return code.value == STILL_ACTIVE
 
     def image_path(self):
         """The program's own file (a Windows path)."""
@@ -292,6 +302,11 @@ def tsu_data(environ=None):
     return Path(environ.get('USERPROFILE', '')) / 'AppData' / 'LocalLow' / 'Turbo Sliders' / 'Unlimited'
 
 
+def metadata_path(image_path):
+    """TSU's `global-metadata.dat`, from where its program file is."""
+    return Path(image_path).parent / 'TSU_Data' / 'il2cpp_data' / 'Metadata' / 'global-metadata.dat'
+
+
 class CachedReader:
     """A race reader that starts every read with an empty page cache."""
 
@@ -307,21 +322,17 @@ def connect(name='TSU.exe'):
     """(race reader, open process) on the running TSU, read as a Windows program; the
     same shape as `turbohud.tsu.client.connect`, for `LiveRace`. Raises OSError while TSU
     does not run, NotFound while its metadata is not mapped yet."""
+    from turbohud.core.il2cpp import Il2Cpp, Memory, NotFound
+    from turbohud.core.race import LapReader
+    from turbohud.tsu.gamelog import EventLog
+
     pid = find_process(name)
     if pid is None:
         raise OSError(f'{name} is not running')
     process = WindowsProcess(pid)
     try:
-        regions = process.regions()
-        metadata_file = (
-            Path(process.image_path()).parent
-            / 'TSU_Data'
-            / 'il2cpp_data'
-            / 'Metadata'
-            / 'global-metadata.dat'
-        )
-        metadata = metadata_file.read_bytes()
-        base = metadata_base(regions, process.read, metadata)
+        metadata = metadata_path(process.image_path()).read_bytes()
+        base = metadata_base(process.regions(), process.read, metadata)
         if base is None:
             raise NotFound('the game metadata is not mapped yet')
         share = WINE_SEARCH_SHARE if under_wine() else 1.0
@@ -332,8 +343,8 @@ def connect(name='TSU.exe'):
         cache = PageCache(process.read)
         memory = Memory(
             cache.read,
-            regions,
-            find_pointers=lambda value: paced([r for r in regions if searchable(r)], value),
+            process.regions,  # listed anew for each search: the memory grows towards a race
+            find_pointers=lambda value: paced([r for r in process.regions() if searchable(r)], value),
             searcher=paced,
         )
         il2cpp = Il2Cpp(memory, metadata, base)

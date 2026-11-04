@@ -36,6 +36,17 @@ BUNDLE_ID = 'io.github.cyberpunkk42.turbohud'
 SMOKE_SECONDS = 3
 SMOKE_TIMEOUT = 120
 _VERSION = re.compile(r'dev|\d{4}\.\d{2}\.\d{2}')
+# The Mac app's reader runs in TSU's CrossOver bottle with its own Windows Python, so it
+# ships as plain files beside the app: these, and that Python (see turbohud/tsu/bottle.py).
+WIN_PYTHON = ROOT / '.buildtools' / 'win-python'
+GET_WIN_PYTHON = ROOT / 'tools' / 'get_windows_python.sh'
+READER_FILES = (
+    'turbohud/__init__.py',
+    'turbohud/tsu/__init__.py',
+    'turbohud/tsu/bottle_reader.py',
+    'turbohud/tsu/gamelog.py',
+    'turbohud/tsu/winmemory.py',
+)
 
 
 def parse_args(argv):
@@ -81,6 +92,9 @@ def pyinstaller_args(system=sys.platform):
     ]  # fmt: skip
     if system == 'darwin':
         args += ['--osx-bundle-identifier', BUNDLE_ID]
+        args += ['--add-data', f'{WIN_PYTHON}:win-python']
+        for name in READER_FILES:
+            args += ['--add-data', f'{ROOT / name}:{Path(name).parent.as_posix()}']
     return args
 
 
@@ -142,6 +156,8 @@ def main(argv=None):
     args = parse_args(sys.argv[1:] if argv is None else argv)
     import PyInstaller.__main__
 
+    if sys.platform == 'darwin':
+        subprocess.run(['sh', str(GET_WIN_PYTHON)], check=True)
     VERSION_FILE.write_text(f'VERSION = {args.version!r}\n', encoding='utf-8')
     try:
         PyInstaller.__main__.run(pyinstaller_args())

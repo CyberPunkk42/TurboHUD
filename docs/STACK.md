@@ -113,12 +113,14 @@ turbohud/
     race.py             reads the race and works out what each section shows
     trackmap.py         the track map: the learnt track and which cars show
     flags.py            TSU's flags as country codes
-  tsu/                  Linux: the game
-    probe.py            the memory probe (started with TSU by the launch option)
-    client.py           talks to the probe, reads the race in a background thread
+  tsu/                  the game
+    probe.py            Linux: the memory probe (started with TSU by the launch option)
+    client.py           the race in a background thread; Linux: talks to the probe
     gamelog.py          TSU's log: whether an event runs
-    controller.py       the gamepad's triggers
+    controller.py       Linux: the gamepad's triggers
     winmemory.py        Windows and CrossOver: reading TSU as a Windows program
+    bottle.py           macOS: finds TSU's bottle, starts the reader, asks it over a pipe
+    bottle_reader.py    macOS: the reader inside the bottle (runs with a Windows Python)
   hud/painter.py        Qt drawing of text, bars and flags
   overlay/
     window.py           the section windows (drawings: blue flag, radar, track map) and
@@ -131,6 +133,7 @@ turbohud/
 experiments/            the probes that settled the design; tsu_memory_probe.py is what
                         the Steam launch option runs
 tools/build_app.py      PyInstaller build, archive and smoke test for this system
+tools/get_windows_python.sh  the pinned Windows Python for the reader in the bottle
 tools/privacy_check.py  the pre-push hook that keeps personal data out of commits
 tests/                  unit tests on any system
 ```

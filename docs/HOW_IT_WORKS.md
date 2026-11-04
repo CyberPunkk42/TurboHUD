@@ -5,8 +5,9 @@ top of the game that show race information the game does not show itself, or not
 clearly. This document explains what it shows, where the data comes from, and what it
 does (and does not do) to the game, to your RAM and to your system.
 
-State: 2026-11-03. Live race data works on Linux (the native TSU build). On Windows
-and macOS TurboHUD so far shows only a session clock and the local time.
+State: 2026-11-04. Live race data works on Linux (the native TSU build) and on macOS
+(TSU in CrossOver; see "On macOS" below). On Windows TurboHUD so far shows only a session
+clock and the local time. The rest of this document describes Linux where they differ.
 
 ## What it shows
 
@@ -85,6 +86,33 @@ The probe understands four questions, all read-only:
 Reading uses the Linux call `process_vm_readv`: it copies bytes out of the game's
 memory into the probe's. It cannot change anything in the game.
 
+## On macOS: a reader in the bottle
+
+TSU runs in a CrossOver bottle. macOS refuses a Mac program access to its memory
+(CrossOver's Wine loader is signed with the hardened runtime), and TurboHUD does not ask
+anyone to turn that protection off. Inside the bottle, a Windows program may read another
+with `ReadProcessMemory`. So:
+
+```
+ CrossOver ──runs──▶ TSU.exe (the game)
+                       ▲ read-only
+ bottle_reader.py ─────┘  (Windows Python, in the same bottle)
+       ▲ questions and answers over its standard input and output
+ TurboHUD (the native Mac overlay app, outside the bottle)
+```
+
+TurboHUD looks for `TSU.exe` among the running programs, finds CrossOver and the bottle,
+and starts `turbohud/tsu/bottle_reader.py` with a portable Windows Python (in the app, or
+for a start from the source in `.buildtools/win-python`). Nothing is installed into the
+bottle. Only TurboHUD holds the pipe, so there is no port, no socket and no secret. The
+reader ends when the pipe closes or TSU quits.
+
+It answers the same kind of read-only questions as the Linux probe. A read of the game
+costs about 250 µs there (a round trip through the Wine server, which also serves the
+game), so TurboHUD reads each 4 KiB page once per race read: about 20 ms. A search reads
+in 1 MiB pieces, a quarter of the time, and takes about 30 s if it has to cover all the
+data; it stops at the first good hit, so a race is usually found in about 15 s.
+
 ## How it finds the race in the game's memory
 
 TSU is made with Unity using IL2CPP: its code is compiled, but it keeps a description of
@@ -145,7 +173,11 @@ busy). So TurboHUD searches only when it has to: when there is no offline or hos
 race, and TSU's own log file says an event is running (TSU writes "Event started." and
 "Event ended." into `Logs/log.*.txt` as it happens; TurboHUD only reads that file). In
 menus and lobbies it does not search at all. While an event runs without a race found
-yet, it searches at most every 10 seconds.
+yet, it waits 10 seconds after each search before the next.
+
+When you spectate, the race is there but has no local player, and the HUD stays hidden.
+TurboHUD then remembers that race and looks at it once a second, which sees you join it,
+and searches again only once a minute (in case that race was an old one).
 
 When you host an online race with other players, TSU runs the server inside your game,
 and the race is found the normal way, with no search.
@@ -226,8 +258,9 @@ gives no control over the car.
 
 ## Limits and what is not checked yet
 
-- Live data on Linux only. Windows and macOS need their own way to read the game's
-  memory.
+- No live data on Windows yet: its reader (`turbohud/tsu/winmemory.py`) is not used by
+  the app there. On macOS the throttle and brake bars move in TSU's thirds, as the pad's
+  triggers are read only on Linux.
 - In online races where your game is a client (joining someone else's server, or
   hosting with only AI drivers), the game keeps no car positions where the offline
   race has them. TurboHUD takes them from the game's replay recorder instead (TSU
@@ -248,6 +281,9 @@ gives no control over the car.
 |---|---|
 | `turbohud/tsu/probe.py` | the probe: starts TSU, serves read-only questions |
 | `turbohud/tsu/client.py` | talks to the probe, reads the race in a background thread |
+| `turbohud/tsu/bottle.py` | macOS: finds TSU's bottle, starts the reader, asks it over the pipe |
+| `turbohud/tsu/bottle_reader.py` | macOS: the read-only reader inside the bottle |
+| `turbohud/tsu/winmemory.py` | reading TSU as a Windows program: regions, page cache, paced search |
 | `turbohud/tsu/gamelog.py` | reads TSU's log to know whether an event runs |
 | `turbohud/tsu/controller.py` | reads the gamepad's triggers |
 | `turbohud/core/il2cpp.py` | finds classes and fields by name in an IL2CPP game |

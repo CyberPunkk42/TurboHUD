@@ -85,9 +85,10 @@ def connect(path=None):
 class LiveRace:
     """Reads the race in a background thread; `snapshot()` gives the latest result."""
 
-    def __init__(self, connect=connect, clock=time.monotonic):
+    def __init__(self, connect=connect, clock=time.monotonic, close=None):
         self._connect = connect
         self._clock = clock
+        self._close = close  # what stays open between connects, to end at stop()
         self._lock = threading.Lock()
         self._snapshot = Snapshot()
         self._stop = threading.Event()
@@ -107,6 +108,8 @@ class LiveRace:
         if self._thread is not None:
             self._thread.join(timeout=2)
         self._drop()
+        if self._close is not None:
+            self._close()
 
     def _set(self, snapshot):
         with self._lock:
