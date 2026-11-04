@@ -859,6 +859,40 @@ class CarTests(unittest.TestCase):
         self.assertEqual(reader.game.searches, 2)
         self.assertIsNone(reader._spectated)
 
+    def test_the_log_says_how_a_search_went(self):
+        now = [100.0]
+        reader = build(
+            [10_000], laps_completed=0, clock=20_000, limit=0, name='A', online=True, clock_fn=lambda: now[0]
+        )
+        find = reader.il.memory.find_pointers
+
+        def slow(value):
+            now[0] += 12.0
+            return find(value)
+
+        reader.il.memory.find_pointers = slow
+        with self.assertLogs('turbohud.core.race', 'INFO') as logs:
+            reader.read()
+        self.assertIn('searching for the online race', logs.output[0])
+        self.assertIn('race found, after 12.0 s', logs.output[1])
+
+    def test_the_log_says_when_there_is_only_a_race_to_watch(self):
+        reader = self.spectated([100.0])
+        with self.assertLogs('turbohud.core.race', 'INFO') as logs, self.assertRaises(race.NotFound):
+            reader.read()
+        self.assertIn('a race to watch', logs.output[1])
+
+    def test_the_log_says_when_a_search_failed(self):
+        reader = self.spectated([100.0])
+
+        def broken(_value):
+            raise OSError('the reader has ended')
+
+        reader.il.memory.find_pointers = broken
+        with self.assertLogs('turbohud.core.race', 'INFO') as logs, self.assertRaises(OSError):
+            reader.read()
+        self.assertIn('stopped by an error', logs.output[1])
+
     def test_the_wait_counts_from_the_end_of_a_long_search(self):
         now = [100.0]
         reader = build(
@@ -1251,6 +1285,65 @@ class LiveRaceTests(unittest.TestCase):
         live.step()
         self.assertEqual(live.snapshot().status, race.WAITING_FOR_RACE)
         self.assertEqual(len(calls), 1)
+
+    def reading(self, durations):
+        """A LiveRace whose reader takes these many seconds, one read after another."""
+        durations = iter(durations)
+        tester = self
+
+        class Reader:
+            def read(self):
+                tester.now += next(durations)
+                return race.LapState(1000, 0, 0, 13, [0])
+
+        return self.live(lambda: (Reader(), None))
+
+    def test_the_log_says_how_long_race_reads_take(self):
+        live = self.reading([9.0, 0.01, 0.02, 0.06])  # the first also finds the race
+        with self.assertLogs('turbohud.tsu.client', 'INFO') as logs:
+            for _ in range(4):
+                live.step()
+                self.now += 15.0
+        line = next(m for m in logs.output if 'race reads' in m)
+        self.assertIn('3 in 30 s', line)
+        self.assertIn('median 20.0 ms', line)
+        self.assertIn('slowest 60.0 ms', line)
+        self.assertIn('1 over 50 ms', line)
+
+    def test_no_line_between_the_times(self):
+        live = self.reading([0.01, 0.01, 0.01])
+        live.step()  # the status line comes with the first read
+        live.step()
+        with self.assertNoLogs('turbohud.tsu.client', 'INFO'):
+            live.step()
+
+    def test_the_last_reads_are_logged_when_the_race_ends(self):
+        lap = race.LapState(1000, 0, 0, 13, [0])
+        results = iter([lap, lap, il.NotFound('m_activeServer is null')])
+
+        class Reader:
+            def read(self):
+                result = next(results)
+                if isinstance(result, Exception):
+                    raise result
+                return result
+
+        live = self.live(lambda: (Reader(), None))
+        with self.assertLogs('turbohud.tsu.client', 'INFO') as logs:
+            for _ in range(3):
+                live.step()
+        self.assertTrue(any('race reads: 1 in' in m for m in logs.output))
+
+    def test_failed_reads_do_not_count(self):
+        class Reader:
+            def read(self):
+                raise il.NotFound('m_activeServer is null')
+
+        live = self.live(lambda: (Reader(), None))
+        with self.assertLogs('turbohud.tsu.client', 'INFO') as logs:
+            live.step()
+            live.stop()
+        self.assertFalse(any('race reads' in m for m in logs.output))
 
     def test_racing_notices_whether_the_clock_moves(self):
         clocks = iter([1000, 1200, 1200])

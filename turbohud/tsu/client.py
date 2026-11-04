@@ -7,6 +7,7 @@ overlay never waits for the game. Everything here only reads.
 
 import logging
 import socket
+import statistics
 import struct
 import threading
 import time
@@ -20,6 +21,7 @@ from turbohud.tsu.probe import receive_message, send_message, socket_path
 READ_INTERVAL = 0.05  # seconds between reads in a race: the live delta updates 20 times a second
 WAIT_INTERVAL = 1.0  # seconds between tries while TSU or a race is not there
 TIMEOUT = 5.0  # seconds before a silent probe counts as gone
+TIMES_EVERY = 30.0  # seconds between the log's lines on how long race reads take
 # What the reader says while a session sets up its race (seen in drives): the race
 # objects are not there yet. In the menu it says m_activeServer is null instead.
 STARTING_SIGNS = ('m_eventListener is null', 'm_eventState is null', 'no local player')
@@ -82,6 +84,37 @@ def connect(path=None):
         raise
 
 
+class ReadTimes:
+    """Logs how long race reads take every TIMES_EVERY seconds, so a drive leaves numbers
+    to go by when the HUD lagged. A read longer than READ_INTERVAL misses an update."""
+
+    def __init__(self, clock):
+        self._clock = clock
+        self._times = []
+        self._since = None
+
+    def add(self, seconds):
+        now = self._clock()
+        if self._since is None:
+            self._since = now - seconds
+        self._times.append(seconds)
+        if now - self._since >= TIMES_EVERY:
+            self.flush()
+
+    def flush(self):
+        if self._times:
+            log.info(
+                'race reads: %d in %.0f s, median %.1f ms, slowest %.1f ms, %d over %.0f ms',
+                len(self._times),
+                self._clock() - self._since,
+                statistics.median(self._times) * 1000,
+                max(self._times) * 1000,
+                sum(seconds > READ_INTERVAL for seconds in self._times),
+                READ_INTERVAL * 1000,
+            )
+        self._times, self._since = [], None
+
+
 class LiveRace:
     """Reads the race in a background thread; `snapshot()` gives the latest result."""
 
@@ -89,6 +122,7 @@ class LiveRace:
         self._connect = connect
         self._clock = clock
         self._close = close  # what stays open between connects, to end at stop()
+        self._times = ReadTimes(clock)
         self._lock = threading.Lock()
         self._snapshot = Snapshot()
         self._stop = threading.Event()
@@ -107,6 +141,7 @@ class LiveRace:
         self._stop.set()
         if self._thread is not None:
             self._thread.join(timeout=2)
+        self._times.flush()
         self._drop()
         if self._close is not None:
             self._close()
@@ -116,6 +151,8 @@ class LiveRace:
             old = self._snapshot
             self._snapshot = snapshot
         if old.status != snapshot.status:
+            if old.status == RACING:
+                self._times.flush()  # the race's last numbers, before what follows it
             log.info('TSU: %s%s', snapshot.status, f' ({snapshot.detail})' if snapshot.detail else '')
 
     def _drop(self):
@@ -128,7 +165,10 @@ class LiveRace:
         try:
             if self._reader is None:
                 self._reader, self._conn = self._connect()
+            started = self._clock()
             state = self._reader.read()
+            if self.snapshot().status == RACING:  # a race's first read also finds the race
+                self._times.add(self._clock() - started)
         except (NotFound, ReadError) as error:
             # In the menu (no session: no active server), or a session whose race is
             # being set up, or a pointer led nowhere between two states.

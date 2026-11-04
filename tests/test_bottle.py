@@ -344,6 +344,30 @@ class BottleTests(ReaderCase):
             bottle.connect()
         self.assertIsNone(bottle.pipe)
 
+    def test_the_log_says_how_long_a_start_took_and_when_it_closes(self):
+        now = [10.0]
+
+        def start(_name):
+            now[0] += 1.5
+            return self.reader()
+
+        bottle = self.bottle(start, clock=lambda: now[0])
+        with self.assertLogs('turbohud.tsu.bottle', 'INFO') as logs:
+            bottle._open()
+            bottle.close()
+            bottle.close()  # nothing left to close: no second line
+        self.assertIn('bottle Steam, started in 1.5 s', logs.output[0])
+        self.assertEqual(len(logs.output), 2)
+        self.assertIn('closing the reader', logs.output[1])
+
+    def test_the_log_says_why_a_reader_was_given_up(self):
+        pipe = self.reader(FakeProcess(alive=False), metadata_file=lambda: '/none')
+        bottle = self.bottle(lambda _name: pipe)
+        with self.assertLogs('turbohud.tsu.bottle', 'WARNING') as logs, self.assertRaises(OSError):
+            bottle.connect()
+        self.assertIn('the reader in the bottle failed', logs.output[0])
+        self.assertIsNone(bottle.pipe)
+
     def test_a_failed_start_is_not_tried_again_at_once(self):
         now = [0.0]
         starts = []

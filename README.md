@@ -108,7 +108,9 @@ When you only spectate, the HUD stays hidden: its sections are about your own ca
 TSU's bottle cannot be told apart from others, set `TURBOHUD_BOTTLE` to its name. The
 throttle and brake bars move in TSU's own steps (thirds) on the Mac, as the pad's
 triggers are read only on Linux. The reader's errors are in `bottle_reader.log`, next to
-`turbohud.log`.
+`turbohud.log`. If the HUD lags or TSU stutters, `turbohud.log` shows how long the race
+reads took and when each search ran; it is replaced at the next start, so look before
+starting TurboHUD again.
 
 ## Use
 

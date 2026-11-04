@@ -477,3 +477,9 @@ its "Recent changes".
   (which sees the player join) and searched again once a minute. Measured live: one search
   and then 18 looks of about 6 ms in 75 s. The built app ran 60 s against that session and
   quit cleanly. Not yet seen in a race on the Mac.
+- 2026-11-04: Numbers in `turbohud.log` for test drives (asked for by the user before the
+  first Mac race; every system). Every 30 s in a race, and when it ends: how many race
+  reads, their median and slowest time, and how many took over 50 ms. Each search for an
+  online race: when it started, how long it took, how many hits and what it found. The
+  reader in the bottle: how long it took to start, why it was given up, when it closes.
+  No names or IDs.

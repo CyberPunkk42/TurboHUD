@@ -58,6 +58,12 @@ See `docs/IMPROVEMENT_BACKLOG.md`. In short:
 4. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-04: Numbers in `turbohud.log` for test drives (asked for by the user before the
+  first Mac race; every system). Every 30 s in a race, and when it ends: how many race
+  reads, their median and slowest time, and how many took over 50 ms. Each search for an
+  online race: when it started, how long it took, how many hits and what it found. The
+  reader in the bottle: how long it took to start, why it was given up, when it closes.
+  No names or IDs.
 - 2026-11-04: macOS live race data. TurboHUD on the Mac now finds TSU in CrossOver and
   starts a read-only reader in its bottle with a portable Windows Python
   (`turbohud/tsu/bottle.py`, `bottle_reader.py`), asked over a pipe; no setup, nothing

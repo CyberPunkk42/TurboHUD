@@ -259,6 +259,7 @@ class Bottle:
             raise OSError('TSU is not running in CrossOver')
         if self.failed is not None and self.clock() < self.failed[0]:
             raise OSError(self.failed[1])
+        started = self.clock()
         try:
             bottle = self.bottle_of(pid)
             pipe = self.start(bottle)
@@ -273,7 +274,11 @@ class Bottle:
             log.warning('the reader in the bottle did not start: %s', error)
             self.failed = self.clock() + RETRY_START, str(error)
             raise
-        log.info('reading TSU through a reader in the CrossOver bottle %s', bottle)
+        log.info(
+            'reading TSU through a reader in the CrossOver bottle %s, started in %.1f s',
+            bottle,
+            self.clock() - started,
+        )
         self.failed = None
         self.pipe = pipe
         return pipe
@@ -295,11 +300,13 @@ class Bottle:
             return CachedReader(reader, cache), self
         except (NotFound, ReadError):
             raise  # the game is loading: the same reader tries again
-        except BaseException:
+        except BaseException as error:
+            log.warning('the reader in the bottle failed: %s', error)
             self.close()
             raise
 
     def close(self):
         if self.pipe is not None:
+            log.info('closing the reader in the bottle')
             self.pipe.close()
             self.pipe = None

@@ -244,7 +244,9 @@ effect for the probe the next time TSU is started.
   other cars on the track map
 - `tracks/`: the track map's learnt tracks, one small file per track (the line it
   draws, and the start line), named from the track's checkpoint lines
-- `turbohud.log`: what TurboHUD did in this run (replaced at each start)
+- `turbohud.log`: what TurboHUD did in this run (replaced at each start), with numbers to
+  go by if the HUD lags: every 30 s in a race how long its reads took, and when each
+  search for an online race ran and what it found. No names or IDs of players.
 - `memory_probe.log`: written by the probe: the game it found, errors
 
 It writes nothing into the game's folders and changes nothing in the system.

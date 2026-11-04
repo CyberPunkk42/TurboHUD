@@ -23,6 +23,7 @@ against the game's own lap times on 2026-11-01: they match exactly.
 import dataclasses
 import functools
 import itertools
+import logging
 import math
 import struct
 import sys
@@ -32,6 +33,8 @@ from dataclasses import dataclass
 from turbohud.core.flags import flag_code, flag_text
 from turbohud.core.hud import Row, blend, clock, local_time_rows
 from turbohud.core.il2cpp import ARRAY_DATA, ARRAY_LENGTH, LIST_ITEMS, SIMPLE_TYPES, NotFound, ReadError
+
+log = logging.getLogger(__name__)
 
 UNITS_PER_SECOND = 10_000
 # EventState.times: ticks, time, ..., time limit (int32 each).
@@ -535,21 +538,28 @@ class LapReader:
         if self._client_class is None:
             self._client_class = il.find_class('TS', 'ClientEventController')
         spectated = None
+        started, hits, result = self._clock(), 0, 'stopped by an error'
+        log.info('searching for the online race')
         try:
             for candidate in find(self._client_class):
+                hits += 1
                 try:
                     state, driving = self._race_of(candidate)
                 except (NotFound, OSError):
                     continue  # a freed controller of an earlier race
                 if driving:
                     self._controller, self._spectated = candidate, None
+                    result = 'race found'
                     return state
                 spectated = spectated or candidate
+            result = 'a race to watch, no local player' if spectated else 'no race'
         finally:
             # Counted from the search's end: in a CrossOver bottle a search of all the
             # data takes longer than the wait, and would start again at once.
             wait = CLIENT_SPECTATE_EVERY if spectated else CLIENT_SEARCH_EVERY
-            self._next_search = self._clock() + wait
+            ended = self._clock()
+            self._next_search = ended + wait
+            log.info('search: %s, after %.1f s and %d hits', result, ended - started, hits)
         self._spectated = spectated
         raise error
 
