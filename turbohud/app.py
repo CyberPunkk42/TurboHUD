@@ -8,6 +8,7 @@ import signal
 import sys
 import time
 from dataclasses import replace
+from functools import partial
 from pathlib import Path
 
 from turbohud import __version__
@@ -15,10 +16,12 @@ from turbohud.core.hud import CLOCK_SECTIONS, RACE_SECTIONS, tight_place
 from turbohud.core.settings import (
     LAYOUT_VERSION,
     LOG_FILE,
+    PRESETS,
     SETTINGS_FILE,
     SectionPlace,
     fit_on_screens,
     load_settings,
+    preset_places,
     save_settings,
     settings_dir,
 )
@@ -79,6 +82,9 @@ def parse_args(argv):
     commands.add_argument('--lock', action='store_true', help='end a running TurboHUD\'s move mode')
     commands.add_argument(
         '--settings', action='store_true', help='open a running TurboHUD\'s settings window'
+    )
+    commands.add_argument(
+        '--preset', type=int, choices=PRESETS, help='load a layout preset in a running TurboHUD'
     )
     commands.add_argument('--quit', action='store_true', help='quit a running TurboHUD')
     parser.add_argument('--seconds', type=float, help='quit after this many seconds (for tests)')
@@ -184,7 +190,7 @@ def run(args, folder):
         session_rows,
     )
     from turbohud.hud.painter import text_ink
-    from turbohud.overlay import HOTKEY_LOCK, HOTKEY_QUIT, choose_platform, native_for
+    from turbohud.overlay import HOTKEY_LOCK, HOTKEY_PRESETS, HOTKEY_QUIT, choose_platform, native_for
     from turbohud.overlay.settings_window import SettingsWindow
     from turbohud.overlay.window import MovePanel, SectionWindow, window_flags
 
@@ -289,6 +295,9 @@ def run(args, folder):
             x, y, width, height = window.placement()
             places[name] = SectionPlace(x, y, width, height, window.wanted, window.group)
         settings = replace(settings, sections=places)
+        write_settings()
+
+    def write_settings():
         try:
             save_settings(path, settings)
         except OSError as error:
@@ -449,6 +458,39 @@ def run(args, folder):
         windows[name].set_wanted(wanted)
         log.info('section %s %s', name, 'shown' if wanted else 'hidden')
 
+    def save_preset(number):
+        """Keep the layout as it is now in a preset, and in the settings as well."""
+        nonlocal settings
+        save()
+        presets = {**settings.presets, number: {name: settings.sections[name] for name in windows}}
+        settings = replace(settings, presets=presets)
+        write_settings()
+        panel.set_preset_saved(number)
+        log.info('preset %d saved', number)
+
+    def load_preset(number):
+        """Put every section as the preset has it. What the desktop reports may lag behind
+        the move (Wayland), so the settings take the preset's places, not what it says."""
+        nonlocal settings
+        places = preset_places(settings.presets.get(number, {}), windows, screens)
+        if not places:
+            log.info('preset %d is empty', number)
+            return
+        until = time.monotonic() + 1.0
+        for name, place in places.items():
+            window = windows[name]
+            box = (place.x, place.y, place.width, place.height)
+            move_window(window, box, settle=True)
+            mover.known[name] = box  # TurboHUD moved it: its group stays where it is
+            mover.pending[name] = (box[:2], until)
+            window.set_wanted(place.visible)
+            window.group = place.group
+            panel.set_wanted(name, place.visible)
+            panel.set_group(name, place.group)
+        settings = replace(settings, sections={**settings.sections, **places})
+        write_settings()
+        log.info('preset %d loaded', number)
+
     # Tray icon (menu bar on the Mac): the way to move mode where there are no shortcuts.
     tray = QSystemTrayIcon(icon)
     tray.setToolTip('TurboHUD')
@@ -490,6 +532,10 @@ def run(args, folder):
         elif number == HOTKEY_QUIT:
             log.info('Ctrl+Shift+Q pressed')
             QTimer.singleShot(0, app.quit)
+        elif number in HOTKEY_PRESETS:
+            preset = HOTKEY_PRESETS[number]
+            log.info('Ctrl+Shift+%d pressed', preset)
+            QTimer.singleShot(0, lambda: load_preset(preset))
 
     shortcuts = native.register_hotkeys(on_hotkey)
     log.info('Ctrl+Shift+L and Ctrl+Shift+Q registered' if shortcuts else 'no system-wide shortcuts')
@@ -503,10 +549,14 @@ def run(args, folder):
             'lock': lambda: set_locked(True),
             'settings': open_settings,
             'quit': app.quit,
+            **{f'preset{number}': partial(load_preset, number) for number in PRESETS},
         }
         action = actions.get(command)
         if action is None:
             return f'unknown command {command!r}'
+        for number in PRESETS:
+            if command == f'preset{number}' and number not in settings.presets:
+                return f'preset {number} is empty: save it first'
         log.info('command: %s', command)
         QTimer.singleShot(0, action)  # answer first, then act
         return 'ok'
@@ -521,7 +571,10 @@ def run(args, folder):
         settings.backdrop,
         commands,
         settings.map_others,
+        tuple(settings.presets),
     )
+    panel.preset_save_requested.connect(save_preset)
+    panel.preset_load_requested.connect(load_preset)
     panel.mph_changed.connect(set_mph)
     panel.backdrop_changed.connect(set_backdrop)
     panel.map_others_changed.connect(set_map_others)
@@ -615,7 +668,7 @@ def command_of(args):
     for name in ('toggle', 'lock', 'settings', 'quit'):
         if getattr(args, name):
             return name
-    return None
+    return f'preset{args.preset}' if args.preset else None
 
 
 def tell_running(args, send=None):

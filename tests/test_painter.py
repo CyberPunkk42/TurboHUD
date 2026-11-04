@@ -137,5 +137,54 @@ class RedrawTests(unittest.TestCase):
                     self.assertLessEqual(bottom, height - 2)
 
 
+class MovePanelPresetTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
+        from PySide6.QtWidgets import QApplication
+
+        cls.app = QApplication.instance() or QApplication([])
+
+    def panel(self, **options):
+        from turbohud.core.hud import RACE_SECTIONS
+        from turbohud.overlay.window import MovePanel
+
+        class Native:
+            def raise_window(self, window):
+                return 'test'
+
+        panel = MovePanel(Native(), RACE_SECTIONS, True, **options)
+        self.addCleanup(panel.close)
+        return panel
+
+    def button(self, panel, number, text):
+        from PySide6.QtWidgets import QPushButton
+
+        found = [
+            b for b in panel.findChildren(QPushButton) if b.text() == text and str(number) in b.toolTip()
+        ]
+        self.assertEqual(len(found), 1)
+        return found[0]
+
+    def test_only_a_saved_preset_can_be_loaded(self):
+        panel = self.panel(saved_presets=(2,))
+        self.assertFalse(self.button(panel, 1, 'Load').isEnabled())
+        self.assertTrue(self.button(panel, 2, 'Load').isEnabled())
+        panel.set_preset_saved(1)
+        self.assertTrue(self.button(panel, 1, 'Load').isEnabled())
+
+    def test_the_buttons_say_which_preset(self):
+        panel = self.panel(saved_presets=(1, 2, 3))
+        saved, loaded = [], []
+        panel.preset_save_requested.connect(saved.append)
+        panel.preset_load_requested.connect(loaded.append)
+        self.button(panel, 2, 'Save').click()
+        self.button(panel, 3, 'Load').click()
+        self.assertEqual((saved, loaded), ([2], [3]))
+
+    def test_load_names_its_shortcut_where_there_are_shortcuts(self):
+        self.assertIn('Ctrl+Shift+2', self.button(self.panel(), 2, 'Load').toolTip())
+
+
 if __name__ == '__main__':
     unittest.main()

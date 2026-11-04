@@ -42,7 +42,7 @@ from turbohud.core.hud import (
     tight_height,
 )
 from turbohud.core.race import CAR_LENGTH, CAR_WIDTH, RADAR_FROM, RADAR_FULL, Blip, RadarView
-from turbohud.core.settings import GROUPS
+from turbohud.core.settings import GROUPS, PRESETS
 from turbohud.core.trackmap import MapDot, TrackMapView, map_transform, outline_from_path, road_width
 from turbohud.hud.painter import (
     AHEAD_COLOR,
@@ -518,11 +518,21 @@ class MovePanel(QWidget):
     mph_changed = Signal(bool)
     backdrop_changed = Signal(bool)
     map_others_changed = Signal(bool)
+    preset_save_requested = Signal(int)  # the preset's number
+    preset_load_requested = Signal(int)
 
     focusable = True  # it takes clicks on its tick boxes and buttons
 
     def __init__(
-        self, native, sections, shortcuts, mph=False, backdrop=False, commands=False, map_others=False
+        self,
+        native,
+        sections,
+        shortcuts,
+        mph=False,
+        backdrop=False,
+        commands=False,
+        map_others=False,
+        saved_presets=(),
     ):
         super().__init__(None, window_flags())
         self.native = native
@@ -581,6 +591,26 @@ class MovePanel(QWidget):
         self.map_others.toggled.connect(self.map_others_changed)
         if any(section.drawing == 'map' for section in sections):
             column.addWidget(self.map_others)
+        presets = QGridLayout()
+        self.preset_loads = {}
+        for row_, number in enumerate(PRESETS):
+            presets.addWidget(QLabel(f'Preset {number}'), row_, 0)
+            save = QPushButton('Save')
+            save.setToolTip(f'Keep the layout as it is now in preset {number}, replacing what was there')
+            save.clicked.connect(lambda _checked=False, n=number: self.preset_save_requested.emit(n))
+            presets.addWidget(save, row_, 1)
+            load = QPushButton('Load')
+            load.setToolTip(
+                f'Put the sections as preset {number} has them, also with Ctrl+Shift+{number}'
+                if shortcuts
+                else f'Put the sections as preset {number} has them'
+            )
+            load.setEnabled(number in saved_presets)
+            load.clicked.connect(lambda _checked=False, n=number: self.preset_load_requested.emit(n))
+            presets.addWidget(load, row_, 2)
+            self.preset_loads[number] = load
+        presets.setColumnStretch(3, 1)
+        column.addLayout(presets)
         row = QHBoxLayout()
         lock = QPushButton('Lock')
         settings = QPushButton('Settings…')
@@ -621,6 +651,9 @@ class MovePanel(QWidget):
             self.backdrop.blockSignals(True)
             self.backdrop.setChecked(backdrop)
             self.backdrop.blockSignals(False)
+
+    def set_preset_saved(self, number):
+        self.preset_loads[number].setEnabled(True)
 
     def set_map_others(self, others):
         if self.map_others.isChecked() != others:

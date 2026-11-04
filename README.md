@@ -60,6 +60,7 @@ runs, you see:
    | `run_turbohud.sh --toggle` | move mode on or off |
    | `run_turbohud.sh --move` / `--lock` | move mode on / off |
    | `run_turbohud.sh --settings` | open the settings window |
+   | `run_turbohud.sh --preset 1` | load layout preset 1 (or 2, or 3) |
    | `run_turbohud.sh --quit` | quit TurboHUD |
 
    Starting TurboHUD again while it runs opens no second copy: it switches the running
@@ -155,6 +156,11 @@ starting TurboHUD again.
   shorter makes its text bigger or smaller; making it wider gives the text room (text
   only shrinks when the box is too narrow for it). A panel lets you show or hide each section, and **Lock** (or
   Ctrl+Shift+L again) ends move mode. On the Mac, clicking back into the game also locks.
+- **Layout presets**: the panel can keep three layouts: where each section sits, its size,
+  whether it shows, and its group. **Save** keeps the layout as it is now in that preset,
+  replacing what was there; **Load** puts the sections back as it has them. **Ctrl+Shift+1**,
+  **2** and **3** load one at any time, also during a race (Linux: `run_turbohud.sh --preset
+  1`, which a key can run). Colours and the other options stay as they are.
 - **Ctrl+Shift+Q** quits; the panel and the icon's menu have **Quit** as well. On Linux
   there are no shortcuts: use the icon, or `run_turbohud.sh --toggle` / `--quit` (see
   Linux above).

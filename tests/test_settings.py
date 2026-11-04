@@ -157,6 +157,49 @@ class FitOnScreensTests(unittest.TestCase):
         self.assertEqual(s.fit_on_screens((4000, 40, 420, 150), []), (4000, 40, 420, 150))
 
 
+class PresetTests(unittest.TestCase):
+    PLACE = s.SectionPlace(10, 20, 300, 40, visible=False, group='B')
+
+    def path(self):
+        return Path(tempfile.mkdtemp()) / 's.json'
+
+    def test_presets_round_trip_and_start_empty(self):
+        path = self.path()
+        kept = s.Settings(presets={2: {'lap': self.PLACE}})
+        s.save_settings(path, kept)
+        self.assertEqual(s.load_settings(path).presets, {2: {'lap': self.PLACE}})
+        self.assertEqual(s.Settings().presets, {})
+
+    def test_a_file_from_before_presets_has_none(self):
+        path = self.path()
+        path.write_text('{"sections": {}}')
+        self.assertEqual(s.load_settings(path).presets, {})
+
+    def test_broken_presets_are_left_out(self):
+        path = self.path()
+        good = {'x': 1, 'y': 2, 'width': 30, 'height': 40}
+        path.write_text(
+            json.dumps({'presets': {'1': 'broken', '2': {}, '3': {'lap': good}, '9': {'lap': good}}})
+        )
+        self.assertEqual(list(s.load_settings(path).presets), [3])
+        path.write_text('{"presets": []}')
+        self.assertEqual(s.load_settings(path).presets, {})
+
+    def test_a_preset_keeps_what_shows_and_the_group(self):
+        places = s.preset_places({'lap': self.PLACE}, ['lap'], [(0, 0, 1920, 1080)])
+        self.assertEqual(places['lap'], self.PLACE)
+
+    def test_a_section_the_preset_does_not_have_stays_out_of_it(self):
+        preset = {'lap': self.PLACE, 'clock': self.PLACE}
+        self.assertEqual(list(s.preset_places(preset, ['lap', 'speed'], [])), ['lap'])
+
+    def test_a_section_off_every_screen_comes_back_at_its_size(self):
+        off = s.SectionPlace(5000, 20, 300, 40)
+        place = s.preset_places({'lap': off}, ['lap'], [(0, 0, 1920, 1080)])['lap']
+        self.assertEqual((place.x, place.y), s.DEFAULT_PLACEMENT[:2])
+        self.assertEqual((place.width, place.height), (300, 40))
+
+
 if __name__ == '__main__':
     unittest.main()
 

@@ -34,6 +34,7 @@ class Theme:
 
 
 GROUPS = ('A', 'B', 'C', 'D')  # section groups; '' is none
+PRESETS = (1, 2, 3)  # the layouts a player can keep
 
 
 @dataclass(frozen=True)
@@ -57,6 +58,7 @@ class Settings:
     backdrop: bool = False  # a light tint behind each section's text while locked
     map_others: bool = False  # the track map also shows the other cars, as faint grey dots
     layout_version: int = 1  # how to read the section sizes: LAYOUT_VERSION is the latest
+    presets: dict = field(default_factory=dict)  # number (one of PRESETS) -> a kept `sections`
 
 
 def settings_dir(platform=sys.platform, environ=None, home=None):
@@ -88,6 +90,19 @@ def fit_on_screens(placement, screens):
         return placement
     sx, sy = max(screens, key=lambda s: s[2] * s[3])[:2]
     return (sx + DEFAULT_PLACEMENT[0], sy + DEFAULT_PLACEMENT[1], width, height)
+
+
+def preset_places(preset, names, screens):
+    """{name: SectionPlace} to load from `preset`, for the sections in `names`: each on a
+    screen (see fit_on_screens). A section the preset does not have stays out of it."""
+    places = {}
+    for name in names:
+        place = preset.get(name)
+        if place is not None:
+            box = (place.x, place.y, place.width, place.height)
+            x, y, width, height = fit_on_screens(box, screens)
+            places[name] = replace(place, x=x, y=y, width=width, height=height)
+    return places
 
 
 def _color(value, default):
@@ -138,6 +153,28 @@ def _sections(data):
     return places
 
 
+def _presets(data):
+    """{number: sections} from the file; an empty or unknown preset is left out."""
+    if not isinstance(data, dict):
+        return {}
+    kept = {number: _sections(data.get(str(number))) for number in PRESETS}
+    return {number: sections for number, sections in kept.items() if sections}
+
+
+def _section_data(sections):
+    return {
+        name: {
+            'x': place.x,
+            'y': place.y,
+            'width': place.width,
+            'height': place.height,
+            'visible': place.visible,
+            'group': place.group,
+        }
+        for name, place in sections.items()
+    }
+
+
 def _layout_version(value):
     return value if isinstance(value, int) and not isinstance(value, bool) and value >= 1 else 1
 
@@ -157,6 +194,7 @@ def load_settings(path):
         backdrop=data.get('backdrop') is True,
         map_others=data.get('map_others') is True,
         layout_version=_layout_version(data.get('layout_version')),
+        presets=_presets(data.get('presets')),
     )
 
 
@@ -177,17 +215,8 @@ def save_settings(path, settings):
         'backdrop': settings.backdrop,
         'map_others': settings.map_others,
         'layout_version': settings.layout_version,
-        'sections': {
-            name: {
-                'x': place.x,
-                'y': place.y,
-                'width': place.width,
-                'height': place.height,
-                'visible': place.visible,
-                'group': place.group,
-            }
-            for name, place in settings.sections.items()
-        },
+        'sections': _section_data(settings.sections),
+        'presets': {str(number): _section_data(kept) for number, kept in settings.presets.items()},
     }
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_name(path.name + '.tmp')
