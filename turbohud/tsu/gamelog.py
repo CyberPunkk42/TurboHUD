@@ -1,9 +1,11 @@
 """Whether TSU has an event running, from its own log (Linux).
 
-TSU writes a text log per start into its data folder, `Logs/log.<date>.<time>.txt`,
-as things happen: "<time>: Event started." when a race (or hotlap) begins, "<time>:
-Event ended." when it is over. TurboHUD only reads it, to know when a search of the
-game's memory for an online race is worth it; it never writes to the game's folders.
+TSU writes a text log into its data folder as things happen: "<time>: Event started."
+when a race (or hotlap) begins, "<time>: Event ended." when it is over. The running game
+keeps it in `log.txt`; dated copies are in `Logs/log.<date>.<time>.txt`, and a run may have
+none yet (seen in CrossOver: `Logs` still ended with the last run's "Event ended" four
+minutes into a new event). TurboHUD only reads them, to know when a search of the game's
+memory for an online race is worth it; it never writes to the game's folders.
 """
 
 import time
@@ -20,7 +22,8 @@ def tsu_data(home=None):
 
 def newest_log(folder):
     """The most recently written log of any account, or None."""
-    logs = list(Path(folder).glob('*/Logs/log.*.txt'))
+    folder = Path(folder)
+    logs = [*folder.glob('*/log.txt'), *folder.glob('*/Logs/log.*.txt')]
     return max(logs, key=lambda path: path.stat().st_mtime, default=None)
 
 

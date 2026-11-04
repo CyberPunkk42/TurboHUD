@@ -42,5 +42,23 @@ class EventLogTests(unittest.TestCase):
             handle.write('Event started.\n')
         self.assertTrue(log.running())  # read again once it changed
 
+    def test_the_running_games_log_counts_over_an_older_copy(self):
+        # A new run with no dated copy yet: `Logs` still says the last event ended.
+        self.write('log.20261101.210000.txt', 'Event started.\nEvent ended.\n', age=3600)
+        (self.folder / ID / 'log.txt').write_text('Event started.\n')
+        self.assertTrue(self.log().running())
+
+    def test_a_newer_copy_counts_over_an_older_running_log(self):
+        live = self.folder / ID / 'log.txt'
+        live.write_text('Event started.\n')
+        stamp = time.time() - 3600
+        os.utime(live, (stamp, stamp))
+        self.write('log.20261101.210000.txt', 'Event started.\nEvent ended.\n')
+        self.assertFalse(self.log().running())
+
+    def test_the_log_beside_the_accounts_is_not_a_players(self):
+        (self.folder / 'log.txt').write_text('Event started.\n')
+        self.assertIsNone(self.log().running())
+
     def test_no_log_is_not_known(self):
         self.assertIsNone(gamelog.EventLog(Path(tempfile.mkdtemp())).running())
