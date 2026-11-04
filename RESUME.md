@@ -58,6 +58,12 @@ See `docs/IMPROVEMENT_BACKLOG.md`. In short:
 4. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-05: Shortening a text section below its normal height first closes the box in
+  on the text, which keeps its size; only a box that fits it tightly makes it smaller
+  (asked for by the user: local time shrank with the edges still far from it). Above the
+  normal height, the height still sets the text's size, so an enlarged section still
+  shrinks at once down to normal size. A section's name shows in move mode only where it
+  fits. The shortest text box is now 10 px, as a shorter one could not be grabbed.
 - 2026-11-05: The speed stays centred between its pedal bars, across and down, when the
   section is resized (it kept to the left and the top while the bars stayed at the edges).
   Digits count as zeros for this, so the text does not shake as the speed changes. Reported

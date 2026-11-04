@@ -51,6 +51,50 @@ class CentredTextTests(unittest.TestCase):
         self.assertEqual(self.place((100, 60), least_left=28)[0], 28)
 
 
+def ink(_text, size):
+    """A stand-in for Qt's letters: as tall as 0.7 of the font size, nothing below."""
+    return size * 0.7, 0
+
+
+class ShrinkingTests(unittest.TestCase):
+    TIME: ClassVar = next(section for section in hud.RACE_SECTIONS if section.name == 'localtime')
+    FUEL: ClassVar = next(section for section in hud.RACE_SECTIONS if section.name == 'fuel')
+
+    def test_a_tight_box_fits_closely_round_the_text(self):
+        # A 20 px font: from 20 to 34, and 3 px of room at each edge.
+        self.assertEqual(hud.ink_span(self.TIME, 1.0, ink), (20.0, 34))
+        self.assertEqual(hud.tight_height(self.TIME, 1.0, ink), 20)
+
+    def test_a_tight_box_includes_the_level_bar(self):
+        self.assertEqual(hud.ink_span(self.FUEL, 1.0, ink), (20.0, 49))
+
+    def test_the_text_keeps_its_size_until_the_box_is_tight(self):
+        for height in (62, 50, 30, 20):
+            with self.subTest(height=height):
+                self.assertEqual(hud.section_scale((500, height), 62, tight=20), 1.0)
+
+    def test_then_it_shrinks_with_the_box(self):
+        self.assertEqual(hud.section_scale((500, 15), 62, tight=20), 0.75)
+        self.assertEqual(hud.section_scale((500, 1), 62, tight=20), 0.3)
+
+    def test_taller_still_makes_it_bigger(self):
+        self.assertEqual(hud.section_scale((500, 124), 62, tight=20), 2.0)
+
+    def test_a_narrow_box_still_shrinks_the_text(self):
+        self.assertEqual(hud.section_scale((50, 40), 62, needed_width=100, tight=20), 0.5)
+
+    def test_the_text_moves_up_evenly_as_the_box_closes_in(self):
+        def shift(height, scale=1.0):
+            return hud.shrink_shift(self.TIME, height, 62, 20, scale, ink)
+
+        self.assertEqual(shift(100), 0)
+        self.assertEqual(shift(62), 0)
+        self.assertEqual(shift(41), -8)  # half way, half of the 17 px
+        self.assertEqual(shift(20), -17)  # 3 px are left above the digits
+        # Smaller still: the room above stays in step with the text.
+        self.assertEqual(shift(10, 0.5), -8)
+
+
 class NewSectionPlaceTests(unittest.TestCase):
     def test_new_sections_go_below_the_placed_ones(self):
         placed = {'lap': (2000, 100, 200, 40), 'delta': (2500, 900, 300, 60)}

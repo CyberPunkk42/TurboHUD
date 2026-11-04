@@ -150,9 +150,11 @@ starting TurboHUD again.
   one of them then moves the whole group; the others follow a moment later.
 - **Ctrl+Shift+L** (or **Move mode** in the TurboHUD icon's menu) switches to **move
   mode**: every section gets a blue tint and its name. Drag a section anywhere, for
-  example to the edges of a wide screen. At its bottom-right corner, making it taller or
-  shorter makes its text bigger or smaller; making it wider gives the text room (text
-  only shrinks when the box is too narrow for it). A panel lets you show or hide each section, and **Lock** (or
+  example to the edges of a wide screen. At its bottom-right corner, making it taller
+  makes its text bigger. Making it shorter makes the text smaller down to its normal
+  size; from there the box first closes in on the text, and only a box that fits it
+  tightly makes it smaller still. Making it wider gives the text room (text only shrinks
+  when the box is too narrow for it). A panel lets you show or hide each section, and **Lock** (or
   Ctrl+Shift+L again) ends move mode. On the Mac, clicking back into the game also locks.
 - **Ctrl+Shift+Q** quits; the panel and the icon's menu have **Quit** as well. On Linux
   there are no shortcuts: use the icon, or `run_turbohud.sh --toggle` / `--quit` (see

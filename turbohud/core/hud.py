@@ -346,13 +346,63 @@ def pedal_bars(width, height, scale, throttle, brake, inset=4):
     ]
 
 
-def section_scale(size, base_height, needed_width=None, low=0.3, high=8.0):
-    """How much a section of `size` scales its content: the box's height sets it, so
-    resizing taller or shorter makes the text bigger or smaller. `needed_width` is how
-    wide the content is at scale 1; it only shrinks further if the box is too narrow
-    for it, so the text never sticks out."""
+TIGHT_PAD = 3  # room between a box's edge and its text when the box fits tightly, at scale 1
+
+
+def ink_span(section, scale, ink):
+    """(top, bottom) of what a text section draws, from its box's top, in pixels: from
+    the top of its first letters to the bottom of its last, or of its level bar. Taken
+    from its tallest sample, so that it stays put as the text changes. `ink(text, size)`
+    gives how far a text reaches (above, below) its baseline."""
+    sizes = Sizes.for_scale(scale)
+    laid_out = [_content(rows, sizes) for rows in section.samples]
+    lines, bottom_baseline = max(laid_out, key=lambda content: content[1])
+
+    def whole(line):
+        return line.text + line.tail + line.middle + line.right
+
+    top = lines[0].baseline - ink(whole(lines[0]), lines[0].size)[0]
+    if section.level:
+        content_height = bottom_baseline + sizes.margin
+        return top, content_height - sizes.margin // 2 + max(level_space(scale), 2)
+    return top, lines[-1].baseline + ink(whole(lines[-1]), lines[-1].size)[1]
+
+
+def tight_pad(scale):
+    return max(1, round(TIGHT_PAD * scale))
+
+
+def tight_height(section, scale, ink):
+    """The height at which a text section's box fits closely round its content: going
+    shorter than this is what makes the text smaller."""
+    top, bottom = ink_span(section, scale, ink)
+    return round(bottom - top + 2 * tight_pad(scale))
+
+
+def shrink_shift(section, height, base_height, tight, scale, ink):
+    """How far to move a section's content down (negative: up) in a box of `height`, so
+    that it stays inside as the box closes in on it. Nothing at the normal height and
+    above; below it, the room above the content goes evenly down to a tight fit, so the
+    content never jumps."""
+    if height >= base_height:
+        return 0
+    share = max(height - tight, 0) / max(base_height - tight, 1)
+    return round((share - 1) * (ink_span(section, scale, ink)[0] - tight_pad(scale)))
+
+
+def section_scale(size, base_height, needed_width=None, low=0.3, high=8.0, tight=None):
+    """How much a section of `size` scales its content. Above its normal height the box's
+    height sets it. Shorter than that the text keeps its size while the box closes in on
+    it, down to `tight` (see tight_height); only then does it get smaller. Without
+    `tight`, the height sets it all the way down. `needed_width` is how wide the content
+    is at scale 1; it only shrinks further if the box is too narrow for it, so the text
+    never sticks out."""
     width, height = size
-    scale = min(max(height / base_height, low), high)
+    if height >= base_height or tight is None:
+        scale = height / base_height
+    else:
+        scale = min(height / tight, 1.0)
+    scale = min(max(scale, low), high)
     if needed_width and needed_width * scale > width:
         scale = max(width / needed_width, low)
     return scale

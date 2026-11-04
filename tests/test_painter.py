@@ -65,7 +65,7 @@ class RedrawTests(unittest.TestCase):
         self.assertTrue(window.show_content(window.rows, level=(0.5, 'ahead')))
         self.assertEqual(window.level, (0.5, 'ahead'))
 
-    def text_box(self, name, rows, size_share):
+    def text_box(self, name, rows, size_share=1.0, height=None):
         """(left, top, right, bottom) of the bright pixels in a section at that share of
         its size, and the window's size: the text is white, the pedal bars are not, and
         text this small has hardly a pixel of its exact colour."""
@@ -80,7 +80,7 @@ class RedrawTests(unittest.TestCase):
         section = next(section for section in RACE_SECTIONS if section.name == name)
         window = SectionWindow(Native(), Theme(), section)
         self.addCleanup(window.close)
-        window.resize(window.base[0], round(window.base[1] * size_share))
+        window.resize(window.base[0], height or round(window.base[1] * size_share))
         window.show_content(rows)
         image = window.grab().toImage()
         found = [
@@ -97,8 +97,9 @@ class RedrawTests(unittest.TestCase):
 
         for share in (1.0, 0.6, 0.35):
             with self.subTest(share=share):
+                # Digits only: it centres on their height.
                 (left, top, right, bottom), (width, height) = self.text_box(
-                    'speed', [Row('000 km/h', 'medium')], share
+                    'speed', [Row('000', 'medium')], share
                 )
                 self.assertLessEqual(abs(left - (width - 1 - right)), 3)
                 self.assertLessEqual(abs(top - (height - 1 - bottom)), 3)
@@ -107,7 +108,37 @@ class RedrawTests(unittest.TestCase):
         from turbohud.core.hud import MARGIN, Row
 
         (left, _top, _right, _bottom), _size = self.text_box('localtime', [Row('12:34', 'medium')], 0.5)
-        self.assertLessEqual(left, MARGIN)
+        self.assertLessEqual(left, MARGIN + 3)
+
+    def test_the_text_keeps_its_size_while_the_box_closes_in(self):
+        from turbohud.core.hud import Row
+
+        rows = [Row('12:34', 'medium')]
+
+        def tall(share):
+            (_left, top, _right, bottom), _size = self.text_box('localtime', rows, share)
+            return bottom - top
+
+        self.assertEqual(tall(0.8), tall(1.0))
+        self.assertEqual(tall(0.5), tall(1.0))
+        self.assertLess(tall(0.2), tall(1.0))
+
+    def test_every_text_section_stays_inside_a_tight_box(self):
+        from turbohud.core.hud import RACE_SECTIONS, tight_height
+        from turbohud.core.settings import Theme
+        from turbohud.hud.painter import text_ink
+
+        for section in RACE_SECTIONS:
+            if section.bar:
+                continue
+            with self.subTest(section=section.name):
+                tight = tight_height(section, Theme().scale, text_ink)
+                (_left, top, _right, bottom), (_width, height) = self.text_box(
+                    section.name, list(section.samples[0]), height=tight
+                )
+                self.assertEqual(height, tight)
+                self.assertGreaterEqual(top, 1)
+                self.assertLessEqual(bottom, height - 2)
 
 
 if __name__ == '__main__':

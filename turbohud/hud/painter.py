@@ -73,6 +73,13 @@ def cap_height(size):
     return QFontMetricsF(hud_font(size)).capHeight()
 
 
+def text_ink(text, size):
+    """How far a line of HUD text reaches (above, below) its baseline, with its outline."""
+    box = text_path(text, size).boundingRect()
+    outline = max(2.0, size / 10) / 2
+    return -box.top() + outline, box.bottom() + outline
+
+
 def text_width(text, size):
     """How wide a line of HUD text is, in pixels, with its outline."""
     return text_path(text, size).boundingRect().right() + max(2.0, size / 10)
