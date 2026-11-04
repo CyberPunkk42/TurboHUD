@@ -104,8 +104,7 @@ own Windows Python; nothing is installed into the bottle, and there is no launch
    takes about 15 s after the event starts. Hover over the TurboHUD icon in the menu bar
    to see what it waits for.
 
-When you only spectate, the HUD stays hidden: its sections are about your own car. If
-TSU's bottle cannot be told apart from others, set `TURBOHUD_BOTTLE` to its name. The
+If TSU's bottle cannot be told apart from others, set `TURBOHUD_BOTTLE` to its name. The
 throttle and brake bars move in TSU's own steps (thirds) on the Mac, as the pad's
 triggers are read only on Linux. The reader's errors are in `bottle_reader.log`, next to
 `turbohud.log`. If the HUD lags or TSU stutters, `turbohud.log` shows how long the race
@@ -123,6 +122,10 @@ starting TurboHUD again.
   bar, a proximity radar and a track map. On the first start they sit one below the other at the left of your largest
   screen (laid out as on a 1920x1080 screen), the blue flag at its top centre,
   **locked**: clicks go through them to the game.
+- **Spectating** an online race, you have no car, so the sections about one stay away:
+  the lap section says "Spectating" with the leader's lap, the player list shows the gaps
+  to the leader, the lap times list every driver, and the track map shows every car with
+  the leader in gold.
 - The **blue flag** is a navy bar that shows when a car about to lap you is within 2
   seconds behind: faint at 2 s, fully visible from 0.5 s, gone once it has passed.
 - **Settings…** (TurboHUD icon's menu, or the move-mode panel) picks the text,

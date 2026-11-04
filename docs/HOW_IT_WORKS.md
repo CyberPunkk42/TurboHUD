@@ -33,6 +33,10 @@ group and centre them; their places are saved.
 | Track map | the track from above, with you, the race leader (gold), the next car ahead (red), the next car behind (green), backmarkers between you and the car ahead (small, bluish), and as an option the other cars (faint grey) |
 | Local time | the clock |
 
+Spectating an online race, only the lap section (with "Spectating" and the leader's lap),
+the player list (gaps to the leader), the lap times, the track map (every car) and the
+local time show.
+
 The race sections appear once the cars are on the grid and go away in the lobby. In
 the menus only the local time shows.
 
@@ -175,9 +179,13 @@ race, and TSU's own log file says an event is running (TSU writes "Event started
 menus and lobbies it does not search at all. While an event runs without a race found
 yet, it waits 10 seconds after each search before the next.
 
-When you spectate, the race is there but has no local player, and the HUD stays hidden.
-TurboHUD then remembers that race and looks at it once a second, which sees you join it,
-and searches again only once a minute (in case that race was an old one).
+When you spectate, the race is there but has no local player. A search then finds no
+race of yours to stop at, so it reads all the data once and takes the race it found to
+watch. TurboHUD keeps reading that race as long as its clock runs, with no more searches,
+and each read would see you join it. Once its clock has stood for 5 s the race counts as
+over, and TurboHUD searches again every 30 s while TSU's log says an event runs. The HUD
+then shows the race without a car: the leader's lap, the gaps to the leader, the lap times
+and every car on the map.
 
 When you host an online race with other players, TSU runs the server inside your game,
 and the race is found the normal way, with no search.

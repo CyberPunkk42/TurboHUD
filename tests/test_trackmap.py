@@ -1,3 +1,4 @@
+import dataclasses
 import importlib.util
 import math
 import os
@@ -289,6 +290,25 @@ class DotTests(unittest.TestCase):
         self.assertEqual(trackmap.road_progress(car('X', 3, position=False), GATES), 3.0)
 
 
+class SpectatorDotTests(unittest.TestCase):
+    def view(self, *players):
+        return learnt_map().update(dataclasses.replace(state(players), spectating=True), players)
+
+    def test_every_car_shows_with_the_leader_on_top(self):
+        leader, second, third = driver('A', 30), driver('B', 20), driver('C', 10)
+        view = self.view(leader, second, third)
+        self.assertEqual([dot.role for dot in view.dots], ['car', 'car', 'leader'])
+        self.assertEqual(view.dots[-1].position, leader.position)
+
+    def test_a_car_without_a_position_has_no_dot(self):
+        view = self.view(driver('A', 30), car('B', 20, position=False))
+        self.assertEqual([dot.role for dot in view.dots], ['leader'])
+
+    def test_no_local_player_and_not_spectating_shows_nothing(self):
+        leader = driver('A', 30)
+        self.assertIsNone(learnt_map().update(state([leader]), [leader]))
+
+
 class RaceSectionsTests(unittest.TestCase):
     def test_the_map_is_a_race_section_in_the_player_lists_order(self):
         players = (car('Ahead', 14), car('Me', 13, local=True))
@@ -347,6 +367,19 @@ class MapWindowTests(unittest.TestCase):
         ]
         self.assertTrue(found)
         self.assertTrue(all(30 <= x <= 270 for x, _y in found))  # inside the square
+
+    def test_a_spectators_map_draws_its_cars(self):
+        from PySide6.QtGui import QColor
+
+        from turbohud.overlay.window import MAP_COLORS
+
+        window = self.window()
+        players = (driver('A', 30), driver('B', 20))
+        window.trackmap = learnt_map().update(dataclasses.replace(state(players), spectating=True), players)
+        image = window.grab().toImage()
+        colour = QColor(MAP_COLORS['car']).rgb()
+        pixels = (image.pixelColor(x, y).rgb() for x in range(image.width()) for y in range(image.height()))
+        self.assertIn(colour, pixels)
 
     def test_a_car_under_the_local_player_still_shows(self):
         from PySide6.QtGui import QColor

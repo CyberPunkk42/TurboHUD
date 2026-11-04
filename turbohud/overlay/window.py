@@ -89,8 +89,17 @@ MAP_COLORS = {
     'behind': AHEAD_COLOR,  # green, as a gap behind
     'backmarker': '#5b8cff',  # bluish: about to be lapped
     'other': '#8c95a3',
+    'car': '#e6ebf2',  # a spectator's map: every car
 }
-MAP_SIZES = {'me': 1.15, 'leader': 1.0, 'ahead': 1.0, 'behind': 1.0, 'backmarker': 0.65, 'other': 0.55}
+MAP_SIZES = {
+    'me': 1.15,
+    'leader': 1.0,
+    'ahead': 1.0,
+    'behind': 1.0,
+    'backmarker': 0.65,
+    'other': 0.55,
+    'car': 0.8,
+}
 MAP_OTHER_ALPHA = 150  # the other cars are faint
 MAP_PIT_OPACITY = 0.4  # a car in the pits is dimmed
 MAP_RING = 0.4  # the local player's ring: its width, as a share of its radius
