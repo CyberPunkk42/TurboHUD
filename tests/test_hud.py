@@ -22,6 +22,35 @@ def measure(text, size):
     return len(text) * size * 0.6
 
 
+class CentredTextTests(unittest.TestCase):
+    ROW: ClassVar = [hud.Row('123 km/h', 'medium')]  # 20 px at scale 1, baseline at 34
+
+    def place(self, size, rows=None, least_left=0, scale=1.0):
+        return hud.centred_text(size, rows or self.ROW, scale, measure, lambda font: font * 0.7, least_left)
+
+    def test_the_text_is_centred_both_ways(self):
+        # 96 wide and 28 of margins: 124; from 20 (the cap height's top) to 34 (the baseline).
+        self.assertEqual(self.place((324, 100)), (100, 23))
+
+    def test_it_stays_centred_when_shrunk(self):
+        left, down = self.place((324, 30), scale=0.5)  # 10 px, margins of 7
+        self.assertEqual(left, (324 - (48 + 14)) // 2)
+        self.assertEqual(down, 15 - 13)  # from 10 to 17: its middle is 13.5, rounded evenly
+
+    def test_digits_do_not_move_it(self):
+        def proportional(text, size):
+            return sum(0.2 if letter == '1' else 0.6 for letter in text) * size
+
+        places = {
+            hud.centred_text((300, 60), [hud.Row(text, 'medium')], 1.0, proportional, lambda _size: 14, 0)
+            for text in ('111 km/h', '123 km/h', '888 km/h')
+        }
+        self.assertEqual(len(places), 1)
+
+    def test_it_stays_clear_of_what_is_at_the_side(self):
+        self.assertEqual(self.place((100, 60), least_left=28)[0], 28)
+
+
 class NewSectionPlaceTests(unittest.TestCase):
     def test_new_sections_go_below_the_placed_ones(self):
         placed = {'lap': (2000, 100, 200, 40), 'delta': (2500, 900, 300, 60)}

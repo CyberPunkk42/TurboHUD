@@ -65,6 +65,50 @@ class RedrawTests(unittest.TestCase):
         self.assertTrue(window.show_content(window.rows, level=(0.5, 'ahead')))
         self.assertEqual(window.level, (0.5, 'ahead'))
 
+    def text_box(self, name, rows, size_share):
+        """(left, top, right, bottom) of the bright pixels in a section at that share of
+        its size, and the window's size: the text is white, the pedal bars are not, and
+        text this small has hardly a pixel of its exact colour."""
+        from turbohud.core.hud import RACE_SECTIONS
+        from turbohud.core.settings import Theme
+        from turbohud.overlay.window import SectionWindow
+
+        class Native:
+            def raise_window(self, window):
+                return 'test'
+
+        section = next(section for section in RACE_SECTIONS if section.name == name)
+        window = SectionWindow(Native(), Theme(), section)
+        self.addCleanup(window.close)
+        window.resize(window.base[0], round(window.base[1] * size_share))
+        window.show_content(rows)
+        image = window.grab().toImage()
+        found = [
+            (x, y)
+            for x in range(image.width())
+            for y in range(image.height())
+            if min(image.pixelColor(x, y).getRgb()) >= 150
+        ]
+        xs, ys = [x for x, _y in found], [y for _x, y in found]
+        return (min(xs), min(ys), max(xs), max(ys)), (image.width(), image.height())
+
+    def test_the_speed_stays_centred_between_its_bars_when_shrunk(self):
+        from turbohud.core.hud import Row
+
+        for share in (1.0, 0.6, 0.35):
+            with self.subTest(share=share):
+                (left, top, right, bottom), (width, height) = self.text_box(
+                    'speed', [Row('000 km/h', 'medium')], share
+                )
+                self.assertLessEqual(abs(left - (width - 1 - right)), 3)
+                self.assertLessEqual(abs(top - (height - 1 - bottom)), 3)
+
+    def test_text_without_bars_keeps_to_the_left_when_shrunk(self):
+        from turbohud.core.hud import MARGIN, Row
+
+        (left, _top, _right, _bottom), _size = self.text_box('localtime', [Row('12:34', 'medium')], 0.5)
+        self.assertLessEqual(left, MARGIN)
+
 
 if __name__ == '__main__':
     unittest.main()

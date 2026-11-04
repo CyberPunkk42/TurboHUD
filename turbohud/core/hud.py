@@ -187,6 +187,26 @@ def content_size(rows, scale, measure):
     return round(width + 2 * sizes.margin), round(bottom + sizes.margin)
 
 
+ALL_ZEROS = str.maketrans('123456789', '000000000')
+
+
+def centred_text(size, rows, scale, measure, cap_height, least_left=0):
+    """(left, down) that centre `rows` in a box of `size`: where the content starts
+    across (at least `least_left`, to keep clear of what is at the side), and how far to
+    move it down. `cap_height(font_size)` gives how tall a capital letter is.
+
+    Digits count as zeros: in a font whose digits differ in width, the text would shake
+    as a number changes. It only shifts when the number gets another digit."""
+
+    def steady(text, font_size):
+        return measure(text.translate(ALL_ZEROS), font_size)
+
+    lines = hud_lines(rows, scale)
+    top = lines[0].baseline - cap_height(lines[0].size)
+    left = max((size[0] - content_size(rows, scale, steady)[0]) // 2, least_left)
+    return left, round((size[1] - top - lines[-1].baseline) / 2)
+
+
 @dataclass(frozen=True)
 class Section:
     """One part of the HUD in its own window, placed by the player."""

@@ -27,6 +27,7 @@ from PySide6.QtWidgets import (
 from turbohud.core.hud import (
     MARGIN,
     base_size,
+    centred_text,
     content_size,
     help_lines,
     hud_lines,
@@ -44,6 +45,7 @@ from turbohud.hud.painter import (
     BEHIND_COLOR,
     DRAFT_COLOR,
     LIFT_COLOR,
+    cap_height,
     draw_bars,
     draw_hud,
     draw_level,
@@ -255,12 +257,17 @@ class SectionWindow(QWidget):
         scale = self.theme.scale * section_scale((self.width(), self.height()), self.base[1], needed)
         if self.locked and self.backdrop and rows:
             self._paint_backdrop(painter, rows, scale, bars)
-        left = 0
+        left, down = 0, 0
         if self.section.pedals and rows:  # no bars without a speed (menu, no game)
             throttle, brake = self.pedals or (None, None)
             draw_bars(painter, pedal_bars(self.width(), self.height(), scale, throttle, brake))
-            left = pedal_space(scale) // 2
+            # The bars keep to the window's edges however small the text gets.
+            left, down = centred_text(
+                (self.width(), self.height()), rows, scale, text_width, cap_height, pedal_space(scale) // 2
+            )
+        painter.translate(0, down)
         draw_hud(painter, hud_lines(rows, scale), self.theme, scale, left, self.width() - left)
+        painter.translate(0, -down)
         if self.section.level and rows:
             level = self.level or (None if self.locked else LEVEL_SAMPLE)
             if level is not None:

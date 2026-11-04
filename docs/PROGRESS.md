@@ -498,3 +498,8 @@ its "Recent changes".
   copies in `Logs/` were read, so during a run with no new copy yet a running event looked
   ended and no search for the online race started (found live while spectating). The newest
   of both counts now. Checked on the real log: it now says an event runs.
+- 2026-11-05: The speed stays centred between its pedal bars, across and down, when the
+  section is resized (it kept to the left and the top while the bars stayed at the edges).
+  Digits count as zeros for this, so the text does not shake as the speed changes. Reported
+  by the user. The other sections were drawn at several sizes: none has anything on both
+  sides to centre between, so their text stays at the left, where stacked sections line up.

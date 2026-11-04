@@ -58,6 +58,11 @@ See `docs/IMPROVEMENT_BACKLOG.md`. In short:
 4. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-05: The speed stays centred between its pedal bars, across and down, when the
+  section is resized (it kept to the left and the top while the bars stayed at the edges).
+  Digits count as zeros for this, so the text does not shake as the speed changes. Reported
+  by the user. The other sections were drawn at several sizes: none has anything on both
+  sides to centre between, so their text stays at the left, where stacked sections line up.
 - 2026-11-04: A running game's log is read. TSU's live log is `log.txt`; only the dated
   copies in `Logs/` were read, so during a run with no new copy yet a running event looked
   ended and no search for the online race started (found live while spectating). The newest
