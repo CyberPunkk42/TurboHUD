@@ -69,6 +69,9 @@
   reader starts, never written. The stutter came from that setting: without TurboHUD, alone on a
   server, with the keyboard and with Sidecar off TSU still stuttered, and it ran well on D3DMetal
   (the default before; why, is not known). The README tells players; tried on the user's Mac only.
+- 2026-11-05: The proximity radar has no outline in a race, as it can get in the way of the view,
+  asked for by the user. It stays in move mode, to show where the radar's box is; the cross lines
+  and the cars are as they were.
 - 2026-11-05: Online, the HUD stayed away for a whole TurboHUD session (only the local time), seen
   by the user in the first races with the faster search: every search ended in `no race`, while
   a separate connection found the race at once (2.1 s, the user the driver among 14). The cause:

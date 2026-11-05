@@ -346,9 +346,10 @@ class SectionWindow(QWidget):
         size = min(self.width(), self.height())
         box = QRectF((self.width() - size) / 2, (self.height() - size) / 2, size, size).adjusted(1, 1, -1, -1)
         painter.setOpacity(min(max(view.opacity, 0.0), 1.0))
-        painter.setPen(QPen(QColor(*RADAR_EDGE), 1.5))
-        painter.setBrush(Qt.NoBrush)  # only its edge: the road shows through
-        painter.drawRoundedRect(box, 10, 10)
+        painter.setBrush(Qt.NoBrush)  # no fill: the road shows through
+        if not self.locked:  # to place it; in a race an outline only gets in the way of the view
+            painter.setPen(QPen(QColor(*RADAR_EDGE), 1.5))
+            painter.drawRoundedRect(box, 10, 10)
         # The local car sits in the middle: cars ahead count as well as those behind.
         # view.view reaches from it to the top and the bottom edge.
         centre = QPointF(box.center().x(), box.top() + box.height() * RADAR_CAR_AT)
