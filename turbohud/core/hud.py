@@ -293,7 +293,7 @@ RACE_SECTIONS = (
         'Players',
         (
             tuple(
-                Row(f'{n}. Playername1234567', 'small', tail='  PIT', flag='DE', right='+00.000')
+                Row(f'{n}. Playername1234567', 'small', tail='  PIT 00.0s', flag='DE', right='+00.000')
                 for n in range(10, 10 + 8)
             ),
         ),
@@ -309,8 +309,8 @@ RACE_SECTIONS = (
                     'small',
                     tail='  L99',
                     flag='DE',
-                    middle='0:00.000',
-                    right='0:00.0',
+                    middle='PIT 00.0s',
+                    right='(00.00s)',
                 )
                 for n in range(10, 10 + LAP_TIME_ROWS)
             ),

@@ -10,8 +10,8 @@
   On Linux, with TSU started through the memory probe (README: "Live lap times on
   Linux"), the HUD shows the live race in movable sections: lap and time left, running
   lap, delta to the best lap, last and best lap, fuel, fuel to finish, tires, health,
-  draft, speed with pedal bars, the player list (flags, PIT with the time stood, live gaps), the lap times
-  list (lap number, best and running lap of every driver, PIT with the time stood), blue flag,
+  draft, speed with pedal bars, the player list (flags, PIT with its timers, live gaps), the lap times
+  list (lap number, best and running lap of every driver, PIT with its timers), blue flag,
   proximity radar, track map and local time. It works offline, in hotlaps, hosting online and as
   an online client (guest, or hosting with only AI). How it works and what it does to
   RAM and the game: `docs/HOW_IT_WORKS.md`. On macOS, with TSU in CrossOver, the same HUD
@@ -64,15 +64,16 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
-- 2026-11-05: Pit stops, asked for by the user. The player list and the lap times list show how long
-  a car stood in the pits for 6 s once it rolls away (`PIT 12.4s`; in the lap times list PIT, then
-  the time, in the right column), not over 45 s, as the driver may have retired; timed from the
-  velocity with the race clock (`PitStops`). The lap times list shows each driver's lap (`L12`). The
+- 2026-11-05: Pit stops, asked for by the user. Both lists show two live timers: `PIT 24.5s`, from
+  pit entry to pit exit, and `(12.03s)`, how long the car stood still in all, kept for 6 s after the
+  exit; standing over 45 s shows plain PIT, as the driver may have retired (`PitStops`: pit area and
+  velocity with the race clock). In the lap times list they take the Best and running-lap columns
+  meanwhile. That list shows each driver's lap (`L12`). The
   tires bar now fills during a change: three recorded stops showed the game holds `tireWear` until
   `tireCompoundAndChangeTicks` reaches 2400 (12 s) and only then sets it to 0. Fuel needed no fix:
   the game refills 5% of the tank a second (18000 of 360000 units), so stops that used 2.5% were
   full in half a second. Not seen: health (the event had no damage), AI or online cars in the pits
-  (the time relies on their velocity), other tire compounds (the bar then behaves as before).
+  (the bracket relies on their velocity), other tire compounds (the bar then behaves as before).
 - 2026-11-05: TurboHUD warns when TSU's bottle is not on D3DMetal, asked for by the user: in
   `turbohud.log` and the text on the menu bar icon, read from the bottle's `cxbottle.conf` when the
   reader starts, never written. The stutter came from that setting: without TurboHUD, alone on a

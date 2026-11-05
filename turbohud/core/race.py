@@ -400,9 +400,9 @@ CLIENT_LOG_EVERY = 2.0  # seconds between looks at TSU's log while it says no ev
 QUANTIZED_ZERO, QUANTIZED_SCALE = 1 << 20, 1024  # TS.QuantizedVehicleState positions
 RECORDER_STALE = 10_000  # race clock (1 s) without a new recorder tick: it does not run
 PIT_STOPPED_SPEED = 0.5  # game units a second: slower than this in the pits, the car stands
-PIT_TIME_LEAST = 0.25  # seconds: a shorter stop is a passing hold-up, not a pit stop
-PIT_TIME_MOST = 45.0  # seconds: a longer stop is not shown, the driver may have retired
-PIT_TIME_SHOWN = 6  # seconds the time stays next to PIT once the car rolls away
+PIT_STOP_LEAST = 0.25  # seconds standing before the bracket shows: less is a passing hold-up
+PIT_STOP_MOST = 45.0  # seconds standing: longer shows plain PIT, the driver may have retired
+PIT_TIME_SHOWN = 6  # seconds the times stay next to PIT once the car has left the pits
 STRING_LENGTH, STRING_CHARS = 0x10, 0x14  # System.String: length, then UTF-16 text
 MAX_NAME = 64
 
@@ -423,7 +423,8 @@ class PlayerState:
     forward: tuple | None = None  # the (x, z) way its nose points
     estimated: bool = False  # the position is worked out (DeadReckoning), not read
     draft_drag: float | None = None  # its air resistance multiplier: under 1 while it drafts
-    pit_seconds: float | None = None  # how long it just stood in the pits, while that is shown
+    pit_seconds: float | None = None  # seconds from pit entry to pit exit, while that is shown
+    pit_stopped: float = 0.0  # of those, seconds standing still (refuelling, tires, repairs)
 
     @functools.cached_property
     def passed(self):
@@ -1227,35 +1228,59 @@ class DeadReckoning:
 
 
 class PitStops:
-    """How long each car stood in the pits, shown for PIT_TIME_SHOWN once it rolls away.
-    A stop over PIT_TIME_MOST is not shown: the driver may have retired. Timed with the
-    race clock from the velocity, which every car has, online too."""
+    """Two timers for each car in the pits: from pit entry to pit exit, and how long it
+    stood still in all, both live and kept for PIT_TIME_SHOWN after the exit. Standing over
+    PIT_STOP_MOST shows neither: the driver may have retired. Timed with the race clock
+    from the pit area and the velocity, which every car has, online too."""
 
     def __init__(self):
-        self._since = {}  # name: race clock when the car stopped
-        self._shown = {}  # name: (seconds it stood, race clock when to stop showing that)
+        self._visits = {}  # name: [race clock at entry, seconds stood, race clock when it stopped or None]
+        self._kept = {}  # name: (seconds in the pits, seconds stood, race clock when to stop showing them)
 
     def update(self, players, clock):
-        """`players` with pit_seconds set on those to show it. Call once per read."""
+        """`players` with the pit timers set on those to show them. Call once per read."""
         return tuple(self._updated(player, clock) for player in players)
 
     def _updated(self, player, clock):
         name = player.name
-        if player.velocity is not None:  # not known: it goes on as it was
-            if player.in_pit and math.hypot(*player.velocity) < PIT_STOPPED_SPEED:
-                self._since.setdefault(name, clock)
-                self._shown.pop(name, None)
-            elif name in self._since:
-                seconds = (clock - self._since.pop(name)) / UNITS_PER_SECOND
-                if PIT_TIME_LEAST <= seconds <= PIT_TIME_MOST:
-                    self._shown[name] = (seconds, clock + PIT_TIME_SHOWN * UNITS_PER_SECOND)
-        shown = self._shown.get(name)
-        if shown is None:
+        visit = self._visits.get(name)
+        if player.in_pit:
+            self._kept.pop(name, None)
+            if visit is None:
+                visit = self._visits[name] = [clock, 0.0, None]
+            self._stand(visit, player, clock)
+            seconds, stood = (clock - visit[0]) / UNITS_PER_SECOND, _stood(visit, clock)
+            if stood > PIT_STOP_MOST:
+                return player
+            return dataclasses.replace(player, pit_seconds=seconds, pit_stopped=stood)
+        if visit is not None:
+            del self._visits[name]
+            seconds, stood = (clock - visit[0]) / UNITS_PER_SECOND, _stood(visit, clock)
+            if stood <= PIT_STOP_MOST:
+                self._kept[name] = (seconds, stood, clock + PIT_TIME_SHOWN * UNITS_PER_SECOND)
+        kept = self._kept.get(name)
+        if kept is None:
             return player
-        if clock >= shown[1]:
-            del self._shown[name]
+        if clock >= kept[2]:
+            del self._kept[name]
             return player
-        return dataclasses.replace(player, pit_seconds=shown[0])
+        return dataclasses.replace(player, pit_seconds=kept[0], pit_stopped=kept[1])
+
+    @staticmethod
+    def _stand(visit, player, clock):
+        """Note in `visit` whether the car stands now. Without a velocity it goes on as it was."""
+        if player.velocity is None:
+            return
+        standing = math.hypot(*player.velocity) < PIT_STOPPED_SPEED
+        if standing and visit[2] is None:
+            visit[2] = clock
+        elif not standing and visit[2] is not None:
+            visit[1], visit[2] = _stood(visit, clock), None
+
+
+def _stood(visit, clock):
+    """The seconds a car in the pits has stood still so far."""
+    return visit[1] + ((clock - visit[2]) / UNITS_PER_SECOND if visit[2] is not None else 0.0)
 
 
 def _known_position(x, z):
@@ -1710,14 +1735,24 @@ def shown_players(players, max_rows=MAX_PLAYER_ROWS, order=None):
 
 
 PIT_TAIL = '  PIT'
+PIT_TAIL_ROOM = '  PIT 00.0s'  # what the player list's sample leaves room for
+
+
+def _pit_time(player):
+    """The time from pit entry to pit exit, for the lists."""
+    return f'PIT {player.pit_seconds:.1f}s'
+
+
+def _pit_bracket(player):
+    """The time it stood still, in brackets, or nothing yet."""
+    return f'({player.pit_stopped:.2f}s)' if player.pit_stopped >= PIT_STOP_LEAST else ''
 
 
 def _pit_tail(player):
-    """PIT in the pits, with the time it stood for a while after it rolls away, also once
-    it has left the pit area."""
-    if player.pit_seconds is not None:
-        return f'{PIT_TAIL} {player.pit_seconds:.1f}s'
-    return PIT_TAIL if player.in_pit else ''
+    """PIT with its timers for the player list, also for a while after the pit exit."""
+    if player.pit_seconds is None:
+        return PIT_TAIL if player.in_pit else ''
+    return f'  {_pit_time(player)} {_pit_bracket(player)}'.rstrip()
 
 
 def players_rows(players, order=None, clock=None, gates=(), watching=False):
@@ -1730,8 +1765,9 @@ def players_rows(players, order=None, clock=None, gates=(), watching=False):
     rows = []
     for position, player in shown_players(players, order=order):
         tail = _pit_tail(player)
-        # The section is sized for a full name and PIT: a pit time takes room from the name.
-        most = MAX_NAME_SHOWN - max(len(tail) - len(PIT_TAIL), 0)
+        # The section is sized for a full name and the first timer: the bracket takes its
+        # room from the name.
+        most = MAX_NAME_SHOWN - max(len(tail) - len(PIT_TAIL_ROOM), 0)
         name = player.name or '?'
         if len(name) > most:
             name = name[: most - 1] + '…'
@@ -1803,7 +1839,10 @@ def lap_times_rows(players, order=None, clock=0):
             name = name[: MAX_NAME_SHOWN - 1] + '…'
         best = bests[id(player)]
         running = player_current_lap(player, clock)
-        pit = '' if player.finished else _pit_column(player)
+        timed = player.pit_seconds is not None and not player.finished
+        plain_pit = player.in_pit and not player.finished and not timed
+        bracket = _pit_bracket(player) if timed else ''
+        time_now = 'Fin' if player.finished else format_tenths(running) if running is not None else '-'
         rows.append(
             Row(
                 f'{position}. {name}',
@@ -1811,11 +1850,10 @@ def lap_times_rows(players, order=None, clock=0):
                 'accent' if player.local else 'text',
                 tail=f'  L{player_lap_number(player)}',
                 flag=flag_code(player.flag) or flag_text(player.flag),
-                middle=format_time(best),
-                middle_color='ahead' if best is not None and best == fastest else 'text',
-                right=pit
-                or ('Fin' if player.finished else format_tenths(running) if running is not None else '-'),
-                right_color='lift' if pit else 'text',
+                middle=_pit_time(player) if timed else format_time(best),
+                middle_color='lift' if timed else 'ahead' if best is not None and best == fastest else 'text',
+                right='PIT' if plain_pit else bracket or time_now,
+                right_color='lift' if plain_pit or bracket else 'text',
             )
         )
     return rows
@@ -1824,14 +1862,6 @@ def lap_times_rows(players, order=None, clock=0):
 def player_lap_number(player):
     """The lap `player` is on, counted from 1; once finished, the laps it drove."""
     return player.laps_completed if player.finished else player.laps_completed + 1
-
-
-def _pit_column(player):
-    """For the lap times list's right column: PIT in the pits, the time it stood once it
-    rolls away (as in the player list, for PIT_TIME_SHOWN), or nothing."""
-    if player.pit_seconds is not None:
-        return f'{player.pit_seconds:.1f}s'
-    return 'PIT' if player.in_pit else ''
 
 
 BLUE_FULL = 0.5  # seconds: this close or closer, the flag is fully visible

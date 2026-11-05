@@ -26,10 +26,11 @@ none is left.
   with HUD frames 50 ms apart. Check `race reads` and `HUD frames` in `turbohud.log` again.
 
 ## Pit stops, not yet seen
-- The pit time and the lap number in a race; the tires bar filling during a 12 s change.
+- The two pit timers and the lap number in a race, and whether the first starts at the pit entry
+  line (it uses the game's pit area); the tires bar filling during a 12 s change.
 - Fuel with a stop that needs much more than 2.5%: it should fill at 5% a second, seen in the game's
   field but not on the bar with a big refill. Health and repairs in an event with damage.
-- AI and online cars in the pits: the time relies on their velocity reading about 0 while they stand.
+- AI and online cars in the pits: the bracket relies on their velocity reading about 0 while they stand.
 - Another tire compound: `tireCompoundAndChangeTicks` holds it too, how is not known. Above 2400 the
   bar behaves as before.
 
