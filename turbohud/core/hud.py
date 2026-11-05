@@ -2,7 +2,7 @@
 
 import colorsys
 import math
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 
 MARGIN = 14  # space between the box's edge and the text, before scaling
 MIN_WIDTH = 380  # the last and best lap line fits at scale 1
@@ -227,6 +227,10 @@ class Section:
     level: bool = False  # a bar below the text showing how much is left (fuel, tires, health)
 
 
+LAP_TIME_ROWS = 20  # how many drivers the lap times section is made for
+OLD_LAP_TIME_ROWS = 16  # before layout 3
+
+
 def text_can_centre(section):
     """Whether a section's text can go in the middle of its box: not the speed, which is
     always between its pedal bars, nor a drawing, nor a list with columns."""
@@ -283,7 +287,7 @@ RACE_SECTIONS = (
             (Row('Driver', 'small', 'accent', middle='Best', right='Lap'),)
             + tuple(
                 Row(f'{n}. Playername1234567', 'small', flag='DE', middle='0:00.000', right='0:00.0')
-                for n in range(10, 10 + 16)
+                for n in range(10, 10 + LAP_TIME_ROWS)
             ),
         ),
     ),
@@ -416,12 +420,32 @@ def content_shift(section, height, scale, ink):
     return round((height - top - bottom) / 2)
 
 
-def tight_place(section, place, scale, ink):
-    """`place` (x, y, width, height) of a section saved before boxes were tight, as a
-    tight box with its text the same size and in the same spot. The text's size came from
-    the height's share of a taller normal height. Pedal bars were as tall as the box, with
-    the speed centred between them, so that box keeps its middle."""
+def _with_old_lap_rows(section):
+    """The lap times section as it was before layout 3; any other section as it is."""
+    if section.name != 'laptimes':
+        return section
+    rows = section.samples[0][: 1 + OLD_LAP_TIME_ROWS]  # the heading and the drivers
+    return replace(section, samples=(rows,))
+
+
+def more_lap_rows_place(section, place, scale, ink):
+    """`place` (x, y, width, height) of a section saved before the lap times list had room
+    for more drivers (layout 3): as tall as needs be for the text to stay the same size.
+    The box grows downwards, so the rows it had stay where they were."""
+    if section.name != 'laptimes':
+        return place
     x, y, width, height = place
+    old_normal = tight_height(_with_old_lap_rows(section), scale, ink)
+    return x, y, width, round(height / old_normal * tight_height(section, scale, ink))
+
+
+def tight_place(section, place, scale, ink):
+    """`place` (x, y, width, height) of a section saved before boxes were tight (layout
+    2), as a tight box with its text the same size and in the same spot. The text's size
+    came from the height's share of a taller normal height. Pedal bars were as tall as the
+    box, with the speed centred between them, so that box keeps its middle."""
+    x, y, width, height = place
+    section = _with_old_lap_rows(section)
     if section.bar:
         return place
     old_normal = base_size(section, scale, lambda _text, _size: 0)[1] + round(OLD_LABEL_SPACE * scale)

@@ -543,3 +543,8 @@ its "Recent changes".
   It lasts as long as TurboHUD runs, and colours and options are not in it. Move mode now
   looks at the sections five times a second, also without groups. Tested through the real
   app code with a fake window layer; real dragging and Hyprland are still to be seen.
+- 2026-11-05: The lap times list shows up to 20 drivers instead of 16, asked for by the user
+  (events can have 20 players). With fewer, it looks the same: the box is invisible and only
+  the drivers there are drawn. Saved sizes and presets are converted once, with the text the
+  same size and the box growing downwards; `settings.before-layout-3.json` keeps the file as
+  it was. The players list stays at 8 rows. Not yet seen with 20 cars in a race.

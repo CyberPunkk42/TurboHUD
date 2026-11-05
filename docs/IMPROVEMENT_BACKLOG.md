@@ -54,6 +54,7 @@ renders and the real app code on simulated windows, so real dragging is still to
   (about five times a second); on Hyprland the followers take their size when it ends.
 - Centre buttons on every section, and Centre text with the tint.
 - Undo, after real drags and resizes (one step each?), and on Hyprland.
+- The lap times list with 20 drivers: does it fit, and does a race read stay quick?
 Windows has run none of this (its shortcut code has only ever run on a build machine).
 
 ## 5. Builds and release

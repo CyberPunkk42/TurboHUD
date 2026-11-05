@@ -5,7 +5,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from turbohud.core import race
+from turbohud.core import hud, race
 from turbohud.core.flags import FLAGS, flag_code, flag_emoji, flag_text
 
 GERMANY = [name for name, _code in FLAGS].index('Germany')
@@ -465,6 +465,27 @@ class LevelBarTests(unittest.TestCase):
         self.assertTrue(fuel.level and not hud.RACE_SECTIONS[0].level and plain)
 
 
+class TwentyDriversTests(unittest.TestCase):
+    def drivers(self, count):
+        return [
+            player(f'P{i}', [lap(0), lap(40_000 + i * 100, count=3)], local=(i == count - 1))
+            for i in range(count)
+        ]
+
+    def test_twenty_drivers_are_all_in_the_lap_times(self):
+        self.assertEqual(len(race.lap_times_rows(self.drivers(20))), 1 + 20)
+
+    def test_more_show_the_leader_and_those_around_me(self):
+        shown = race.shown_players(self.drivers(25), race.MAX_LAP_TIME_ROWS)
+        self.assertEqual(len(shown), 20)
+        self.assertEqual(shown[0][0], 1)
+        self.assertEqual(shown[-1][0], 25)
+
+    def test_the_section_has_room_for_as_many_as_it_shows(self):
+        section = next(s for s in hud.RACE_SECTIONS if s.name == 'laptimes')
+        self.assertEqual(len(section.samples[0]), 1 + race.MAX_LAP_TIME_ROWS)
+
+
 def client_car(name, times, velocity, local=False):
     """A car as the game keeps it online as a client: no position, but a velocity."""
     return race.PlayerState(name, GERMANY, 0, (tuple(times),), local=local, velocity=velocity)
@@ -746,9 +767,9 @@ class LapTimesTests(unittest.TestCase):
         self.assertEqual([r.middle_color for r in rows[1:]], ['ahead', 'text', 'text', 'text'])
         self.assertEqual(rows[3].color, 'accent')
 
-    def test_at_most_sixteen_drivers(self):
+    def test_at_most_the_most_drivers_it_shows(self):
         players = [
-            player(f'P{i}', [lap(0), lap(40_000 + i * 100, count=3)], local=(i == 18)) for i in range(20)
+            player(f'P{i}', [lap(0), lap(40_000 + i * 100, count=3)], local=(i == 18)) for i in range(25)
         ]
         rows = race.lap_times_rows(players, clock=50_000)
         self.assertEqual(len(rows), 1 + race.MAX_LAP_TIME_ROWS)
