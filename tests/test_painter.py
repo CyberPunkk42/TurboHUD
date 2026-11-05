@@ -307,6 +307,18 @@ class MovePanelPresetTests(unittest.TestCase):
         self.assertFalse(panel.centres['lap'].isChecked())
         panel.set_text_centred('speed', True)  # not one of them: nothing happens
 
+    def test_only_a_saved_preset_can_be_deleted(self):
+        panel = self.panel(saved_presets=(2,))
+        got = []
+        panel.preset_delete_requested.connect(got.append)
+        self.assertFalse(panel.preset_deletes[1].isEnabled())
+        self.assertTrue(panel.preset_deletes[2].isEnabled())
+        panel.preset_deletes[2].click()
+        self.assertEqual(got, [2])
+        panel.set_presets_saved(())
+        self.assertFalse(panel.preset_deletes[2].isEnabled())
+        self.assertFalse(panel.preset_deletes[2].icon().isNull())
+
     def test_a_preset_can_go_back_to_empty(self):
         panel = self.panel(saved_presets=(1, 2))
         panel.set_presets_saved((2,))

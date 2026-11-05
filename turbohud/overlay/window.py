@@ -21,6 +21,7 @@ from PySide6.QtWidgets import (
     QLabel,
     QPushButton,
     QSizeGrip,
+    QStyle,
     QVBoxLayout,
     QWidget,
 )
@@ -526,6 +527,7 @@ class MovePanel(QWidget):
     map_others_changed = Signal(bool)
     preset_save_requested = Signal(int)  # the preset's number
     preset_load_requested = Signal(int)
+    preset_delete_requested = Signal(int)
     match_requested = Signal(str)  # the group
     undo_requested = Signal()
     text_centred_changed = Signal(str, bool)  # section name, its text in the middle of its box
@@ -627,6 +629,7 @@ class MovePanel(QWidget):
             column.addWidget(self.map_others)
         presets = QGridLayout()
         self.preset_loads = {}
+        self.preset_deletes = {}
         for row_, number in enumerate(PRESETS):
             presets.addWidget(QLabel(f'Preset {number}'), row_, 0)
             save = QPushButton('Save')
@@ -643,7 +646,15 @@ class MovePanel(QWidget):
             load.clicked.connect(lambda _checked=False, n=number: self.preset_load_requested.emit(n))
             presets.addWidget(load, row_, 2)
             self.preset_loads[number] = load
-        presets.setColumnStretch(3, 1)
+            delete = QPushButton()
+            delete.setIcon(self.style().standardIcon(QStyle.SP_TrashIcon))
+            delete.setAccessibleName(f'Delete preset {number}')
+            delete.setToolTip(f'Delete preset {number}; Undo brings it back')
+            delete.setEnabled(number in saved_presets)
+            delete.clicked.connect(lambda _checked=False, n=number: self.preset_delete_requested.emit(n))
+            presets.addWidget(delete, row_, 3)
+            self.preset_deletes[number] = delete
+        presets.setColumnStretch(4, 1)
         column.addLayout(presets)
         row = QHBoxLayout()
         self.undo = QPushButton('Undo')
@@ -708,6 +719,7 @@ class MovePanel(QWidget):
     def set_presets_saved(self, numbers):
         for number, load in self.preset_loads.items():
             load.setEnabled(number in numbers)
+            self.preset_deletes[number].setEnabled(number in numbers)
 
     def set_undo_available(self, available):
         self.undo.setEnabled(available)

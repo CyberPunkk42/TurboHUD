@@ -169,7 +169,8 @@ starting TurboHUD again.
   afresh when TurboHUD starts.
 - **Layout presets**: the panel can keep three layouts: where each section sits, its size,
   whether it shows, and its group. **Save** keeps the layout as it is now in that preset,
-  replacing what was there; **Load** puts the sections back as it has them. **Ctrl+Shift+1**,
+  replacing what was there; **Load** puts the sections back as it has them; the bin deletes
+  it, and **Undo** brings it back. **Ctrl+Shift+1**,
   **2** and **3** load one at any time, also during a race (Linux: `run_turbohud.sh --preset
   1`, which a key can run). Colours and the other options stay as they are.
 - **Ctrl+Shift+Q** quits; the panel and the icon's menu have **Quit** as well. On Linux

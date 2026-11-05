@@ -550,6 +550,15 @@ def run(args, folder):
         log.info('preset %d saved', number)
 
     @undoable
+    def delete_preset(number):
+        nonlocal settings
+        presets = {kept: places for kept, places in settings.presets.items() if kept != number}
+        settings = replace(settings, presets=presets)
+        write_settings()
+        panel.set_presets_saved(presets)
+        log.info('preset %d deleted', number)
+
+    @undoable
     def load_preset(number):
         """Put every section as the preset has it. What the desktop reports may lag behind
         the move (Wayland), so the settings take the preset's places, not what it says."""
@@ -680,6 +689,7 @@ def run(args, folder):
     )
     panel.preset_save_requested.connect(save_preset)
     panel.preset_load_requested.connect(load_preset)
+    panel.preset_delete_requested.connect(delete_preset)
     panel.match_requested.connect(match_group)
     panel.undo_requested.connect(undo)
     panel.text_centred_changed.connect(set_text_centred)

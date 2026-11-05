@@ -64,6 +64,8 @@ See `docs/IMPROVEMENT_BACKLOG.md`. In short:
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-05: A bin button next to each preset deletes it, asked for by the user. It is greyed
+  out while the preset is empty; Undo brings a deleted preset back, so it asks nothing first.
 - 2026-11-05: The user checked the layout work by hand on the Mac and it worked: tight boxes,
   presets, groups, centring and Undo. Backlog item 4 now holds only what is left: in races,
   on Linux and on Windows.
