@@ -516,3 +516,10 @@ its "Recent changes".
   spot; `settings.before-layout-2.json` keeps the file as it was. The speed's pedal bars
   get shorter with the box. In a text box the name no longer fits: it shows when the
   pointer rests on the box in move mode.
+- 2026-11-05: Three layout presets, asked for by the user. The move-mode panel has Save and
+  Load for each: where each section sits, its size, whether it shows and its group, kept in
+  `settings.json`. Ctrl+Shift+1, 2 and 3 load one at any time (Mac, Windows); elsewhere
+  `run_turbohud.sh --preset 1`. Colours and options stay global. A preset's Load is greyed
+  out until it is saved; a section off every screen comes back to the default spot. Tested
+  through the real app code with a fake window layer; the shortcuts were registered on the
+  Mac but not pressed, and Windows has not run this.

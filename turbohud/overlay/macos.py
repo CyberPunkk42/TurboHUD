@@ -8,7 +8,7 @@ import ctypes.util
 import logging
 from ctypes import c_bool, c_char_p, c_int32, c_long, c_uint32, c_ulong, c_void_p
 
-from turbohud.overlay import HOTKEY_LOCK, HOTKEY_QUIT
+from turbohud.overlay import HOTKEY_LOCK, HOTKEY_PRESETS, HOTKEY_QUIT
 
 WINDOW_LEVEL = 1000  # NSScreenSaverWindowLevel
 NS_ACTIVATION_POLICY_ACCESSORY = 1
@@ -19,6 +19,7 @@ COLLECTION_BEHAVIOR = (1 << 0) | (1 << 4) | (1 << 6) | (1 << 8)
 # Carbon hotkeys: virtual key codes (kVK_ANSI_*) and modifier flags (controlKey, shiftKey).
 KEY_L = 0x25
 KEY_Q = 0x0C
+KEYS_PRESET = {1: 0x12, 2: 0x13, 3: 0x14}  # the keys 1, 2 and 3
 CARBON_CONTROL = 1 << 12
 CARBON_SHIFT = 1 << 9
 
@@ -137,8 +138,8 @@ class Native:
         spec = EventTypeSpec(fourcc('keyb'), 5)  # kEventClassKeyboard, kEventHotKeyPressed
         target = carbon.GetApplicationEventTarget()
         status = carbon.InstallEventHandler(target, self.handler, 1, ctypes.byref(spec), None, None)
-        ok = status == 0
-        for key, number in ((KEY_L, HOTKEY_LOCK), (KEY_Q, HOTKEY_QUIT)):
+
+        def register(key, number):
             ref = c_void_p()
             hotkey_id = EventHotKeyID(fourcc('TKit'), number)
             result = carbon.RegisterEventHotKey(
@@ -148,8 +149,14 @@ class Native:
                 self.hotkeys.append(ref)
             else:
                 log.warning('hotkey %d not available (error %d)', number, result)
-            ok = ok and result == 0
-        return ok
+            return result == 0
+
+        # Both, whatever the first gives. Only these two say whether there are shortcuts:
+        # without one, move mode needs another way; a preset still loads from the panel.
+        lock, quit_ = register(KEY_L, HOTKEY_LOCK), register(KEY_Q, HOTKEY_QUIT)
+        for number, preset in HOTKEY_PRESETS.items():
+            register(KEYS_PRESET[preset], number)
+        return status == 0 and lock and quit_
 
     def unregister_hotkeys(self):
         for ref in self.hotkeys:

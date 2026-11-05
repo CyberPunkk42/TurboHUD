@@ -149,6 +149,29 @@ class CommandLineTests(unittest.TestCase):
     def test_one_command_at_a_time(self):
         with self.assertRaises(SystemExit):
             app.parse_args(['--toggle', '--quit'])
+        with self.assertRaises(SystemExit):
+            app.parse_args(['--toggle', '--preset', '1'])
+
+    def test_a_preset_goes_to_the_running_turbohud(self):
+        sent = []
+
+        def send(command):
+            sent.append(command)
+            return 'ok'
+
+        self.assertEqual(app.tell_running(app.parse_args(['--preset', '2']), send), 0)
+        self.assertEqual(sent, ['preset2'])
+
+    def test_only_presets_that_exist(self):
+        with self.assertRaises(SystemExit):
+            app.parse_args(['--preset', '4'])
+        self.assertTrue(set(control.COMMANDS) >= {f'preset{n}' for n in settings.PRESETS})
+
+    def test_an_empty_preset_is_reported(self):
+        self.assertEqual(
+            app.tell_running(app.parse_args(['--preset', '1']), lambda _: 'preset 1 is empty: save it first'),
+            1,
+        )
 
 
 class PlatformTests(unittest.TestCase):

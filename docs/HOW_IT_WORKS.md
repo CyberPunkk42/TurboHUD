@@ -212,8 +212,8 @@ click through to the game.
 
 ## Commands from the command line (Linux, macOS)
 
-`run_turbohud.sh --toggle`, `--move`, `--lock`, `--settings` and `--quit` tell the
-running TurboHUD what to do. It listens on a socket in your user's private runtime
+`run_turbohud.sh --toggle`, `--move`, `--lock`, `--settings`, `--preset 1` (or 2, or 3)
+and `--quit` tell the running TurboHUD what to do. It listens on a socket in your user's private runtime
 folder (`/run/user/<uid>/turbohud/control.sock`, only your user can open it); the
 command connects, sends one word, gets "ok" and ends. A second start of TurboHUD uses
 the same way to switch the running one to move mode instead of opening a second copy.
