@@ -35,7 +35,7 @@ STILL_ACTIVE = 259
 READ = {0x02, 0x04, 0x08, 0x20, 0x40, 0x80}
 WRITE = {0x04, 0x08, 0x40, 0x80}
 EXECUTE = {0x10, 0x20, 0x40, 0x80}
-WINE_SEARCH_SHARE = 0.25  # in Wine, the share of the time a search may read
+WINE_SEARCH_SHARE = 0.5  # in Wine, the share of the time a search may read
 
 
 def region(start, size, protect, kind, path=''):
@@ -106,7 +106,7 @@ def search(read, regions, value, align=8, chunk=CHUNK, share=1.0, sleep=time.sle
     as its hits are taken, so a lookup that stops at the first good one reads little
     (in TSU the class records and the online race lie in the first fifth of its data).
     With `share` below 1, it pauses after each piece so that reading takes about that
-    share of the time (0.25: four times as long, the rest left to the game)."""
+    share of the time (0.5: twice as long, the rest left to the game)."""
     pattern = struct.pack('<Q', value)
     overlap = len(pattern) - 1
     for start, end, *_ in sorted(regions):

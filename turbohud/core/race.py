@@ -450,7 +450,6 @@ class LapReader:
         self._recorder_tick, self._recorder_moved = None, 0
         self._client_class = None  # TS.ClientEventController, once looked up
         self._controller = None  # the online race's event controller, once found
-        self._last_controller = None  # where the last one was: the game tends to reuse the spot
         self._spectated = None  # a controller whose race the player only watches
         self._watched_clock, self._watched_at = None, 0.0  # its race clock, and since when
         self._next_search = 0.0  # when to look for it again
@@ -538,9 +537,6 @@ class LapReader:
             except (NotFound, OSError):
                 self._spectated = None
                 self._next_search = 0.0
-        found = self._race_at_last_place()
-        if found is not None:
-            return found
         find = memory.find_pointers
         if find is None or self._clock() < self._next_search:
             raise error
@@ -562,10 +558,8 @@ class LapReader:
                 except (NotFound, OSError):
                     continue  # a freed controller of an earlier race
                 if driving:
-                    moved = self._last_controller is not None and candidate != self._last_controller
                     self._controller, self._spectated = candidate, None
-                    self._last_controller = candidate
-                    result = 'race found, not where the last one was' if moved else 'race found'
+                    result = 'race found'
                     return state
                 watchable.append((candidate, state))
             result = 'a race to watch, no local player' if watchable else 'no race'
@@ -582,26 +576,6 @@ class LapReader:
         # Not the one whose clock stood still, if there is another: an old race can linger.
         self._spectated, state = next((w for w in watchable if w[0] != self._spectated), watchable[0])
         self._watched_clock = None
-        return state
-
-    def _race_at_last_place(self):
-        """The event state of a new race where the last one was, or None. A search takes
-        up to about 10 s in a CrossOver bottle, with the race already on: between races the
-        game's next controller came at the same place (the same number of hits, every
-        search). One look there is a few small reads, so it is tried at every retry."""
-        last = self._last_controller
-        if last is None or (self._event_running is not None and self._event_running() is False):
-            return None
-        try:
-            if self.il.memory.u64(last) != self._client_class:
-                return None
-            state, driving = self._race_of(last)
-        except (NotFound, OSError):
-            return None
-        if not driving:
-            return None
-        self._controller, self._spectated = last, None
-        log.info('race found at the last one\'s place, no search needed')
         return state
 
     def _watched_clock_runs(self, state):

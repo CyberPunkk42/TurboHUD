@@ -16,7 +16,7 @@
   an online client (guest, or hosting with only AI). How it works and what it does to
   RAM and the game: `docs/HOW_IT_WORKS.md`. On macOS, with TSU in CrossOver, the same HUD
   reads the race through a reader in the bottle (`turbohud/tsu/bottle.py`), with no setup;
-  run against a live online session as a spectator, not yet seen in a race. On Windows it
+  online AI races have run on it, while the race test list is still to do. On Windows it
   still shows a session clock and the local time. Start from the source with
   `run_turbohud.sh` / `run_turbohud.cmd`.
 - Layout, in the move-mode panel: a text section's box fits closely round its text, three
@@ -50,8 +50,7 @@
   (Linux; a separate tools environment, never part of the app). Both pass.
 
 ## Next steps
-**Start with `docs/CONTINUE_HERE.md`**: a decision waiting for the user, and what is left to
-test. Then `docs/IMPROVEMENT_BACKLOG.md`. In short:
+**Start with `docs/CONTINUE_HERE.md`**: what is left to test. Then `docs/IMPROVEMENT_BACKLOG.md`. In short:
 0. Tests: keep them from reaching a running TurboHUD (until then run them with
    `XDG_RUNTIME_DIR` set to an empty private folder).
 1. Windows: the overlay over TSU (windowed, Fullscreen, Fullscreen Exclusive), then
@@ -65,6 +64,11 @@ test. Then `docs/IMPROVEMENT_BACKLOG.md`. In short:
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-05: The online race search is faster, asked for by the user as the HUD showed 7 to 12 s
+  after an online race started. In CrossOver a search now reads half of the time instead of a
+  quarter (expected: about 4 to 6 s; a little stutter in the first seconds is the risk, not yet
+  seen in a race). The look at the last race's place is gone: the new race was elsewhere in all
+  three races logged, as the equal hit counts were a coincidence.
 - 2026-11-05: `docs/CONTINUE_HERE.md` notes where the work stopped, asked for by the user: the
   decision on the online race search, what has not been seen in a race, and the test list.
 - 2026-11-05: The settings window can be dragged by its background, like the move-mode panel,
