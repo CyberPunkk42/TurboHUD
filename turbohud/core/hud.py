@@ -22,6 +22,7 @@ class Line:
     middle: str = ''  # a second column, lined up on the right just before `right`
     middle_color: str = 'text'
     slot: str = ''  # the text is at the right of a slot this wide, with the tail after it
+    before: str = ''  # a column lined up on the right just before `middle`, in the text's colour
 
 
 @dataclass(frozen=True)
@@ -39,6 +40,7 @@ class Row:
     middle: str = ''  # a second column, lined up on the right just before `right`
     middle_color: str = 'text'
     slot: str = ''  # the text is at the right of a slot this wide, with the tail after it
+    before: str = ''  # a column lined up on the right just before `middle`, in the text's colour
 
 
 FLAG_WIDTH = 1.5  # a flag's room before the text, in font sizes
@@ -130,6 +132,7 @@ def _content(rows, sizes):
                 row.middle,
                 row.middle_color,
                 row.slot,
+                row.before,
             )
         )
     return lines, baseline
@@ -151,6 +154,8 @@ def _left_width(line, measure):
 def line_width(line, measure):
     """How wide a line is with its flag and its columns."""
     width = _left_width(line, measure)
+    if line.before:
+        width += COLUMN_GAP * line.size + measure(line.before, line.size)
     if line.middle:
         width += COLUMN_GAP * line.size + measure(line.middle, line.size)
     if line.right:
@@ -164,8 +169,10 @@ def lines_width(lines, measure):
     if not any(line.middle for line in lines):
         return max((line_width(line, measure) for line in lines), default=0)
     gap = max(COLUMN_GAP * line.size for line in lines)
+    before = max((measure(line.before, line.size) for line in lines if line.before), default=None)
     return (
         max(_left_width(line, measure) for line in lines)
+        + (before + gap if before is not None else 0)
         + gap
         + max((measure(line.middle, line.size) for line in lines if line.middle), default=0)
         + gap
@@ -179,6 +186,14 @@ def middle_right(lines, width, margin, measure):
     right = max((measure(line.right, line.size) for line in lines if line.middle and line.right), default=0)
     gap = max((COLUMN_GAP * line.size for line in lines if line.middle), default=0)
     return width - margin - right - gap
+
+
+def before_right(lines, middle_end, measure):
+    """Where the `before` column ends (it is right-aligned there): before the widest
+    middle column, whose right edge is at `middle_end`, with a gap."""
+    middle = max((measure(line.middle, line.size) for line in lines if line.middle), default=0)
+    gap = max((COLUMN_GAP * line.size for line in lines if line.middle), default=0)
+    return middle_end - middle - gap
 
 
 def content_size(rows, scale, measure):
@@ -209,6 +224,7 @@ def steady_rows(rows):
             text=steady_text(row.text),
             tail=steady_text(row.tail),
             middle=steady_text(row.middle),
+            before=steady_text(row.before),
             right=steady_text(row.right),
         )
         for row in rows
@@ -307,7 +323,7 @@ RACE_SECTIONS = (
                 Row(
                     f'{n}. Playername1234567',
                     'small',
-                    tail='  L99',
+                    before='L99',
                     flag='DE',
                     middle='PIT 00.0s',
                     right='(00.00s)',
@@ -766,12 +782,33 @@ class GroupMover:
 
 
 FRAMES_EVERY = 30.0  # seconds between the log's lines about how the overlay draws
+RACE_FRAME_MOST = 0.1  # seconds without a read before a race frame is drawn anyway
+
+
+class FramePacer:
+    """Whether to draw a frame now. In a race, one for each new read: on timers of their
+    own, 19 reads and 20 frames a second left a frame with nothing new about once a
+    second, and the track map's dots stood still and then jumped. A late read still gets a
+    frame after RACE_FRAME_MOST, for the times that run on. Otherwise at every call."""
+
+    def __init__(self):
+        self._read_at = self._drawn_at = None
+
+    def due(self, read_at, racing, now):
+        """(draw now, the frame has a new read). `read_at`: when the latest read was made."""
+        fresh = read_at != self._read_at
+        late = self._drawn_at is None or now - self._drawn_at >= RACE_FRAME_MOST
+        if not (fresh or late or not racing):
+            return False, False
+        self._read_at, self._drawn_at = read_at, now
+        return True, fresh
 
 
 class FrameTimes:
     """How smoothly the overlay's frames come and how busy they keep its thread, for the
-    log, over FRAMES_EVERY seconds at a time. `frame(worked, drawn)` at each frame: the
-    seconds it spent on the content, and on drawing since the last one."""
+    log, over FRAMES_EVERY seconds at a time. `frame(worked, drawn, fresh)` at each frame:
+    the seconds it spent on the content, on drawing since the last one, and whether it
+    has a new read."""
 
     def __init__(self, clock, log_line):
         self._clock = clock
@@ -781,8 +818,9 @@ class FrameTimes:
     def clear(self):
         self._gaps, self._last, self._since = [], None, None
         self._worked = self._drawn = 0.0
+        self._stale = 0
 
-    def frame(self, worked, drawn):
+    def frame(self, worked, drawn, fresh=True):
         now = self._clock()
         if self._last is not None:
             self._gaps.append(now - self._last)
@@ -791,6 +829,7 @@ class FrameTimes:
         self._last = now
         self._worked += worked
         self._drawn += drawn
+        self._stale += not fresh
         if now - self._since >= FRAMES_EVERY:
             self.flush()
 
@@ -799,12 +838,13 @@ class FrameTimes:
             span = max(self._clock() - self._since, 1e-6)
             gaps = sorted(self._gaps)
             self._log_line(
-                'HUD frames: %d in %.0f s, %.0f ms apart, slowest %.0f ms; content %.0f%% and '
-                'drawing %.0f%% of the time',
+                'HUD frames: %d in %.0f s, %.0f ms apart, slowest %.0f ms, %d with no new read; '
+                'content %.0f%% and drawing %.0f%% of the time',
                 len(gaps),
                 span,
                 gaps[len(gaps) // 2] * 1000,
                 gaps[-1] * 1000,
+                self._stale,
                 self._worked / span * 100,
                 self._drawn / span * 100,
             )

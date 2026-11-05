@@ -1848,7 +1848,7 @@ def lap_times_rows(players, order=None, clock=0):
                 f'{position}. {name}',
                 'small',
                 'accent' if player.local else 'text',
-                tail=f'  L{player_lap_number(player)}',
+                before=f'L{player_lap_number(player)}',
                 flag=flag_code(player.flag) or flag_text(player.flag),
                 middle=_pit_time(player) if timed else format_time(best),
                 middle_color='lift' if timed else 'ahead' if best is not None and best == fastest else 'text',

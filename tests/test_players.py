@@ -243,11 +243,11 @@ class LapTimesPitAndLapTests(unittest.TestCase):
 
     def test_each_driver_shows_the_lap_it_is_on(self):
         car = player('Me', [lap(0), lap(40_000), lap(80_000)], laps=2, local=True)
-        self.assertEqual(self.row(car).tail, '  L3')
+        self.assertEqual((self.row(car).before, self.row(car).tail), ('L3', ''))
 
     def test_a_finished_driver_shows_the_laps_it_drove(self):
         car = player('Me', [lap(0), lap(40_000), lap(80_000)], laps=2, local=True, finished=True)
-        self.assertEqual((self.row(car).tail, self.row(car).right), ('  L2', 'Fin'))
+        self.assertEqual((self.row(car).before, self.row(car).right), ('L2', 'Fin'))
 
     def test_the_timers_stand_in_the_columns_while_they_show(self):
         car = dataclasses.replace(
