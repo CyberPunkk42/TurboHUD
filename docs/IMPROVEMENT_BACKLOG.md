@@ -1,6 +1,7 @@
 # Improvement backlog
 
-Open items, most valuable first. Finished items move to `docs/PROGRESS.md`.
+Open items, most valuable first. Finished items move to `docs/PROGRESS.md`. Where the work
+last stopped: `docs/CONTINUE_HERE.md`.
 
 ## 1. Tests must not reach a running TurboHUD
 Running the tests while TurboHUD runs (found 2026-11-03, mid-race) switched the real
