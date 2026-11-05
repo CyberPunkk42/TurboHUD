@@ -33,11 +33,9 @@ none is left.
   2026-11-05. Not tried: another tire compound (`tireCompoundAndChangeTicks` holds it too, how is
   not known; above 2400 the bar jumps at the end of the change, as before).
 
-## Delta bar and radar option, not yet seen in a race
-- The bar's colour, which changes at once: whether it follows the driver's feeling or flickers. The live delta can move
-  unevenly between checkpoint lines, and online as a client it can step at each line. Tune
-  `DELTA_TREND_WINDOW` and `DELTA_STEADY` in `turbohud/core/race.py`.
-- The cone option on the real radar, and the section's first place on the user's screen.
+## Delta bar and radar option
+The user confirmed both work on 2026-11-05. If the bar's colour ever flickers or lags, tune
+`DELTA_TREND_WINDOW` and `DELTA_STEADY` in `turbohud/core/race.py`.
 
 ## Test list: what is left
 Done by the user on the Mac: all of the layout list (tight boxes, centring, groups, presets
