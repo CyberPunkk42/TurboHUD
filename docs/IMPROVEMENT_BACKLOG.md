@@ -41,21 +41,14 @@ hit). The Mac app now does this by itself (`turbohud/tsu/bottle.py`, reader in
   fake game and offscreen): whether the replay recorder runs for a spectator, so the map's
   dots and the live gaps use real positions; and what fun-mode events show.
 
-## 4. Layout: check by hand
-Merged 2026-11-05 without having been used by hand; tested with automatic tests, offscreen
-renders and the real app code on simulated windows, so real dragging is still to be seen:
-- Tight boxes: saved sizes converted once, with the text the same size and in the same spot
-  (the old file is kept as `settings.before-layout-2.json`); boxes that fit closely while
-  shortening; the speed centred between its shorter bars; a short box can still be grabbed;
-  a text section's name as a tooltip in move mode.
-- Presets: Save and Load; Ctrl+Shift+1, 2 and 3 pressed for real, with TSU in front and
-  during a race (a hitch when switching?). Linux: `--preset`, and moving through Hyprland.
-- Groups: the same text size and width; how smoothly a group follows a corner being dragged
-  (about five times a second); on Hyprland the followers take their size when it ends.
-- Centre buttons on every section, and Centre text with the tint.
-- Undo, after real drags and resizes (one step each?), and on Hyprland.
-- The lap times list with 20 drivers: does it fit, and does a race read stay quick?
-Windows has run none of this (its shortcut code has only ever run on a build machine).
+## 4. Layout: what is left to check
+The user went through it all by hand on the Mac on 2026-11-05 and it worked: the tight boxes,
+presets with their shortcuts, groups, the Centre buttons, Centre text and Undo. Still to see:
+- The lap times list with 20 drivers in a race: does it fit, and does a race read stay quick?
+- The preset shortcuts with TSU in front, during a race (a hitch when switching?).
+- Linux: `--preset`, and moving and resizing through Hyprland (followers take their size when
+  a resize ends), and Undo there.
+- Windows has run none of this (its shortcut code has only ever run on a build machine).
 
 ## 5. Builds and release
 Bundled apps from `tools/build_app.py` with the probe and clear launch-option steps for

@@ -548,3 +548,6 @@ its "Recent changes".
   the drivers there are drawn. Saved sizes and presets are converted once, with the text the
   same size and the box growing downwards; `settings.before-layout-3.json` keeps the file as
   it was. The players list stays at 8 rows. Not yet seen with 20 cars in a race.
+- 2026-11-05: The user checked the layout work by hand on the Mac and it worked: tight boxes,
+  presets, groups, centring and Undo. Backlog item 4 now holds only what is left: in races,
+  on Linux and on Windows.
