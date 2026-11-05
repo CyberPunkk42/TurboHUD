@@ -28,6 +28,13 @@ TSU_LISTING = (
     '  103 C:\\Program Files (x86)\\Steam\\steamapps\\common\\TSU\\TSU.exe -logFile x\n'
 )
 
+GRAPHICS_DEFAULT = (
+    '[EnvironmentVariables]\n'
+    ';;"CX_GRAPHICS_BACKEND" = "d3dmetal"\n'
+    '"WINEMSYNC" = "1"\n'
+    '"CX_GRAPHICS_BACKEND" = ""\n'
+)
+
 
 class FakeProcess:
     """Bytes at `base`, as `WindowsProcess` reads them."""
@@ -106,6 +113,33 @@ class FindCrossoverTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as home:
             if not Path('/Applications/CrossOver.app', bt.WINE).exists():
                 self.assertIsNone(bt.find_crossover(home, spotlight=lambda: ''))
+
+
+class GraphicsTests(unittest.TestCase):
+    def test_the_default_and_other_backends_warn(self):
+        self.assertEqual(bt.graphics_warning(GRAPHICS_DEFAULT), bt.GRAPHICS_WARNING)
+        self.assertEqual(bt.graphics_warning('"CX_GRAPHICS_BACKEND" = "dxvk"\n'), bt.GRAPHICS_WARNING)
+
+    def test_without_the_setting_it_warns(self):
+        self.assertEqual(
+            bt.graphics_warning('[EnvironmentVariables]\n"WINEMSYNC" = "1"\n'), bt.GRAPHICS_WARNING
+        )
+
+    def test_a_comment_does_not_count(self):
+        self.assertEqual(bt.graphics_warning(';;"CX_GRAPHICS_BACKEND" = "d3dmetal"\n'), bt.GRAPHICS_WARNING)
+
+    def test_d3dmetal_does_not_warn(self):
+        self.assertIsNone(bt.graphics_warning('"CX_GRAPHICS_BACKEND" = "d3dmetal"\n'))
+        self.assertIsNone(bt.graphics_warning('"CX_GRAPHICS_BACKEND" = "D3DMetal"\n'))
+
+    def test_the_tray_shows_it_below_the_status(self):
+        self.assertEqual(app.tray_text('racing'), 'TurboHUD - racing')
+        self.assertEqual(app.tray_text('racing', 'careful'), 'TurboHUD - racing\ncareful')
+
+    def test_the_mac_passes_it_on(self):
+        with mock.patch('turbohud.tsu.client.LiveRace.start'):
+            live = app.start_live_race('darwin')
+        self.assertIsNone(live.warning())
 
 
 class BottleOfTests(unittest.TestCase):
@@ -357,18 +391,55 @@ class PipeTests(ReaderCase):
 class BottleTests(ReaderCase):
     """Starting and keeping the reader."""
 
-    def bottle(self, start, listing=TSU_LISTING, clock=None):
+    def bottle(self, start, listing=TSU_LISTING, clock=None, home=None):
         return bt.Bottle(
             environ={'TURBOHUD_BOTTLE': 'Steam'},
             output=lambda _command: listing,
             start=start,
             clock=clock or (lambda: 0.0),
+            home=home or '/nonexistent',
         )
 
     def test_no_reader_while_tsu_does_not_run(self):
         bottle = self.bottle(lambda _b: self.fail('started'), listing='  1 /bin/zsh\n')
         with self.assertRaisesRegex(OSError, 'not running'):
             bottle.connect()
+
+    def settings(self, home, text):
+        folder = Path(home) / bt.BOTTLES / 'Steam'
+        folder.mkdir(parents=True)
+        (folder / bt.BOTTLE_SETTINGS).write_text(text)
+
+    def test_warns_about_the_graphics_setting_until_the_reader_closes(self):
+        with tempfile.TemporaryDirectory() as home:
+            self.settings(home, GRAPHICS_DEFAULT)
+            before = (Path(home) / bt.BOTTLES / 'Steam' / bt.BOTTLE_SETTINGS).read_text()
+            bottle = self.bottle(lambda _b: self.reader(), home=home)
+            self.assertIsNone(bottle.warning)  # nothing known before TSU's bottle is
+            with self.assertLogs('turbohud.tsu.bottle', 'WARNING') as logs:
+                bottle._open()
+            self.assertEqual(bottle.warning, bt.GRAPHICS_WARNING)
+            self.assertIn('D3DMetal', logs.output[0])
+            self.assertEqual((Path(home) / bt.BOTTLES / 'Steam' / bt.BOTTLE_SETTINGS).read_text(), before)
+            bottle.close()
+            self.assertIsNone(bottle.warning)
+
+    def test_no_warning_with_d3dmetal(self):
+        with tempfile.TemporaryDirectory() as home:
+            self.settings(
+                home,
+                GRAPHICS_DEFAULT.replace('"CX_GRAPHICS_BACKEND" = ""', '"CX_GRAPHICS_BACKEND" = "d3dmetal"'),
+            )
+            bottle = self.bottle(lambda _b: self.reader(), home=home)
+            bottle._open()
+            self.addCleanup(bottle.close)
+            self.assertIsNone(bottle.warning)
+
+    def test_no_warning_when_the_settings_cannot_be_read(self):
+        bottle = self.bottle(lambda _b: self.reader())
+        bottle._open()
+        self.addCleanup(bottle.close)
+        self.assertIsNone(bottle.warning)
 
     def test_keeps_its_reader_while_the_game_loads(self):
         with tempfile.TemporaryDirectory() as folder:

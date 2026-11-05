@@ -7,7 +7,8 @@ portable Windows Python. `Bottle.connect` then gives `LiveRace` a race reader, a
 Linux probe's `connect` does. The page cache is on this side: a question through the pipe
 costs about 15 µs, a read of the game about 250 µs.
 
-Nothing here changes the bottle: the reader is run from outside it, and installs nothing.
+Nothing here changes the bottle: the reader is run from outside it, and installs nothing,
+and the bottle's settings are only read, to warn about a graphics setting that makes TSU stutter.
 """
 
 import json
@@ -35,6 +36,10 @@ WINE = 'Contents/SharedSupport/CrossOver/bin/wine'
 BOTTLES = Path('Library') / 'Application Support' / 'CrossOver' / 'Bottles'
 TSU_PROCESS = re.compile(r'^\s*(\d+)\s+[A-Za-z]:\\.*\\TSU\.exe(\s|$)', re.IGNORECASE | re.MULTILINE)
 BOTTLE_PATH = re.compile(r'/Bottles/([^/\n]+)/')
+BOTTLE_SETTINGS = 'cxbottle.conf'
+GRAPHICS_SETTING = re.compile(r'^\s*"CX_GRAPHICS_BACKEND"\s*=\s*"([^"]*)"', re.MULTILINE)
+SMOOTH_GRAPHICS = 'd3dmetal'  # TSU stuttered on CrossOver's default, and ran well on this
+GRAPHICS_WARNING = "CrossOver's graphics setting is not D3DMetal: TSU may stutter"
 
 log = logging.getLogger(__name__)
 
@@ -50,6 +55,14 @@ def bottle_named_in(files):
     """The bottle in a process's list of open files (`lsof -Fn`), or None."""
     found = BOTTLE_PATH.search(files)
     return found.group(1) if found else None
+
+
+def graphics_warning(settings):
+    """The warning for the text of a bottle's settings file, or None. Without the setting the
+    bottle is on CrossOver's default, which also counts."""
+    found = GRAPHICS_SETTING.search(settings)
+    backend = found.group(1) if found else ''
+    return None if backend.strip().lower() == SMOOTH_GRAPHICS else GRAPHICS_WARNING
 
 
 def windows_path(path):
@@ -200,6 +213,17 @@ class Bottle:
         self.clock = clock
         self.pipe = None
         self.failed = None  # (when to try again, why the last start failed)
+        self.warning = None  # what to tell the player about the bottle, for the tray icon
+
+    def _check_graphics(self, bottle):
+        """Note what the bottle's settings say. A file that cannot be read says nothing."""
+        try:
+            settings = (self.home / BOTTLES / bottle / BOTTLE_SETTINGS).read_text(errors='replace')
+        except OSError:
+            return
+        self.warning = graphics_warning(settings)
+        if self.warning:
+            log.warning('%s (bottle %s)', self.warning, bottle)
 
     def bottle_of(self, pid):
         """The bottle TSU runs in: as asked for, else from its open files, else the only
@@ -290,6 +314,7 @@ class Bottle:
         )
         self.failed = None
         self.pipe = pipe
+        self._check_graphics(bottle)
         return pipe
 
     def connect(self):
@@ -319,3 +344,4 @@ class Bottle:
             log.info('closing the reader in the bottle')
             self.pipe.close()
             self.pipe = None
+            self.warning = None

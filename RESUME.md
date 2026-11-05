@@ -64,6 +64,11 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-05: TurboHUD warns when TSU's bottle is not on D3DMetal, asked for by the user: in
+  `turbohud.log` and the text on the menu bar icon, read from the bottle's `cxbottle.conf` when the
+  reader starts, never written. The stutter came from that setting: without TurboHUD, alone on a
+  server, with the keyboard and with Sidecar off TSU still stuttered, and it ran well on D3DMetal
+  (the default before; why, is not known). The README tells players; tried on the user's Mac only.
 - 2026-11-05: Online, the HUD stayed away for a whole TurboHUD session (only the local time), seen
   by the user in the first races with the faster search: every search ended in `no race`, while
   a separate connection found the race at once (2.1 s, the user the driver among 14). The cause:

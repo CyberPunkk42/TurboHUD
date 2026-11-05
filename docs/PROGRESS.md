@@ -625,3 +625,8 @@ its "Recent changes".
   before TSU started, so the faster search was not the cause. Field lists are now kept only once
   the class and its parents are set up. Seen with TurboHUD started first, as in the failed
   session: the same early search, then the race found in 1.5 s.
+- 2026-11-05: TurboHUD warns when TSU's bottle is not on D3DMetal, asked for by the user: in
+  `turbohud.log` and the text on the menu bar icon, read from the bottle's `cxbottle.conf` when the
+  reader starts, never written. The stutter came from that setting: without TurboHUD, alone on a
+  server, with the keyboard and with Sidecar off TSU still stuttered, and it ran well on D3DMetal
+  (the default before; why, is not known). The README tells players; tried on the user's Mac only.
