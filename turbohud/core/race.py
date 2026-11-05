@@ -23,14 +23,18 @@ against the game's own lap times on 2026-11-01: they match exactly.
 import dataclasses
 import functools
 import itertools
+import logging
 import math
 import struct
+import sys
 import time
 from dataclasses import dataclass
 
 from turbohud.core.flags import flag_code, flag_text
 from turbohud.core.hud import Row, blend, clock, local_time_rows
 from turbohud.core.il2cpp import ARRAY_DATA, ARRAY_LENGTH, LIST_ITEMS, SIMPLE_TYPES, NotFound, ReadError
+
+log = logging.getLogger(__name__)
 
 UNITS_PER_SECOND = 10_000
 # EventState.times: ticks, time, ..., time limit (int32 each).
@@ -381,6 +385,7 @@ def per_lap(history, laps=PER_LAP_LAPS):
 
 
 CLIENT_SEARCH_EVERY = 10.0  # seconds between searches for an online race while there is none
+CLIENT_SPECTATE_EVERY = 60.0  # the same while the race found is one the player only watches
 CLIENT_LOG_EVERY = 2.0  # seconds between looks at TSU's log while it says no event runs
 QUANTIZED_ZERO, QUANTIZED_SCALE = 1 << 20, 1024  # TS.QuantizedVehicleState positions
 RECORDER_STALE = 10_000  # race clock (1 s) without a new recorder tick: it does not run
@@ -443,6 +448,7 @@ class LapReader:
         self._recorder_tick, self._recorder_moved = None, 0
         self._client_class = None  # TS.ClientEventController, once looked up
         self._controller = None  # the online race's event controller, once found
+        self._spectated = None  # a controller whose race the player only watches
         self._next_search = 0.0  # when to look for it again
         self._state = None  # the TS.EventState the caches below belong to
         self._offsets = {}  # (role, field) -> offset
@@ -508,6 +514,19 @@ class LapReader:
                 pass
             self._controller = None
             self._next_search = 0.0  # gone (race over): look again at once
+        if self._spectated is not None:
+            # Spectating has no local player, so no search would ever stop at a good hit
+            # or find more. A look at the same race is cheap, and sees the player join.
+            try:
+                if memory.u64(self._spectated) != self._client_class:
+                    raise NotFound('that race is gone')
+                state, driving = self._race_of(self._spectated)
+                if driving:
+                    self._controller, self._spectated = self._spectated, None
+                    return state
+            except (NotFound, OSError):
+                self._spectated = None
+                self._next_search = 0.0
         find = memory.find_pointers
         if find is None or self._clock() < self._next_search:
             raise error
@@ -516,19 +535,44 @@ class LapReader:
             # of the game's data and keeps a CPU core busy for over a second).
             self._next_search = self._clock() + CLIENT_LOG_EVERY
             raise error
-        self._next_search = self._clock() + CLIENT_SEARCH_EVERY
         if self._client_class is None:
             self._client_class = il.find_class('TS', 'ClientEventController')
-        for candidate in find(self._client_class):
-            try:
-                state = il.ref(candidate, 'm_eventState')
-                for player in il.list_items(il.ref(state, 'players')):
-                    if player and memory.i32(player + il.offset(player, 'm_localHumanIndex')) >= 0:
-                        self._controller = candidate
-                        return state
-            except (NotFound, OSError):
-                continue  # a freed controller of an earlier race
+        spectated = None
+        started, hits, result = self._clock(), 0, 'stopped by an error'
+        log.info('searching for the online race')
+        try:
+            for candidate in find(self._client_class):
+                hits += 1
+                try:
+                    state, driving = self._race_of(candidate)
+                except (NotFound, OSError):
+                    continue  # a freed controller of an earlier race
+                if driving:
+                    self._controller, self._spectated = candidate, None
+                    result = 'race found'
+                    return state
+                spectated = spectated or candidate
+            result = 'a race to watch, no local player' if spectated else 'no race'
+        finally:
+            # Counted from the search's end: in a CrossOver bottle a search of all the
+            # data takes longer than the wait, and would start again at once.
+            wait = CLIENT_SPECTATE_EVERY if spectated else CLIENT_SEARCH_EVERY
+            ended = self._clock()
+            self._next_search = ended + wait
+            log.info('search: %s, after %.1f s and %d hits', result, ended - started, hits)
+        self._spectated = spectated
         raise error
+
+    def _race_of(self, controller):
+        """(a controller's event state, whether the player drives in it). Raises NotFound
+        or OSError when it holds no race."""
+        il, memory = self.il, self.il.memory
+        state = il.ref(controller, 'm_eventState')
+        players = [player for player in il.list_items(il.ref(state, 'players')) if player]
+        if not players:
+            raise NotFound('no players')
+        driving = any(memory.i32(p + il.offset(p, 'm_localHumanIndex')) >= 0 for p in players)
+        return state, driving
 
     def local_player(self):
         """(event state, local TS.EventPlayer); raises NotFound outside a race."""
@@ -1164,9 +1208,12 @@ def on_grid(snapshot, now=None):
     return now is None or now - snapshot.moved_at < STILL_SECONDS
 
 
-def status_text(snapshot):
-    """What TurboHUD is waiting for, for the tray icon's tooltip."""
+def status_text(snapshot, platform=sys.platform):
+    """What TurboHUD is waiting for, for the tray icon's tooltip. On the Mac TurboHUD
+    finds TSU by itself, so what is in the way is the reader's own message."""
     if snapshot.status == WAITING_FOR_GAME:
+        if platform == 'darwin':
+            return f'waiting: {snapshot.detail or "TSU is not running in CrossOver"}'
         return 'waiting for TSU (start it with the launch option)'
     if on_grid(snapshot, time.monotonic()):
         return 'racing'

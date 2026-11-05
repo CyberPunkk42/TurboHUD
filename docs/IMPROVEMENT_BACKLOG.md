@@ -27,17 +27,18 @@ inside the bottle can read TSU with `ReadProcessMemory`, and TurboHUD's lookup b
 works there unchanged, race reads too: alone 17 ms a read; online as a client (13 AI)
 the race is found after about 15 s and read in about 20 ms
 (`turbohud/tsu/winmemory.py`: page cache, paced search that stops at the first good
-hit). Next:
+hit). The Mac app now does this by itself (`turbohud/tsu/bottle.py`, reader in
+`bottle_reader.py`, Windows Python inside the app). Still to do:
+- Check in races on the Mac: offline and online, the sections over TSU's Fullscreen, how
+  long the race takes to show, the track map and the radar. So far the new connection was
+  only run against an online session as a spectator (no HUD to show there).
 - Listen for stutter while the reader searches (in an online event, the first 15 s;
   a search of all the data at once made TSU stutter, the paced one was not noticed for
   sure). If there is none, a larger share than a quarter finds the race sooner.
-- A bottle reader in place of the Linux probe: the same read-only questions (`maps`,
-  `read`, `read_many`, `search`), with the search and the regions from `winmemory`,
-  answered over its standard input and output. TurboHUD starts it, so only TurboHUD
-  holds the pipe: no port, no secret. The page cache then sits on the Mac side.
-- Starting it: TurboHUD looks for `TSU.exe` among the running programs, finds
-  CrossOver and the bottle, and runs the reader there with a portable Windows Python
-  (pinned and checked, as for the probes) shipped in the Mac app; it ends with TSU.
+- Throttle and brake on the Mac move in TSU's thirds: the pad's triggers are read through
+  the Linux joystick interface only.
+- Possible later: a spectator HUD. Spectating, the race and all its players are found
+  (12 in the session checked), but every section assumes a local car.
 
 ## 4. Builds and release
 Bundled apps from `tools/build_app.py` with the probe and clear launch-option steps for

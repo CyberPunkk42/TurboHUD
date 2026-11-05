@@ -14,12 +14,15 @@
   list (best and running lap of every driver), blue flag,
   proximity radar, track map and local time. It works offline, in hotlaps, hosting online and as
   an online client (guest, or hosting with only AI). How it works and what it does to
-  RAM and the game: `docs/HOW_IT_WORKS.md`. On Windows and macOS it still shows a
-  session clock and the local time. Start from the source with `run_turbohud.sh` /
-  `run_turbohud.cmd`.
-- Builds: `tools/build_app.py` (PyInstaller) makes a Windows ZIP, a Mac app ZIP and a
-  Linux `.tar.gz`, run locally on each system. Nothing goes to GitHub any more; the
-  old `.github/workflows/build.yml` is kept for reference only.
+  RAM and the game: `docs/HOW_IT_WORKS.md`. On macOS, with TSU in CrossOver, the same HUD
+  reads the race through a reader in the bottle (`turbohud/tsu/bottle.py`), with no setup;
+  run against a live online session as a spectator, not yet seen in a race. On Windows it
+  still shows a session clock and the local time. Start from the source with
+  `run_turbohud.sh` / `run_turbohud.cmd`.
+- Builds: `tools/build_app.py` (PyInstaller) makes a Windows ZIP, a Mac app ZIP (with the
+  reader and its Windows Python, 39 MB) and a Linux `.tar.gz`, run locally on each system.
+  Nothing goes to GitHub any more; the old `.github/workflows/build.yml` is kept for
+  reference only.
 - The overlay probe (`experiments/overlay_probe.py`, see `experiments/README.md`) answered
   whether a see-through, click-through, always-on-top window can sit over TSU:
   - macOS (CrossOver): yes when TSU runs windowed or with Fullscreen off; never with TSU's
@@ -48,14 +51,32 @@ See `docs/IMPROVEMENT_BACKLOG.md`. In short:
    `XDG_RUNTIME_DIR` set to an empty private folder).
 1. Windows: the overlay over TSU (windowed, Fullscreen, Fullscreen Exclusive), then
    live data (reading memory as the same user, without a probe).
-2. macOS: live data through a reader inside the CrossOver bottle. Its reading code
-   is done (`turbohud/tsu/winmemory.py`, checked live online); still to do: the bottle
-   reader that answers over a pipe, and the Mac app starting it and drawing.
+2. macOS: live data is connected; check it in races (offline and online), over
+   Fullscreen, and listen for stutter while the race is searched for.
 3. Builds and release: bundled apps with the probe, an AppImage; before the repository
    goes public, the privacy check, a licence and a README for players.
 4. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-04: Numbers in `turbohud.log` for test drives (asked for by the user before the
+  first Mac race; every system). Every 30 s in a race, and when it ends: how many race
+  reads, their median and slowest time, and how many took over 50 ms. Each search for an
+  online race: when it started, how long it took, how many hits and what it found. The
+  reader in the bottle: how long it took to start, why it was given up, when it closes.
+  No names or IDs.
+- 2026-11-04: macOS live race data. TurboHUD on the Mac now finds TSU in CrossOver and
+  starts a read-only reader in its bottle with a portable Windows Python
+  (`turbohud/tsu/bottle.py`, `bottle_reader.py`), asked over a pipe; no setup, nothing
+  installed in the bottle. The Mac app carries both (`tools/build_app.py`), and a start
+  from the source fetches the pinned Python (`tools/get_windows_python.sh`). A reader that
+  fails to start is tried again after 10 s, and the tray icon says why. Fixed, found
+  spectating an online fun-mode session: a spectator's race has no local player, so a
+  search never stopped early, and as the 10 s wait counted from a search's start, while
+  one takes about 30 s in the bottle, searches ran back to back. The wait now counts from
+  a search's end, and a race the player only watches is remembered: looked at each read
+  (which sees the player join) and searched again once a minute. Measured live: one search
+  and then 18 looks of about 6 ms in 75 s. The built app ran 60 s against that session and
+  quit cleanly. Not yet seen in a race on the Mac.
 - 2026-11-04: Windows memory reader (`turbohud/tsu/winmemory.py`), for Windows and for
   TSU inside CrossOver: it opens TSU for reading, lists its memory in the form the
   lookup by name takes, and `connect()` gives `LiveRace` a race reader as the Linux

@@ -75,15 +75,25 @@ def setup_log(folder):
 
 
 def start_live_race(platform=sys.platform):
-    """On Linux, start reading TSU's race through the memory probe (TSU started from
-    Steam with the launch option); None elsewhere, where the HUD keeps its session clock."""
-    if not platform.startswith('linux'):
-        return None
-    from turbohud.tsu.client import LiveRace
+    """Start reading TSU's race: on Linux through the memory probe (TSU started from Steam
+    with the launch option), on the Mac through a reader in TSU's CrossOver bottle. None
+    elsewhere, where the HUD keeps its session clock."""
+    if platform == 'darwin':
+        from turbohud.tsu.bottle import Bottle
+        from turbohud.tsu.client import LiveRace
 
-    live = LiveRace()
+        bottle = Bottle()
+        live = LiveRace(connect=bottle.connect, close=bottle.close)
+        way = 'a reader in the CrossOver bottle'
+    elif platform.startswith('linux'):
+        from turbohud.tsu.client import LiveRace
+
+        live = LiveRace()
+        way = 'the memory probe'
+    else:
+        return None
     live.start()
-    log.info('reading TSU live through the memory probe')
+    log.info('reading TSU live through %s', way)
     return live
 
 
@@ -181,10 +191,11 @@ def run(args, folder):
         from turbohud.core.race import Radar, Standings, race_sections, status_text, with_local_time
 
         layout = RACE_SECTIONS
-        from turbohud.tsu.controller import Pad, combined
+        if sys.platform.startswith('linux'):  # the Linux joystick interface
+            from turbohud.tsu.controller import Pad, combined
 
-        pad = Pad()
-        pad.start()
+            pad = Pad()
+            pad.start()
         from turbohud.core.trackmap import TrackMap
 
         standings = Standings()
@@ -197,7 +208,7 @@ def run(args, folder):
             current = race_sections(
                 snapshot, time.monotonic(), settings.speed_unit, standings, radar, track_map
             )
-            if 'pedals' in current:
+            if pad is not None and 'pedals' in current:
                 current['pedals'] = combined(current['pedals'], pad.pedals())
             return with_local_time(current, snapshot, time.localtime())
 

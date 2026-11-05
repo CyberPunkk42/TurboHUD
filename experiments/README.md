@@ -409,7 +409,8 @@ Mac's own sockets): 78 µs per round trip, measured with a small echo server.
 **So live data on the Mac can work like on Linux:** a small reader inside the bottle (in
 place of the Linux probe) answers the same read-only questions over a local socket, and
 the native TurboHUD asks them and draws, with no system change. The same Windows reading
-code serves TurboHUD on Windows itself, there without a socket. To settle: a socket
-only this user can use (TCP on 127.0.0.1 is open to every local user, so a secret in a
-private file), and how the reader starts (with TSU, or started by TurboHUD with CrossOver's
-`wine --bottle`).
+code serves TurboHUD on Windows itself, there without a socket.
+
+Settled and built (2026-11-04, `turbohud/tsu/bottle.py`, `bottle_reader.py`): TurboHUD
+starts the reader with CrossOver's `wine --bottle` and asks it over its standard input and
+output, so there is no socket, port or secret.

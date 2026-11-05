@@ -8,8 +8,9 @@ Early version. On Linux, with TSU started through TurboHUD's memory probe (see
 [Live lap times on Linux](#live-lap-times-on-linux)), the HUD shows the live race: lap
 times and the delta to your best lap, fuel, tires, health, the draft, speed with pedal
 bars, the player list with gaps, a blue flag, a proximity radar and a track map (see
-[Use](#use)). It works offline, in hotlaps and online. On Windows and macOS it shows a
-session clock and the local time for now.
+[Use](#use)). It works offline, in hotlaps and online. On macOS, with TSU in CrossOver,
+the same HUD needs no setup (see [Live race data on macOS](#live-race-data-on-macos)). On
+Windows it shows a session clock and the local time for now.
 
 ## Install and first start
 
@@ -94,6 +95,23 @@ game. How it all works, and what it does to RAM and the game:
 Clear the launch option to start TSU without the probe. The probe writes what it did to
 `~/.config/TurboHUD/memory_probe.log`.
 
+### Live race data on macOS
+TSU runs in a CrossOver bottle, and macOS lets no Mac program read its memory. A Windows
+program in the same bottle may, so TurboHUD runs a small read-only reader there, with its
+own Windows Python; nothing is installed into the bottle, and there is no launch option.
+1. Start TSU in CrossOver and start TurboHUD, in either order.
+2. The race sections appear when the cars stand on the grid. Online, finding the race
+   takes about 15 s after the event starts. Hover over the TurboHUD icon in the menu bar
+   to see what it waits for.
+
+When you only spectate, the HUD stays hidden: its sections are about your own car. If
+TSU's bottle cannot be told apart from others, set `TURBOHUD_BOTTLE` to its name. The
+throttle and brake bars move in TSU's own steps (thirds) on the Mac, as the pad's
+triggers are read only on Linux. The reader's errors are in `bottle_reader.log`, next to
+`turbohud.log`. If the HUD lags or TSU stutters, `turbohud.log` shows how long the race
+reads took and when each search ran; it is replaced at the next start, so look before
+starting TurboHUD again.
+
 ## Use
 
 - The HUD is made of sections, each in its own small box: lap and time left, the running
@@ -101,7 +119,7 @@ Clear the launch option to start TSU without the probe. The probe writes what it
   they last), health (in events with damage), the draft (slipstream) with the downforce it costs, the fuel to spare or short for the finish, speed with throttle and brake
   bars (km/h or mph), the player list with flags, pit status and gaps, the lap times
   (every driver's best lap and running lap), the local time
-  (on Windows and macOS for now the session clock and the local time), a blue flag
+  (on Windows for now the session clock and the local time), a blue flag
   bar, a proximity radar and a track map. On the first start they sit one below the other at the left of your largest
   screen (laid out as on a 1920x1080 screen), the blue flag at its top centre,
   **locked**: clicks go through them to the game.

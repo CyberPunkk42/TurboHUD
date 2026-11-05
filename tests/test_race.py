@@ -812,6 +812,112 @@ class CarTests(unittest.TestCase):
             reader.read()
         self.assertEqual(g.searches, 2)
 
+    def spectated(self, now):
+        """A reader in an online race where the player only watches: no local player."""
+        reader = build(
+            [10_000], laps_completed=0, clock=20_000, limit=0, name='A', online=True, clock_fn=lambda: now[0]
+        )
+        _state, player = reader.local_player()
+        reader.game.put(player + 0x50, struct.pack('<i', -1))
+        reader.spectator = player
+        reader._controller, reader._next_search = None, 0.0
+        reader.game.searches = 0
+        return reader
+
+    def test_spectating_searches_rarely(self):
+        now = [100.0]
+        reader = self.spectated(now)
+        with self.assertRaises(race.NotFound):
+            reader.read()
+        self.assertEqual(reader.game.searches, 1)
+        now[0] += race.CLIENT_SEARCH_EVERY + 1
+        with self.assertRaises(race.NotFound):
+            reader.read()
+        self.assertEqual(reader.game.searches, 1)  # the race is known: nothing more to find
+        now[0] += race.CLIENT_SPECTATE_EVERY
+        with self.assertRaises(race.NotFound):
+            reader.read()
+        self.assertEqual(reader.game.searches, 2)  # in case that race was an old one
+
+    def test_joining_the_spectated_race_needs_no_search(self):
+        now = [100.0]
+        reader = self.spectated(now)
+        with self.assertRaises(race.NotFound):
+            reader.read()
+        reader.game.put(reader.spectator + 0x50, struct.pack('<i', 0))
+        self.assertEqual(reader.read().laps_completed, 0)
+        self.assertEqual(reader.game.searches, 1)
+
+    def test_a_spectated_race_that_ends_is_looked_for_again_at_once(self):
+        now = [100.0]
+        reader = self.spectated(now)
+        with self.assertRaises(race.NotFound):
+            reader.read()
+        reader.game.q(reader.game.client_controller + 0x48, 0)  # its race is gone
+        with self.assertRaises(race.NotFound):
+            reader.read()
+        self.assertEqual(reader.game.searches, 2)
+        self.assertIsNone(reader._spectated)
+
+    def test_the_log_says_how_a_search_went(self):
+        now = [100.0]
+        reader = build(
+            [10_000], laps_completed=0, clock=20_000, limit=0, name='A', online=True, clock_fn=lambda: now[0]
+        )
+        find = reader.il.memory.find_pointers
+
+        def slow(value):
+            now[0] += 12.0
+            return find(value)
+
+        reader.il.memory.find_pointers = slow
+        with self.assertLogs('turbohud.core.race', 'INFO') as logs:
+            reader.read()
+        self.assertIn('searching for the online race', logs.output[0])
+        self.assertIn('race found, after 12.0 s', logs.output[1])
+
+    def test_the_log_says_when_there_is_only_a_race_to_watch(self):
+        reader = self.spectated([100.0])
+        with self.assertLogs('turbohud.core.race', 'INFO') as logs, self.assertRaises(race.NotFound):
+            reader.read()
+        self.assertIn('a race to watch', logs.output[1])
+
+    def test_the_log_says_when_a_search_failed(self):
+        reader = self.spectated([100.0])
+
+        def broken(_value):
+            raise OSError('the reader has ended')
+
+        reader.il.memory.find_pointers = broken
+        with self.assertLogs('turbohud.core.race', 'INFO') as logs, self.assertRaises(OSError):
+            reader.read()
+        self.assertIn('stopped by an error', logs.output[1])
+
+    def test_the_wait_counts_from_the_end_of_a_long_search(self):
+        now = [100.0]
+        reader = build(
+            [10_000], laps_completed=0, clock=20_000, limit=0, online=True, clock_fn=lambda: now[0]
+        )
+        g = reader.game
+        g.q(g.client_controller + 0x48, 0)
+        searches = []
+
+        def slow(value):
+            searches.append(value)
+            now[0] += 30.0  # longer than the wait, as in a CrossOver bottle
+            return []
+
+        reader.il.memory.find_pointers = slow
+        with self.assertRaises(race.NotFound):
+            reader.read()
+        with self.assertRaises(race.NotFound):
+            reader.read()
+        self.assertEqual(len(searches), 1)
+        now[0] += race.CLIENT_SEARCH_EVERY
+        with self.assertRaises(race.NotFound):
+            reader.read()
+        self.assertEqual(len(searches), 2)
+
     def test_no_search_while_the_games_log_says_no_event_runs(self):
         running = [False]
         reader = build(
@@ -1121,7 +1227,14 @@ class RowsTests(unittest.TestCase):
         self.assertNotEqual(race.race_sections(racing(old, moved_at=100.0), 101.0), {})
 
     def test_status_for_the_tray(self):
-        self.assertIn('launch option', race.status_text(race.Snapshot(race.WAITING_FOR_GAME)))
+        self.assertIn('launch option', race.status_text(race.Snapshot(race.WAITING_FOR_GAME), 'linux'))
+        self.assertEqual(
+            race.status_text(
+                race.Snapshot(race.WAITING_FOR_GAME, detail='CrossOver was not found'), 'darwin'
+            ),
+            'waiting: CrossOver was not found',
+        )
+        self.assertIn('CrossOver', race.status_text(race.Snapshot(race.WAITING_FOR_GAME), 'darwin'))
         self.assertEqual(race.status_text(race.Snapshot(race.WAITING_FOR_RACE)), 'waiting for a race')
         self.assertEqual(race.status_text(race.Snapshot(race.STARTING)), 'race being set up')
         import time
@@ -1172,6 +1285,65 @@ class LiveRaceTests(unittest.TestCase):
         live.step()
         self.assertEqual(live.snapshot().status, race.WAITING_FOR_RACE)
         self.assertEqual(len(calls), 1)
+
+    def reading(self, durations):
+        """A LiveRace whose reader takes these many seconds, one read after another."""
+        durations = iter(durations)
+        tester = self
+
+        class Reader:
+            def read(self):
+                tester.now += next(durations)
+                return race.LapState(1000, 0, 0, 13, [0])
+
+        return self.live(lambda: (Reader(), None))
+
+    def test_the_log_says_how_long_race_reads_take(self):
+        live = self.reading([9.0, 0.01, 0.02, 0.06])  # the first also finds the race
+        with self.assertLogs('turbohud.tsu.client', 'INFO') as logs:
+            for _ in range(4):
+                live.step()
+                self.now += 15.0
+        line = next(m for m in logs.output if 'race reads' in m)
+        self.assertIn('3 in 30 s', line)
+        self.assertIn('median 20.0 ms', line)
+        self.assertIn('slowest 60.0 ms', line)
+        self.assertIn('1 over 50 ms', line)
+
+    def test_no_line_between_the_times(self):
+        live = self.reading([0.01, 0.01, 0.01])
+        live.step()  # the status line comes with the first read
+        live.step()
+        with self.assertNoLogs('turbohud.tsu.client', 'INFO'):
+            live.step()
+
+    def test_the_last_reads_are_logged_when_the_race_ends(self):
+        lap = race.LapState(1000, 0, 0, 13, [0])
+        results = iter([lap, lap, il.NotFound('m_activeServer is null')])
+
+        class Reader:
+            def read(self):
+                result = next(results)
+                if isinstance(result, Exception):
+                    raise result
+                return result
+
+        live = self.live(lambda: (Reader(), None))
+        with self.assertLogs('turbohud.tsu.client', 'INFO') as logs:
+            for _ in range(3):
+                live.step()
+        self.assertTrue(any('race reads: 1 in' in m for m in logs.output))
+
+    def test_failed_reads_do_not_count(self):
+        class Reader:
+            def read(self):
+                raise il.NotFound('m_activeServer is null')
+
+        live = self.live(lambda: (Reader(), None))
+        with self.assertLogs('turbohud.tsu.client', 'INFO') as logs:
+            live.step()
+            live.stop()
+        self.assertFalse(any('race reads' in m for m in logs.output))
 
     def test_racing_notices_whether_the_clock_moves(self):
         clocks = iter([1000, 1200, 1200])
