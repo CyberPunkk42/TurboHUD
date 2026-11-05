@@ -64,6 +64,9 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-05: The lap section shows the leader's lap when the driver is on an earlier lap
+  (`Lap 9/20 · Leader 12`), asked for by the user: lapped many times, the driver's own count says little
+  about the race. Left out on the leader's lap or in the lead. No more reads of the game.
 - 2026-11-05: In the lap times list, each driver's lap (`L12`) is now a right-aligned column before
   Best, asked for by the user, so the numbers line up. The columns are placed with digits as zeros,
   so they stay put while a pit timer runs.
