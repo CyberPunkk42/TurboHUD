@@ -187,6 +187,26 @@ def content_size(rows, scale, measure):
     return round(width + 2 * sizes.margin), round(bottom + sizes.margin)
 
 
+ALL_ZEROS = str.maketrans('123456789', '000000000')
+
+
+def centred_text(size, rows, scale, measure, cap_height, least_left=0):
+    """(left, down) that centre `rows` in a box of `size`: where the content starts
+    across (at least `least_left`, to keep clear of what is at the side), and how far to
+    move it down. `cap_height(font_size)` gives how tall a capital letter is.
+
+    Digits count as zeros: in a font whose digits differ in width, the text would shake
+    as a number changes. It only shifts when the number gets another digit."""
+
+    def steady(text, font_size):
+        return measure(text.translate(ALL_ZEROS), font_size)
+
+    lines = hud_lines(rows, scale)
+    top = lines[0].baseline - cap_height(lines[0].size)
+    left = max((size[0] - content_size(rows, scale, steady)[0]) // 2, least_left)
+    return left, round((size[1] - top - lines[-1].baseline) / 2)
+
+
 @dataclass(frozen=True)
 class Section:
     """One part of the HUD in its own window, placed by the player."""
@@ -324,6 +344,76 @@ def pedal_bars(width, height, scale, throttle, brake, inset=4):
         Bar(inset, top, bar, tall, amount(throttle), 'ahead'),
         Bar(width - inset - bar, top, bar, tall, amount(brake), 'behind'),
     ]
+
+
+TIGHT_PAD = 3  # room between a box's edge and its content, at scale 1
+FIT_ROOM = 2  # pixels kept free in a box that its content only just fits
+FIT_STEP, FIT_STEPS = 0.98, 20  # how far fitted_scale goes, and how often at most
+OLD_LABEL_SPACE = 14  # room boxes kept for the section's name before they were tight
+
+
+def ink_span(section, scale, ink):
+    """(top, bottom) of what a text section draws, from its box's top, in pixels: from
+    the top of its first letters to the bottom of its last, or of its level bar. Taken
+    from its tallest sample, so that it stays put as the text changes. Where the sample
+    has letters, room for those that hang below the line, as the live text may have
+    them. `ink(text, size)` gives how far a text reaches (above, below) its baseline."""
+    sizes = Sizes.for_scale(scale)
+    lines, bottom_baseline = max(
+        (_content(rows, sizes) for rows in section.samples), key=lambda content: content[1]
+    )
+
+    def whole(line):
+        return line.text + line.tail + line.middle + line.right
+
+    top = lines[0].baseline - ink(whole(lines[0]), lines[0].size)[0]
+    if section.level:
+        content_height = bottom_baseline + sizes.margin
+        return top, content_height - sizes.margin // 2 + max(level_space(scale), 2)
+    last = whole(lines[-1])
+    hanging = 'g' if any(letter.isalpha() for letter in last) else ''
+    return top, lines[-1].baseline + ink(last + hanging, lines[-1].size)[1]
+
+
+def tight_height(section, scale, ink):
+    """A text section's normal height: its box fits closely round its content."""
+    top, bottom = ink_span(section, scale, ink)
+    return round(bottom - top + 2 * max(1, round(TIGHT_PAD * scale)))
+
+
+def fitted_scale(section, height, scale, ink):
+    """`scale`, a little smaller if the content would not fit a box of `height`: font
+    sizes and gaps round to whole pixels, which in a long list adds up. As small as the
+    box allows, within reason: a box can be shorter than any readable text."""
+    for _step in range(FIT_STEPS):
+        top, bottom = ink_span(section, scale, ink)
+        if bottom - top + FIT_ROOM <= height:
+            break
+        scale *= FIT_STEP
+    return scale
+
+
+def content_shift(section, height, scale, ink):
+    """How far to move a section's content down (negative: up) to centre it in a box of
+    `height`. Its layout starts a margin from the top, which a tight box does not have."""
+    top, bottom = ink_span(section, scale, ink)
+    return round((height - top - bottom) / 2)
+
+
+def tight_place(section, place, scale, ink):
+    """`place` (x, y, width, height) of a section saved before boxes were tight, as a
+    tight box with its text the same size and in the same spot. The text's size came from
+    the height's share of a taller normal height. Pedal bars were as tall as the box, with
+    the speed centred between them, so that box keeps its middle."""
+    x, y, width, height = place
+    if section.bar:
+        return place
+    old_normal = base_size(section, scale, lambda _text, _size: 0)[1] + round(OLD_LABEL_SPACE * scale)
+    share = height / old_normal
+    new_height = round(share * tight_height(section, scale, ink))
+    if section.pedals:
+        return x, y + (height - new_height) // 2, width, new_height
+    return x, y - content_shift(section, new_height, scale * share, ink), width, new_height
 
 
 def section_scale(size, base_height, needed_width=None, low=0.3, high=8.0):

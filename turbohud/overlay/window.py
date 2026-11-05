@@ -2,8 +2,9 @@
 small panel that shows in move mode.
 
 Locked, a section lets every click through and shows only its content. In move mode it
-gets a tint and its name, can be dragged, and resized at its corner, which scales its
-content. The panel says what to do, shows or hides sections, and locks or quits.
+gets a tint, can be dragged, and resized at its corner, which scales its content. A text
+section's box fits closely round its text, so its name shows only when the pointer rests
+on it; the others show their name. The panel says what to do, shows or hides sections, and locks or quits.
 """
 
 import logging
@@ -27,7 +28,10 @@ from PySide6.QtWidgets import (
 from turbohud.core.hud import (
     MARGIN,
     base_size,
+    centred_text,
+    content_shift,
     content_size,
+    fitted_scale,
     help_lines,
     hud_lines,
     level_bar,
@@ -35,6 +39,7 @@ from turbohud.core.hud import (
     pedal_bars,
     pedal_space,
     section_scale,
+    tight_height,
 )
 from turbohud.core.race import CAR_LENGTH, CAR_WIDTH, RADAR_FROM, RADAR_FULL, Blip, RadarView
 from turbohud.core.settings import GROUPS
@@ -44,17 +49,19 @@ from turbohud.hud.painter import (
     BEHIND_COLOR,
     DRAFT_COLOR,
     LIFT_COLOR,
+    cap_height,
     draw_bars,
     draw_hud,
     draw_level,
+    text_ink,
     text_width,
 )
 
 TINT = (23, 56, 97, 153)  # move mode's background: red, green, blue, opacity (0-255)
 BORDER = (120, 170, 230)
 LABEL_COLOR = (200, 220, 245)
-LABEL_SPACE = 14  # room below the content for the section's name in move mode, at scale 1
 MIN_WIDTH = 40
+MIN_HEIGHT = 10  # a text section's box: any shorter and there is nothing left to grab
 BLUE_FLAG = (0, 0, 128)  # navy
 BLUE_FLAG_EDGE = (0, 0, 64)  # its outline, a darker blue
 BLUE_FLAG_EDGE_WIDTH = 2
@@ -161,14 +168,18 @@ class SectionWindow(QWidget):
         self.setAttribute(Qt.WA_ShowWithoutActivating)
         self.setWindowFlag(Qt.WindowTransparentForInput, True)
         width, height = base_size(section, theme.scale, text_width)
-        self.base = (width, height + (0 if section.bar else round(LABEL_SPACE * theme.scale)))
+        if not section.bar:
+            height = tight_height(section, theme.scale, text_ink)
+            self.setToolTip(section.label)  # no room for its name in the box (move mode)
+        self.base = (width, height)
         self.grip = QSizeGrip(self)
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.addStretch()
         layout.addWidget(self.grip, 0, Qt.AlignBottom | Qt.AlignRight)
         self.grip.setVisible(False)
-        self.setMinimumSize(MIN_WIDTH, round(self.base[1] * 0.3))
+        lowest = round(self.base[1] * 0.3)
+        self.setMinimumSize(MIN_WIDTH, lowest if section.bar else max(lowest, MIN_HEIGHT))
 
     def placement(self):
         # On Wayland only the desktop knows where the window is; ask it where possible.
@@ -253,33 +264,33 @@ class SectionWindow(QWidget):
         bars = pedal_space(self.theme.scale) if self.section.pedals else 0
         needed = content_size(rows, self.theme.scale, text_width)[0] + bars if rows else None
         scale = self.theme.scale * section_scale((self.width(), self.height()), self.base[1], needed)
-        if self.locked and self.backdrop and rows:
-            self._paint_backdrop(painter, rows, scale, bars)
+        scale = fitted_scale(self.section, self.height(), scale, text_ink)
         left = 0
+        down = content_shift(self.section, self.height(), scale, text_ink)
+        if self.locked and self.backdrop and rows:
+            self._paint_backdrop(painter, rows, scale, bars, down)
         if self.section.pedals and rows:  # no bars without a speed (menu, no game)
             throttle, brake = self.pedals or (None, None)
             draw_bars(painter, pedal_bars(self.width(), self.height(), scale, throttle, brake))
-            left = pedal_space(scale) // 2
+            # The bars keep to the window's edges however small the text gets.
+            left, down = centred_text(
+                (self.width(), self.height()), rows, scale, text_width, cap_height, pedal_space(scale) // 2
+            )
+        painter.translate(0, down)
         draw_hud(painter, hud_lines(rows, scale), self.theme, scale, left, self.width() - left)
         if self.section.level and rows:
             level = self.level or (None if self.locked else LEVEL_SAMPLE)
             if level is not None:
                 content_height = content_size(rows, scale, text_width)[1]
                 draw_level(painter, level_bar(self.width(), content_height, scale, *level))
-        if not self.locked:
-            painter.setPen(QColor(*LABEL_COLOR))
-            font = painter.font()
-            font.setPixelSize(11)
-            painter.setFont(font)
-            painter.drawText(
-                self.rect().adjusted(6, 0, -20, -3), Qt.AlignBottom | Qt.AlignLeft, self.section.label
-            )
+        painter.translate(0, -down)
         painter.end()
 
-    def _paint_backdrop(self, painter, rows, scale, bars):
+    def _paint_backdrop(self, painter, rows, scale, bars, down=0):
         """The light tint, only as large as the text (and pedal bars): half the margin
-        round it. A section with a right-hand column (the player list) is as wide as its
-        window, where that column is drawn."""
+        round it, moved `down` with the text and kept inside the window. A section with a
+        right-hand column (the player list) is as wide as its window, where that column
+        is drawn."""
         width, height = content_size(rows, scale, text_width)
         pad = round(MARGIN * scale / 2)
         if self.section.level:
@@ -289,7 +300,8 @@ class SectionWindow(QWidget):
             width = self.width()
         else:
             width = min(width + (bars or 0), self.width())
-        left, top, tall = pad, pad, min(height, self.height()) - 2 * pad
+        top = max(pad + down, 0)
+        left, tall = pad, min(height - pad + down, self.height()) - top
         if self.section.pedals:
             # From the throttle bar to the brake bar, as tall as they are: the bars sit
             # at the window's edges, however wide it is.

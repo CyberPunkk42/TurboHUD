@@ -149,7 +149,8 @@ starting TurboHUD again.
 - **Groups:** in the move-mode panel, put sections in the same group (A to D). Dragging
   one of them then moves the whole group; the others follow a moment later.
 - **Ctrl+Shift+L** (or **Move mode** in the TurboHUD icon's menu) switches to **move
-  mode**: every section gets a blue tint and its name. Drag a section anywhere, for
+  mode**: every section gets a blue tint; a text section's box fits closely round its
+  text, so rest the pointer on it to see its name. Drag a section anywhere, for
   example to the edges of a wide screen. At its bottom-right corner, making it taller or
   shorter makes its text bigger or smaller; making it wider gives the text room (text
   only shrinks when the box is too narrow for it). A panel lets you show or hide each section, and **Lock** (or
