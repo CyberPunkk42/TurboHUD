@@ -40,6 +40,12 @@ The user sees the map stutter from time to time. Likely cause, not proved: race 
 second) and HUD frames (20 a second) run on separate timers, so about once a second a frame has no
 new position. Proposed: draw when a new read arrives.
 
+## Delta bar and radar option, not yet seen in a race
+- The bar's colour: whether it follows the driver's feeling or flickers. The live delta can move
+  unevenly between checkpoint lines, and online as a client it can step at each line. Tune
+  `DELTA_TREND_WINDOW`, `DELTA_TREND_FULL` and `DELTA_SIGN_FULL` in `turbohud/core/race.py`.
+- The cone option on the real radar, and the section's first place on the user's screen.
+
 ## Test list: what is left
 Done by the user on the Mac: all of the layout list (tight boxes, centring, groups, presets
 with Ctrl+Shift+1, 2, 3, Undo). AI races online ran many times while fixing the reads, but

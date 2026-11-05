@@ -15,7 +15,7 @@ from PySide6.QtGui import (
     QPen,
 )
 
-from turbohud.core.hud import FLAG_WIDTH, MARGIN, middle_right, steady_text
+from turbohud.core.hud import FLAG_WIDTH, MARGIN, blend, middle_right, steady_text
 
 # On Linux the desktop's default font may be a monospace or icon font; prefer a plain
 # sans-serif one. Qt uses the first that is installed. Windows and macOS keep their
@@ -25,6 +25,9 @@ BAR_OFF = (110, 110, 110, 170)  # a pedal bar with no input: grey
 LIFT_COLOR = '#ffe14d'  # the speed while lifting (no throttle, no brake)
 DRAFT_COLOR = '#5ec8ff'  # the slipstream (draft section)
 BEHIND_COLOR = '#ff6b6b'  # and when slower
+DELTA_BAR_TRACK = (0, 0, 0, 130)  # behind the delta bar's fill
+DELTA_BAR_INSET = 2  # pixels between the delta bar and its box
+DELTA_BAR_TEXT = 0.6  # the delta's text height, as a share of the bar's
 LINUX_FAMILIES = ['Noto Sans', 'DejaVu Sans', 'Liberation Sans', 'Cantarell', 'Ubuntu', 'Arial']
 
 
@@ -266,6 +269,33 @@ def draw_hud(painter, lines, theme, scale=None, left=0, width=None, centre=False
             outlined_text(
                 painter, tail_x, line.baseline, line.tail, line.size, _pick(colors, line.tail_color), outline
             )
+
+
+def delta_bar_parts(width, height, fill):
+    """(the bar's rectangle, where it fills, the x of its middle) in a box of that size, as
+    (x, y, width, height). `fill`: -1 to 1, left to right from the middle."""
+    inset = DELTA_BAR_INSET
+    inner = width - 2 * inset
+    middle = width / 2
+    reach = abs(fill) * inner / 2
+    left = middle - reach if fill < 0 else middle
+    return (inset, inset, inner, height - 2 * inset), (left, inset, reach, height - 2 * inset), middle
+
+
+def draw_delta_bar(painter, width, height, fill, green, text, theme):
+    """The delta bar: a dark track, filled from the middle in a colour from red to green
+    (through yellow, see core.hud.blend), with the delta over it."""
+    track, filled, middle = delta_bar_parts(width, height, fill)
+    painter.setPen(Qt.NoPen)
+    painter.setBrush(QColor(*DELTA_BAR_TRACK))
+    painter.drawRoundedRect(QRectF(*track), 4, 4)
+    painter.setBrush(QColor(blend(BEHIND_COLOR, AHEAD_COLOR, green)))
+    painter.drawRect(QRectF(*filled))
+    painter.fillRect(QRectF(middle - 1, track[1], 2, track[3]), QColor(255, 255, 255, 170))
+    size = max(round(height * DELTA_BAR_TEXT), 8)
+    x = (width - text_advance(steady_text(text), size)) / 2
+    baseline = (height + cap_height(size)) / 2
+    outlined_text(painter, x, baseline, text, size, QColor(theme.text_color), _rgba(theme.outline_color))
 
 
 def _pick(colors, name):

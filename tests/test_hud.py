@@ -103,6 +103,15 @@ class SteadySizeTests(unittest.TestCase):
         self.assertEqual((steady.text, steady.tail, steady.middle, steady.right), ('0', '0', '0', '0'))
 
 
+class DeltaBarPlaceTests(unittest.TestCase):
+    def test_it_goes_below_the_blue_flag(self):
+        sections = {section.name: section for section in hud.RACE_SECTIONS}
+        screen = (0, 0, 1000, 1000)
+        flag = hud.drawing_place(sections['blueflag'], (480, 24), screen)
+        bar = hud.drawing_place(sections['deltabar'], (360, 36), screen)
+        self.assertGreater(bar[1], flag[1] + flag[3])
+
+
 class TextCanCentreTests(unittest.TestCase):
     def test_sections_with_plain_text_can(self):
         can = {section.name for section in hud.RACE_SECTIONS if hud.text_can_centre(section)}
@@ -389,6 +398,7 @@ class SectionTests(unittest.TestCase):
                 'players',
                 'laptimes',
                 'blueflag',
+                'deltabar',
                 'radar',
                 'trackmap',
             ],
@@ -744,4 +754,6 @@ class CentreTests(unittest.TestCase):
         self.assertEqual(hud.centred(flag, screen, horizontal=True), (2320, -1300, 480, 24))
 
     def test_only_the_drawings_have_centre_buttons(self):
-        self.assertEqual({s.name for s in hud.RACE_SECTIONS if s.drawing}, {'blueflag', 'radar', 'trackmap'})
+        self.assertEqual(
+            {s.name for s in hud.RACE_SECTIONS if s.drawing}, {'blueflag', 'deltabar', 'radar', 'trackmap'}
+        )

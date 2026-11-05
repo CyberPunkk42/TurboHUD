@@ -62,6 +62,7 @@ class Settings:
     speed_unit: str = 'kmh'  # 'kmh' or 'mph'
     backdrop: bool = False  # every text section has its tint on (see SectionPlace.tint)
     map_others: bool = False  # the track map also shows the other cars, as faint grey dots
+    radar_cone: bool = True  # the proximity radar shows the slipstream behind cars ahead
     layout_version: int = 1  # how to read the section sizes: LAYOUT_VERSION is the latest
     presets: dict = field(default_factory=dict)  # number (one of PRESETS) -> a kept `sections`
     blue_seconds: float = 2.0  # how far behind a car about to lap the player shows the blue flag
@@ -218,6 +219,7 @@ def load_settings(path):
         speed_unit=data.get('speed_unit') if data.get('speed_unit') in SPEED_UNITS else 'kmh',
         backdrop=data.get('backdrop') is True,
         map_others=data.get('map_others') is True,
+        radar_cone=data.get('radar_cone') is not False,
         layout_version=_layout_version(data.get('layout_version')),
         presets=_presets(data.get('presets'), data.get('backdrop') is True),
         blue_seconds=_seconds(data.get('blue_seconds'), Settings.blue_seconds, BLUE_SECONDS),
@@ -241,6 +243,7 @@ def save_settings(path, settings):
         'speed_unit': settings.speed_unit,
         'backdrop': settings.backdrop,
         'map_others': settings.map_others,
+        'radar_cone': settings.radar_cone,
         'layout_version': settings.layout_version,
         'blue_seconds': settings.blue_seconds,
         'radar_seconds': settings.radar_seconds,

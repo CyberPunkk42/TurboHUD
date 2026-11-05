@@ -159,6 +159,32 @@ class RedrawTests(unittest.TestCase):
         self.assertEqual(image.pixelColor(40, 40).alpha(), 0)  # away from the lines and the cars
         self.assertGreater(image.pixelColor(100, 100).alpha(), 0)  # the local car, in the middle
 
+    def test_the_delta_bar_fills_from_the_middle_towards_the_right_side(self):
+        from turbohud.core.hud import RACE_SECTIONS
+        from turbohud.core.race import DeltaBarView
+        from turbohud.core.settings import Theme
+        from turbohud.overlay.window import SectionWindow
+
+        class Native:
+            def raise_window(self, window):
+                return 'test'
+
+        window = SectionWindow(Native(), Theme(), next(s for s in RACE_SECTIONS if s.name == 'deltabar'))
+        self.addCleanup(window.close)
+        window.resize(400, 40)
+        window.set_locked(True)
+        self.assertTrue(window.show_content([], delta_view=DeltaBarView(-0.5, 1.0, '')))
+        image = window.grab().toImage()
+        green = image.pixelColor(120, 20)
+        self.assertGreater(green.green(), green.red())  # ahead: filled on the left, in green
+        self.assertLess(image.pixelColor(300, 20).alpha(), 200)  # the right stays the dark track
+        window.show_content([], delta_view=DeltaBarView(0.5, 0.0, ''))
+        image = window.grab().toImage()
+        red = image.pixelColor(280, 20)
+        self.assertGreater(red.red(), red.green())  # behind: filled on the right, in red
+        window.show_content([])
+        self.assertEqual(window.grab().toImage().pixelColor(200, 20).alpha(), 0)  # no delta, no bar
+
     def test_the_radar_has_an_outline_only_in_move_mode(self):
         from turbohud.core.hud import RACE_SECTIONS
         from turbohud.core.race import Blip, RadarView
