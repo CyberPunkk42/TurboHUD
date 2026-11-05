@@ -146,8 +146,9 @@ starting TurboHUD again.
   the first lap and is complete once any car has driven a whole lap; after that it is
   saved and shows at once.
 - Every section has **Centre ↔** and **Centre ↕** buttons in the move-mode panel: they
-  centre its box across or down the screen it is on. Text starts at the box's left, so
-  narrow a box to its text first if the text itself should sit in the middle.
+  centre its box across or down the screen it is on. **Centre text** puts a section's text
+  in the middle of its box instead of at the left, so with both the text is in the middle
+  of the screen.
 - **Groups:** in the move-mode panel, put sections in the same group (A to D). Dragging
   one of them then moves the whole group; the others follow a moment later.
 - **Ctrl+Shift+L** (or **Move mode** in the TurboHUD icon's menu) switches to **move

@@ -58,6 +58,11 @@ See `docs/IMPROVEMENT_BACKLOG.md`. In short:
 4. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-05: A section's text can go in the middle of its box: a Centre text tick box per
+  section in the move-mode panel, off by default, kept with the section and in presets, asked
+  for by the user. Each line is centred on its own, measured with digits as zeros so that
+  numbers do not make it shake. Not for the speed (always centred), the drawings, or the
+  lists with columns.
 - 2026-11-05: Every section can be centred across or down its screen from the move-mode
   panel, asked for by the user; only the blue flag, the radar and the track map could. Its
   group stays where it is, as with the others before.

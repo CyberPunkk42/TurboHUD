@@ -157,6 +157,28 @@ class FitOnScreensTests(unittest.TestCase):
         self.assertEqual(s.fit_on_screens((4000, 40, 420, 150), []), (4000, 40, 420, 150))
 
 
+class TextCentredTests(unittest.TestCase):
+    def test_it_round_trips_also_in_a_preset_and_is_off_by_default(self):
+        path = Path(tempfile.mkdtemp()) / 'settings.json'
+        place = s.SectionPlace(1, 2, 300, 40, text_centred=True)
+        s.save_settings(path, s.Settings(sections={'lap': place}, presets={1: {'lap': place}}))
+        loaded = s.load_settings(path)
+        self.assertTrue(loaded.sections['lap'].text_centred)
+        self.assertTrue(loaded.presets[1]['lap'].text_centred)
+        self.assertFalse(s.SectionPlace(1, 2, 300, 40).text_centred)
+
+    def test_a_file_from_before_has_it_off(self):
+        path = Path(tempfile.mkdtemp()) / 'settings.json'
+        path.write_text(json.dumps({'sections': {'lap': {'x': 1, 'y': 2, 'width': 30, 'height': 40}}}))
+        self.assertFalse(s.load_settings(path).sections['lap'].text_centred)
+
+    def test_only_true_counts(self):
+        path = Path(tempfile.mkdtemp()) / 'settings.json'
+        entry = {'x': 1, 'y': 2, 'width': 30, 'height': 40, 'text_centred': 'yes'}
+        path.write_text(json.dumps({'sections': {'lap': entry}}))
+        self.assertFalse(s.load_settings(path).sections['lap'].text_centred)
+
+
 class PresetTests(unittest.TestCase):
     PLACE = s.SectionPlace(10, 20, 300, 40, visible=False, group='B')
 

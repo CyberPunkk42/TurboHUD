@@ -56,6 +56,29 @@ def ink(_text, size):
     return size * 0.7, 0
 
 
+class TextCanCentreTests(unittest.TestCase):
+    def test_sections_with_plain_text_can(self):
+        can = {section.name for section in hud.RACE_SECTIONS if hud.text_can_centre(section)}
+        self.assertEqual(
+            can,
+            {
+                'lap',
+                'current',
+                'delta',
+                'times',
+                'fuel',
+                'fuelfinish',
+                'tires',
+                'health',
+                'draft',
+                'localtime',
+            },
+        )
+
+    def test_digits_do_not_change_what_is_measured(self):
+        self.assertEqual(hud.steady_text('Fuel 81.9%'), hud.steady_text('Fuel 00.0%'))
+
+
 class TightBoxTests(unittest.TestCase):
     TIME: ClassVar = next(section for section in hud.RACE_SECTIONS if section.name == 'localtime')
     FUEL: ClassVar = next(section for section in hud.RACE_SECTIONS if section.name == 'fuel')
