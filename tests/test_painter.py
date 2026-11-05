@@ -228,6 +228,24 @@ class MovePanelPresetTests(unittest.TestCase):
                 self.assertEqual(len(fonts), 1, matched)
                 self.assertEqual(len({box[2] for box in matched.values()}), 1)
 
+    def test_every_section_can_be_centred_both_ways(self):
+        from PySide6.QtWidgets import QPushButton
+
+        from turbohud.core.hud import RACE_SECTIONS
+
+        panel = self.panel()
+        got = []
+        panel.align_requested.connect(lambda *request: got.append(request))
+        for text in ('Centre ↔', 'Centre ↕'):
+            for button in panel.findChildren(QPushButton):
+                if button.text() == text:
+                    button.click()
+        names = [section.name for section in RACE_SECTIONS]
+        self.assertEqual(
+            sorted(got),
+            sorted([(name, True, False) for name in names] + [(name, False, True) for name in names]),
+        )
+
     def test_load_names_its_shortcut_where_there_are_shortcuts(self):
         self.assertIn('Ctrl+Shift+2', self.button(self.panel(), 2, 'Load').toolTip())
 

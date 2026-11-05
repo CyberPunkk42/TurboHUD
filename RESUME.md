@@ -58,6 +58,9 @@ See `docs/IMPROVEMENT_BACKLOG.md`. In short:
 4. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-05: Every section can be centred across or down its screen from the move-mode
+  panel, asked for by the user; only the blue flag, the radar and the track map could. Its
+  group stays where it is, as with the others before.
 - 2026-11-05: Sections in a group can match, asked for by the user. A button per group in
   the move-mode panel gives its text sections the largest text size among them and one
   width; they stay where they are, and heights stay as different as the content is. Resizing

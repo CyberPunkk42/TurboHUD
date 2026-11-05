@@ -563,22 +563,21 @@ class MovePanel(QWidget):
             group.currentTextChanged.connect(lambda _text: self._update_matches())
             grid.addWidget(group, row, 1)
             self.groups[section.name] = group
-            if section.drawing:  # the blue flag, the radar and the track map can be centred
-                for column_, (text, tip, across, down) in enumerate(
-                    (
-                        ('Centre ↔', 'Centre across the screen', True, False),
-                        ('Centre ↕', 'Centre down the screen', False, True),
-                    ),
-                    start=2,
-                ):
-                    button = QPushButton(text)
-                    button.setToolTip(tip)
-                    button.clicked.connect(
-                        lambda _checked=False, name=section.name, a=across, d=down: self.align_requested.emit(
-                            name, a, d
-                        )
+            for column_, (text, tip, across, down) in enumerate(
+                (
+                    ('Centre ↔', 'Centre across the screen', True, False),
+                    ('Centre ↕', 'Centre down the screen', False, True),
+                ),
+                start=2,
+            ):
+                button = QPushButton(text)
+                button.setToolTip(tip)
+                button.clicked.connect(
+                    lambda _checked=False, name=section.name, a=across, d=down: self.align_requested.emit(
+                        name, a, d
                     )
-                    grid.addWidget(button, row, column_)
+                )
+                grid.addWidget(button, row, column_)
         column.addLayout(grid)
         self.text_sections = [section.name for section in sections if not section.drawing]
         self.matches = {}

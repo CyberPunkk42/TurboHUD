@@ -529,3 +529,6 @@ its "Recent changes".
   a section at its corner now resizes the rest of its group by the same factors. Tested
   through the real app code with a fake window layer; on Hyprland the followers only take
   their new size when the resize ends (written for that, not run there).
+- 2026-11-05: Every section can be centred across or down its screen from the move-mode
+  panel, asked for by the user; only the blue flag, the radar and the track map could. Its
+  group stays where it is, as with the others before.
