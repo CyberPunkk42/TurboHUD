@@ -587,3 +587,6 @@ its "Recent changes".
   as zeros, and the delta has a true minus, as wide as a plus. The HUD's font now asks for
   digits all of one width (`tnum`, in the Mac's system font: `1111` and `8888` alike, also for
   the fuel's and the other sections' numbers), where a font has them.
+- 2026-11-05: The delta's number has a slot as wide as its widest form, so " vs best" also stays
+  when the number gets another digit. The log says when a race was found by search and not
+  where the last one was.

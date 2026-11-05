@@ -562,9 +562,10 @@ class LapReader:
                 except (NotFound, OSError):
                     continue  # a freed controller of an earlier race
                 if driving:
+                    moved = self._last_controller is not None and candidate != self._last_controller
                     self._controller, self._spectated = candidate, None
                     self._last_controller = candidate
-                    result = 'race found'
+                    result = 'race found, not where the last one was' if moved else 'race found'
                     return state
                 watchable.append((candidate, state))
             result = 'a race to watch, no local player' if watchable else 'no race'
@@ -1400,7 +1401,7 @@ def _racing_sections(snapshot, now):
         color = 'text' if abs(delta) < EVEN else 'ahead' if delta < 0 else 'behind'
         # The number on its own, with a true minus, as wide as a plus: only the number changes.
         number = format_delta(delta).replace('-', '\u2212')
-        delta_row = Row(number, 'medium', color, tail=' vs best', tail_color=color)
+        delta_row = Row(number, 'medium', color, tail=' vs best', tail_color=color, slot=DELTA_SLOT)
     return {
         'lap': [Row(title, 'title')],
         'current': [Row(format_tenths(current_lap_now(snapshot, now)), 'big', 'accent')],
@@ -1481,6 +1482,7 @@ def car_sections(car, laps_to_go=None, speed_unit='kmh'):
     return sections
 
 
+DELTA_SLOT = '+00.000'  # the delta's widest number
 DRAFT_DOWNFORCE_WARN = 0.05  # downforce lost to the slipstream from which the draft section warns
 DRAFT_COUNTS = 0.05  # a draft at least this strong counts as time in a slipstream
 DRAFT_CARD_SECONDS = 20  # the race clock up to which the draft section shows the event's settings

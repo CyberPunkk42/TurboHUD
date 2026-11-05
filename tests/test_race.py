@@ -864,6 +864,15 @@ class CarTests(unittest.TestCase):
         reader._controller = None
         self.assertIsNone(reader._race_at_last_place())
 
+    def test_the_log_says_when_a_race_was_not_where_the_last_one_was(self):
+        reader = build(
+            [10_000, 944_595], laps_completed=1, clock=1_000_000, limit=0, name='Host', online=True
+        )
+        reader._last_controller = 0x1234560  # another place, with nothing of a race there
+        with self.assertLogs('turbohud.core.race', 'INFO') as logs:
+            reader.read()
+        self.assertTrue(any('not where the last one was' in line for line in logs.output))
+
     def test_without_an_online_race_the_search_waits_between_tries(self):
         now = [100.0]
         reader = build(

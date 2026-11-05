@@ -200,7 +200,7 @@ def draw_flag(painter, x, baseline, code, size, outline):
 
 def centred_x(line, width, margin):
     """Where a line starts in the middle of a box `width` wide, between its margins."""
-    steady = text_advance(steady_text(line.text + line.tail), line.size)
+    steady = text_advance(steady_text((line.slot or line.text) + line.tail), line.size)
     return max(round((width - steady) / 2), margin)
 
 
@@ -225,8 +225,12 @@ def draw_hud(painter, lines, theme, scale=None, left=0, width=None, centre=False
         if line.flag:
             draw_flag(painter, x, line.baseline, line.flag, line.size, outline)
             text_x = x + FLAG_WIDTH * line.size
+        # In a slot, the text ends where the slot does, whatever its length, and the tail
+        # stays put: only the number changes.
+        slot = text_advance(steady_text(line.slot), line.size) if line.slot else None
+        number_x = text_x + slot - text_advance(line.text, line.size) if line.slot else text_x
         outlined_text(
-            painter, text_x, line.baseline, line.text, line.size, _pick(colors, line.color), outline
+            painter, number_x, line.baseline, line.text, line.size, _pick(colors, line.color), outline
         )
         if line.right and width is not None:
             right_x = width - margin - text_advance(line.right, line.size)
@@ -251,7 +255,7 @@ def draw_hud(painter, lines, theme, scale=None, left=0, width=None, centre=False
             )
         if line.tail:
             # From the width with digits as zeros, so that the tail stays as a number runs.
-            tail_x = text_x + text_advance(steady_text(line.text), line.size)
+            tail_x = text_x + (slot if line.slot else text_advance(steady_text(line.text), line.size))
             outlined_text(
                 painter, tail_x, line.baseline, line.tail, line.size, _pick(colors, line.tail_color), outline
             )

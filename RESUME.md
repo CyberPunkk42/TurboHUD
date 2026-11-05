@@ -64,6 +64,9 @@ See `docs/IMPROVEMENT_BACKLOG.md`. In short:
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-05: The delta's number has a slot as wide as its widest form, so " vs best" also stays
+  when the number gets another digit. The log says when a race was found by search and not
+  where the last one was.
 - 2026-11-05: Only the number changes in the delta, reported by the user: " vs best" moved with
   the digits. The number and the label are drawn apart, the label from the width with digits
   as zeros, and the delta has a true minus, as wide as a plus. The HUD's font now asks for

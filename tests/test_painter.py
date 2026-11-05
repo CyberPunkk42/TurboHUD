@@ -252,13 +252,21 @@ class RedrawTests(unittest.TestCase):
         from turbohud.core.hud import Row
 
         def picture(number):
-            row = Row(number, 'medium', 'ahead', tail=' vs best', tail_color='ahead')
+            row = Row(number, 'medium', 'ahead', tail=' vs best', tail_color='ahead', slot='+00.000')
             return self.drawn('delta', [row], (300, 40))
 
         first = picture('+1.111')
-        # The label is on the right of the number, past its widest.
-        from_x = 150
-        for number in ('+8.888', '\u22120.505', '+7.417'):
+        # The label starts past the widest number, whatever the size the box gives.
+        from turbohud.core.hud import MARGIN, RACE_SECTIONS, drawn_scale, hud_lines, tight_height
+        from turbohud.hud.painter import text_advance, text_ink, text_width
+
+        section = next(s for s in RACE_SECTIONS if s.name == 'delta')
+        normal = tight_height(section, 1.0, text_ink)
+        row = Row('+1.111', 'medium', tail=' vs best', slot='+00.000')
+        scale = drawn_scale(section, (300, 40), [row], normal, 1.0, text_ink, text_width)
+        size = hud_lines([row], scale)[0].size
+        from_x = round(MARGIN * scale + text_advance('+00.000 ', size))  # past the space before it
+        for number in ('+8.888', '\u22120.505', '+7.417', '+10.250', '\u221212.000', '0.000'):
             other = picture(number)
             with self.subTest(number=number):
                 differ = sum(
