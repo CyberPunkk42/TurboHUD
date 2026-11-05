@@ -53,6 +53,7 @@ renders and the real app code on simulated windows, so real dragging is still to
 - Groups: the same text size and width; how smoothly a group follows a corner being dragged
   (about five times a second); on Hyprland the followers take their size when it ends.
 - Centre buttons on every section, and Centre text with the tint.
+- Undo, after real drags and resizes (one step each?), and on Hyprland.
 Windows has run none of this (its shortcut code has only ever run on a build machine).
 
 ## 5. Builds and release
