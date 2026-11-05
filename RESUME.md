@@ -22,7 +22,7 @@
 - Layout, in the move-mode panel: a text section's box fits closely round its text, three
   presets (Ctrl+Shift+1, 2, 3 load them; Linux: `--preset`), groups that move and resize
   together and can match their text size and width, Centre buttons for every section, and
-  Centre text. Not yet used by hand.
+  Centre text, and Undo. Checked by hand on the Mac.
 - Builds: `tools/build_app.py` (PyInstaller) makes a Windows ZIP, a Mac app ZIP (with the
   reader and its Windows Python, 39 MB) and a Linux `.tar.gz`, run locally on each system.
   Nothing goes to GitHub any more; the old `.github/workflows/build.yml` is kept for
@@ -57,13 +57,16 @@ See `docs/IMPROVEMENT_BACKLOG.md`. In short:
    live data (reading memory as the same user, without a probe).
 2. macOS: live data is connected; check it in races (offline and online), over
    Fullscreen, and listen for stutter while the race is searched for.
-3. Layout: the tight boxes, presets, group matching and centring were merged before being
-   used by hand; check them (backlog item 4).
+3. Layout: checked by hand on the Mac; what is left is in races, on Linux and on Windows
+   (backlog item 4).
 4. Builds and release: bundled apps with the probe, an AppImage; before the repository
    goes public, the privacy check, a licence and a README for players.
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-05: The user checked the layout work by hand on the Mac and it worked: tight boxes,
+  presets, groups, centring and Undo. Backlog item 4 now holds only what is left: in races,
+  on Linux and on Windows.
 - 2026-11-05: The lap times list shows up to 20 drivers instead of 16, asked for by the user
   (events can have 20 players). With fewer, it looks the same: the box is invisible and only
   the drivers there are drawn. Saved sizes and presets are converted once, with the text the
