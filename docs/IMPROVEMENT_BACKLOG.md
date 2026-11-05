@@ -40,7 +40,10 @@ hit). The Mac app now does this by itself (`turbohud/tsu/bottle.py`, reader in
   about 25 ms to the end. The HUD then updates about once a second. TSU itself used over two
   CPU cores and the user has similar stutter without TurboHUD, so the reads are not known to
   cause it; unknown whether the game slows the reads or the reads add to it. Next: log what a
-  slow read spends its time on (pages read), and compare a run with and without TurboHUD.
+  slow read spends its time on (the log's `race reads` line now says trips a read, ms a
+  trip and how much of that is on the game's memory), and compare a run with and without
+  TurboHUD. Drawing is not the cause: measured without the game, 20 lap time rows take about
+  14 ms a frame, and a thread making 110 round trips stays at about 1.3 ms meanwhile.
 - Throttle and brake on the Mac move in TSU's thirds: the pad's triggers are read through
   the Linux joystick interface only.
 - Check the spectator HUD while watching a real race (built 2026-11-04, seen only with a

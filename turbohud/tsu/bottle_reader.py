@@ -17,6 +17,7 @@ test on any system.
 import json
 import struct
 import sys
+import time
 from pathlib import Path
 
 if __name__ == '__main__':
@@ -80,7 +81,9 @@ class Service:
             size = int(request['size'])
             if not 0 < size <= MAX_READ:
                 return {'ok': False, 'error': 'size out of range'}, b''
-            return {'ok': True}, self.process.read(int(request['address']), size)
+            began = time.perf_counter()
+            data = self.process.read(int(request['address']), size)
+            return {'ok': True, 'took': time.perf_counter() - began}, data
         if op == 'metadata':
             metadata = Path(self.metadata_file()).read_bytes()
             base = metadata_base(self.process.regions(), self.process.read, metadata)

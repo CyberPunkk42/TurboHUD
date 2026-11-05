@@ -136,6 +136,10 @@ class ServiceTests(unittest.TestCase):
     def service(self, process=None, metadata_file=None, running=lambda: True):
         return br.Service(process or FakeProcess(), metadata_file, running)
 
+    def test_a_read_says_how_long_it_took_on_the_game_s_memory(self):
+        header, _ = self.service().handle({'op': 'read', 'address': 0x10010, 'size': 4})
+        self.assertGreaterEqual(header['took'], 0.0)
+
     def test_read(self):
         process = FakeProcess(data=bytes(range(256)))
         header, payload = self.service(process).handle({'op': 'read', 'address': 0x10010, 'size': 4})
@@ -196,7 +200,8 @@ class ServiceTests(unittest.TestCase):
             {'op': 'read', 'address': 0x10000, 'size': 8},
         )
         self.assertFalse(answers[0][0]['ok'])
-        self.assertEqual(answers[1], ({'ok': True}, bytes(8)))
+        self.assertTrue(answers[1][0]['ok'])
+        self.assertEqual(answers[1][1], bytes(8))
 
     def test_ends_once_tsu_has_quit(self):
         answers = self.serve(

@@ -111,6 +111,7 @@ class Pipe:
         self.source_fd = source_fd
         self.on_close = on_close
         self.metadata = None  # (base, bytes), kept while this reader lasts
+        self.in_game = 0.0  # seconds its reads have spent on the game's memory, for the log
 
     def _take(self, size, timeout):
         chunks = []
@@ -144,7 +145,9 @@ class Pipe:
         return header, payload
 
     def read(self, address, size):
-        return self.ask({'op': 'read', 'address': address, 'size': size})[1]
+        header, payload = self.ask({'op': 'read', 'address': address, 'size': size})
+        self.in_game += header.get('took', 0.0)
+        return payload
 
     def maps(self):
         """The game's memory as it is now: it grows as the game goes from menu to race."""
@@ -297,7 +300,7 @@ class Bottle:
                 searcher=pipe.search,
             )
             reader = LapReader(Il2Cpp(memory, metadata, base), event_running=pipe.event_running)
-            return CachedReader(reader, cache), self
+            return CachedReader(reader, cache, lambda: pipe.in_game), self
         except (NotFound, ReadError):
             raise  # the game is loading: the same reader tries again
         except BaseException as error:
