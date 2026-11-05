@@ -1,5 +1,4 @@
 import dataclasses
-import itertools
 import sys
 import unittest
 from pathlib import Path
@@ -284,21 +283,20 @@ class Lapping:
 
 class DeltaColourTests(unittest.TestCase):
     def test_steady_it_follows_the_delta(self):
-        self.assertEqual(race.delta_colour(-0.5, 0.0), 1.0)  # ahead: green
-        self.assertEqual(race.delta_colour(0.5, 0.0), 0.0)  # behind: red
-        self.assertEqual(race.delta_colour(0.0, 0.0), 0.5)
+        self.assertTrue(race.delta_green(-0.5, 0.0))  # ahead
+        self.assertFalse(race.delta_green(0.5, 0.0))  # behind
+        self.assertTrue(race.delta_green(-0.5, race.DELTA_STEADY))  # still steady
 
-    def test_gaining_while_behind_goes_green(self):
-        self.assertEqual(race.delta_colour(0.5, -race.DELTA_TREND_FULL), 1.0)
+    def test_gaining_while_behind_is_green(self):
+        self.assertTrue(race.delta_green(0.5, -0.05))
 
-    def test_losing_while_ahead_goes_red(self):
-        self.assertEqual(race.delta_colour(-0.5, race.DELTA_TREND_FULL), 0.0)
+    def test_losing_while_ahead_is_red(self):
+        self.assertFalse(race.delta_green(-0.5, 0.05))
 
-    def test_the_change_is_gradual(self):
-        rates = [i / 100 * race.DELTA_TREND_FULL for i in range(100, -101, -5)]
-        colours = [race.delta_colour(0.5, rate) for rate in rates]
-        self.assertEqual(colours, sorted(colours))
-        self.assertTrue(all(b - a < 0.15 for a, b in itertools.pairwise(colours)))
+    def test_it_is_only_ever_one_or_the_other(self):
+        for delta in (-1.0, 0.0, 1.0):
+            for rate in (-1.0, 0.0, 1.0):
+                self.assertIsInstance(race.delta_green(delta, rate), bool)
 
 
 class DeltaBarTests(unittest.TestCase):
@@ -326,30 +324,39 @@ class DeltaBarTests(unittest.TestCase):
 
     def test_gaining_on_a_positive_delta_is_green(self):
         view, _bar = self.run_bar((10.0, 0.6), (10.5, 0.5), (11.0, 0.4))
-        self.assertEqual(view.green, 1.0)
+        self.assertIs(view.green, True)
         self.assertEqual(view.text, '+0.400')
 
     def test_losing_on_a_negative_delta_is_red(self):
         view, _bar = self.run_bar((10.0, -0.6), (10.5, -0.5), (11.0, -0.4))
-        self.assertEqual(view.green, 0.0)
+        self.assertIs(view.green, False)
         self.assertEqual(view.text, '\u22120.400')
 
-    def test_only_the_last_second_counts(self):
-        view, _bar = self.run_bar((10.0, 2.0), (10.5, 0.5), (11.5, 0.5), (12.0, 0.5))
-        self.assertEqual(view.green, 0.0)  # steady now, and behind
+    def test_only_the_recent_moves_count(self):
+        view, _bar = self.run_bar((10.0, 2.0), (10.3, 0.5), (11.0, 0.5), (11.3, 0.5))
+        self.assertIs(view.green, False)  # steady now, and behind
+
+    def test_the_colour_changes_as_soon_as_the_trend_does(self):
+        bar = race.DeltaBar()
+        for seconds, delta in ((10.0, 0.5), (10.25, 0.4), (10.5, 0.3)):
+            green = bar.update(Lapping(round(seconds * SEC), round(delta * SEC))).green
+        self.assertIs(green, True)  # gaining
+        for seconds, delta in ((10.75, 0.4), (11.0, 0.5)):
+            green = bar.update(Lapping(round(seconds * SEC), round(delta * SEC))).green
+        self.assertIs(green, False)  # losing, within half a second
 
     def test_a_new_lap_starts_afresh(self):
         bar = race.DeltaBar()
         bar.update(Lapping(10 * SEC, 1 * SEC, laps=2))
         view = bar.update(Lapping(11 * SEC, -1 * SEC, laps=3))
-        self.assertEqual(view.green, 1.0)  # from its sign, not from the 2 s jump
+        self.assertIs(view.green, True)  # from its sign, not from the 2 s jump
         self.assertEqual(len(bar._history), 1)
 
     def test_the_history_stays_small(self):
         bar = race.DeltaBar()
         for i in range(10_000):
             bar.update(Lapping(i * 500, 0))
-        self.assertLessEqual(len(bar._history), 21)
+        self.assertLessEqual(len(bar._history), 11)
 
     def test_it_works_once_a_read(self):
         bar = race.DeltaBar()

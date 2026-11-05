@@ -194,12 +194,12 @@ class RedrawTests(unittest.TestCase):
         self.addCleanup(window.close)
         window.resize(400, 40)
         window.set_locked(True)
-        self.assertTrue(window.show_content([], delta_view=DeltaBarView(-0.5, 1.0, '')))
+        self.assertTrue(window.show_content([], delta_view=DeltaBarView(-0.5, True, '')))
         image = window.grab().toImage()
         green = image.pixelColor(120, 20)
         self.assertGreater(green.green(), green.red())  # ahead: filled on the left, in green
         self.assertLess(image.pixelColor(300, 20).alpha(), 200)  # the right stays the dark track
-        window.show_content([], delta_view=DeltaBarView(0.5, 0.0, ''))
+        window.show_content([], delta_view=DeltaBarView(0.5, False, ''))
         image = window.grab().toImage()
         red = image.pixelColor(280, 20)
         self.assertGreater(red.red(), red.green())  # behind: filled on the right, in red
