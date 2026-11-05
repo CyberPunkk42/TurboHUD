@@ -625,3 +625,6 @@ its "Recent changes".
   before TSU started, so the faster search was not the cause. Field lists are now kept only once
   the class and its parents are set up. Seen with TurboHUD started first, as in the failed
   session: the same early search, then the race found in 1.5 s.
+- 2026-11-05: The proximity radar has no outline in a race, as it can get in the way of the view,
+  asked for by the user. It stays in move mode, to show where the radar's box is; the cross lines
+  and the cars are as they were.

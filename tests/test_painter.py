@@ -159,6 +159,30 @@ class RedrawTests(unittest.TestCase):
         self.assertEqual(image.pixelColor(40, 40).alpha(), 0)  # away from the lines and the cars
         self.assertGreater(image.pixelColor(100, 100).alpha(), 0)  # the local car, in the middle
 
+    def test_the_radar_has_an_outline_only_in_move_mode(self):
+        from turbohud.core.hud import RACE_SECTIONS
+        from turbohud.core.race import Blip, RadarView
+        from turbohud.core.settings import Theme
+        from turbohud.overlay.window import SectionWindow
+
+        class Native:
+            def raise_window(self, window):
+                return 'test'
+
+        window = SectionWindow(Native(), Theme(), next(s for s in RACE_SECTIONS if s.name == 'radar'))
+        self.addCleanup(window.close)
+        window.resize(200, 200)
+        window.show_content([], radar=RadarView(1.0, (Blip(10.0, 0.0, 0.0, 0.3),)))
+        window.locked = True
+        image = window.grab().toImage()
+        self.assertEqual(image.pixelColor(40, 1).alpha(), 0)  # on the top edge, away from the lines
+        self.assertEqual(image.pixelColor(1, 40).alpha(), 0)  # on the left edge
+        self.assertGreater(image.pixelColor(100, 100).alpha(), 0)  # the cars still show
+        window.locked = False
+        image = window.grab().toImage()
+        self.assertGreater(image.pixelColor(40, 1).alpha(), 0)
+        self.assertGreater(image.pixelColor(1, 40).alpha(), 0)
+
     def test_a_section_is_drawn_again_only_when_its_content_changes(self):
         from turbohud.core.hud import RACE_SECTIONS, Row
         from turbohud.core.settings import Theme
