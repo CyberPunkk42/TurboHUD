@@ -248,6 +248,37 @@ class RedrawTests(unittest.TestCase):
         window.show_content(rows)
         return window.grab().toImage()
 
+    def test_only_the_number_changes_and_the_label_stays(self):
+        from turbohud.core.hud import Row
+
+        def picture(number):
+            row = Row(number, 'medium', 'ahead', tail=' vs best', tail_color='ahead')
+            return self.drawn('delta', [row], (300, 40))
+
+        first = picture('+1.111')
+        # The label is on the right of the number, past its widest.
+        from_x = 150
+        for number in ('+8.888', '\u22120.505', '+7.417'):
+            other = picture(number)
+            with self.subTest(number=number):
+                differ = sum(
+                    first.pixelColor(x, y) != other.pixelColor(x, y)
+                    for x in range(from_x, first.width())
+                    for y in range(first.height())
+                )
+                self.assertEqual(differ, 0)
+        self.assertNotEqual(first, picture('+8.888'))
+
+    def test_digits_are_all_as_wide_in_the_hud_s_font(self):
+        from PySide6.QtGui import QFontInfo
+
+        from turbohud.hud.painter import hud_font, text_advance
+
+        widths = {round(text_advance(digit, 40), 2) for digit in '0123456789'}
+        if len(widths) > 1 and QFontInfo(hud_font(40)).family() != '.AppleSystemUIFont':
+            self.skipTest('this font has no digits of one width')
+        self.assertEqual(len(widths), 1)
+
     def test_a_running_number_keeps_its_height_on_screen(self):
         from turbohud.core.hud import Row
 

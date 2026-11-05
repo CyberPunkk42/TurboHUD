@@ -35,6 +35,9 @@ def hud_font(size):
         font.setFamilies(LINUX_FAMILIES)
     font.setPixelSize(size)
     font.setBold(True)
+    # Digits all as wide, where the font can: a running number then does not push what
+    # follows it, or shake when it is centred or at the right.
+    font.setFeature(QFont.Tag('tnum'), 1)
     return font
 
 
@@ -247,7 +250,8 @@ def draw_hud(painter, lines, theme, scale=None, left=0, width=None, centre=False
                 outline,
             )
         if line.tail:
-            tail_x = text_x + text_advance(line.text, line.size)
+            # From the width with digits as zeros, so that the tail stays as a number runs.
+            tail_x = text_x + text_advance(steady_text(line.text), line.size)
             outlined_text(
                 painter, tail_x, line.baseline, line.tail, line.size, _pick(colors, line.tail_color), outline
             )

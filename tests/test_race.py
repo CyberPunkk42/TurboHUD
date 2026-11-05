@@ -1269,17 +1269,18 @@ class RowsTests(unittest.TestCase):
     def test_delta_row_is_green_ahead_and_red_behind(self):
         ahead = race.LapState(1, 0, 1, 13, [0, 900_000], checkpoints=((0, 300_000), (900_000, 1_199_000)))
         row = race.race_rows(racing(ahead), 0)[2]
-        self.assertEqual((row.text, row.color), ('-0.100 vs best', 'ahead'))
+        self.assertEqual((row.text + row.tail, row.color), ('\u22120.100 vs best', 'ahead'))
+        self.assertEqual(row.tail_color, 'ahead')
         behind = race.LapState(1, 0, 1, 13, [0, 900_000], checkpoints=((0, 300_000), (900_000, 1_202_340)))
         row = race.race_rows(racing(behind), 0)[2]
-        self.assertEqual((row.text, row.color), ('+0.234 vs best', 'behind'))
+        self.assertEqual((row.text + row.tail, row.color), ('+0.234 vs best', 'behind'))
 
     def test_a_delta_too_small_to_show_is_even(self):
         self.assertEqual(race.format_delta(-3), '0.000')
         self.assertEqual(race.format_delta(5), '+0.001')
         even = race.LapState(1, 0, 1, 13, [0, 900_000], checkpoints=((0, 300_000), (900_000, 1_199_997)))
         row = race.race_rows(racing(even), 0)[2]
-        self.assertEqual((row.text, row.color), ('0.000 vs best', 'text'))
+        self.assertEqual((row.text + row.tail, row.color), ('0.000 vs best', 'text'))
 
     def test_the_local_time_shows_once_tsu_runs(self):
         import time

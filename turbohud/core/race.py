@@ -1398,7 +1398,9 @@ def _racing_sections(snapshot, now):
         delta_row = Row('vs best  -', 'medium')
     else:
         color = 'text' if abs(delta) < EVEN else 'ahead' if delta < 0 else 'behind'
-        delta_row = Row(f'{format_delta(delta)} vs best', 'medium', color)
+        # The number on its own, with a true minus, as wide as a plus: only the number changes.
+        number = format_delta(delta).replace('-', '\u2212')
+        delta_row = Row(number, 'medium', color, tail=' vs best', tail_color=color)
     return {
         'lap': [Row(title, 'title')],
         'current': [Row(format_tenths(current_lap_now(snapshot, now)), 'big', 'accent')],

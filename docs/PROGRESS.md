@@ -582,3 +582,8 @@ its "Recent changes".
   that same number of hits. So the place of the last race is looked at first, at every retry,
   with the search as before if it is not there. The log says `race found at the last one's
   place` when that works; not yet seen in a race.
+- 2026-11-05: Only the number changes in the delta, reported by the user: " vs best" moved with
+  the digits. The number and the label are drawn apart, the label from the width with digits
+  as zeros, and the delta has a true minus, as wide as a plus. The HUD's font now asks for
+  digits all of one width (`tnum`, in the Mac's system font: `1111` and `8888` alike, also for
+  the fuel's and the other sections' numbers), where a font has them.

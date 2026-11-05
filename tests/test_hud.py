@@ -125,6 +125,10 @@ class TextCanCentreTests(unittest.TestCase):
     def test_digits_do_not_change_what_is_measured(self):
         self.assertEqual(hud.steady_text('Fuel 81.9%'), hud.steady_text('Fuel 00.0%'))
 
+    def test_signs_do_not_change_what_is_measured(self):
+        self.assertEqual(hud.steady_text('-1.5'), hud.steady_text('+1.5'))
+        self.assertEqual(hud.steady_text('\u22121.5'), hud.steady_text('+1.5'))
+
 
 class TightBoxTests(unittest.TestCase):
     TIME: ClassVar = next(section for section in hud.RACE_SECTIONS if section.name == 'localtime')

@@ -188,12 +188,13 @@ def content_size(rows, scale, measure):
     return round(width + 2 * sizes.margin), round(bottom + sizes.margin)
 
 
-ALL_ZEROS = str.maketrans('123456789', '000000000')
+ALL_ZEROS = str.maketrans('123456789-\u2212', '000000000++')  # and signs as wide as a plus
 
 
 def steady_text(text):
-    """`text` with its digits as zeros, to measure it: in a font whose digits differ in
-    width, text centred by its real width would shake as a number changes."""
+    """`text` with its digits as zeros and its signs as plus, to measure it: in a font
+    whose digits differ in width, text centred by its real width would shake as a number
+    changes."""
     return text.translate(ALL_ZEROS)
 
 

@@ -64,6 +64,11 @@ See `docs/IMPROVEMENT_BACKLOG.md`. In short:
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-05: Only the number changes in the delta, reported by the user: " vs best" moved with
+  the digits. The number and the label are drawn apart, the label from the width with digits
+  as zeros, and the delta has a true minus, as wide as a plus. The HUD's font now asks for
+  digits all of one width (`tnum`, in the Mac's system font: `1111` and `8888` alike, also for
+  the fuel's and the other sections' numbers), where a font has them.
 - 2026-11-05: The HUD shows sooner at the start of an online race after the first, reported by
   the user. A search took about 9 s (6 s measured apart, the race being the 42nd of 42 hits at
   18% of the data, the others left by earlier races), and every search after the first gave
