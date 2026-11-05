@@ -556,6 +556,20 @@ class MovePanelPresetTests(unittest.TestCase):
                 )
                 self.assertEqual(hud.Sizes.for_scale(before).small, hud.Sizes.for_scale(now).small)
 
+    def test_text_sections_have_a_tint_tick_box_and_drawings_none(self):
+        from turbohud.core.hud import RACE_SECTIONS
+
+        panel = self.panel()
+        got = []
+        panel.tint_changed.connect(lambda *change: got.append(change))
+        self.assertEqual(set(panel.tints), {s.name for s in RACE_SECTIONS if not s.drawing})
+        panel.tints['fuel'].setChecked(True)
+        self.assertEqual(got, [('fuel', True)])
+        panel.set_tint('fuel', False)  # from a preset or Undo: no change to report
+        self.assertEqual(got, [('fuel', True)])
+        self.assertFalse(panel.tints['fuel'].isChecked())
+        panel.set_tint('radar', True)  # none: nothing happens
+
     def test_load_names_its_shortcut_where_there_are_shortcuts(self):
         self.assertIn('Ctrl+Shift+2', self.button(self.panel(), 2, 'Load').toolTip())
 

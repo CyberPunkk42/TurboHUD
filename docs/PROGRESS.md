@@ -599,3 +599,6 @@ its "Recent changes".
   said the user.
 - 2026-11-05: The outline's least width is now 1.2 px (a seventh of the font size above that),
   as 2 px still filled in the small lines of the draft section (about 10 px), said the user.
+- 2026-11-05: A Tint tick box for each text section in the move-mode panel, asked for by the
+  user: kept with the section and in presets, with Undo. The option for all sections now turns
+  it on or off for every one at once; a file from before takes what it had for all.

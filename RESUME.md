@@ -64,6 +64,9 @@ See `docs/IMPROVEMENT_BACKLOG.md`. In short:
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-05: A Tint tick box for each text section in the move-mode panel, asked for by the
+  user: kept with the section and in presets, with Undo. The option for all sections now turns
+  it on or off for every one at once; a file from before takes what it had for all.
 - 2026-11-05: The outline's least width is now 1.2 px (a seventh of the font size above that),
   as 2 px still filled in the small lines of the draft section (about 10 px), said the user.
 - 2026-11-05: The outline is in step with the font again at small sizes: a width of 2 px or a

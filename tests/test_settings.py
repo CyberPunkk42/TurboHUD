@@ -157,6 +157,38 @@ class FitOnScreensTests(unittest.TestCase):
         self.assertEqual(s.fit_on_screens((4000, 40, 420, 150), []), (4000, 40, 420, 150))
 
 
+class SectionTintTests(unittest.TestCase):
+    def path(self):
+        return Path(tempfile.mkdtemp()) / 'settings.json'
+
+    def test_it_round_trips_also_in_a_preset_and_is_off_by_default(self):
+        path = self.path()
+        place = s.SectionPlace(1, 2, 300, 40, tint=True)
+        s.save_settings(path, s.Settings(sections={'lap': place}, presets={1: {'lap': place}}))
+        loaded = s.load_settings(path)
+        self.assertTrue(loaded.sections['lap'].tint)
+        self.assertTrue(loaded.presets[1]['lap'].tint)
+        self.assertFalse(s.SectionPlace(1, 2, 300, 40).tint)
+
+    def test_a_file_from_before_takes_the_tint_it_had_for_all(self):
+        path = self.path()
+        entry = {'x': 1, 'y': 2, 'width': 30, 'height': 40}
+        path.write_text(
+            json.dumps({'backdrop': True, 'sections': {'lap': entry}, 'presets': {'1': {'lap': entry}}})
+        )
+        loaded = s.load_settings(path)
+        self.assertTrue(loaded.sections['lap'].tint)
+        self.assertTrue(loaded.presets[1]['lap'].tint)
+        path.write_text(json.dumps({'backdrop': False, 'sections': {'lap': entry}}))
+        self.assertFalse(s.load_settings(path).sections['lap'].tint)
+
+    def test_a_section_s_own_choice_counts_over_all(self):
+        path = self.path()
+        entry = {'x': 1, 'y': 2, 'width': 30, 'height': 40, 'tint': False}
+        path.write_text(json.dumps({'backdrop': True, 'sections': {'lap': entry}}))
+        self.assertFalse(s.load_settings(path).sections['lap'].tint)
+
+
 class TextCentredTests(unittest.TestCase):
     def test_it_round_trips_also_in_a_preset_and_is_off_by_default(self):
         path = Path(tempfile.mkdtemp()) / 'settings.json'

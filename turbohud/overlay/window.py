@@ -164,7 +164,7 @@ class SectionWindow(QWidget):
         self.radar = None  # the radar's turbohud.core.race.RadarView; None: not shown
         self.trackmap = None  # the track map's turbohud.core.trackmap.TrackMapView; None: not shown
         self.level = None  # (0 to 1, colour) for a section with a level bar
-        self.backdrop = False  # a light tint behind the text while locked (option)
+        self.backdrop = False  # a light tint behind its text while locked (its own option)
         self.locked = True
         self.wanted = True  # the player wants it shown
         self.group = ''  # sections of the same group move together (move mode)
@@ -545,6 +545,7 @@ class MovePanel(QWidget):
     preset_delete_requested = Signal(int)
     match_requested = Signal(str)  # the group
     undo_requested = Signal()
+    tint_changed = Signal(str, bool)  # section name, a tint behind its text
     text_centred_changed = Signal(str, bool)  # section name, its text in the middle of its box
 
     focusable = True  # it takes clicks on its tick boxes and buttons
@@ -574,6 +575,7 @@ class MovePanel(QWidget):
         self.boxes = {}
         self.groups = {}
         self.centres = {}
+        self.tints = {}
         grid = QGridLayout()
         grid.addWidget(QLabel('Group (moves together):'), 0, 1)
         for row, section in enumerate(sections, start=1):
@@ -612,6 +614,12 @@ class MovePanel(QWidget):
                 )
                 grid.addWidget(centre, row, 4)
                 self.centres[section.name] = centre
+            if not section.drawing:
+                tint = QCheckBox('Tint')
+                tint.setToolTip('A light tint behind the text of this section while locked')
+                tint.toggled.connect(lambda checked, name=section.name: self.tint_changed.emit(name, checked))
+                grid.addWidget(tint, row, 5)
+                self.tints[section.name] = tint
         column.addLayout(grid)
         self.text_sections = [section.name for section in sections if not section.drawing]
         self.matches = {}
@@ -633,7 +641,7 @@ class MovePanel(QWidget):
         self.mph.setChecked(mph)
         self.mph.toggled.connect(self.mph_changed)
         column.addWidget(self.mph)
-        self.backdrop = QCheckBox('Light tint behind the sections')
+        self.backdrop = QCheckBox('Light tint behind all sections')
         self.backdrop.setChecked(backdrop)
         self.backdrop.toggled.connect(self.backdrop_changed)
         column.addWidget(self.backdrop)
@@ -711,6 +719,13 @@ class MovePanel(QWidget):
         for group, button in self.matches.items():
             members = [name for name in self.text_sections if self.groups[name].currentText() == group]
             button.setEnabled(len(members) >= 2)
+
+    def set_tint(self, name, tint):
+        box = self.tints.get(name)
+        if box is not None and box.isChecked() != tint:
+            box.blockSignals(True)
+            box.setChecked(tint)
+            box.blockSignals(False)
 
     def set_text_centred(self, name, centred):
         box = self.centres.get(name)
