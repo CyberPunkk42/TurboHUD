@@ -38,8 +38,8 @@ hit). The Mac app now does this by itself (`turbohud/tsu/bottle.py`, reader in
   quarter (2026-11-05), to show the HUD sooner.
 - See that race reads now stay quick in a race with AI (2026-11-05: they took about 1000 ms a
   read while driving, 28 ms from a separate connection, 14 ms a trip of which 0.37 ms on the
-  game's memory). The fix is in; the log's `race reads` line tells. TSU's own stutter with many
-  AI is there without TurboHUD, as far as the user can tell.
+  game's memory). The fix is in; the log's `race reads` line tells. The stutter came from
+  CrossOver's graphics setting, not the many AI: D3DMetal cured it (2026-11-05).
 - Throttle and brake on the Mac move in TSU's thirds: the pad's triggers are read through
   the Linux joystick interface only.
 - Check the spectator HUD while watching a real race (built 2026-11-04, seen only with a

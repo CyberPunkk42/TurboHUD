@@ -141,8 +141,9 @@ class ReadTimes:
 class LiveRace:
     """Reads the race in a background thread; `snapshot()` gives the latest result."""
 
-    def __init__(self, connect=connect, clock=time.monotonic, close=None):
+    def __init__(self, connect=connect, clock=time.monotonic, close=None, warning=None):
         self._connect = connect
+        self.warning = warning or (lambda: None)  # what to tell the player, for the tray icon
         self._clock = clock
         self._close = close  # what stays open between connects, to end at stop()
         self._times = ReadTimes(clock)

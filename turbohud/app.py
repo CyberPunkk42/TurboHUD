@@ -119,6 +119,11 @@ def setup_log(folder):
     )
 
 
+def tray_text(status, warning=None):
+    """The tray icon's tooltip: what TurboHUD is doing, and a warning if there is one."""
+    return f'TurboHUD - {status}' + (f'\n{warning}' if warning else '')
+
+
 def start_live_race(platform=sys.platform):
     """Start reading TSU's race: on Linux through the memory probe (TSU started from Steam
     with the launch option), on the Mac through a reader in TSU's CrossOver bottle. None
@@ -128,7 +133,7 @@ def start_live_race(platform=sys.platform):
         from turbohud.tsu.client import LiveRace
 
         bottle = Bottle()
-        live = LiveRace(connect=bottle.connect, close=bottle.close)
+        live = LiveRace(connect=bottle.connect, close=bottle.close, warning=lambda: bottle.warning)
         way = 'a reader in the CrossOver bottle'
     elif platform.startswith('linux'):
         from turbohud.tsu.client import LiveRace
@@ -783,9 +788,9 @@ def run(args, folder):
         began = time.perf_counter()
         current = contents()
         if live is not None:
-            text = status_text(live.snapshot())
+            text = tray_text(status_text(live.snapshot()), live.warning())
             if text != shown_status:
-                tray.setToolTip(f'TurboHUD - {text}')
+                tray.setToolTip(text)
                 shown_status = text
         for name, window in windows.items():
             if window.show_content(

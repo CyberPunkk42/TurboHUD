@@ -48,8 +48,10 @@ The most valuable are 2 and 4. Ask the user to say when done before restarting T
 log is replaced at each start.
 
 ## Smaller open points
-- Stutter with many AI: the user has "similar stutters" without TurboHUD, from memory, not a
-  side-by-side test. Reads are not known to add to it, and now run more often, so listen for it.
+- Stutter: settled on 2026-11-05, it was CrossOver's graphics setting. It stuttered alone on a
+  server, without TurboHUD, with the keyboard and with the iPad's Sidecar screen off, and ran well
+  once the bottle was on D3DMetal. Why the bottle was on the default is not known. Whether
+  TurboHUD adds a little on D3DMetal has not been compared side by side.
 - Text got smaller when the size stopped following the digits (draft most). The user's draft
   box is narrow: about 400 px wide gives it 23 px text, against 16 px now. Told to the user;
   they found the result "much better" afterwards, but may not have widened it.

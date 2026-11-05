@@ -105,6 +105,11 @@ own Windows Python; nothing is installed into the bottle, and there is no launch
    takes about 5 s after the event starts. Hover over the TurboHUD icon in the menu bar
    to see what it waits for.
 
+If TSU stutters, try setting the graphics of its bottle to D3DMetal in CrossOver and restarting
+TSU. On the one Mac where this was tried, TSU stuttered on the default and ran well on D3DMetal.
+TurboHUD only reads this setting: while it is anything else, `turbohud.log` and the text on the
+menu bar icon say so.
+
 If TSU's bottle cannot be told apart from others, set `TURBOHUD_BOTTLE` to its name. The
 throttle and brake bars move in TSU's own steps (thirds) on the Mac, as the pad's
 triggers are read only on Linux. The reader's errors are in `bottle_reader.log`, next to
