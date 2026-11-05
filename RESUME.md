@@ -64,6 +64,9 @@ See `docs/IMPROVEMENT_BACKLOG.md`. In short:
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-05: The outline is in step with the font again at small sizes: a width of 2 px or a
+  seventh of the font size. Its 3 px least made the player and lap time lists harder to read,
+  said the user.
 - 2026-11-05: A stronger outline round the text, as it was hard to read without the tint (the
   user): 3 px or a seventh of the font size instead of 2 px or a tenth, half of it outside the
   letter. Drawing it through the text images looked the same as filling the shapes before, so

@@ -63,8 +63,9 @@ def text_path(text, size):
 
 def outline_width(size):
     """The width of the stroke round a letter, half of it outside: enough to read light text
-    on the game's light road and sky, also without the tint behind it."""
-    return max(3.0, size / 7)
+    on the game's light road and sky, also without the tint behind it, and in step with the
+    font, as a thick one fills in small letters (seen in the player and lap time lists)."""
+    return max(2.0, size / 7)
 
 
 @lru_cache(maxsize=512)

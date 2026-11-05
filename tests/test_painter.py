@@ -43,8 +43,14 @@ class OutlineTests(unittest.TestCase):
     def test_the_outline_is_thick_enough_to_read_without_the_tint(self):
         from turbohud.hud.painter import outline_width
 
-        self.assertEqual(outline_width(8), 3.0)  # 1.5 px outside the letter
         self.assertEqual(outline_width(70), 10.0)
+
+    def test_small_text_keeps_a_thin_outline_that_leaves_its_letters_open(self):
+        from turbohud.hud.painter import outline_width
+
+        self.assertEqual(outline_width(8), 2.0)
+        self.assertEqual(outline_width(13), 2.0)
+        self.assertLess(outline_width(15), 2.2)
 
 
 class TextImageTests(unittest.TestCase):
