@@ -102,7 +102,7 @@ program in the same bottle may, so TurboHUD runs a small read-only reader there,
 own Windows Python; nothing is installed into the bottle, and there is no launch option.
 1. Start TSU in CrossOver and start TurboHUD, in either order.
 2. The race sections appear when the cars stand on the grid. Online, finding the race
-   takes about 15 s after the event starts. Hover over the TurboHUD icon in the menu bar
+   takes about 5 s after the event starts. Hover over the TurboHUD icon in the menu bar
    to see what it waits for.
 
 If TSU's bottle cannot be told apart from others, set `TURBOHUD_BOTTLE` to its name. The

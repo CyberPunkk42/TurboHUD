@@ -441,6 +441,45 @@ class ReaderTests(unittest.TestCase):
         self.assertEqual(listed['m_lapsCompleted'], (0x32, False))
         self.assertEqual(runtime.class_name(stats), 'TS.PlayerRaceStats')
 
+    def test_fields_of_a_class_the_game_has_not_set_up_are_not_kept(self):
+        reader = build([10_000], laps_completed=0, clock=20_000, limit=0)
+        g, runtime = reader.game, reader.il
+        parent = g.klass('TS', 'Base', [('m_base', 0x10, False)])
+        child = g.klass('TS', 'Child', [('m_child', 0x18, False)], parent=parent)
+        entries = runtime.memory.u64(child + il.CLASS_FIELDS)
+        g.q(child + il.CLASS_FIELDS, 0)  # the parent is set up, this one not yet
+        self.assertNotIn('m_child', runtime.fields(child))
+        g.q(child + il.CLASS_FIELDS, entries)
+        self.assertEqual(runtime.fields(child)['m_child'], (0x18, False))
+        self.assertEqual(runtime.fields(child)['m_base'], (0x10, False))
+
+    def test_fields_are_kept_once_the_class_is_set_up(self):
+        reader = build([10_000], laps_completed=0, clock=20_000, limit=0)
+        g, runtime = reader.game, reader.il
+        parent = g.klass('TS', 'Base', [('m_base', 0x10, False)])
+        child = g.klass('TS', 'Child', [('m_child', 0x18, False)], parent=parent)
+        runtime.fields(child)
+        g.q(child + il.CLASS_FIELDS, 0)  # would show if it were read again
+        self.assertIn('m_child', runtime.fields(child))
+
+    def test_a_race_is_found_when_the_first_search_came_before_the_game_set_up_its_class(self):
+        reader = build(
+            [10_000, 944_595], laps_completed=1, clock=1_000_000, limit=0, name='Host', online=True
+        )
+        g = reader.game
+        memory = reader.il.memory
+        klass = memory.u64(g.client_controller)
+        parent = memory.u64(klass + il.CLASS_PARENT)  # holds m_eventState
+        entries = memory.u64(klass + il.CLASS_FIELDS), memory.u64(parent + il.CLASS_FIELDS)
+        g.q(klass + il.CLASS_FIELDS, 0)  # the event has just started
+        g.q(parent + il.CLASS_FIELDS, 0)
+        with self.assertRaises(race.NotFound):
+            reader.read()
+        g.q(klass + il.CLASS_FIELDS, entries[0])
+        g.q(parent + il.CLASS_FIELDS, entries[1])
+        reader._next_search = 0.0
+        self.assertEqual(reader.read().laps_completed, 1)
+
     def test_unknown_class_is_reported(self):
         reader = build([10_000], laps_completed=0, clock=20_000, limit=0)
         with self.assertRaises(il.NotFound):
@@ -800,7 +839,7 @@ class CarTests(unittest.TestCase):
         reader.read()
         self.assertEqual(reader.game.searches, searches)  # found once, then kept
 
-    def test_the_next_race_at_the_same_place_needs_no_search(self):
+    def test_the_next_race_is_searched_for(self):
         reader = build(
             [10_000, 944_595], laps_completed=1, clock=1_000_000, limit=0, name='Host', online=True
         )
@@ -810,33 +849,15 @@ class CarTests(unittest.TestCase):
         g.q(g.client_controller + 0x48, 0)  # the race is over
         with self.assertRaises(race.NotFound):
             reader.read()
-        searches = g.searches
-        g.put(g.client_controller + 0x48, state)  # the next race
-        with self.assertLogs('turbohud.core.race', 'INFO') as logs:
-            self.assertEqual(reader.read().laps_completed, 1)
-        self.assertEqual(g.searches, searches)
-        self.assertTrue(any('no search needed' in line for line in logs.output))
-
-    def test_a_race_elsewhere_is_still_searched_for(self):
-        reader = build(
-            [10_000, 944_595], laps_completed=1, clock=1_000_000, limit=0, name='Host', online=True
-        )
-        reader.read()
-        g = reader.game
-        reader._last_controller = g.client_controller + 0x1000  # nothing of it there
-        state = g.read(g.client_controller + 0x48, 8)
-        g.q(g.client_controller + 0x48, 0)
-        with self.assertRaises(race.NotFound):
-            reader.read()
-        reader._last_controller = g.client_controller + 0x1000
         reader._next_search = 0.0
         searches = g.searches
-        g.put(g.client_controller + 0x48, state)
-        self.assertEqual(reader.read().laps_completed, 1)
+        g.put(g.client_controller + 0x48, state)  # the next race, at the same place
+        with self.assertLogs('turbohud.core.race', 'INFO') as logs:
+            self.assertEqual(reader.read().laps_completed, 1)
         self.assertEqual(g.searches, searches + 1)
-        self.assertEqual(reader._last_controller, g.client_controller)
+        self.assertTrue(any('race found' in line for line in logs.output))
 
-    def test_no_look_at_the_last_place_while_the_games_log_says_no_event_runs(self):
+    def test_no_search_between_events_after_a_race(self):
         running = [True]
         reader = build(
             [10_000, 944_595],
@@ -849,29 +870,13 @@ class CarTests(unittest.TestCase):
         )
         reader.read()
         reader._controller = None  # dropped between events; what is there is not a new race
+        reader._next_search = 0.0
+        searches = reader.game.searches
         running[0] = False
         with self.assertRaises(race.NotFound):
             reader.read()
         self.assertIsNone(reader._controller)
-
-    def test_a_race_there_without_the_player_is_not_taken(self):
-        reader = build(
-            [10_000, 944_595], laps_completed=1, clock=1_000_000, limit=0, name='Host', online=True
-        )
-        reader.read()
-        _state, player = reader.local_player()
-        reader.game.put(player + 0x50, struct.pack('<i', -1))  # now only watching
-        reader._controller = None
-        self.assertIsNone(reader._race_at_last_place())
-
-    def test_the_log_says_when_a_race_was_not_where_the_last_one_was(self):
-        reader = build(
-            [10_000, 944_595], laps_completed=1, clock=1_000_000, limit=0, name='Host', online=True
-        )
-        reader._last_controller = 0x1234560  # another place, with nothing of a race there
-        with self.assertLogs('turbohud.core.race', 'INFO') as logs:
-            reader.read()
-        self.assertTrue(any('not where the last one was' in line for line in logs.output))
+        self.assertEqual(reader.game.searches, searches)
 
     def test_without_an_online_race_the_search_waits_between_tries(self):
         now = [100.0]

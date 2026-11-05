@@ -4,25 +4,21 @@ Where the work stopped on 2026-11-05, on the Mac. Everything below was merged in
 and nothing was pushed or tagged. Delete a point when it is settled, and this file when
 none is left.
 
-## Decision waiting for the user
-**Race start online.** The HUD shows 7 to 12 s after an online race starts; this was the
-user's complaint. Proposal, not yet answered:
-1. Remove the "last place" shortcut (`LapReader._race_at_last_place` and
-   `_last_controller` in `turbohud/core/race.py`, with its tests).
-2. Set `WINE_SEARCH_SHARE` in `turbohud/tsu/winmemory.py` from 0.25 to 0.5. Expected: about
-   4 to 6 s. Risk: a little stutter in the first seconds. Going back is one small change.
-
-What is known:
-- The shortcut does not work. The new race was `not where the last one was` in all three
-  races logged after it went in. The equal hit counts (42) that suggested it were a coincidence
-  of how many leftovers there are, not the same address.
-- One search measured apart: 1.48 GiB in 608 regions, the race at hit 42 of 42, at 18% of
-  the data, 6 s in. The other 41 hits are freed controllers of earlier races.
-- A full-speed search was seen to make TSU stutter in earlier checks (`experiments/README.md`).
-- If half speed is not enough: search from a better starting point (log where the race is
-  relative to the data first), or look for a pointer path to the controller.
-
 ## Not yet seen in a race
+- Race start online: the "last place" shortcut is gone and the search reads half of the time
+  instead of a quarter. Expected: the HUD shows about 4 to 6 s after the start, where it took 7
+  to 12 s. Check the log's `search:` line and the wait, and listen for stutter in the first
+  seconds. A full-speed search made TSU stutter in earlier checks (`experiments/README.md`). If
+  it stutters, go back with `WINE_SEARCH_SHARE` in `turbohud/tsu/winmemory.py`. If half speed
+  is not fast enough: search from a better starting point (log where the race is relative to
+  the data first), or look for a pointer path to the controller. One search measured apart at a
+  quarter: 1.48 GiB in 608 regions, the race at hit 42 of 42, at 18% of the data, 6 s in. Nearly
+  all the other hits are not controllers at all (seen 2026-11-05 in a TSU's first event: tables
+  and code bytes that hold the class's address), so they do not come from earlier races.
+- A search at TSU's start: TSU's log can still say an event runs, from before TSU started, so
+  TurboHUD searches for about 10 s with no event on (log: `search: no race` right after the
+  reader starts). No longer harmful (see the entry of 2026-11-05 in `RESUME.md` on classes not
+  yet set up), but needless; not fixed yet.
 - The radar without its fill, its larger cars, and the two warning times in the settings
   window (blue flag 1 to 10 s, radar 0.2 to 3 s). A long radar time zooms the radar out.
 - Dragging the settings window with a real mouse (tested only with a stand-in).

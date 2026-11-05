@@ -164,6 +164,24 @@ class SearchTests(unittest.TestCase):
         for pause in slept:
             self.assertAlmostEqual(pause, 0.006)  # 2 ms reading, 6 ms left to the game
 
+    def test_in_wine_a_search_reads_half_the_time(self):
+        memory = self.memory_with(0x10, 0x2000)
+        ticks = iter([0.0, 0.002])  # the piece takes 2 ms to read
+        slept = []
+        list(
+            wm.search(
+                memory.read,
+                [(0x100000, 0x101000)],
+                self.VALUE,
+                chunk=4096,
+                share=wm.WINE_SEARCH_SHARE,
+                sleep=slept.append,
+                clock=lambda: next(ticks),
+            )
+        )
+        self.assertEqual(len(slept), 1)
+        self.assertAlmostEqual(slept[0], 0.002)  # as long left to the game as spent reading
+
     def test_reads_only_as_far_as_hits_are_taken(self):
         memory = self.memory_with(0x10, 0x8000)
         hits = wm.search(memory.read, [(0x100000, 0x110000)], self.VALUE, chunk=4096)

@@ -610,3 +610,18 @@ its "Recent changes".
   reported by the user.
 - 2026-11-05: `docs/CONTINUE_HERE.md` notes where the work stopped, asked for by the user: the
   decision on the online race search, what has not been seen in a race, and the test list.
+- 2026-11-05: The online race search is faster, asked for by the user as the HUD showed 7 to 12 s
+  after an online race started. In CrossOver a search now reads half of the time instead of a
+  quarter (expected: about 4 to 6 s; a little stutter in the first seconds is the risk, not yet
+  seen in a race). The look at the last race's place is gone: the new race was elsewhere in all
+  three races logged, as the equal hit counts were a coincidence.
+- 2026-11-05: Online, the HUD stayed away for a whole TurboHUD session (only the local time), seen
+  by the user in the first races with the faster search: every search ended in `no race`, while
+  a separate connection found the race at once (2.1 s, the user the driver among 14). The cause:
+  field lists were kept for good, and a search just after TSU started read
+  `TS.ClientEventController` while it and its parents were not yet set up (seen: their fields are
+  empty until about a second before the event shows in TSU's log). The empty list then made every
+  controller look like no race. That search ran as TSU's log still said an event was running, from
+  before TSU started, so the faster search was not the cause. Field lists are now kept only once
+  the class and its parents are set up. Seen with TurboHUD started first, as in the failed
+  session: the same early search, then the race found in 1.5 s.

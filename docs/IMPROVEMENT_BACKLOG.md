@@ -30,12 +30,12 @@ the race is found after about 15 s and read in about 20 ms
 (`turbohud/tsu/winmemory.py`: page cache, paced search that stops at the first good
 hit). The Mac app now does this by itself (`turbohud/tsu/bottle.py`, reader in
 `bottle_reader.py`, Windows Python inside the app). Still to do:
-- Check in races on the Mac: offline and online, the sections over TSU's Fullscreen, how
-  long the race takes to show, the track map and the radar. So far the new connection was
-  only run against an online session as a spectator (no HUD to show there).
-- Listen for stutter while the reader searches (in an online event, the first 15 s;
-  a search of all the data at once made TSU stutter, the paced one was not noticed for
-  sure). If there is none, a larger share than a quarter finds the race sooner.
+- Check in races on the Mac, going through the list in `docs/CONTINUE_HERE.md`: offline and
+  online, the sections over TSU's Fullscreen, how long the race takes to show, the track map
+  and the radar. AI races online have run many times, but the list has not been gone through.
+- Listen for stutter while the reader searches (in an online event, the first seconds; a
+  search of all the data at once made TSU stutter). It now reads half of the time, up from a
+  quarter (2026-11-05), to show the HUD sooner.
 - See that race reads now stay quick in a race with AI (2026-11-05: they took about 1000 ms a
   read while driving, 28 ms from a separate connection, 14 ms a trip of which 0.37 ms on the
   game's memory). The fix is in; the log's `race reads` line tells. TSU's own stutter with many
