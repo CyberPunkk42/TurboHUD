@@ -131,7 +131,8 @@ starting TurboHUD again.
   seconds behind: faint at 2 s, fully visible from 0.5 s, gone once it has passed.
 - **Settings…** (TurboHUD icon's menu, or the move-mode panel) picks the text,
   highlight and outline colours, and makes all sections bigger or smaller at once.
-- **Light tint behind the sections** (TurboHUD icon's menu, or the move-mode panel) puts
+- **Tint**, for each text section in the move-mode panel, or **Light tint behind all sections**
+  for all of them at once (also in the TurboHUD icon's menu), puts
   a faint dark box behind each section's text, for reading it on bright tracks.
 - The **proximity radar** shows your car and the cars around you when one is within
   half a second behind or ahead (faint) up to alongside (fully visible): red beside you, yellow

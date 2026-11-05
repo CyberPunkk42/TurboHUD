@@ -294,7 +294,7 @@ def run(args, folder):
         place = (saved.x, saved.y, saved.width, saved.height) if saved else defaults[name]
         place = fit_on_screens(place, screens)
         window.setGeometry(*place)
-        window.backdrop = settings.backdrop
+        window.backdrop = saved.tint if saved else settings.backdrop
         window.show_on_top()
         window.set_wanted(saved.visible if saved else True)
         window.group = saved.group if saved else ''
@@ -309,9 +309,14 @@ def run(args, folder):
         places = {}
         for name, window in windows.items():
             x, y, width, height = window.placement()
-            places[name] = SectionPlace(x, y, width, height, window.wanted, window.group, window.text_centred)
-        settings = replace(settings, sections=places)
+            places[name] = SectionPlace(
+                x, y, width, height, window.wanted, window.group, window.text_centred, window.backdrop
+            )
+        settings = replace(settings, sections=places, backdrop=all_tinted())
         write_settings()
+
+    def all_tinted():
+        return all(w.backdrop for w in windows.values() if not w.section.drawing)
 
     def write_settings():
         try:
@@ -366,15 +371,18 @@ def run(args, folder):
         log.info('speed in %s', settings.speed_unit)
 
     def set_backdrop(backdrop):
-        nonlocal settings
-        settings = replace(settings, backdrop=backdrop)
-        backdrop_action.setChecked(backdrop)
-        panel.set_backdrop(backdrop)
-        for window in windows.values():
+        """The tint on or off for every section at once."""
+        for name, window in windows.items():
             window.backdrop = backdrop
+            panel.set_tint(name, backdrop)
             window.update()
+        show_all_tinted()
         save()
-        log.info('tint behind the sections %s', 'on' if backdrop else 'off')
+        log.info('tint behind all sections %s', 'on' if backdrop else 'off')
+
+    def show_all_tinted():
+        backdrop_action.setChecked(all_tinted())
+        panel.set_backdrop(all_tinted())
 
     def set_map_others(others):
         nonlocal settings
@@ -396,7 +404,7 @@ def run(args, folder):
         for name, window in windows.items():
             x, y, width, height = found.get(name) or window.placement()
             sections[name] = SectionPlace(
-                x, y, width, height, window.wanted, window.group, window.text_centred
+                x, y, width, height, window.wanted, window.group, window.text_centred, window.backdrop
             )
         return sections, settings.presets
 
@@ -447,6 +455,16 @@ def run(args, folder):
                 if window.group and name in mover.known:
                     move_window(window, mover.known[name], settle=True)
         group_moving = bool(moves)
+
+    set_backdrop = undoable(set_backdrop)
+
+    @undoable
+    def set_tint(name, tint):
+        windows[name].backdrop = tint
+        windows[name].update()
+        show_all_tinted()
+        save()
+        log.info('section %s: tint %s', name, 'on' if tint else 'off')
 
     @undoable
     def set_text_centred(name, centred):
@@ -534,7 +552,9 @@ def run(args, folder):
             mover.known[name] = box  # TurboHUD resized it: not a drag
             mover.pending[name] = (box, until)
             x, y, width, height = box
-            places[name] = SectionPlace(x, y, width, height, window.wanted, window.group, window.text_centred)
+            places[name] = SectionPlace(
+                x, y, width, height, window.wanted, window.group, window.text_centred, window.backdrop
+            )
         settings = replace(settings, sections=places)
         write_settings()
         log.info('group %s: same text size and width', group)
@@ -586,10 +606,13 @@ def run(args, folder):
             window.set_wanted(place.visible)
             window.group = place.group
             window.text_centred = place.text_centred
+            window.backdrop = place.tint
             window.update()
             panel.set_wanted(name, place.visible)
             panel.set_group(name, place.group)
             panel.set_text_centred(name, place.text_centred)
+            panel.set_tint(name, place.tint)
+        show_all_tinted()
 
     def undo():
         """Back one change. What the desktop reports may lag behind the move (see
@@ -619,7 +642,7 @@ def run(args, folder):
     mph_action.setChecked(settings.speed_unit == 'mph')
     mph_action.triggered.connect(lambda checked: set_mph(checked))
     menu.addAction(mph_action)
-    backdrop_action = QAction('Light tint behind the sections', menu, checkable=True)
+    backdrop_action = QAction('Light tint behind all sections', menu, checkable=True)
     backdrop_action.setChecked(settings.backdrop)
     backdrop_action.triggered.connect(lambda checked: set_backdrop(checked))
     menu.addAction(backdrop_action)
@@ -694,6 +717,7 @@ def run(args, folder):
     panel.match_requested.connect(match_group)
     panel.undo_requested.connect(undo)
     panel.text_centred_changed.connect(set_text_centred)
+    panel.tint_changed.connect(set_tint)
     panel.mph_changed.connect(set_mph)
     panel.backdrop_changed.connect(set_backdrop)
     panel.map_others_changed.connect(set_map_others)
@@ -708,6 +732,7 @@ def run(args, folder):
     for name, window in windows.items():
         panel.set_group(name, window.group)
         panel.set_text_centred(name, window.text_centred)
+        panel.set_tint(name, window.backdrop)
 
     history = LayoutHistory(layout_state())
     was_active = False  # in move mode: whether TurboHUD has been the active app yet

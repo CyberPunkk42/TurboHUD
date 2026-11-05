@@ -48,6 +48,7 @@ class SectionPlace:
     visible: bool = True
     group: str = ''  # sections with the same group (one of GROUPS) move together
     text_centred: bool = False  # its text in the middle of its box, not at the left
+    tint: bool = False  # a light tint behind its text while locked
 
 
 @dataclass(frozen=True)
@@ -56,7 +57,7 @@ class Settings:
     theme: Theme = field(default_factory=Theme)
     sections: dict = field(default_factory=dict)  # section name -> SectionPlace
     speed_unit: str = 'kmh'  # 'kmh' or 'mph'
-    backdrop: bool = False  # a light tint behind each section's text while locked
+    backdrop: bool = False  # every text section has its tint on (see SectionPlace.tint)
     map_others: bool = False  # the track map also shows the other cars, as faint grey dots
     layout_version: int = 1  # how to read the section sizes: LAYOUT_VERSION is the latest
     presets: dict = field(default_factory=dict)  # number (one of PRESETS) -> a kept `sections`
@@ -133,9 +134,9 @@ def _placement(data):
     return (x, y, *clamped_size(width, height))
 
 
-def _sections(data):
+def _sections(data, tint=False):
     """{name: SectionPlace} from the file; a broken entry is left out (it then starts
-    at its default place)."""
+    at its default place). `tint` is for a file from before each section had its own."""
     places = {}
     if not isinstance(data, dict):
         return places
@@ -158,15 +159,16 @@ def _sections(data):
             entry.get('visible', True) is not False,
             group,
             entry.get('text_centred') is True,
+            entry.get('tint', tint) is True,
         )
     return places
 
 
-def _presets(data):
+def _presets(data, tint=False):
     """{number: sections} from the file; an empty or unknown preset is left out."""
     if not isinstance(data, dict):
         return {}
-    kept = {number: _sections(data.get(str(number))) for number in PRESETS}
+    kept = {number: _sections(data.get(str(number)), tint) for number in PRESETS}
     return {number: sections for number, sections in kept.items() if sections}
 
 
@@ -180,6 +182,7 @@ def _section_data(sections):
             'visible': place.visible,
             'group': place.group,
             'text_centred': place.text_centred,
+            'tint': place.tint,
         }
         for name, place in sections.items()
     }
@@ -199,12 +202,12 @@ def load_settings(path):
     return Settings(
         placement=_placement(data.get('placement')),
         theme=_theme(data.get('theme')),
-        sections=_sections(data.get('sections')),
+        sections=_sections(data.get('sections'), data.get('backdrop') is True),
         speed_unit=data.get('speed_unit') if data.get('speed_unit') in SPEED_UNITS else 'kmh',
         backdrop=data.get('backdrop') is True,
         map_others=data.get('map_others') is True,
         layout_version=_layout_version(data.get('layout_version')),
-        presets=_presets(data.get('presets')),
+        presets=_presets(data.get('presets'), data.get('backdrop') is True),
     )
 
 
