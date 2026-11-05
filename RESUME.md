@@ -64,6 +64,11 @@ See `docs/IMPROVEMENT_BACKLOG.md`. In short:
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-05: The lap times list shows up to 20 drivers instead of 16, asked for by the user
+  (events can have 20 players). With fewer, it looks the same: the box is invisible and only
+  the drivers there are drawn. Saved sizes and presets are converted once, with the text the
+  same size and the box growing downwards; `settings.before-layout-3.json` keeps the file as
+  it was. The players list stays at 8 rows. Not yet seen with 20 cars in a race.
 - 2026-11-05: Undo in the move-mode panel, asked for by the user: back one change to the
   layout at a time until none is left, also through a Save that replaced a preset. A drag
   counts as one step once it has stood still for a second; each button is a step of its own.

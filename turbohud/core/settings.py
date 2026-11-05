@@ -21,7 +21,7 @@ MIN_SECTION_SIZE = 8  # a saved section smaller than this is broken
 SPEED_UNITS = ('kmh', 'mph')
 MIN_SCALE = 0.5
 MAX_SCALE = 3.0
-LAYOUT_VERSION = 2  # 2: a text section's box fits closely round its text
+LAYOUT_VERSION = 3  # 2: a text section's box fits closely round its text; 3: 20 lap times
 _COLOR = re.compile(r'#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?')
 
 

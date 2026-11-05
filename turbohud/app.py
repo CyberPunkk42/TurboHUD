@@ -12,7 +12,7 @@ from functools import partial
 from pathlib import Path
 
 from turbohud import __version__
-from turbohud.core.hud import CLOCK_SECTIONS, RACE_SECTIONS, tight_place
+from turbohud.core.hud import CLOCK_SECTIONS, RACE_SECTIONS, more_lap_rows_place, tight_place
 from turbohud.core.settings import (
     LAYOUT_VERSION,
     LOG_FILE,
@@ -36,18 +36,31 @@ log = logging.getLogger('turbohud')
 def upgrade_layout(settings, path, ink):
     """The settings with sections saved in an older layout converted, once, and written
     back; the file as it was stays beside it. `ink` is turbohud.hud.painter.text_ink."""
-    if settings.layout_version >= LAYOUT_VERSION:
+    version = settings.layout_version
+    if version >= LAYOUT_VERSION:
         return settings
     known = {section.name: section for section in (*RACE_SECTIONS, *CLOCK_SECTIONS)}
-    places = {}
-    for name, place in settings.sections.items():
-        if name in known:
-            box = (place.x, place.y, place.width, place.height)
-            x, y, width, height = tight_place(known[name], box, settings.theme.scale, ink)
-            place = replace(place, x=x, y=y, width=width, height=height)
-        places[name] = place
-    settings = replace(settings, sections=places, layout_version=LAYOUT_VERSION)
-    if places:
+    scale = settings.theme.scale
+
+    def converted(sections):
+        places = {}
+        for name, place in sections.items():
+            if name in known:
+                box = (place.x, place.y, place.width, place.height)
+                if version < 2:
+                    box = tight_place(known[name], box, scale, ink)
+                x, y, width, height = more_lap_rows_place(known[name], box, scale, ink)
+                place = replace(place, x=x, y=y, width=width, height=height)
+            places[name] = place
+        return places
+
+    settings = replace(
+        settings,
+        sections=converted(settings.sections),
+        presets={number: converted(kept) for number, kept in settings.presets.items()},
+        layout_version=LAYOUT_VERSION,
+    )
+    if settings.sections or settings.presets:
         try:
             shutil.copy2(path, path.with_name(f'{path.stem}.before-layout-{LAYOUT_VERSION}{path.suffix}'))
             save_settings(path, settings)

@@ -33,9 +33,39 @@ class UpgradeLayoutTests(unittest.TestCase):
         self.assertEqual(place.height, 50)
         self.assertEqual((place.visible, place.group), (False, 'A'))
         self.assertEqual(settings.load_settings(self.path), upgraded)
-        self.assertEqual(self.path.with_name('settings.before-layout-2.json').read_bytes(), old)
+        self.assertEqual(self.path.with_name('settings.before-layout-3.json').read_bytes(), old)
         # A second start finds them converted.
         self.assertEqual(app.upgrade_layout(upgraded, self.path, self.ink), upgraded)
+
+    def lap_times(self, layout_version, height):
+        place = settings.SectionPlace(100, 200, 500, height)
+        return settings.Settings(
+            sections={'laptimes': place}, presets={2: {'laptimes': place}}, layout_version=layout_version
+        )
+
+    def test_a_tight_lap_times_box_grows_by_its_new_rows_also_in_a_preset(self):
+        settings.save_settings(self.path, self.lap_times(2, 300))
+        upgraded = app.upgrade_layout(settings.load_settings(self.path), self.path, self.ink)
+        place = upgraded.sections['laptimes']
+        self.assertEqual((place.x, place.y, place.width), (100, 200, 500))
+        # The 4 more rows of 21 px on a box that fits 16 rows and a heading, 351 px at scale 1.
+        self.assertEqual(place.height, round(300 * (351 + 84) / 351))
+        self.assertEqual(upgraded.presets[2]['laptimes'], place)
+        self.assertEqual(settings.load_settings(self.path).layout_version, settings.LAYOUT_VERSION)
+
+    def test_a_section_from_before_tight_boxes_goes_through_both_steps(self):
+        old_normal = 14 + 13 + 16 * (13 + 8) + 14 + 14  # the 16 rows and the room for its name
+        settings.save_settings(self.path, self.lap_times(1, old_normal * 2))
+        upgraded = app.upgrade_layout(settings.load_settings(self.path), self.path, self.ink)
+        section = next(s for s in hud.RACE_SECTIONS if s.name == 'laptimes')
+        self.assertEqual(upgraded.sections['laptimes'].height, 2 * hud.tight_height(section, 1.0, self.ink))
+
+    def test_other_sections_keep_their_size_in_layout_3(self):
+        place = settings.SectionPlace(1, 2, 300, 40)
+        current = settings.Settings(sections={'localtime': place}, layout_version=2)
+        settings.save_settings(self.path, current)
+        upgraded = app.upgrade_layout(settings.load_settings(self.path), self.path, self.ink)
+        self.assertEqual(upgraded.sections['localtime'], place)
 
     def test_converted_sizes_stay(self):
         current = self.saved(layout_version=settings.LAYOUT_VERSION)

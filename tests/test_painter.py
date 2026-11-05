@@ -144,6 +144,17 @@ class RedrawTests(unittest.TestCase):
         rows = [Row('000', 'medium')]
         self.assertEqual(self.text_box('speed', rows, centred=True), self.text_box('speed', rows))
 
+    def test_a_full_lap_times_list_fits_its_box(self):
+        from turbohud.core.hud import Row
+
+        rows = [Row('Driver', 'small', 'accent', middle='Best', right='Lap')]
+        rows += [
+            Row(f'{n}. Driver', 'small', flag='DE', middle='0:00.000', right='0:00.0') for n in range(1, 21)
+        ]
+        (_left, top, _right, bottom), (_width, height) = self.text_box('laptimes', rows)
+        self.assertGreaterEqual(top, 1)
+        self.assertLessEqual(bottom, height - 2)
+
     def test_the_text_shrinks_with_the_box(self):
         from turbohud.core.hud import Row
 
@@ -310,6 +321,24 @@ class MovePanelPresetTests(unittest.TestCase):
         panel.set_undo_available(True)
         panel.undo.click()
         self.assertEqual(got, [True])
+
+    def test_the_lap_times_keep_their_font_size_through_the_conversion(self):
+        from dataclasses import replace
+
+        from turbohud.core import hud
+        from turbohud.hud.painter import text_ink
+
+        section = next(s for s in hud.RACE_SECTIONS if s.name == 'laptimes')
+        old = replace(section, samples=(section.samples[0][:17],))
+        old_normal = hud.tight_height(old, 1.0, text_ink)
+        for height in (old_normal, 357, 500, 200):
+            with self.subTest(height=height):
+                box = hud.more_lap_rows_place(section, (0, 0, 2000, height), 1.0, text_ink)
+                before = hud.fitted_scale(old, height, height / old_normal, text_ink)
+                now = hud.fitted_scale(
+                    section, box[3], box[3] / hud.tight_height(section, 1.0, text_ink), text_ink
+                )
+                self.assertEqual(hud.Sizes.for_scale(before).small, hud.Sizes.for_scale(now).small)
 
     def test_load_names_its_shortcut_where_there_are_shortcuts(self):
         self.assertIn('Ctrl+Shift+2', self.button(self.panel(), 2, 'Load').toolTip())

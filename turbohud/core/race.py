@@ -1672,7 +1672,7 @@ def players_rows(players, order=None, clock=None, gates=(), watching=False):
     return rows
 
 
-MAX_LAP_TIME_ROWS = 16  # drivers in the lap times list; more: the leader and those around me
+MAX_LAP_TIME_ROWS = 20  # drivers in the lap times list; more: the leader and those around me
 
 
 def player_lap_times(player):
