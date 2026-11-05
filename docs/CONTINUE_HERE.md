@@ -26,7 +26,8 @@ none is left.
   with HUD frames 50 ms apart. Check `race reads` and `HUD frames` in `turbohud.log` again.
 
 ## Pit stops, not yet seen
-- The two pit timers and the lap number in a race, and whether the first starts at the pit entry
+- Seen by the user on 2026-11-05, hosting with AI: the pits work, the timers' display is liked, and
+  it ran smoothly. Not asked separately: whether the first timer starts exactly at the pit entry
   line (it uses the game's pit area); the tires bar filling during a 12 s change.
 - Fuel with a stop that needs much more than 2.5%: it should fill at 5% a second, seen in the game's
   field but not on the bar with a big refill. Health and repairs in an event with damage.
