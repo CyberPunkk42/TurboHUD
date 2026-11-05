@@ -617,9 +617,11 @@ its "Recent changes".
   three races logged, as the equal hit counts were a coincidence.
 - 2026-11-05: Online, the HUD stayed away for a whole TurboHUD session (only the local time), seen
   by the user in the first races with the faster search: every search ended in `no race`, while
-  a separate connection found the race at once (2.1 s, you the driver among 14). The likely cause:
-  field lists were kept for good, and a search that reads a class before the game has set it up
-  keeps an empty one, so each controller then looks like no race. Field lists are now kept only
-  once the class and its parents are set up. Not yet seen in a race; that the class was not set
-  up then is inferred. The faster search may make this more likely, as it reaches its first hit
-  sooner.
+  a separate connection found the race at once (2.1 s, the user the driver among 14). The cause:
+  field lists were kept for good, and a search just after TSU started read
+  `TS.ClientEventController` while it and its parents were not yet set up (seen: their fields are
+  empty until about a second before the event shows in TSU's log). The empty list then made every
+  controller look like no race. That search ran as TSU's log still said an event was running, from
+  before TSU started, so the faster search was not the cause. Field lists are now kept only once
+  the class and its parents are set up. Seen with TurboHUD started first, as in the failed
+  session: the same early search, then the race found in 1.5 s.
