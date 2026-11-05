@@ -98,9 +98,35 @@ class SteadySizeTests(unittest.TestCase):
         self.assertEqual(hud.widest_rows(self.SECTIONS['delta'], [], 1.0, self.proportional), [])
 
     def test_every_column_counts_as_steady(self):
-        row = hud.Row('1', 'small', tail='2', middle='3', right='4')
+        row = hud.Row('1', 'small', tail='2', middle='3', right='4', before='5')
         steady = hud.steady_rows([row])[0]
+        self.assertEqual(steady.before, '0')
         self.assertEqual((steady.text, steady.tail, steady.middle, steady.right), ('0', '0', '0', '0'))
+
+
+class BeforeColumnTests(unittest.TestCase):
+    @staticmethod
+    def measure(text, size):
+        return len(text) * size
+
+    def lines(self, *rows):
+        return hud._content(list(rows), hud.Sizes.for_scale(1.0))[0]
+
+    def test_it_ends_a_gap_before_the_widest_middle_column(self):
+        lines = self.lines(
+            hud.Row('A', 'small', middle='1:23.456', before='L3'),
+            hud.Row('B', 'small', middle='-', before='L12'),
+        )
+        size = lines[0].size
+        self.assertEqual(hud.before_right(lines, 500, self.measure), 500 - 8 * size - hud.COLUMN_GAP * size)
+
+    def test_it_counts_towards_the_width(self):
+        plain = self.lines(hud.Row('A', 'small', middle='1:23', right='0:12'))
+        lap = self.lines(hud.Row('A', 'small', middle='1:23', right='0:12', before='L12'))
+        size = plain[0].size
+        extra = 3 * size + hud.COLUMN_GAP * size
+        self.assertEqual(hud.lines_width(lap, self.measure), hud.lines_width(plain, self.measure) + extra)
+        self.assertEqual(hud.line_width(lap[0], self.measure), hud.line_width(plain[0], self.measure) + extra)
 
 
 class TextCanCentreTests(unittest.TestCase):

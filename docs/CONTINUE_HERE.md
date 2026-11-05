@@ -26,9 +26,9 @@ none is left.
   with HUD frames 50 ms apart. Check `race reads` and `HUD frames` in `turbohud.log` again.
 
 ## Race start and the map, not yet seen
-- Track map: a frame now comes with each new read (`hud.FramePacer`). The log's `HUD frames` line
-  says how many had no new read; expected near 0 and about as many frames as `race reads`. The
-  cause was not proved before the fix: see whether the user still sees the hitch.
+- Track map: a frame now comes with each new read (`hud.FramePacer`). The user found it smooth on
+  2026-11-05, hosting with AI; the log's `HUD frames` lines had 0 or 1 frames with no new read in
+  30 s. Not seen online as a client, where the other cars' positions come from the recorder.
 - Pit stops: the user confirmed the timers, AI cars, tires, fuel, health and the pit entry on
   2026-11-05. Not tried: another tire compound (`tireCompoundAndChangeTicks` holds it too, how is
   not known; above 2400 the bar jumps at the end of the change, as before).

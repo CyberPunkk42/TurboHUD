@@ -648,3 +648,6 @@ its "Recent changes".
   about once a second a frame had nothing new. A race frame now comes with each new read, and after
   0.1 s without one for the times that run on; the log's `HUD frames` line counts frames with no new
   read. The cause was worked out from the log's rates and the code, not measured before the fix.
+- 2026-11-05: In the lap times list, each driver's lap (`L12`) is now a right-aligned column before
+  Best, asked for by the user, so the numbers line up. The columns are placed with digits as zeros,
+  so they stay put while a pit timer runs.

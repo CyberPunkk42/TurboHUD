@@ -22,6 +22,7 @@ class Line:
     middle: str = ''  # a second column, lined up on the right just before `right`
     middle_color: str = 'text'
     slot: str = ''  # the text is at the right of a slot this wide, with the tail after it
+    before: str = ''  # a column lined up on the right just before `middle`, in the text's colour
 
 
 @dataclass(frozen=True)
@@ -39,6 +40,7 @@ class Row:
     middle: str = ''  # a second column, lined up on the right just before `right`
     middle_color: str = 'text'
     slot: str = ''  # the text is at the right of a slot this wide, with the tail after it
+    before: str = ''  # a column lined up on the right just before `middle`, in the text's colour
 
 
 FLAG_WIDTH = 1.5  # a flag's room before the text, in font sizes
@@ -130,6 +132,7 @@ def _content(rows, sizes):
                 row.middle,
                 row.middle_color,
                 row.slot,
+                row.before,
             )
         )
     return lines, baseline
@@ -151,6 +154,8 @@ def _left_width(line, measure):
 def line_width(line, measure):
     """How wide a line is with its flag and its columns."""
     width = _left_width(line, measure)
+    if line.before:
+        width += COLUMN_GAP * line.size + measure(line.before, line.size)
     if line.middle:
         width += COLUMN_GAP * line.size + measure(line.middle, line.size)
     if line.right:
@@ -164,8 +169,10 @@ def lines_width(lines, measure):
     if not any(line.middle for line in lines):
         return max((line_width(line, measure) for line in lines), default=0)
     gap = max(COLUMN_GAP * line.size for line in lines)
+    before = max((measure(line.before, line.size) for line in lines if line.before), default=None)
     return (
         max(_left_width(line, measure) for line in lines)
+        + (before + gap if before is not None else 0)
         + gap
         + max((measure(line.middle, line.size) for line in lines if line.middle), default=0)
         + gap
@@ -179,6 +186,14 @@ def middle_right(lines, width, margin, measure):
     right = max((measure(line.right, line.size) for line in lines if line.middle and line.right), default=0)
     gap = max((COLUMN_GAP * line.size for line in lines if line.middle), default=0)
     return width - margin - right - gap
+
+
+def before_right(lines, middle_end, measure):
+    """Where the `before` column ends (it is right-aligned there): before the widest
+    middle column, whose right edge is at `middle_end`, with a gap."""
+    middle = max((measure(line.middle, line.size) for line in lines if line.middle), default=0)
+    gap = max((COLUMN_GAP * line.size for line in lines if line.middle), default=0)
+    return middle_end - middle - gap
 
 
 def content_size(rows, scale, measure):
@@ -209,6 +224,7 @@ def steady_rows(rows):
             text=steady_text(row.text),
             tail=steady_text(row.tail),
             middle=steady_text(row.middle),
+            before=steady_text(row.before),
             right=steady_text(row.right),
         )
         for row in rows
@@ -307,7 +323,7 @@ RACE_SECTIONS = (
                 Row(
                     f'{n}. Playername1234567',
                     'small',
-                    tail='  L99',
+                    before='L99',
                     flag='DE',
                     middle='PIT 00.0s',
                     right='(00.00s)',

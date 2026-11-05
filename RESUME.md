@@ -64,6 +64,9 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-05: In the lap times list, each driver's lap (`L12`) is now a right-aligned column before
+  Best, asked for by the user, so the numbers line up. The columns are placed with digits as zeros,
+  so they stay put while a pit timer runs.
 - 2026-11-05: The track map's dots should no longer stand still and jump, seen by the user from time
   to time. Race reads (about 19 a second) and HUD frames (20 a second) ran on separate timers, so
   about once a second a frame had nothing new. A race frame now comes with each new read, and after
