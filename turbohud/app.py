@@ -27,9 +27,8 @@ from turbohud.core.settings import (
 )
 
 FRAME_MS = 50  # redraw interval: 20 times a second, as often as the race is read
-PLACEMENT_EVERY = 1.0  # seconds between position checks in move mode
 MIN_SECTION = 20  # pixels: the smallest a section gets from Smaller in the settings
-GROUP_EVERY = 0.2  # seconds between position checks in move mode while sections are grouped
+PLACEMENT_EVERY = 0.2  # seconds between position checks in move mode
 ICON = 'tsu_turbo_hud_00.png'  # in assets/, also the bundled app's icon
 log = logging.getLogger('turbohud')
 
@@ -179,6 +178,7 @@ def run(args, folder):
         CLOCK_SECTIONS,
         RACE_SECTIONS,
         GroupMover,
+        LayoutHistory,
         below,
         centred,
         drawing_place,
@@ -331,12 +331,15 @@ def run(args, folder):
         if value:
             panel.hide()
             native.give_focus_back()
+            history.record(layout_state())
             save()
             log.info('locked')
         else:
             mover.known.clear()  # compare from where the sections are now
             mover.pending.clear()
             native.take_focus()
+            history.resume(layout_state())
+            panel.set_undo_available(history.can_undo(history.current))
             panel.show_at(*panel_spot())
             log.info('move mode')
 
@@ -370,6 +373,33 @@ def run(args, folder):
     mover = GroupMover()
     group_moving = False  # a group followed a drag at the last look
 
+    history = None  # made once the panel is there
+
+    def layout_state():
+        """The sections as they are now and the presets: what Undo goes back through."""
+        found = placements()
+        sections = {}
+        for name, window in windows.items():
+            x, y, width, height = found.get(name) or window.placement()
+            sections[name] = SectionPlace(
+                x, y, width, height, window.wanted, window.group, window.text_centred
+            )
+        return sections, settings.presets
+
+    def undoable(action):
+        """A change from a button or a shortcut: one step for Undo. A drag it comes right
+        after counts as a step of its own."""
+
+        def run(*arguments):
+            history.record(layout_state())
+            action(*arguments)
+            state = layout_state()
+            history.record(state)
+            panel.set_undo_available(history.can_undo(state))
+
+        return run
+
+    @undoable
     def set_group(name, group):
         windows[name].group = group
         mover.known.clear()  # start comparing afresh
@@ -404,12 +434,14 @@ def run(args, folder):
                     move_window(window, mover.known[name], settle=True)
         group_moving = bool(moves)
 
+    @undoable
     def set_text_centred(name, centred):
         windows[name].text_centred = centred
         windows[name].update()
         save()
         log.info('section %s: text %s', name, 'in the middle' if centred else 'at the left')
 
+    @undoable
     def align(name, across, down):
         """Centre a section on the screen that holds it (the panel's Centre buttons)."""
         window = windows[name]
@@ -440,6 +472,7 @@ def run(args, folder):
             theme.outline_color,
         )
 
+    @undoable
     def resize_all(factor):
         """Every section bigger or smaller by `factor`, from its top-left corner."""
         for name, window in windows.items():
@@ -462,10 +495,12 @@ def run(args, folder):
             x, y = panel_spot()
             settings_window.show_at(x + panel.width() + 20, y)
 
+    @undoable
     def set_wanted(name, wanted):
         windows[name].set_wanted(wanted)
         log.info('section %s %s', name, 'shown' if wanted else 'hidden')
 
+    @undoable
     def match_group(group):
         """The group's text sections get the same text size and width (the panel's Match).
         The settings take these places, not what the desktop says yet (see load_preset)."""
@@ -490,6 +525,7 @@ def run(args, folder):
         write_settings()
         log.info('group %s: same text size and width', group)
 
+    @undoable
     def save_preset(number):
         """Keep the layout as it is now in a preset, and in the settings as well."""
         nonlocal settings
@@ -497,9 +533,10 @@ def run(args, folder):
         presets = {**settings.presets, number: {name: settings.sections[name] for name in windows}}
         settings = replace(settings, presets=presets)
         write_settings()
-        panel.set_preset_saved(number)
+        panel.set_presets_saved(settings.presets)
         log.info('preset %d saved', number)
 
+    @undoable
     def load_preset(number):
         """Put every section as the preset has it. What the desktop reports may lag behind
         the move (Wayland), so the settings take the preset's places, not what it says."""
@@ -508,13 +545,21 @@ def run(args, folder):
         if not places:
             log.info('preset %d is empty', number)
             return
+        apply_places(places)
+        settings = replace(settings, sections={**settings.sections, **places})
+        write_settings()
+        log.info('preset %d loaded', number)
+
+    def apply_places(places):
+        """Put sections as `places` {name: SectionPlace} has them, moved by TurboHUD: their
+        groups stay where they are."""
         until = time.monotonic() + 1.0
         for name, place in places.items():
             window = windows[name]
             box = (place.x, place.y, place.width, place.height)
             move_window(window, box, settle=True)
-            mover.known[name] = box  # TurboHUD moved it: its group stays where it is
-            mover.pending[name] = (box[:2], until)
+            mover.known[name] = box
+            mover.pending[name] = (box, until)
             window.set_wanted(place.visible)
             window.group = place.group
             window.text_centred = place.text_centred
@@ -522,9 +567,21 @@ def run(args, folder):
             panel.set_wanted(name, place.visible)
             panel.set_group(name, place.group)
             panel.set_text_centred(name, place.text_centred)
-        settings = replace(settings, sections={**settings.sections, **places})
+
+    def undo():
+        """Back one change. What the desktop reports may lag behind the move (see
+        load_preset), so the settings take the earlier places, not what it says."""
+        nonlocal settings
+        previous = history.undo(layout_state())
+        if previous is None:
+            return
+        sections, presets = previous
+        apply_places(sections)
+        settings = replace(settings, sections={**settings.sections, **sections}, presets=presets)
         write_settings()
-        log.info('preset %d loaded', number)
+        panel.set_presets_saved(presets)
+        panel.set_undo_available(history.can_undo(previous))
+        log.info('undone; %d more to go back', len(history.past))
 
     # Tray icon (menu bar on the Mac): the way to move mode where there are no shortcuts.
     tray = QSystemTrayIcon(icon)
@@ -611,6 +668,7 @@ def run(args, folder):
     panel.preset_save_requested.connect(save_preset)
     panel.preset_load_requested.connect(load_preset)
     panel.match_requested.connect(match_group)
+    panel.undo_requested.connect(undo)
     panel.text_centred_changed.connect(set_text_centred)
     panel.mph_changed.connect(set_mph)
     panel.backdrop_changed.connect(set_backdrop)
@@ -627,6 +685,7 @@ def run(args, folder):
         panel.set_group(name, window.group)
         panel.set_text_centred(name, window.text_centred)
 
+    history = LayoutHistory(layout_state())
     was_active = False  # in move mode: whether TurboHUD has been the active app yet
 
     def on_state(state):
@@ -665,17 +724,16 @@ def run(args, folder):
                 current.get('levels', {}).get(name),
             ):
                 window.update()  # only what changed: drawing every section each frame stutters
-        grouped = any(w.group for w in windows.values())
-        every = GROUP_EVERY if grouped else PLACEMENT_EVERY
-        if not locked and time.monotonic() - last_seen >= every:
+        if not locked and time.monotonic() - last_seen >= PLACEMENT_EVERY:
             # In move mode, note where the sections are: on Wayland only the desktop
-            # knows, and it may no longer say once TurboHUD is quitting. Grouped
-            # sections follow the one being dragged.
+            # knows, and it may no longer say once TurboHUD is quitting. Grouped sections
+            # follow the one being dragged, and a drag that ends is one step for Undo.
             last_seen = time.monotonic()
-            if grouped:
+            if any(w.group for w in windows.values()):
                 follow_groups(last_seen)
-            else:
-                placements()
+            state = layout_state()
+            history.look(state, last_seen)
+            panel.set_undo_available(history.can_undo(state))
         if args.seconds is not None and time.monotonic() - started >= args.seconds:
             log.info('time is up')
             app.quit()

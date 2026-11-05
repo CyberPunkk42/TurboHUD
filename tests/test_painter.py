@@ -204,7 +204,7 @@ class MovePanelPresetTests(unittest.TestCase):
         panel = self.panel(saved_presets=(2,))
         self.assertFalse(self.button(panel, 1, 'Load').isEnabled())
         self.assertTrue(self.button(panel, 2, 'Load').isEnabled())
-        panel.set_preset_saved(1)
+        panel.set_presets_saved((1, 2))
         self.assertTrue(self.button(panel, 1, 'Load').isEnabled())
 
     def test_the_buttons_say_which_preset(self):
@@ -295,6 +295,21 @@ class MovePanelPresetTests(unittest.TestCase):
         self.assertEqual(got, [('lap', True)])
         self.assertFalse(panel.centres['lap'].isChecked())
         panel.set_text_centred('speed', True)  # not one of them: nothing happens
+
+    def test_a_preset_can_go_back_to_empty(self):
+        panel = self.panel(saved_presets=(1, 2))
+        panel.set_presets_saved((2,))
+        self.assertFalse(self.button(panel, 1, 'Load').isEnabled())
+        self.assertTrue(self.button(panel, 2, 'Load').isEnabled())
+
+    def test_undo_starts_greyed_out_and_asks_when_clicked(self):
+        panel = self.panel()
+        got = []
+        panel.undo_requested.connect(lambda: got.append(True))
+        self.assertFalse(panel.undo.isEnabled())
+        panel.set_undo_available(True)
+        panel.undo.click()
+        self.assertEqual(got, [True])
 
     def test_load_names_its_shortcut_where_there_are_shortcuts(self):
         self.assertIn('Ctrl+Shift+2', self.button(self.panel(), 2, 'Load').toolTip())

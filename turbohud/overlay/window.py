@@ -527,6 +527,7 @@ class MovePanel(QWidget):
     preset_save_requested = Signal(int)  # the preset's number
     preset_load_requested = Signal(int)
     match_requested = Signal(str)  # the group
+    undo_requested = Signal()
     text_centred_changed = Signal(str, bool)  # section name, its text in the middle of its box
 
     focusable = True  # it takes clicks on its tick boxes and buttons
@@ -645,6 +646,11 @@ class MovePanel(QWidget):
         presets.setColumnStretch(3, 1)
         column.addLayout(presets)
         row = QHBoxLayout()
+        self.undo = QPushButton('Undo')
+        self.undo.setToolTip('Go back one change to the layout, as often as there are changes')
+        self.undo.setEnabled(False)
+        self.undo.clicked.connect(self.undo_requested)
+        row.addWidget(self.undo)
         lock = QPushButton('Lock')
         settings = QPushButton('Settings…')
         quit_ = QPushButton('Quit TurboHUD')
@@ -699,8 +705,12 @@ class MovePanel(QWidget):
             self.backdrop.setChecked(backdrop)
             self.backdrop.blockSignals(False)
 
-    def set_preset_saved(self, number):
-        self.preset_loads[number].setEnabled(True)
+    def set_presets_saved(self, numbers):
+        for number, load in self.preset_loads.items():
+            load.setEnabled(number in numbers)
+
+    def set_undo_available(self, available):
+        self.undo.setEnabled(available)
 
     def set_map_others(self, others):
         if self.map_others.isChecked() != others:

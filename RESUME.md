@@ -64,6 +64,12 @@ See `docs/IMPROVEMENT_BACKLOG.md`. In short:
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-05: Undo in the move-mode panel, asked for by the user: back one change to the
+  layout at a time until none is left, also through a Save that replaced a preset. A drag
+  counts as one step once it has stood still for a second; each button is a step of its own.
+  It lasts as long as TurboHUD runs, and colours and options are not in it. Move mode now
+  looks at the sections five times a second, also without groups. Tested through the real
+  app code with a fake window layer; real dragging and Hyprland are still to be seen.
 - 2026-11-05: A section's text can go in the middle of its box: a Centre text tick box per
   section in the move-mode panel, off by default, kept with the section and in presets, asked
   for by the user. Each line is centred on its own, measured with digits as zeros so that

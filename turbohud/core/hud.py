@@ -677,6 +677,57 @@ class GroupMover:
         }
 
 
+HISTORY_SETTLE = 1.0  # seconds a dragged layout stays still before it counts as one change
+
+
+class LayoutHistory:
+    """The earlier layouts, for Undo, as long as TurboHUD runs. A state is whatever can be
+    compared: the sections and presets. Buttons `record` their change at once. Dragging is
+    the desktop's, and TurboHUD only sees where things are when it looks, so `look` takes
+    it for one change when it has stood still, however many looks it took."""
+
+    def __init__(self, state):
+        self.current = state
+        self.past = []
+        self._seen = state
+        self._changed = None
+
+    def record(self, state):
+        """The layout is now `state`: one change, if it differs."""
+        if state != self.current:
+            self.past.append(self.current)
+            self.current = state
+        self._seen = state
+
+    def look(self, state, now):
+        """What TurboHUD sees at monotonic time `now`, perhaps in the middle of a drag."""
+        if state != self._seen:
+            self._seen = state
+            self._changed = now
+        elif state != self.current and now - self._changed >= HISTORY_SETTLE:
+            self.record(state)
+
+    def resume(self, state):
+        """Move mode begins at `state`. With nothing to undo yet, this is simply the start:
+        at first the desktop may report windows a little off from where they were asked."""
+        if self.past:
+            self.record(state)
+        else:
+            self.current = self._seen = state
+
+    def can_undo(self, state):
+        return bool(self.past) or state != self.current
+
+    def undo(self, state):
+        """The layout before the last change, a drag still going on being one; None if
+        there is nothing left to go back to."""
+        self.record(state)
+        if not self.past:
+            return None
+        self.current = self._seen = self.past.pop()
+        return self.current
+
+
 FREE_STEP = 40  # pixels between the spots free_spot tries
 FREE_GAP = 12  # room kept between the panel and a section
 

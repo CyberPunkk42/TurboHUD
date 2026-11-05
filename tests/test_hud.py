@@ -534,6 +534,61 @@ class MatchSizesTests(unittest.TestCase):
         self.assertEqual(again, once)
 
 
+class LayoutHistoryTests(unittest.TestCase):
+    def test_undo_goes_back_one_change_at_a_time_until_none_is_left(self):
+        history = hud.LayoutHistory('a')
+        history.record('b')
+        history.record('c')
+        self.assertEqual(history.undo('c'), 'b')
+        self.assertEqual(history.undo('b'), 'a')
+        self.assertFalse(history.can_undo('a'))
+        self.assertIsNone(history.undo('a'))
+        self.assertEqual(history.current, 'a')
+
+    def test_nothing_changed_is_no_step(self):
+        history = hud.LayoutHistory('a')
+        history.record('a')
+        self.assertFalse(history.can_undo('a'))
+
+    def test_a_drag_is_one_step_when_it_has_stood_still(self):
+        history = hud.LayoutHistory('start')
+        for now, state in ((0.2, 'x1'), (0.4, 'x2'), (0.6, 'x3'), (0.8, 'x3'), (1.5, 'x3')):
+            history.look(state, now)
+        self.assertEqual(history.past, [])  # not still for long enough yet
+        history.look('x3', 1.6)
+        self.assertEqual((history.past, history.current), (['start'], 'x3'))
+
+    def test_undo_during_a_drag_goes_back_to_before_it(self):
+        history = hud.LayoutHistory('start')
+        history.look('moving', 0.2)
+        self.assertTrue(history.can_undo('moving'))
+        self.assertEqual(history.undo('moving'), 'start')
+        self.assertFalse(history.can_undo('start'))
+
+    def test_a_button_right_after_a_drag_is_a_step_of_its_own(self):
+        history = hud.LayoutHistory('start')
+        history.look('dragged', 0.2)
+        history.record('dragged')  # undoable: before the button acts
+        history.record('hidden')
+        self.assertEqual(history.past, ['start', 'dragged'])
+
+    def test_arriving_after_an_undo_is_no_new_step(self):
+        history = hud.LayoutHistory('a')
+        history.record('b')
+        history.undo('b')
+        for now in (0.2, 0.4, 3.0):
+            history.look('a', now)
+        self.assertFalse(history.can_undo('a'))
+
+    def test_move_mode_starts_where_the_desktop_says_while_nothing_can_be_undone(self):
+        history = hud.LayoutHistory('asked')
+        history.resume('reported')
+        self.assertFalse(history.can_undo('reported'))
+        history.record('moved')
+        history.resume('from a shortcut')
+        self.assertEqual(history.past, ['reported', 'moved'])
+
+
 class FreeSpotTests(unittest.TestCase):
     SCREEN = (0, 0, 5120, 1440)  # the player's main monitor
 

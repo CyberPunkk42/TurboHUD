@@ -163,6 +163,10 @@ starting TurboHUD again.
   (or B, C, D) gives the group's text sections the largest text size among them and one
   width. They stay where they are, and sections with bars or several rows stay taller. Save
   a preset first to be able to go back.
+- **Undo** in the panel goes back one change to the layout at a time until none is left:
+  moving, resizing, showing or hiding, groups, centring, matching, and loading or saving a
+  preset. A drag counts as one change. Colours and options are not in it, and it starts
+  afresh when TurboHUD starts.
 - **Layout presets**: the panel can keep three layouts: where each section sits, its size,
   whether it shows, and its group. **Save** keeps the layout as it is now in that preset,
   replacing what was there; **Load** puts the sections back as it has them. **Ctrl+Shift+1**,
