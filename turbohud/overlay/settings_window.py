@@ -10,9 +10,17 @@ from dataclasses import replace
 
 from PySide6.QtCore import QRectF, Qt, Signal
 from PySide6.QtGui import QColor, QPainter, QPen
-from PySide6.QtWidgets import QGridLayout, QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget
+from PySide6.QtWidgets import (
+    QDoubleSpinBox,
+    QGridLayout,
+    QHBoxLayout,
+    QLabel,
+    QPushButton,
+    QVBoxLayout,
+    QWidget,
+)
 
-from turbohud.core.settings import Theme
+from turbohud.core.settings import BLUE_SECONDS, RADAR_SECONDS, Theme
 
 log = logging.getLogger(__name__)
 
@@ -72,15 +80,18 @@ class Swatch(QPushButton):
 
 
 class SettingsWindow(QWidget):
-    """Colours for text, highlight and outline; all sections bigger or smaller; reset."""
+    """Colours for text, highlight and outline; all sections bigger or smaller; when the blue
+    flag and the proximity radar show; reset."""
 
     theme_changed = Signal(object)  # the new Theme
     resize_requested = Signal(float)  # factor for every section's size
+    blue_seconds_changed = Signal(float)
+    radar_seconds_changed = Signal(float)
     closed = Signal()
 
     focusable = True  # it takes clicks on its buttons
 
-    def __init__(self, native, flags, theme):
+    def __init__(self, native, flags, theme, blue_seconds=2.0, radar_seconds=0.5):
         super().__init__(None, flags)
         self.native = native
         self.theme = theme
@@ -115,6 +126,16 @@ class SettingsWindow(QWidget):
         size.addWidget(bigger)
         size.addStretch()
         column.addLayout(size)
+        timing = QGridLayout()
+        self.blue_seconds = self._seconds_box(blue_seconds, BLUE_SECONDS, self.blue_seconds_changed)
+        self.blue_seconds.setToolTip('How far behind you a car about to lap you shows the blue flag')
+        timing.addWidget(QLabel('Blue flag when a car about to lap you is within:'), 0, 0)
+        timing.addWidget(self.blue_seconds, 0, 1)
+        self.radar_seconds = self._seconds_box(radar_seconds, RADAR_SECONDS, self.radar_seconds_changed)
+        self.radar_seconds.setToolTip('How far ahead of or behind you a car shows the proximity radar')
+        timing.addWidget(QLabel('Proximity radar when a car is within:'), 1, 0)
+        timing.addWidget(self.radar_seconds, 1, 1)
+        column.addLayout(timing)
         row = QHBoxLayout()
         reset, close = QPushButton('Reset colours'), QPushButton('Close')
         reset.clicked.connect(self.reset)
@@ -125,6 +146,19 @@ class SettingsWindow(QWidget):
         column.addLayout(row)
         self.show_chosen()
         self.adjustSize()
+
+    @staticmethod
+    def _seconds_box(value, limits, changed):
+        low, high, step = limits
+        box = QDoubleSpinBox()
+        box.setRange(low, high)
+        box.setSingleStep(step)
+        box.setDecimals(1)
+        box.setSuffix(' s')
+        box.setValue(value)
+        box.setKeyboardTracking(False)  # the time typed, not each digit on the way
+        box.valueChanged.connect(changed)
+        return box
 
     def choose(self, field, color):
         self.theme = replace(self.theme, **{field: color})

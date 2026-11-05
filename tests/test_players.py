@@ -318,6 +318,49 @@ def moving(name, position, velocity, local=False):
     return race.PlayerState(name, GERMANY, 1, (lap(0),), False, False, local, position, velocity, (0.0, 1.0))
 
 
+class WarningTimeTests(unittest.TestCase):
+    def test_the_blue_flag_can_show_earlier(self):
+        self.assertIsNone(race.blue_flag_opacity(3.0))
+        self.assertAlmostEqual(race.blue_flag_opacity(3.0, 3.0), race.BLUE_FAINT)
+        self.assertIsNone(race.blue_flag_opacity(3.1, 3.0))
+        self.assertEqual(race.blue_flag_opacity(0.5, 3.0), 1.0)
+
+    def test_the_radar_can_show_earlier_and_later(self):
+        self.assertIsNone(race.radar_opacity(1.0))
+        self.assertAlmostEqual(race.radar_opacity(1.0, 1.0), race.RADAR_FAINT)
+        self.assertIsNone(race.radar_opacity(0.3, 0.2))
+        self.assertEqual(race.radar_opacity(0.05, 0.2), 1.0)
+
+    def test_a_car_at_the_warning_time_is_inside_the_radar(self):
+        speed = 80.0
+        for within in (0.2, 0.5, 1.5, 3.0):
+            self.assertGreaterEqual(race.radar_view(speed, within), speed * within)
+
+    def test_a_radar_tells_its_view_when_a_car_counts(self):
+        def me(t):
+            return moving('Me', (0.0, 40.0 * t), (0.0, 40.0), local=True)
+
+        def other(t):
+            return moving('Far', (2.0, 40.0 * t - 34.0), (0.0, 40.0))  # 0.75 s behind
+
+        for within, shown in ((0.5, False), (1.0, True)):
+            radar = race.Radar(within)
+            view = None
+            for step in range(4):
+                t = step * 0.05
+                view = radar.update([me(t), other(t)], t)
+            with self.subTest(within=within):
+                self.assertEqual(view is not None, shown)
+                if shown:
+                    self.assertEqual(view.within, 1.0)
+
+    def test_cars_are_drawn_larger_and_never_too_small(self):
+        width, length = race.radar_car_size(7.9, 316)
+        self.assertAlmostEqual(width, race.CAR_WIDTH * 7.9 * race.RADAR_CAR_SCALE)
+        self.assertAlmostEqual(length / width, race.CAR_LENGTH / race.CAR_WIDTH)
+        self.assertEqual(race.radar_car_size(0.5, 316)[0], 316 * race.RADAR_CAR_LEAST)
+
+
 class RadarSteadyTests(unittest.TestCase):
     """As on a hosted online server: positions move on only every other read (0.1 s),
     reads come every 0.05 s, and the game gives each car's velocity and direction."""

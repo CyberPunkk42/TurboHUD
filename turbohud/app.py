@@ -254,8 +254,15 @@ def run(args, folder):
         def contents():
             snapshot = live.snapshot()
             track_map.others = settings.map_others
+            radar.within = settings.radar_seconds
             current = race_sections(
-                snapshot, time.monotonic(), settings.speed_unit, standings, radar, track_map
+                snapshot,
+                time.monotonic(),
+                settings.speed_unit,
+                standings,
+                radar,
+                track_map,
+                settings.blue_seconds,
             )
             if pad is not None and 'pedals' in current:
                 current['pedals'] = combined(current['pedals'], pad.pedals())
@@ -489,6 +496,13 @@ def run(args, folder):
             'section %s centred%s%s at %s', name, ' across' if across else '', ' down' if down else '', target
         )
 
+    def set_seconds(name, seconds):
+        """When the blue flag or the proximity radar shows, from the settings window."""
+        nonlocal settings
+        settings = replace(settings, **{name: seconds})
+        save()
+        log.info('%s: %.1f s', name, seconds)
+
     def set_theme(theme):
         """New colours from the settings window: every section draws with them."""
         nonlocal settings
@@ -520,8 +534,14 @@ def run(args, folder):
     def open_settings():
         nonlocal settings_window
         if settings_window is None:
-            settings_window = SettingsWindow(native, window_flags(), settings.theme)
+            settings_window = SettingsWindow(
+                native, window_flags(), settings.theme, settings.blue_seconds, settings.radar_seconds
+            )
             settings_window.theme_changed.connect(set_theme)
+            settings_window.blue_seconds_changed.connect(lambda seconds: set_seconds('blue_seconds', seconds))
+            settings_window.radar_seconds_changed.connect(
+                lambda seconds: set_seconds('radar_seconds', seconds)
+            )
             settings_window.resize_requested.connect(resize_all)
         if not settings_window.isVisible():
             x, y = panel_spot()

@@ -44,7 +44,7 @@ from turbohud.core.hud import (
     text_can_centre,
     tight_height,
 )
-from turbohud.core.race import CAR_LENGTH, CAR_WIDTH, RADAR_FROM, RADAR_FULL, Blip, RadarView
+from turbohud.core.race import RADAR_FULL, Blip, RadarView, radar_car_size
 from turbohud.core.settings import GROUPS, PRESETS
 from turbohud.core.trackmap import MapDot, TrackMapView, map_transform, outline_from_path, road_width
 from turbohud.hud.painter import (
@@ -75,7 +75,6 @@ LEVEL_SAMPLE = (0.7, 'ahead')  # a level bar in move mode, to place the section
 RADAR_CAR_AT = 0.5  # the local car's height in the radar, from the top: the middle
 CONE_STEPS = 8  # points along a slipstream cone's far edge
 CONE_OUT, CONE_IN = 30, 80  # a slipstream cone's opacity (0-255): elsewhere, local car in it
-RADAR_BACK = (10, 14, 22, 150)  # RGBA
 RADAR_EDGE = (120, 130, 150, 200)
 RADAR_LINES = (120, 130, 150, 90)
 RADAR_ME = '#f2f2f2'
@@ -348,12 +347,13 @@ class SectionWindow(QWidget):
         box = QRectF((self.width() - size) / 2, (self.height() - size) / 2, size, size).adjusted(1, 1, -1, -1)
         painter.setOpacity(min(max(view.opacity, 0.0), 1.0))
         painter.setPen(QPen(QColor(*RADAR_EDGE), 1.5))
-        painter.setBrush(QColor(*RADAR_BACK))
+        painter.setBrush(Qt.NoBrush)  # only its edge: the road shows through
         painter.drawRoundedRect(box, 10, 10)
         # The local car sits in the middle: cars ahead count as well as those behind.
         # view.view reaches from it to the top and the bottom edge.
         centre = QPointF(box.center().x(), box.top() + box.height() * RADAR_CAR_AT)
         per_unit = box.height() * (1 - RADAR_CAR_AT) / view.view
+        w, h = radar_car_size(per_unit, box.width())
         painter.setPen(QPen(QColor(*RADAR_LINES), 1))
         painter.drawLine(QPointF(centre.x(), box.top() + 6), QPointF(centre.x(), box.bottom() - 6))
         painter.drawLine(QPointF(box.left() + 6, centre.y()), QPointF(box.right() - 6, centre.y()))
@@ -363,7 +363,6 @@ class SectionWindow(QWidget):
             painter.save()
             painter.translate(centre.x() + side * per_unit, centre.y() - ahead * per_unit)
             painter.rotate(math.degrees(angle))
-            w, h = CAR_WIDTH * per_unit, CAR_LENGTH * per_unit
             painter.setPen(QPen(QColor(0, 0, 0, 160), 1))
             painter.setBrush(QColor(color))
             painter.drawRoundedRect(QRectF(-w / 2, -h / 2, w, h), w / 4, w / 4)
@@ -376,7 +375,7 @@ class SectionWindow(QWidget):
             painter.save()
             painter.translate(centre.x() + blip.side * per_unit, centre.y() - blip.ahead * per_unit)
             painter.rotate(math.degrees(blip.angle))
-            tail, radius = CAR_LENGTH * per_unit / 2, reach * per_unit
+            tail, radius = h / 2, reach * per_unit
             points = [QPointF(0, tail)]
             for step in range(CONE_STEPS + 1):
                 turn = math.radians(-spread + 2 * spread * step / CONE_STEPS)
@@ -395,7 +394,7 @@ class SectionWindow(QWidget):
         for blip in view.blips:
             if blip.seconds is not None and blip.seconds <= RADAR_FULL:
                 color = BEHIND_COLOR
-            elif blip.seconds is not None and blip.seconds <= RADAR_FROM:
+            elif blip.seconds is not None and blip.seconds <= view.within:
                 color = LIFT_COLOR
             else:
                 color = RADAR_OTHER
@@ -404,7 +403,6 @@ class SectionWindow(QWidget):
                 painter.save()
                 painter.translate(centre.x() + blip.side * per_unit, centre.y() - blip.ahead * per_unit)
                 painter.rotate(math.degrees(blip.angle))
-                w, h = CAR_WIDTH * per_unit, CAR_LENGTH * per_unit
                 painter.setPen(QPen(QColor(DRAFT_COLOR), 2))
                 painter.setBrush(Qt.NoBrush)
                 painter.drawRoundedRect(QRectF(-w / 2 - 1, -h / 2 - 1, w + 2, h + 2), w / 4, w / 4)

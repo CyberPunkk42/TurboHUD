@@ -127,6 +127,7 @@ starting TurboHUD again.
   the lap section says "Spectating" with the leader's lap, the player list shows the gaps
   to the leader, the lap times list every driver, and the track map shows every car with
   the leader in gold.
+- **Settings…** sets how soon the blue flag and the radar show.
 - The **blue flag** is a navy bar that shows when a car about to lap you is within 2
   seconds behind: faint at 2 s, fully visible from 0.5 s, gone once it has passed.
 - **Settings…** (TurboHUD icon's menu, or the move-mode panel) picks the text,

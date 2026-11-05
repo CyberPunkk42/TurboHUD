@@ -189,6 +189,27 @@ class SectionTintTests(unittest.TestCase):
         self.assertFalse(s.load_settings(path).sections['lap'].tint)
 
 
+class WarningTimeTests(unittest.TestCase):
+    def path(self):
+        return Path(tempfile.mkdtemp()) / 'settings.json'
+
+    def test_they_round_trip_and_have_their_old_values_by_default(self):
+        path = self.path()
+        self.assertEqual((s.Settings().blue_seconds, s.Settings().radar_seconds), (2.0, 0.5))
+        s.save_settings(path, s.Settings(blue_seconds=3.0, radar_seconds=0.8))
+        loaded = s.load_settings(path)
+        self.assertEqual((loaded.blue_seconds, loaded.radar_seconds), (3.0, 0.8))
+
+    def test_wrong_values_give_the_default_or_the_limit(self):
+        path = self.path()
+        path.write_text(json.dumps({'blue_seconds': 'soon', 'radar_seconds': True}))
+        loaded = s.load_settings(path)
+        self.assertEqual((loaded.blue_seconds, loaded.radar_seconds), (2.0, 0.5))
+        path.write_text(json.dumps({'blue_seconds': 500, 'radar_seconds': 0}))
+        loaded = s.load_settings(path)
+        self.assertEqual((loaded.blue_seconds, loaded.radar_seconds), (s.BLUE_SECONDS[1], s.RADAR_SECONDS[0]))
+
+
 class TextCentredTests(unittest.TestCase):
     def test_it_round_trips_also_in_a_preset_and_is_off_by_default(self):
         path = Path(tempfile.mkdtemp()) / 'settings.json'
