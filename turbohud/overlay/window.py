@@ -11,6 +11,7 @@ import logging
 import math
 import sys
 import time
+from dataclasses import replace
 
 from PySide6.QtCore import QPointF, QRectF, Qt, Signal
 from PySide6.QtGui import QColor, QPainter, QPainterPath, QPen, QPolygonF
@@ -44,7 +45,7 @@ from turbohud.core.hud import (
     text_can_centre,
     tight_height,
 )
-from turbohud.core.race import RADAR_FULL, Blip, RadarView, radar_car_size
+from turbohud.core.race import RADAR_FULL, Blip, DeltaBarView, RadarView, radar_car_size
 from turbohud.core.settings import GROUPS, PRESETS
 from turbohud.core.trackmap import MapDot, TrackMapView, map_transform, outline_from_path, road_width
 from turbohud.hud.painter import (
@@ -54,6 +55,7 @@ from turbohud.hud.painter import (
     LIFT_COLOR,
     cap_height,
     draw_bars,
+    draw_delta_bar,
     draw_hud,
     draw_level,
     text_ink,
@@ -71,6 +73,7 @@ BLUE_FLAG_EDGE_WIDTH = 2
 PEDAL_INSET = 4  # pedal_bars' default inset
 BACKDROP = (0, 0, 0, 40)  # the light tint behind a section's text (option), RGBA
 BLUE_SAMPLE = 0.6  # the bar's opacity in move mode, to place it
+DELTA_BAR_SAMPLE = DeltaBarView(-0.4, 0.85, '\u22120.400')  # the delta bar in move mode
 LEVEL_SAMPLE = (0.7, 'ahead')  # a level bar in move mode, to place the section
 RADAR_CAR_AT = 0.5  # the local car's height in the radar, from the top: the middle
 CONE_STEPS = 8  # points along a slipstream cone's far edge
@@ -168,6 +171,8 @@ class SectionWindow(QWidget):
         self.wanted = True  # the player wants it shown
         self.group = ''  # sections of the same group move together (move mode)
         self.text_centred = False  # its text in the middle of its box (an option)
+        self.delta_view = None  # the delta bar's content (a DeltaBarView)
+        self.radar_cone = True  # the radar's sample in move mode shows slipstream cones (an option)
         self.setWindowTitle(f'TurboHUD - {section.label}')
         self.setAttribute(Qt.WA_TranslucentBackground)
         self.setAttribute(Qt.WA_ShowWithoutActivating)
@@ -195,14 +200,17 @@ class SectionWindow(QWidget):
         self.show()
         log.info('%s: %s', self.section.name, self.native.raise_window(self))
 
-    def show_content(self, rows, pedals=None, opacity=None, radar=None, trackmap=None, level=None):
+    def show_content(
+        self, rows, pedals=None, opacity=None, radar=None, trackmap=None, level=None, delta_view=None
+    ):
         """Take the latest content; True if it differs from what is shown, so the
         section needs drawing again. Locking, showing, the theme and the tint ask for a
         redraw themselves."""
-        content = (rows, pedals, opacity, radar, trackmap, level)
-        if content == (self.rows, self.pedals, self.opacity, self.radar, self.trackmap, self.level):
+        content = (rows, pedals, opacity, radar, trackmap, level, delta_view)
+        shown = (self.rows, self.pedals, self.opacity, self.radar, self.trackmap, self.level, self.delta_view)
+        if content == shown:
             return False
-        self.rows, self.pedals, self.opacity, self.radar, self.trackmap, self.level = content
+        self.rows, self.pedals, self.opacity, self.radar, self.trackmap, self.level, self.delta_view = content
         return True
 
     def set_locked(self, locked):
@@ -259,6 +267,10 @@ class SectionWindow(QWidget):
             return
         if self.section.drawing == 'map':
             self._paint_map(painter)
+            painter.end()
+            return
+        if self.section.drawing == 'delta':
+            self._paint_delta(painter)
             painter.end()
             return
         if self.section.bar:
@@ -341,6 +353,9 @@ class SectionWindow(QWidget):
         view = self.radar
         if not self.locked and view is None:
             view = RadarView(BLUE_SAMPLE, RADAR_SAMPLE, cone=(30, 20))
+            if not self.radar_cone:  # the sample as the race will show it
+                blips = tuple(replace(blip, in_cone=None) for blip in RADAR_SAMPLE)
+                view = RadarView(BLUE_SAMPLE, blips)
         if view is None:
             return
         size = min(self.width(), self.height())
@@ -499,6 +514,26 @@ class SectionWindow(QWidget):
                 self.rect().adjusted(6, 0, -20, -3), Qt.AlignBottom | Qt.AlignLeft, self.section.label
             )
 
+    def _paint_delta(self, painter):
+        """The delta bar. In move mode a sample, with a border and its name."""
+        view = self.delta_view
+        if not self.locked and view is None:
+            view = DELTA_BAR_SAMPLE
+        if view is None:
+            return
+        draw_delta_bar(painter, self.width(), self.height(), view.fill, view.green, view.text, self.theme)
+        if not self.locked:
+            painter.setPen(QPen(QColor(*BORDER), 2))
+            painter.setBrush(Qt.NoBrush)
+            painter.drawRoundedRect(QRectF(self.rect()).adjusted(1, 1, -1, -1), 4, 4)
+            painter.setPen(QColor(*LABEL_COLOR))
+            font = painter.font()
+            font.setPixelSize(11)
+            painter.setFont(font)
+            painter.drawText(
+                self.rect().adjusted(6, 0, -20, 0), Qt.AlignVCenter | Qt.AlignLeft, self.section.label
+            )
+
     def _paint_bar(self, painter):
         """A plain bar filling the window (the blue flag), at its opacity; in move mode
         with a border and its name, so it can be placed while no flag is out."""
@@ -539,6 +574,7 @@ class MovePanel(QWidget):
     mph_changed = Signal(bool)
     backdrop_changed = Signal(bool)
     map_others_changed = Signal(bool)
+    radar_cone_changed = Signal(bool)
     preset_save_requested = Signal(int)  # the preset's number
     preset_load_requested = Signal(int)
     preset_delete_requested = Signal(int)
@@ -559,6 +595,7 @@ class MovePanel(QWidget):
         commands=False,
         map_others=False,
         saved_presets=(),
+        radar_cone=True,
     ):
         super().__init__(None, window_flags())
         self.native = native
@@ -647,6 +684,11 @@ class MovePanel(QWidget):
         self.map_others = QCheckBox('Other cars on the track map')
         self.map_others.setChecked(map_others)
         self.map_others.toggled.connect(self.map_others_changed)
+        self.radar_cone = QCheckBox('Slipstream cones on the proximity radar')
+        self.radar_cone.setChecked(radar_cone)
+        self.radar_cone.toggled.connect(self.radar_cone_changed)
+        if any(section.drawing == 'radar' for section in sections):
+            column.addWidget(self.radar_cone)
         if any(section.drawing == 'map' for section in sections):
             column.addWidget(self.map_others)
         presets = QGridLayout()
@@ -752,6 +794,12 @@ class MovePanel(QWidget):
 
     def set_undo_available(self, available):
         self.undo.setEnabled(available)
+
+    def set_radar_cone(self, cone):
+        if self.radar_cone.isChecked() != cone:
+            self.radar_cone.blockSignals(True)
+            self.radar_cone.setChecked(cone)
+            self.radar_cone.blockSignals(False)
 
     def set_map_others(self, others):
         if self.map_others.isChecked() != others:

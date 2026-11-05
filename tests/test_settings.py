@@ -139,6 +139,10 @@ class SpeedUnitSettingTests(unittest.TestCase):
             self.assertTrue(s.load_settings(path).map_others)
             path.write_text(json.dumps({'map_others': 1}))
             self.assertFalse(s.load_settings(path).map_others)
+            path.write_text(json.dumps({}))
+            self.assertTrue(s.load_settings(path).radar_cone)  # as it was before the option
+            s.save_settings(path, s.Settings(radar_cone=False))
+            self.assertFalse(s.load_settings(path).radar_cone)
 
 
 class FitOnScreensTests(unittest.TestCase):

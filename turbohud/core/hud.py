@@ -333,6 +333,7 @@ RACE_SECTIONS = (
         ),
     ),
     Section('blueflag', 'Blue flag', (), bar=(480, 24), drawing='flag'),
+    Section('deltabar', 'Delta bar', (), bar=(360, 36), drawing='delta'),
     Section('radar', 'Proximity radar', (), bar=(160, 160), drawing='radar'),
     Section('trackmap', 'Track map', (), bar=(240, 240), drawing='map'),
 )
@@ -678,6 +679,9 @@ def top_centre(size, screen, margin=LAYOUT_MARGIN):
 RADAR_DOWN = 0.6  # the radar starts centred, this far down the screen (below the car)
 
 
+DELTA_BAR_DOWN = 0.07  # how far below the blue flag the delta bar goes first, of the screen
+
+
 def drawing_place(section, size, screen, margin=LAYOUT_MARGIN):
     """Where a drawing section goes first: the blue flag at the top centre, the radar
     in the middle a little below the centre, where the eyes are while driving, and the
@@ -686,6 +690,9 @@ def drawing_place(section, size, screen, margin=LAYOUT_MARGIN):
         width, height = size
         x, y, screen_width, screen_height = screen
         return (x + screen_width - margin - width, y + (screen_height - height) // 2, width, height)
+    if section.drawing == 'delta':  # below where the blue flag goes
+        x, y, width, height = top_centre(size, screen)
+        return (x, y + round(screen[3] * DELTA_BAR_DOWN), width, height)
     if section.drawing == 'radar':
         width, height = size
         x, y, screen_width, screen_height = screen

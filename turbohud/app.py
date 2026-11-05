@@ -243,7 +243,15 @@ def run(args, folder):
     live = start_live_race()
     pad = None
     if live is not None:
-        from turbohud.core.race import RACING, Radar, Standings, race_sections, status_text, with_local_time
+        from turbohud.core.race import (
+            RACING,
+            DeltaBar,
+            Radar,
+            Standings,
+            race_sections,
+            status_text,
+            with_local_time,
+        )
 
         layout = RACE_SECTIONS
         if sys.platform.startswith('linux'):  # the Linux joystick interface
@@ -255,12 +263,14 @@ def run(args, folder):
 
         standings = Standings()
         radar = Radar()
+        delta_bar = DeltaBar()
         track_map = TrackMap(settings.map_others, folder)  # learnt tracks beside the settings
 
         def contents():
             snapshot = live.snapshot()
             track_map.others = settings.map_others
             radar.within = settings.radar_seconds
+            radar.cone = settings.radar_cone
             current = race_sections(
                 snapshot,
                 time.monotonic(),
@@ -269,6 +279,7 @@ def run(args, folder):
                 radar,
                 track_map,
                 settings.blue_seconds,
+                delta_bar,
             )
             if pad is not None and 'pedals' in current:
                 current['pedals'] = combined(current['pedals'], pad.pedals())
@@ -308,6 +319,7 @@ def run(args, folder):
         place = fit_on_screens(place, screens)
         window.setGeometry(*place)
         window.backdrop = saved.tint if saved else settings.backdrop
+        window.radar_cone = settings.radar_cone
         window.show_on_top()
         window.set_wanted(saved.visible if saved else True)
         window.group = saved.group if saved else ''
@@ -396,6 +408,18 @@ def run(args, folder):
     def show_all_tinted():
         backdrop_action.setChecked(all_tinted())
         panel.set_backdrop(all_tinted())
+
+    def set_radar_cone(cone):
+        nonlocal settings
+        settings = replace(settings, radar_cone=cone)
+        radar_cone_action.setChecked(cone)
+        panel.set_radar_cone(cone)
+        for window in windows.values():
+            window.radar_cone = cone
+            if window.section.drawing == 'radar':
+                window.update()
+        save()
+        log.info('slipstream cones on the radar %s', 'on' if cone else 'off')
 
     def set_map_others(others):
         nonlocal settings
@@ -672,6 +696,11 @@ def run(args, folder):
     backdrop_action.setChecked(settings.backdrop)
     backdrop_action.triggered.connect(lambda checked: set_backdrop(checked))
     menu.addAction(backdrop_action)
+    radar_cone_action = QAction('Slipstream cones on the proximity radar', menu, checkable=True)
+    radar_cone_action.setChecked(settings.radar_cone)
+    radar_cone_action.triggered.connect(lambda checked: set_radar_cone(checked))
+    if any(section.drawing == 'radar' for section in layout):
+        menu.addAction(radar_cone_action)
     map_others_action = QAction('Other cars on the track map', menu, checkable=True)
     map_others_action.setChecked(settings.map_others)
     map_others_action.triggered.connect(lambda checked: set_map_others(checked))
@@ -736,6 +765,7 @@ def run(args, folder):
         commands,
         settings.map_others,
         tuple(settings.presets),
+        settings.radar_cone,
     )
     panel.preset_save_requested.connect(save_preset)
     panel.preset_load_requested.connect(load_preset)
@@ -747,6 +777,7 @@ def run(args, folder):
     panel.mph_changed.connect(set_mph)
     panel.backdrop_changed.connect(set_backdrop)
     panel.map_others_changed.connect(set_map_others)
+    panel.radar_cone_changed.connect(set_radar_cone)
     panel.settings_requested.connect(open_settings)
     for name, window in windows.items():
         panel.set_wanted(name, window.wanted)
@@ -809,6 +840,7 @@ def run(args, folder):
                 current.get('radar'),
                 current.get('trackmap'),
                 current.get('levels', {}).get(name),
+                current.get('deltaview'),
             ):
                 window.update()  # only what changed: drawing every section each frame stutters
         if racing:

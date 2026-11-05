@@ -1,4 +1,5 @@
 import dataclasses
+import itertools
 import sys
 import unittest
 from pathlib import Path
@@ -269,6 +270,91 @@ class LapTimesPitAndLapTests(unittest.TestCase):
     def test_otherwise_as_ever(self):
         row = self.row(player('Me', [lap(0)], laps=0, local=True))
         self.assertEqual((row.right, row.right_color), ('0:05.0', 'text'))
+
+
+SEC = race.UNITS_PER_SECOND
+
+
+class Lapping:
+    """A stand-in for LapState, as much as the delta bar needs."""
+
+    def __init__(self, clock, delta, laps=2):
+        self.clock, self.delta_to_best, self.laps_completed = clock, delta, laps
+
+
+class DeltaColourTests(unittest.TestCase):
+    def test_steady_it_follows_the_delta(self):
+        self.assertEqual(race.delta_colour(-0.5, 0.0), 1.0)  # ahead: green
+        self.assertEqual(race.delta_colour(0.5, 0.0), 0.0)  # behind: red
+        self.assertEqual(race.delta_colour(0.0, 0.0), 0.5)
+
+    def test_gaining_while_behind_goes_green(self):
+        self.assertEqual(race.delta_colour(0.5, -race.DELTA_TREND_FULL), 1.0)
+
+    def test_losing_while_ahead_goes_red(self):
+        self.assertEqual(race.delta_colour(-0.5, race.DELTA_TREND_FULL), 0.0)
+
+    def test_the_change_is_gradual(self):
+        rates = [i / 100 * race.DELTA_TREND_FULL for i in range(100, -101, -5)]
+        colours = [race.delta_colour(0.5, rate) for rate in rates]
+        self.assertEqual(colours, sorted(colours))
+        self.assertTrue(all(b - a < 0.15 for a, b in itertools.pairwise(colours)))
+
+
+class DeltaBarTests(unittest.TestCase):
+    def run_bar(self, *samples, laps=2):
+        bar = race.DeltaBar()
+        view = None
+        for seconds, delta in samples:
+            view = bar.update(Lapping(round(seconds * SEC), round(delta * SEC), laps))
+        return view, bar
+
+    def test_nothing_without_a_delta(self):
+        self.assertIsNone(race.DeltaBar().update(Lapping(SEC, None)))
+
+    def test_ahead_it_fills_left_with_a_minus(self):
+        view, _bar = self.run_bar((10.0, -0.25))
+        self.assertEqual((view.fill, view.text), (-0.25, '\u22120.250'))
+
+    def test_behind_it_fills_right_with_a_plus(self):
+        view, _bar = self.run_bar((10.0, 0.5))
+        self.assertEqual((view.fill, view.text), (0.5, '+0.500'))
+
+    def test_the_fill_stops_at_the_end(self):
+        self.assertEqual(self.run_bar((10.0, 5.0))[0].fill, 1.0)
+        self.assertEqual(self.run_bar((10.0, -5.0))[0].fill, -1.0)
+
+    def test_gaining_on_a_positive_delta_is_green(self):
+        view, _bar = self.run_bar((10.0, 0.6), (10.5, 0.5), (11.0, 0.4))
+        self.assertEqual(view.green, 1.0)
+        self.assertEqual(view.text, '+0.400')
+
+    def test_losing_on_a_negative_delta_is_red(self):
+        view, _bar = self.run_bar((10.0, -0.6), (10.5, -0.5), (11.0, -0.4))
+        self.assertEqual(view.green, 0.0)
+        self.assertEqual(view.text, '\u22120.400')
+
+    def test_only_the_last_second_counts(self):
+        view, _bar = self.run_bar((10.0, 2.0), (10.5, 0.5), (11.5, 0.5), (12.0, 0.5))
+        self.assertEqual(view.green, 0.0)  # steady now, and behind
+
+    def test_a_new_lap_starts_afresh(self):
+        bar = race.DeltaBar()
+        bar.update(Lapping(10 * SEC, 1 * SEC, laps=2))
+        view = bar.update(Lapping(11 * SEC, -1 * SEC, laps=3))
+        self.assertEqual(view.green, 1.0)  # from its sign, not from the 2 s jump
+        self.assertEqual(len(bar._history), 1)
+
+    def test_the_history_stays_small(self):
+        bar = race.DeltaBar()
+        for i in range(10_000):
+            bar.update(Lapping(i * 500, 0))
+        self.assertLessEqual(len(bar._history), 21)
+
+    def test_it_works_once_a_read(self):
+        bar = race.DeltaBar()
+        first = bar.update(Lapping(SEC, SEC))
+        self.assertIs(bar.update(Lapping(SEC, SEC)), first)
 
 
 class SpeedUnitTests(unittest.TestCase):
@@ -861,6 +947,22 @@ class DraftExtrasTests(unittest.TestCase):
         )
         later = dataclasses.replace(start, clock=900_000)
         self.assertEqual([r.text for r in race.draft_rows(later)], ['Last lap 23% in a slipstream'])
+
+    def test_the_slipstream_on_the_radar_can_be_turned_off(self):
+        def view(cone):
+            radar = race.Radar()
+            radar.cone = cone
+            shown = None
+            for i in range(6):
+                t = i * 0.05
+                players = [car('Me', (0.0, 40 * t), local=True), car('Ahead', (0.0, 40 * t + 12))]
+                shown = radar.update(players, t, SERVER_DRAFT)
+            return shown
+
+        self.assertIsNotNone(view(True).cone)
+        off = view(False)
+        self.assertIsNone(off.cone)
+        self.assertEqual([blip.in_cone for blip in off.blips], [None])
 
     def test_the_radar_draws_the_slipstream_of_cars_ahead(self):
         # A car 12 ahead in line: its tail is 9.75 ahead, well within the reach of 30.
