@@ -19,6 +19,10 @@
   run against a live online session as a spectator, not yet seen in a race. On Windows it
   still shows a session clock and the local time. Start from the source with
   `run_turbohud.sh` / `run_turbohud.cmd`.
+- Layout, in the move-mode panel: a text section's box fits closely round its text, three
+  presets (Ctrl+Shift+1, 2, 3 load them; Linux: `--preset`), groups that move and resize
+  together and can match their text size and width, Centre buttons for every section, and
+  Centre text. Not yet used by hand.
 - Builds: `tools/build_app.py` (PyInstaller) makes a Windows ZIP, a Mac app ZIP (with the
   reader and its Windows Python, 39 MB) and a Linux `.tar.gz`, run locally on each system.
   Nothing goes to GitHub any more; the old `.github/workflows/build.yml` is kept for
@@ -53,11 +57,18 @@ See `docs/IMPROVEMENT_BACKLOG.md`. In short:
    live data (reading memory as the same user, without a probe).
 2. macOS: live data is connected; check it in races (offline and online), over
    Fullscreen, and listen for stutter while the race is searched for.
-3. Builds and release: bundled apps with the probe, an AppImage; before the repository
+3. Layout: the tight boxes, presets, group matching and centring were merged before being
+   used by hand; check them (backlog item 4).
+4. Builds and release: bundled apps with the probe, an AppImage; before the repository
    goes public, the privacy check, a licence and a README for players.
-4. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
+5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-05: A section's text can go in the middle of its box: a Centre text tick box per
+  section in the move-mode panel, off by default, kept with the section and in presets, asked
+  for by the user. Each line is centred on its own, measured with digits as zeros so that
+  numbers do not make it shake. Not for the speed (always centred), the drawings, or the
+  lists with columns.
 - 2026-11-05: Every section can be centred across or down its screen from the move-mode
   panel, asked for by the user; only the blue flag, the radar and the track map could. Its
   group stays where it is, as with the others before.

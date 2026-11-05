@@ -39,6 +39,7 @@ from turbohud.core.hud import (
     pedal_bars,
     pedal_space,
     section_scale,
+    text_can_centre,
     tight_height,
 )
 from turbohud.core.race import CAR_LENGTH, CAR_WIDTH, RADAR_FROM, RADAR_FULL, Blip, RadarView
@@ -163,6 +164,7 @@ class SectionWindow(QWidget):
         self.locked = True
         self.wanted = True  # the player wants it shown
         self.group = ''  # sections of the same group move together (move mode)
+        self.text_centred = False  # its text in the middle of its box (an option)
         self.setWindowTitle(f'TurboHUD - {section.label}')
         self.setAttribute(Qt.WA_TranslucentBackground)
         self.setAttribute(Qt.WA_ShowWithoutActivating)
@@ -277,7 +279,8 @@ class SectionWindow(QWidget):
                 (self.width(), self.height()), rows, scale, text_width, cap_height, pedal_space(scale) // 2
             )
         painter.translate(0, down)
-        draw_hud(painter, hud_lines(rows, scale), self.theme, scale, left, self.width() - left)
+        centre = self.text_centred and text_can_centre(self.section)
+        draw_hud(painter, hud_lines(rows, scale), self.theme, scale, left, self.width() - left, centre)
         if self.section.level and rows:
             level = self.level or (None if self.locked else LEVEL_SAMPLE)
             if level is not None:
@@ -307,7 +310,10 @@ class SectionWindow(QWidget):
             # at the window's edges, however wide it is.
             left, top, tall = PEDAL_INSET, PEDAL_INSET, self.height() - 2 * PEDAL_INSET
             width = self.width()
-        rect = QRectF(left, top, max(width - 2 * left, 1), max(tall, 1))
+        x = left
+        if self.text_centred and text_can_centre(self.section):
+            x = (self.width() - width) / 2 + left  # round the text in the middle of the box
+        rect = QRectF(x, top, max(width - 2 * left, 1), max(tall, 1))
         painter.setPen(Qt.NoPen)
         painter.setBrush(QColor(*BACKDROP))
         painter.drawRoundedRect(rect, 6, 6)
@@ -521,6 +527,7 @@ class MovePanel(QWidget):
     preset_save_requested = Signal(int)  # the preset's number
     preset_load_requested = Signal(int)
     match_requested = Signal(str)  # the group
+    text_centred_changed = Signal(str, bool)  # section name, its text in the middle of its box
 
     focusable = True  # it takes clicks on its tick boxes and buttons
 
@@ -548,6 +555,7 @@ class MovePanel(QWidget):
             column.addWidget(QLabel(line))
         self.boxes = {}
         self.groups = {}
+        self.centres = {}
         grid = QGridLayout()
         grid.addWidget(QLabel('Group (moves together):'), 0, 1)
         for row, section in enumerate(sections, start=1):
@@ -578,6 +586,14 @@ class MovePanel(QWidget):
                     )
                 )
                 grid.addWidget(button, row, column_)
+            if text_can_centre(section):
+                centre = QCheckBox('Centre text')
+                centre.setToolTip('Put the text in the middle of the box, not at its left')
+                centre.toggled.connect(
+                    lambda checked, name=section.name: self.text_centred_changed.emit(name, checked)
+                )
+                grid.addWidget(centre, row, 4)
+                self.centres[section.name] = centre
         column.addLayout(grid)
         self.text_sections = [section.name for section in sections if not section.drawing]
         self.matches = {}
@@ -663,6 +679,13 @@ class MovePanel(QWidget):
         for group, button in self.matches.items():
             members = [name for name in self.text_sections if self.groups[name].currentText() == group]
             button.setEnabled(len(members) >= 2)
+
+    def set_text_centred(self, name, centred):
+        box = self.centres.get(name)
+        if box is not None and box.isChecked() != centred:
+            box.blockSignals(True)
+            box.setChecked(centred)
+            box.blockSignals(False)
 
     def set_mph(self, mph):
         if self.mph.isChecked() != mph:

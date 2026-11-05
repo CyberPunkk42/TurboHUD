@@ -4,7 +4,7 @@ from functools import lru_cache
 from PySide6.QtCore import QPointF, QRectF, Qt
 from PySide6.QtGui import QColor, QFont, QFontMetricsF, QPainterPath, QPainterPathStroker, QPen
 
-from turbohud.core.hud import FLAG_WIDTH, MARGIN, middle_right
+from turbohud.core.hud import FLAG_WIDTH, MARGIN, middle_right, steady_text
 
 # On Linux the desktop's default font may be a monospace or icon font; prefer a plain
 # sans-serif one. Qt uses the first that is installed. Windows and macOS keep their
@@ -144,9 +144,16 @@ def draw_flag(painter, x, baseline, code, size, outline):
         outlined_text(painter, x, baseline, code, max(1, round(size * 0.55)), QColor('white'), outline)
 
 
-def draw_hud(painter, lines, theme, scale=None, left=0, width=None):
+def centred_x(line, width, margin):
+    """Where a line starts in the middle of a box `width` wide, between its margins."""
+    steady = text_advance(steady_text(line.text + line.tail), line.size)
+    return max(round((width - steady) / 2), margin)
+
+
+def draw_hud(painter, lines, theme, scale=None, left=0, width=None, centre=False):
     """Draw the lines from turbohud.core.hud.hud_lines with the theme's colours, at
-    `scale` (the theme's own by default)."""
+    `scale` (the theme's own by default). `centre`: each line in the middle of a box
+    `width` wide, for lines without columns."""
     colors = {
         'text': QColor(theme.text_color),
         'accent': QColor(theme.accent_color),
@@ -160,7 +167,7 @@ def draw_hud(painter, lines, theme, scale=None, left=0, width=None):
     x = left + margin
     middle_end = middle_right(lines, width, margin, text_advance) if width is not None else None
     for line in lines:
-        text_x = x
+        text_x = centred_x(line, width, margin) if centre else x
         if line.flag:
             draw_flag(painter, x, line.baseline, line.flag, line.size, outline)
             text_x = x + FLAG_WIDTH * line.size

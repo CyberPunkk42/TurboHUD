@@ -284,6 +284,7 @@ def run(args, folder):
         window.show_on_top()
         window.set_wanted(saved.visible if saved else True)
         window.group = saved.group if saved else ''
+        window.text_centred = saved.text_centred if saved else False
         log.info('section %s at %s%s', name, place, '' if window.wanted else ' (hidden)')
     shortcuts = False
     panel = None  # made once the shortcuts are known
@@ -294,7 +295,7 @@ def run(args, folder):
         places = {}
         for name, window in windows.items():
             x, y, width, height = window.placement()
-            places[name] = SectionPlace(x, y, width, height, window.wanted, window.group)
+            places[name] = SectionPlace(x, y, width, height, window.wanted, window.group, window.text_centred)
         settings = replace(settings, sections=places)
         write_settings()
 
@@ -403,6 +404,12 @@ def run(args, folder):
                     move_window(window, mover.known[name], settle=True)
         group_moving = bool(moves)
 
+    def set_text_centred(name, centred):
+        windows[name].text_centred = centred
+        windows[name].update()
+        save()
+        log.info('section %s: text %s', name, 'in the middle' if centred else 'at the left')
+
     def align(name, across, down):
         """Centre a section on the screen that holds it (the panel's Centre buttons)."""
         window = windows[name]
@@ -478,7 +485,7 @@ def run(args, folder):
             mover.known[name] = box  # TurboHUD resized it: not a drag
             mover.pending[name] = (box, until)
             x, y, width, height = box
-            places[name] = SectionPlace(x, y, width, height, window.wanted, window.group)
+            places[name] = SectionPlace(x, y, width, height, window.wanted, window.group, window.text_centred)
         settings = replace(settings, sections=places)
         write_settings()
         log.info('group %s: same text size and width', group)
@@ -510,8 +517,11 @@ def run(args, folder):
             mover.pending[name] = (box[:2], until)
             window.set_wanted(place.visible)
             window.group = place.group
+            window.text_centred = place.text_centred
+            window.update()
             panel.set_wanted(name, place.visible)
             panel.set_group(name, place.group)
+            panel.set_text_centred(name, place.text_centred)
         settings = replace(settings, sections={**settings.sections, **places})
         write_settings()
         log.info('preset %d loaded', number)
@@ -601,6 +611,7 @@ def run(args, folder):
     panel.preset_save_requested.connect(save_preset)
     panel.preset_load_requested.connect(load_preset)
     panel.match_requested.connect(match_group)
+    panel.text_centred_changed.connect(set_text_centred)
     panel.mph_changed.connect(set_mph)
     panel.backdrop_changed.connect(set_backdrop)
     panel.map_others_changed.connect(set_map_others)
@@ -614,6 +625,7 @@ def run(args, folder):
     panel.align_requested.connect(align)
     for name, window in windows.items():
         panel.set_group(name, window.group)
+        panel.set_text_centred(name, window.text_centred)
 
     was_active = False  # in move mode: whether TurboHUD has been the active app yet
 

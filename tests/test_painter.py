@@ -65,7 +65,7 @@ class RedrawTests(unittest.TestCase):
         self.assertTrue(window.show_content(window.rows, level=(0.5, 'ahead')))
         self.assertEqual(window.level, (0.5, 'ahead'))
 
-    def text_box(self, name, rows, size_share=1.0, height=None):
+    def text_box(self, name, rows, size_share=1.0, height=None, centred=False, wider=1.0):
         """(left, top, right, bottom) of the bright pixels in a section at that share of
         its size, and the window's size: the text is white, the pedal bars are not, and
         text this small has hardly a pixel of its exact colour."""
@@ -80,7 +80,8 @@ class RedrawTests(unittest.TestCase):
         section = next(section for section in RACE_SECTIONS if section.name == name)
         window = SectionWindow(Native(), Theme(), section)
         self.addCleanup(window.close)
-        window.resize(window.base[0], height or round(window.base[1] * size_share))
+        window.text_centred = centred
+        window.resize(round(window.base[0] * wider), height or round(window.base[1] * size_share))
         window.show_content(rows)
         image = window.grab().toImage()
         found = [
@@ -109,6 +110,39 @@ class RedrawTests(unittest.TestCase):
 
         (left, _top, _right, _bottom), _size = self.text_box('localtime', [Row('12:34', 'medium')], 0.5)
         self.assertLessEqual(left, MARGIN + 3)
+
+    def test_centred_text_sits_in_the_middle_of_a_wide_box(self):
+        from turbohud.core.hud import Row
+
+        rows = [Row('00:00', 'medium')]
+        (left, _top, right, _bottom), (width, _height) = self.text_box(
+            'localtime', rows, centred=True, wider=4.0
+        )
+        self.assertLessEqual(abs(left - (width - 1 - right)), 4)
+        (left, _top, _right, _bottom), _size = self.text_box('localtime', rows, wider=4.0)
+        self.assertLessEqual(left, 18)  # without the option
+
+    def test_digits_do_not_move_centred_text(self):
+        from turbohud.core.hud import Row, hud_lines
+        from turbohud.hud.painter import centred_x
+
+        narrow, wide = (hud_lines([Row(text, 'medium')])[0] for text in ('11:11', '00:00'))
+        self.assertEqual(centred_x(narrow, 400, 14), centred_x(wide, 400, 14))
+
+    def test_each_line_is_centred_on_its_own(self):
+        from turbohud.core.hud import Row
+
+        rows = [Row('Draft 000%', 'medium'), Row('Another line of small text', 'small')]
+        (left, _t, right, _b), (width, _h) = self.text_box('draft', rows, centred=True, wider=2.0)
+        self.assertLessEqual(abs(left - (width - 1 - right)), 6)
+
+    def test_the_speed_and_a_list_ignore_the_option(self):
+        from turbohud.core.hud import Row
+
+        rows = [Row('1. Somebody', 'small', right='+1.000')]
+        self.assertEqual(self.text_box('players', rows, centred=True), self.text_box('players', rows))
+        rows = [Row('000', 'medium')]
+        self.assertEqual(self.text_box('speed', rows, centred=True), self.text_box('speed', rows))
 
     def test_the_text_shrinks_with_the_box(self):
         from turbohud.core.hud import Row
@@ -245,6 +279,22 @@ class MovePanelPresetTests(unittest.TestCase):
             sorted(got),
             sorted([(name, True, False) for name in names] + [(name, False, True) for name in names]),
         )
+
+    def test_the_option_shows_where_it_works_and_says_which_section(self):
+        from turbohud.core.hud import RACE_SECTIONS, text_can_centre
+
+        panel = self.panel()
+        got = []
+        panel.text_centred_changed.connect(lambda *change: got.append(change))
+        self.assertEqual(
+            set(panel.centres), {section.name for section in RACE_SECTIONS if text_can_centre(section)}
+        )
+        panel.centres['lap'].setChecked(True)
+        self.assertEqual(got, [('lap', True)])
+        panel.set_text_centred('lap', False)  # from a preset: no change to report
+        self.assertEqual(got, [('lap', True)])
+        self.assertFalse(panel.centres['lap'].isChecked())
+        panel.set_text_centred('speed', True)  # not one of them: nothing happens
 
     def test_load_names_its_shortcut_where_there_are_shortcuts(self):
         self.assertIn('Ctrl+Shift+2', self.button(self.panel(), 2, 'Load').toolTip())

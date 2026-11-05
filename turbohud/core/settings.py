@@ -47,6 +47,7 @@ class SectionPlace:
     height: int
     visible: bool = True
     group: str = ''  # sections with the same group (one of GROUPS) move together
+    text_centred: bool = False  # its text in the middle of its box, not at the left
 
 
 @dataclass(frozen=True)
@@ -149,7 +150,15 @@ def _sections(data):
             continue
         group = entry.get('group', '')
         group = group if group in GROUPS else ''
-        places[str(name)] = SectionPlace(x, y, width, height, entry.get('visible', True) is not False, group)
+        places[str(name)] = SectionPlace(
+            x,
+            y,
+            width,
+            height,
+            entry.get('visible', True) is not False,
+            group,
+            entry.get('text_centred') is True,
+        )
     return places
 
 
@@ -170,6 +179,7 @@ def _section_data(sections):
             'height': place.height,
             'visible': place.visible,
             'group': place.group,
+            'text_centred': place.text_centred,
         }
         for name, place in sections.items()
     }

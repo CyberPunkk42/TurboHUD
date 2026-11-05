@@ -191,16 +191,22 @@ def content_size(rows, scale, measure):
 ALL_ZEROS = str.maketrans('123456789', '000000000')
 
 
+def steady_text(text):
+    """`text` with its digits as zeros, to measure it: in a font whose digits differ in
+    width, text centred by its real width would shake as a number changes."""
+    return text.translate(ALL_ZEROS)
+
+
 def centred_text(size, rows, scale, measure, cap_height, least_left=0):
     """(left, down) that centre `rows` in a box of `size`: where the content starts
     across (at least `least_left`, to keep clear of what is at the side), and how far to
     move it down. `cap_height(font_size)` gives how tall a capital letter is.
 
-    Digits count as zeros: in a font whose digits differ in width, the text would shake
-    as a number changes. It only shifts when the number gets another digit."""
+    Digits count as zeros (steady_text), so it only shifts when a number gets another
+    digit."""
 
     def steady(text, font_size):
-        return measure(text.translate(ALL_ZEROS), font_size)
+        return measure(steady_text(text), font_size)
 
     lines = hud_lines(rows, scale)
     top = lines[0].baseline - cap_height(lines[0].size)
@@ -219,6 +225,15 @@ class Section:
     bar: tuple = ()  # (width, height) at scale 1 for a drawing without text
     drawing: str = ''  # what it draws instead of text: 'flag' (blue flag), 'radar' or 'map'
     level: bool = False  # a bar below the text showing how much is left (fuel, tires, health)
+
+
+def text_can_centre(section):
+    """Whether a section's text can go in the middle of its box: not the speed, which is
+    always between its pedal bars, nor a drawing, nor a list with columns."""
+    if section.bar or section.pedals:
+        return False
+    rows = [row for sample in section.samples for row in sample]
+    return not any(row.right or row.middle or row.flag for row in rows)
 
 
 RACE_SECTIONS = (

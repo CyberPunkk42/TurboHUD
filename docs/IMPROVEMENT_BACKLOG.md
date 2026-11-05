@@ -41,19 +41,33 @@ hit). The Mac app now does this by itself (`turbohud/tsu/bottle.py`, reader in
   fake game and offscreen): whether the replay recorder runs for a spectator, so the map's
   dots and the live gaps use real positions; and what fun-mode events show.
 
-## 4. Builds and release
+## 4. Layout: check by hand
+Merged 2026-11-05 without having been used by hand; tested with automatic tests, offscreen
+renders and the real app code on simulated windows, so real dragging is still to be seen:
+- Tight boxes: saved sizes converted once, with the text the same size and in the same spot
+  (the old file is kept as `settings.before-layout-2.json`); boxes that fit closely while
+  shortening; the speed centred between its shorter bars; a short box can still be grabbed;
+  a text section's name as a tooltip in move mode.
+- Presets: Save and Load; Ctrl+Shift+1, 2 and 3 pressed for real, with TSU in front and
+  during a race (a hitch when switching?). Linux: `--preset`, and moving through Hyprland.
+- Groups: the same text size and width; how smoothly a group follows a corner being dragged
+  (about five times a second); on Hyprland the followers take their size when it ends.
+- Centre buttons on every section, and Centre text with the tint.
+Windows has run none of this (its shortcut code has only ever run on a build machine).
+
+## 5. Builds and release
 Bundled apps from `tools/build_app.py` with the probe and clear launch-option steps for
 Linux; an AppImage instead of the `.tar.gz`. Before the repository goes public for the
 TSU community: the privacy check (pre-push hook), a licence, a README for players.
 
-## 5. Linux: other desktops
+## 6. Linux: other desktops
 Commands for the running TurboHUD (`run_turbohud.sh --toggle` and so on) are done, and
 on Wayland desktops other than Hyprland TurboHUD runs through XWayland, where staying on
 top should work. Still to try on KDE and GNOME: on top over the game, clicks going
 through. If XWayland is not enough there, the layer-shell extension (KDE, Sway; not
 GNOME) would need a library outside PySide6.
 
-## 6. Track map: check in races
+## 7. Track map: check in races
 The user saw it work in a race (2026-11-03), and the track is now learnt from the cars
 (checked live in an AI event; the user confirmed it works). Still to check: the track's shape (tight
 hairpins, tracks that cross themselves, point-to-point tracks), the road's width, the
