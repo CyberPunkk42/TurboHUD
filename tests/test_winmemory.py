@@ -10,6 +10,38 @@ from turbohud.core.il2cpp import Memory
 from turbohud.tsu import winmemory as wm
 
 
+class CachedReaderDetailTests(unittest.TestCase):
+    def test_it_says_what_the_latest_read_took(self):
+        spent = [0.0]
+        cache = wm.PageCache(lambda address, size: bytes(size))
+
+        class Reader:
+            def read(self):
+                cache.read(0, 8)
+                cache.read(wm.PAGE * 5, 8)
+                spent[0] += 0.5
+                return 'state'
+
+        reader = wm.CachedReader(Reader(), cache, lambda: spent[0])
+        self.assertEqual(reader.read(), 'state')
+        self.assertEqual(reader.last_read, (2, 0.5))
+        self.assertEqual(reader.read(), 'state')
+        self.assertEqual(reader.last_read, (2, 0.5))
+
+    def test_a_failed_read_says_so_too(self):
+        cache = wm.PageCache(lambda address, size: bytes(size))
+
+        class Reader:
+            def read(self):
+                cache.read(0, 8)
+                raise OSError('gone')
+
+        reader = wm.CachedReader(Reader(), cache)
+        with self.assertRaises(OSError):
+            reader.read()
+        self.assertEqual(reader.last_read, (1, None))
+
+
 class FakeMemory:
     """Bytes at `base`, readable only inside; counts reads."""
 

@@ -102,6 +102,9 @@ def app_files(bundle=None):
     return root / '.buildtools' / 'win-python' / 'python.exe', root / 'turbohud' / 'tsu' / 'bottle_reader.py'
 
 
+READ_AHEAD = 64 * 1024  # bytes asked for at a time from the reader in the bottle
+
+
 class Pipe:
     """Questions to a reader over its standard input and output. Raises ConnectionError
     when it has ended, TimeoutError when it has gone silent, ReadError when it refuses."""
@@ -111,19 +114,23 @@ class Pipe:
         self.source_fd = source_fd
         self.on_close = on_close
         self.metadata = None  # (base, bytes), kept while this reader lasts
+        self.in_game = 0.0  # seconds its reads have spent on the game's memory, for the log
+        self._received = b''  # what has come but was not asked for yet
 
     def _take(self, size, timeout):
-        chunks = []
-        while size:
+        """`size` bytes of the answer. An answer comes in one piece, so one wait is enough
+        for all its parts: each wait lets go of Python's lock, and when the overlay is busy
+        drawing it can take a while to get it back (see LiveRace.start)."""
+        while len(self._received) < size:
             ready, _, _ = select.select([self.source_fd], [], [], timeout)
             if not ready:
                 raise TimeoutError('the reader in the bottle does not answer')
-            chunk = os.read(self.source_fd, min(size, 1 << 20))
+            chunk = os.read(self.source_fd, max(size - len(self._received), READ_AHEAD))
             if not chunk:
                 raise ConnectionError('the reader in the bottle has ended')
-            chunks.append(chunk)
-            size -= len(chunk)
-        return b''.join(chunks)
+            self._received += chunk
+        taken, self._received = self._received[:size], self._received[size:]
+        return taken
 
     def receive(self, timeout=TIMEOUT):
         body_size, payload_size = HEADER.unpack(self._take(HEADER.size, timeout))
@@ -144,7 +151,9 @@ class Pipe:
         return header, payload
 
     def read(self, address, size):
-        return self.ask({'op': 'read', 'address': address, 'size': size})[1]
+        header, payload = self.ask({'op': 'read', 'address': address, 'size': size})
+        self.in_game += header.get('took', 0.0)
+        return payload
 
     def maps(self):
         """The game's memory as it is now: it grows as the game goes from menu to race."""
@@ -297,7 +306,7 @@ class Bottle:
                 searcher=pipe.search,
             )
             reader = LapReader(Il2Cpp(memory, metadata, base), event_running=pipe.event_running)
-            return CachedReader(reader, cache), self
+            return CachedReader(reader, cache, lambda: pipe.in_game), self
         except (NotFound, ReadError):
             raise  # the game is loading: the same reader tries again
         except BaseException as error:

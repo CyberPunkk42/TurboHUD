@@ -10,6 +10,7 @@ on it; the others show their name. The panel says what to do, shows or hides sec
 import logging
 import math
 import sys
+import time
 
 from PySide6.QtCore import QPointF, QRectF, Qt, Signal
 from PySide6.QtGui import QColor, QPainter, QPainterPath, QPen, QPolygonF
@@ -32,14 +33,14 @@ from turbohud.core.hud import (
     centred_text,
     content_shift,
     content_size,
-    fitted_scale,
+    drawn_scale,
     help_lines,
     hud_lines,
     level_bar,
     level_space,
     pedal_bars,
     pedal_space,
-    section_scale,
+    steady_rows,
     text_can_centre,
     tight_height,
 )
@@ -150,6 +151,8 @@ def _set_input(widget, native, transparent):
 
 
 class SectionWindow(QWidget):
+    drawing_time = 0.0  # seconds all sections have spent drawing, for the log
+
     def __init__(self, native, theme, section):
         super().__init__(None, window_flags())
         self.native = native
@@ -240,7 +243,12 @@ class SectionWindow(QWidget):
         if not self.locked and event.button() == Qt.LeftButton:
             self.windowHandle().startSystemMove()
 
-    def paintEvent(self, _event):
+    def paintEvent(self, event):
+        began = time.perf_counter()
+        self._paint(event)
+        SectionWindow.drawing_time += time.perf_counter() - began
+
+    def _paint(self, _event):
         painter = QPainter(self)
         if not self.wanted:
             painter.end()
@@ -265,9 +273,15 @@ class SectionWindow(QWidget):
             painter.drawRoundedRect(QRectF(self.rect()).adjusted(1, 1, -1, -1), 8, 8)
             rows = rows or list(self.section.samples[0])  # something to place, also before a race
         bars = pedal_space(self.theme.scale) if self.section.pedals else 0
-        needed = content_size(rows, self.theme.scale, text_width)[0] + bars if rows else None
-        scale = self.theme.scale * section_scale((self.width(), self.height()), self.base[1], needed)
-        scale = fitted_scale(self.section, self.height(), scale, text_ink)
+        scale = drawn_scale(
+            self.section,
+            (self.width(), self.height()),
+            rows,
+            self.base[1],
+            self.theme.scale,
+            text_ink,
+            text_width,
+        )
         left = 0
         down = content_shift(self.section, self.height(), scale, text_ink)
         if self.locked and self.backdrop and rows:
@@ -295,7 +309,8 @@ class SectionWindow(QWidget):
         round it, moved `down` with the text and kept inside the window. A section with a
         right-hand column (the player list) is as wide as its window, where that column
         is drawn."""
-        width, height = content_size(rows, scale, text_width)
+        # Digits as zeros: a tint that follows them would flicker as a number runs.
+        width, height = content_size(steady_rows(rows), scale, text_width)
         pad = round(MARGIN * scale / 2)
         if self.section.level:
             height += level_space(scale) + pad // 2  # the level bar, with a little room below

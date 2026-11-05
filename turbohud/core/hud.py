@@ -197,6 +197,20 @@ def steady_text(text):
     return text.translate(ALL_ZEROS)
 
 
+def steady_rows(rows):
+    """`rows` with their digits as zeros (steady_text), to measure them."""
+    return [
+        replace(
+            row,
+            text=steady_text(row.text),
+            tail=steady_text(row.tail),
+            middle=steady_text(row.middle),
+            right=steady_text(row.right),
+        )
+        for row in rows
+    ]
+
+
 def centred_text(size, rows, scale, measure, cap_height, least_left=0):
     """(left, down) that centre `rows` in a box of `size`: where the content starts
     across (at least `least_left`, to keep clear of what is at the side), and how far to
@@ -368,7 +382,7 @@ def pedal_bars(width, height, scale, throttle, brake, inset=4):
 
 TIGHT_PAD = 3  # room between a box's edge and its content, at scale 1
 FIT_ROOM = 2  # pixels kept free in a box that its content only just fits
-FIT_STEP, FIT_STEPS = 0.98, 20  # how far fitted_scale goes, and how often at most
+FIT_STEP, FIT_STEPS = 0.98, 40  # how far fitted_scale goes, and how often at most
 OLD_LABEL_SPACE = 14  # room boxes kept for the section's name before they were tight
 
 
@@ -401,13 +415,25 @@ def tight_height(section, scale, ink):
     return round(bottom - top + 2 * max(1, round(TIGHT_PAD * scale)))
 
 
-def fitted_scale(section, height, scale, ink):
+def fitted_scale(section, height, scale, ink, width=None, rows=(), measure=None):
     """`scale`, a little smaller if the content would not fit a box of `height`: font
     sizes and gaps round to whole pixels, which in a long list adds up. As small as the
-    box allows, within reason: a box can be shorter than any readable text."""
-    for _step in range(FIT_STEPS):
+    box allows, within reason: a box can be shorter than any readable text. With `width`,
+    `rows` and `measure` the same goes across: text is not as wide as its font size says
+    (at 8 px, a quarter wider than in proportion to 20 px in the Mac's system font), so
+    only measuring it at the size it is drawn tells whether it fits."""
+
+    def fits(scale):
         top, bottom = ink_span(section, scale, ink)
-        if bottom - top + FIT_ROOM <= height:
+        if bottom - top + FIT_ROOM > height:
+            return False
+        if width is None or not rows:
+            return True
+        bars = pedal_space(scale) if section.pedals else 0
+        return content_size(rows, scale, measure)[0] + bars <= width
+
+    for _step in range(FIT_STEPS):
+        if fits(scale):
             break
         scale *= FIT_STEP
     return scale
@@ -456,16 +482,31 @@ def tight_place(section, place, scale, ink):
     return x, y - content_shift(section, new_height, scale * share, ink), width, new_height
 
 
+def widest_rows(section, rows, scale, measure):
+    """What a section's text size is worked out from, so that it stays as the content
+    changes: the `rows` or the section's usual content, whichever is wider, with digits
+    as zeros. Without any `rows`, nothing."""
+    if not rows:
+        return []
+    rows, usual = steady_rows(rows), steady_rows(section.samples[0])
+    wider = content_size(usual, scale, measure)[0] > content_size(rows, scale, measure)[0]
+    return usual if wider else rows
+
+
+def drawn_scale(section, size, rows, normal_height, scale, ink, measure):
+    """The scale a section draws `rows` at in a box of `size`; `normal_height` is its
+    normal height at the theme's `scale`."""
+    widest = widest_rows(section, rows, scale, measure)
+    needed = None
+    if widest:
+        needed = content_size(widest, scale, measure)[0] + (pedal_space(scale) if section.pedals else 0)
+    drawn = scale * section_scale(size, normal_height, needed)
+    return fitted_scale(section, size[1], drawn, ink, size[0], widest, measure)
+
+
 def _first_font(section, scale):
     """The font size of a section's first row at `scale`."""
     return getattr(Sizes.for_scale(scale), section.samples[0][0].style)
-
-
-def _drawn_font(section, size, normal_size, scale, ink):
-    """The font size a section's first row is drawn at in a box of `size` (the painting's
-    own steps); `normal_size` is the box at the theme's `scale`."""
-    share = section_scale(size, normal_size[1], normal_size[0])
-    return _first_font(section, fitted_scale(section, size[1], scale * share, ink))
 
 
 def match_sizes(places, scale, measure, ink):
@@ -473,25 +514,37 @@ def match_sizes(places, scale, measure, ink):
     same font size, the largest they have, and the same width, the widest they then need.
     A section's height sets its font size, so heights stay as different as the content
     is (level bars, several rows). They stay where they are. `scale` is the theme's."""
-    normal = {
-        section: (base_size(section, scale, measure)[0], tight_height(section, scale, ink))
-        for section in places
-    }
+
+    def usual(section):
+        return list(section.samples[0])
+
+    normal = {section: tight_height(section, scale, ink) for section in places}
     font = max(
-        _drawn_font(section, place[2:], normal[section], scale, ink) for section, place in places.items()
+        _first_font(
+            section, drawn_scale(section, place[2:], usual(section), normal[section], scale, ink, measure)
+        )
+        for section, place in places.items()
     )
+
+    def width_at(section, at):
+        bars = pedal_space(at) if section.pedals else 0
+        return content_size(steady_rows(usual(section)), at, measure)[0] + bars
+
     heights, needed = {}, 0
-    for section, size in normal.items():
-        near = round(font / _first_font(section, scale) * size[1])
+    for section, height in normal.items():
+        near = round(font / _first_font(section, scale) * height)
         heights[section] = next(
             (
-                height
-                for height in range(max(near - 2, 1), near + 4)
-                if _first_font(section, fitted_scale(section, height, scale * height / size[1], ink)) == font
+                tried
+                for tried in range(max(near - 2, 1), near + 4)
+                if _first_font(section, fitted_scale(section, tried, scale * tried / height, ink)) == font
             ),
             near,
         )
-        needed = max(needed, size[0] * heights[section] / size[1])
+        # Both: what the height's share of the normal width allows the text, and how wide
+        # it really is at that size.
+        share = heights[section] / height
+        needed = max(needed, width_at(section, scale) * share, width_at(section, scale * share))
     return {
         section.name: (place[0], place[1], math.ceil(needed), heights[section])
         for section, place in places.items()
@@ -699,6 +752,52 @@ class GroupMover:
             name: (max(1, round(width * across)), max(1, round(height * down)))
             for name, (width, height) in start.items()
         }
+
+
+FRAMES_EVERY = 30.0  # seconds between the log's lines about how the overlay draws
+
+
+class FrameTimes:
+    """How smoothly the overlay's frames come and how busy they keep its thread, for the
+    log, over FRAMES_EVERY seconds at a time. `frame(worked, drawn)` at each frame: the
+    seconds it spent on the content, and on drawing since the last one."""
+
+    def __init__(self, clock, log_line):
+        self._clock = clock
+        self._log_line = log_line
+        self.clear()
+
+    def clear(self):
+        self._gaps, self._last, self._since = [], None, None
+        self._worked = self._drawn = 0.0
+
+    def frame(self, worked, drawn):
+        now = self._clock()
+        if self._last is not None:
+            self._gaps.append(now - self._last)
+        else:
+            self._since = now
+        self._last = now
+        self._worked += worked
+        self._drawn += drawn
+        if now - self._since >= FRAMES_EVERY:
+            self.flush()
+
+    def flush(self):
+        if self._gaps:
+            span = max(self._clock() - self._since, 1e-6)
+            gaps = sorted(self._gaps)
+            self._log_line(
+                'HUD frames: %d in %.0f s, %.0f ms apart, slowest %.0f ms; content %.0f%% and '
+                'drawing %.0f%% of the time',
+                len(gaps),
+                span,
+                gaps[len(gaps) // 2] * 1000,
+                gaps[-1] * 1000,
+                self._worked / span * 100,
+                self._drawn / span * 100,
+            )
+        self.clear()
 
 
 HISTORY_SETTLE = 1.0  # seconds a dragged layout stays still before it counts as one change

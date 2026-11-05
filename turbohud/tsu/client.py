@@ -9,6 +9,7 @@ import logging
 import socket
 import statistics
 import struct
+import sys
 import threading
 import time
 from pathlib import Path
@@ -18,6 +19,8 @@ from turbohud.core.race import RACING, STARTING, WAITING_FOR_GAME, WAITING_FOR_R
 from turbohud.tsu.gamelog import EventLog
 from turbohud.tsu.probe import receive_message, send_message, socket_path
 
+READ_SWITCH_INTERVAL = 0.001  # seconds a thread waits for Python's lock before it asks for it
+LEAST_WAIT = 0.005  # seconds after a read that took its whole interval, for the game's sake
 READ_INTERVAL = 0.05  # seconds between reads in a race: the live delta updates 20 times a second
 WAIT_INTERVAL = 1.0  # seconds between tries while TSU or a race is not there
 TIMEOUT = 5.0  # seconds before a silent probe counts as gone
@@ -91,28 +94,48 @@ class ReadTimes:
     def __init__(self, clock):
         self._clock = clock
         self._times = []
+        self._details = []  # (trips, seconds on the game's memory or None, seconds in all)
         self._since = None
 
-    def add(self, seconds):
+    def add(self, seconds, detail=None):
+        """`detail`: (trips to the game's memory, seconds on it or None), where known."""
         now = self._clock()
         if self._since is None:
             self._since = now - seconds
         self._times.append(seconds)
+        if detail is not None:
+            self._details.append((*detail, seconds))
         if now - self._since >= TIMES_EVERY:
             self.flush()
 
     def flush(self):
         if self._times:
             log.info(
-                'race reads: %d in %.0f s, median %.1f ms, slowest %.1f ms, %d over %.0f ms',
+                'race reads: %d in %.0f s, median %.1f ms, slowest %.1f ms, %d over %.0f ms%s',
                 len(self._times),
                 self._clock() - self._since,
                 statistics.median(self._times) * 1000,
                 max(self._times) * 1000,
                 sum(seconds > READ_INTERVAL for seconds in self._times),
                 READ_INTERVAL * 1000,
+                self._detail_text(),
             )
-        self._times, self._since = [], None
+        self._times, self._details, self._since = [], [], None
+
+    def _detail_text(self):
+        """Whether a slow read made many trips or each trip was slow, and whether that was
+        the game's memory: what the times alone cannot tell."""
+        trips = [detail[0] for detail in self._details if detail[0]]
+        if not trips:
+            return ''
+        each = [detail[2] / detail[0] for detail in self._details if detail[0]]
+        text = (
+            f'; {statistics.median(trips):.0f} trips a read, {statistics.median(each) * 1000:.2f} ms a trip'
+        )
+        in_game = [detail[1] / detail[0] for detail in self._details if detail[0] and detail[1] is not None]
+        if in_game:
+            text += f', {statistics.median(in_game) * 1000:.2f} ms of it on the game\'s memory'
+        return text
 
 
 class LiveRace:
@@ -134,6 +157,10 @@ class LiveRace:
             return self._snapshot
 
     def start(self):
+        # This thread lets go of Python's lock at every trip to the game's memory. By default
+        # it then waits 5 ms for it while the overlay draws, about a second for a race read
+        # of 70 trips (seen in races on the Mac).
+        sys.setswitchinterval(READ_SWITCH_INTERVAL)
         self._thread = threading.Thread(target=self._run, name='tsu-live-race', daemon=True)
         self._thread.start()
 
@@ -162,13 +189,14 @@ class LiveRace:
 
     def step(self):
         """One read; returns the seconds to wait before the next."""
+        began = self._clock()
         try:
             if self._reader is None:
                 self._reader, self._conn = self._connect()
             started = self._clock()
             state = self._reader.read()
             if self.snapshot().status == RACING:  # a race's first read also finds the race
-                self._times.add(self._clock() - started)
+                self._times.add(self._clock() - started, getattr(self._reader, 'last_read', None))
         except (NotFound, ReadError) as error:
             # In the menu (no session: no active server), or a session whose race is
             # being set up, or a pointer led nowhere between two states.
@@ -186,7 +214,8 @@ class LiveRace:
         now = self._clock()
         moved_at = now if running or before is None else previous.moved_at
         self._set(Snapshot(RACING, state, running, now, moved_at=moved_at))
-        return READ_INTERVAL
+        # READ_INTERVAL from the start of this read to the start of the next.
+        return max(READ_INTERVAL - (now - began), LEAST_WAIT)
 
     def _run(self):
         while not self._stop.is_set():

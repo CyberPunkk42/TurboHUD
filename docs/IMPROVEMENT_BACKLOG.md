@@ -35,12 +35,10 @@ hit). The Mac app now does this by itself (`turbohud/tsu/bottle.py`, reader in
 - Listen for stutter while the reader searches (in an online event, the first 15 s;
   a search of all the data at once made TSU stutter, the paced one was not noticed for
   sure). If there is none, a larger share than a quarter finds the race sooner.
-- Find out why race reads were slow for a while in a race with many AI as a client (seen
-  2026-11-05): about 190 ms a read for the first 30 s, about 1000 ms for the next minute, then
-  about 25 ms to the end. The HUD then updates about once a second. TSU itself used over two
-  CPU cores and the user has similar stutter without TurboHUD, so the reads are not known to
-  cause it; unknown whether the game slows the reads or the reads add to it. Next: log what a
-  slow read spends its time on (pages read), and compare a run with and without TurboHUD.
+- See that race reads now stay quick in a race with AI (2026-11-05: they took about 1000 ms a
+  read while driving, 28 ms from a separate connection, 14 ms a trip of which 0.37 ms on the
+  game's memory). The fix is in; the log's `race reads` line tells. TSU's own stutter with many
+  AI is there without TurboHUD, as far as the user can tell.
 - Throttle and brake on the Mac move in TSU's thirds: the pad's triggers are read through
   the Linux joystick interface only.
 - Check the spectator HUD while watching a real race (built 2026-11-04, seen only with a

@@ -1333,6 +1333,65 @@ class LiveRaceTests(unittest.TestCase):
         self.assertIn('slowest 60.0 ms', line)
         self.assertIn('1 over 50 ms', line)
 
+    def test_the_log_says_how_many_trips_a_read_made_where_that_is_known(self):
+        from turbohud.tsu.client import ReadTimes
+
+        times = ReadTimes(lambda: 100.0)
+        for trips in (100, 100, 200):
+            times.add(0.1, (trips, 0.02))
+        with self.assertLogs('turbohud.tsu.client', 'INFO') as logs:
+            times.flush()
+        self.assertIn('100 trips a read, 1.00 ms a trip, 0.20 ms of it on the game', logs.output[0])
+
+    def test_the_reading_thread_gets_python_s_lock_quickly(self):
+        import sys
+
+        from turbohud.tsu import client
+
+        before = sys.getswitchinterval()
+        self.addCleanup(sys.setswitchinterval, before)
+        live = self.reading([0.01])
+        live._run = lambda: None
+        live.start()
+        live._thread.join()
+        self.assertEqual(sys.getswitchinterval(), client.READ_SWITCH_INTERVAL)
+
+    def test_reads_come_at_their_interval_from_start_to_start(self):
+        from turbohud.tsu.client import LEAST_WAIT, READ_INTERVAL
+
+        live = self.reading([0.03, 0.03, 0.2])
+        now = [100.0]
+
+        def clock():
+            return now[0]
+
+        live._clock = clock
+        reader = live._connect()[0]
+        real = reader.read
+
+        def timed():
+            now[0] += 0.03
+            return real()
+
+        live._reader, reader.read = reader, timed
+        self.assertAlmostEqual(live.step(), READ_INTERVAL - 0.03)
+
+        def slow():
+            now[0] += 0.2
+            return real()
+
+        reader.read = slow
+        self.assertEqual(live.step(), LEAST_WAIT)
+
+    def test_no_trips_in_the_line_where_they_are_not_known(self):
+        from turbohud.tsu.client import ReadTimes
+
+        times = ReadTimes(lambda: 100.0)
+        times.add(0.1)
+        with self.assertLogs('turbohud.tsu.client', 'INFO') as logs:
+            times.flush()
+        self.assertNotIn('trips', logs.output[0])
+
     def test_no_line_between_the_times(self):
         live = self.reading([0.01, 0.01, 0.01])
         live.step()  # the status line comes with the first read

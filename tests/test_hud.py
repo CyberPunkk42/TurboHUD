@@ -56,6 +56,53 @@ def ink(_text, size):
     return size * 0.7, 0
 
 
+class SteadySizeTests(unittest.TestCase):
+    SECTIONS: ClassVar = {section.name: section for section in hud.RACE_SECTIONS}
+
+    @staticmethod
+    def proportional(text, size):
+        return sum(0.3 if letter == '1' else 0.6 for letter in text) * size
+
+    def scale_of(self, name, text, box, style='medium'):
+        section = self.SECTIONS[name]
+        normal = hud.tight_height(section, 1.0, ink)
+        return hud.drawn_scale(section, box, [hud.Row(text, style)], normal, 1.0, ink, self.proportional)
+
+    def test_digits_do_not_change_the_text_size(self):
+        for name, style, first, second in (
+            ('current', 'big', '1:11.1', '8:88.8'),
+            ('delta', 'medium', '+1.111 vs best', '+8.888 vs best'),
+        ):
+            normal = hud.tight_height(self.SECTIONS[name], 1.0, ink)
+            for box in ((120, 200), (200, 60), (300, normal * 3)):
+                with self.subTest(section=name, box=box):
+                    self.assertEqual(
+                        self.scale_of(name, first, box, style), self.scale_of(name, second, box, style)
+                    )
+
+    def test_short_text_is_not_larger_than_the_usual_text(self):
+        box = (300, 90)
+        self.assertEqual(
+            self.scale_of('times', 'Last -   Best -', box),
+            self.scale_of('times', 'Last 1:23.456   Best 1:22.000', box),
+        )
+
+    def test_longer_text_than_usual_still_fits(self):
+        section = self.SECTIONS['delta']
+        row = hud.Row('Something much longer than the usual text of this section', 'medium')
+        scale = self.scale_of('delta', row.text, (200, 90))
+        self.assertLessEqual(hud.content_size([row], scale, self.proportional)[0], 200)
+        self.assertIs(section, self.SECTIONS['delta'])
+
+    def test_no_rows_measure_nothing(self):
+        self.assertEqual(hud.widest_rows(self.SECTIONS['delta'], [], 1.0, self.proportional), [])
+
+    def test_every_column_counts_as_steady(self):
+        row = hud.Row('1', 'small', tail='2', middle='3', right='4')
+        steady = hud.steady_rows([row])[0]
+        self.assertEqual((steady.text, steady.tail, steady.middle, steady.right), ('0', '0', '0', '0'))
+
+
 class TextCanCentreTests(unittest.TestCase):
     def test_sections_with_plain_text_can(self):
         can = {section.name for section in hud.RACE_SECTIONS if hud.text_can_centre(section)}
@@ -108,6 +155,27 @@ class TightBoxTests(unittest.TestCase):
                 height = round(normal * share)
                 top, bottom = hud.ink_span(times, hud.fitted_scale(times, height, share, ink), ink)
                 self.assertLessEqual(bottom - top + hud.FIT_ROOM, height)
+
+    def test_text_wider_than_in_proportion_shrinks_to_its_box(self):
+        def wide_when_small(text, size):
+            return len(text) * size * (0.6 if size >= 20 else 0.9)
+
+        times = next(section for section in hud.RACE_SECTIONS if section.name == 'times')
+        rows = [hud.Row('Last 0:48.442   Best 0:48.442', 'medium')]
+        scale = hud.fitted_scale(times, 100, 0.8, ink, 300, rows, wide_when_small)
+        self.assertLess(scale, 0.8)
+        self.assertLessEqual(hud.content_size(rows, scale, wide_when_small)[0], 300)
+
+    def test_text_that_fits_its_width_keeps_its_scale(self):
+        times = next(section for section in hud.RACE_SECTIONS if section.name == 'times')
+        rows = [hud.Row('Last', 'medium')]
+        self.assertEqual(hud.fitted_scale(times, 100, 1.0, ink, 900, rows, measure), 1.0)
+
+    def test_the_pedal_bars_count_across(self):
+        speed = next(section for section in hud.RACE_SECTIONS if section.name == 'speed')
+        rows = [hud.Row('000 km/h', 'medium')]
+        scale = hud.fitted_scale(speed, 100, 1.0, ink, 150, rows, measure)
+        self.assertLessEqual(hud.content_size(rows, scale, measure)[0] + hud.pedal_space(scale), 150)
 
     def test_content_that_fits_keeps_its_scale(self):
         self.assertEqual(hud.fitted_scale(self.TIME, 100, 1.0, ink), 1.0)
@@ -502,8 +570,11 @@ class MatchSizesTests(unittest.TestCase):
 
     def font(self, name, box):
         section = self.SECTIONS[name]
-        normal = self.normal(name)
-        return hud._drawn_font(section, box[2:], normal[2:], 1.0, ink)
+        rows = list(section.samples[0])
+        normal = hud.tight_height(section, 1.0, ink)
+        return hud._first_font(
+            section, hud.drawn_scale(section, box[2:], rows, normal, 1.0, ink, size_measure)
+        )
 
     def test_every_section_gets_the_largest_font_and_one_width(self):
         boxes = {
@@ -532,6 +603,38 @@ class MatchSizesTests(unittest.TestCase):
         once = self.match(localtime=self.normal('localtime', 2.0), speed=self.normal('speed'))
         again = self.match(**once)
         self.assertEqual(again, once)
+
+
+class FrameTimesTests(unittest.TestCase):
+    def setUp(self):
+        self.now, self.lines = 0.0, []
+        self.frames = hud.FrameTimes(lambda: self.now, lambda text, *args: self.lines.append(text % args))
+
+    def run_frames(self, gap, count, worked=0.005, drawn=0.01):
+        for _ in range(count):
+            self.frames.frame(worked, drawn)
+            self.now += gap
+
+    def test_it_says_how_the_frames_came_every_so_often(self):
+        self.run_frames(0.05, 601)
+        self.assertEqual(len(self.lines), 1)
+        self.assertIn('50 ms apart', self.lines[0])
+        self.assertIn('content 10% and drawing 20%', self.lines[0])
+
+    def test_a_late_frame_shows_as_the_slowest(self):
+        self.run_frames(0.05, 10)
+        self.now += 0.2
+        self.run_frames(0.05, 3)
+        self.frames.flush()
+        self.assertIn('slowest 250 ms', self.lines[0])
+
+    def test_no_line_without_frames_and_after_the_race_it_starts_afresh(self):
+        self.frames.flush()
+        self.assertEqual(self.lines, [])
+        self.run_frames(0.05, 3)
+        self.frames.flush()
+        self.frames.flush()
+        self.assertEqual(len(self.lines), 1)
 
 
 class LayoutHistoryTests(unittest.TestCase):

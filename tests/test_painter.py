@@ -39,6 +39,85 @@ class TextPathTests(unittest.TestCase):
 
 
 @unittest.skipUnless(importlib.util.find_spec('PySide6'), 'needs Qt')
+class TextImageTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
+        from PySide6.QtWidgets import QApplication
+
+        cls.app = QApplication.instance() or QApplication([])
+
+    def test_a_text_is_filled_once_and_then_copied(self):
+        from turbohud.hud.painter import text_image
+
+        first = text_image('1:23.4', 40, 0xFFFFFFFF, 0xC8000000, 1.0)
+        self.assertIs(text_image('1:23.4', 40, 0xFFFFFFFF, 0xC8000000, 1.0), first)
+        self.assertIsNot(text_image('1:23.4', 40, 0xFFFF0000, 0xC8000000, 1.0), first)
+        self.assertIsNot(text_image('1:23.4', 40, 0xFFFFFFFF, 0xC8000000, 2.0), first)
+
+    def test_large_images_cannot_fill_the_memory(self):
+        from turbohud.hud import painter
+
+        limit = painter.IMAGES_LIMIT
+        self.addCleanup(setattr, painter, 'IMAGES_LIMIT', limit)
+        painter.IMAGES_LIMIT = 200 * 1024
+        first = painter.text_image('oldest', 60, 0xFFFFFFFF, 0xC8000000, 2.0)
+        for number in range(40):
+            painter.text_image(f'{number:04d}', 60, 0xFFFFFFFF, 0xC8000000, 2.0)
+        self.assertLessEqual(painter._images_size, 200 * 1024 + 500 * 1024)
+        self.assertEqual(
+            painter._images_size, sum(entry[0].sizeInBytes() for entry in painter._images.values())
+        )
+        self.assertIsNot(painter.text_image('oldest', 60, 0xFFFFFFFF, 0xC8000000, 2.0), first)
+
+    def test_it_holds_the_whole_text_and_its_outline_for_the_screen(self):
+        from turbohud.hud.painter import outline_path, text_image
+
+        image, left, top = text_image('Fuel', 20, 0xFFFFFFFF, 0xC8000000, 2.0)
+        self.assertEqual(image.devicePixelRatio(), 2.0)
+        box = outline_path('Fuel', 20).boundingRect()
+        self.assertLessEqual(left, box.left())
+        self.assertLessEqual(top, box.top())
+        self.assertGreaterEqual(left + image.width() / 2, box.right())
+        self.assertGreaterEqual(top + image.height() / 2, box.bottom())
+
+    def draw(self, draw_it, ratio=1.0):
+        from PySide6.QtGui import QImage, QPainter
+
+        image = QImage(round(300 * ratio), round(60 * ratio), QImage.Format_ARGB32_Premultiplied)
+        image.setDevicePixelRatio(ratio)
+        image.fill(0)
+        painter = QPainter(image)
+        painter.setRenderHint(QPainter.Antialiasing)
+        draw_it(painter)
+        painter.end()
+        return image
+
+    def test_it_looks_as_filling_the_shapes_did(self):
+        from PySide6.QtGui import QColor
+
+        from turbohud.hud.painter import outline_path, outlined_text, text_path
+
+        white, dark = QColor('#ffffff'), QColor(0, 0, 0, 200)
+
+        def by_shapes(painter):
+            painter.translate(10, 40)
+            painter.fillPath(outline_path('Lap 3/13', 24), dark)
+            painter.fillPath(text_path('Lap 3/13', 24), white)
+
+        for ratio in (1.0, 2.0):
+            with self.subTest(ratio=ratio):
+                shapes = self.draw(by_shapes, ratio)
+                copied = self.draw(lambda p: outlined_text(p, 10, 40, 'Lap 3/13', 24, white, dark), ratio)
+                differ = 0
+                for x in range(shapes.width()):
+                    for y in range(shapes.height()):
+                        one, two = shapes.pixelColor(x, y), copied.pixelColor(x, y)
+                        if max(abs(a - b) for a, b in zip(one.getRgb(), two.getRgb())) > 12:
+                            differ += 1
+                self.assertLess(differ, 8)
+
+
 class RedrawTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -129,6 +208,74 @@ class RedrawTests(unittest.TestCase):
         narrow, wide = (hud_lines([Row(text, 'medium')])[0] for text in ('11:11', '00:00'))
         self.assertEqual(centred_x(narrow, 400, 14), centred_x(wide, 400, 14))
 
+    def test_text_stays_inside_narrow_boxes_at_any_size(self):
+        from PySide6.QtGui import QColor
+
+        from turbohud.core.hud import RACE_SECTIONS, Row
+        from turbohud.core.settings import Theme
+        from turbohud.overlay.window import SectionWindow
+
+        class Native:
+            def raise_window(self, window):
+                return 'test'
+
+        section = next(s for s in RACE_SECTIONS if s.name == 'times')
+        rows = [Row('Last 0:48.442   Best 0:48.442', 'medium')]
+        for width, height in ((120, 60), (160, 60), (200, 120), (240, 40), (284, 69), (391, 88)):
+            with self.subTest(width=width, height=height):
+                window = SectionWindow(Native(), Theme(), section)
+                self.addCleanup(window.close)
+                window.resize(width, height)
+                window.show_content(rows)
+                image = window.grab().toImage()
+                # The window cuts the text off at its edge: look for ink in its last column.
+                edge = [image.pixelColor(image.width() - 1, y) for y in range(image.height())]
+                self.assertEqual([c for c in edge if c.alpha() > 0 and c != QColor(0, 0, 0, 0)], [])
+
+    def drawn(self, name, rows, size, backdrop=False):
+        from turbohud.core.hud import RACE_SECTIONS
+        from turbohud.core.settings import Theme
+        from turbohud.overlay.window import SectionWindow
+
+        class Native:
+            def raise_window(self, window):
+                return 'test'
+
+        window = SectionWindow(Native(), Theme(), next(s for s in RACE_SECTIONS if s.name == name))
+        self.addCleanup(window.close)
+        window.resize(*size)
+        window.backdrop = backdrop
+        window.show_content(rows)
+        return window.grab().toImage()
+
+    def test_a_running_number_keeps_its_height_on_screen(self):
+        from turbohud.core.hud import Row
+
+        def tall(text, style, name, size):
+            image = self.drawn(name, [Row(text, style)], size)
+            rows = [
+                y
+                for y in range(image.height())
+                if any(image.pixelColor(x, y).alpha() > 40 for x in range(image.width()))
+            ]
+            return rows[-1] - rows[0]
+
+        for name, style, first, second, size in (
+            ('current', 'big', '1:11.1', '8:00.8', (210, 46)),
+            ('delta', 'medium', '+1.111 vs best', '+8.800 vs best', (230, 26)),
+        ):
+            with self.subTest(section=name):
+                self.assertEqual(tall(first, style, name, size), tall(second, style, name, size))
+
+    def test_the_tint_does_not_follow_the_digits(self):
+        from turbohud.core.hud import Row
+
+        def tint_right(text):
+            image = self.drawn('current', [Row(text, 'big')], (400, 46), backdrop=True)
+            return max(x for x in range(image.width()) if image.pixelColor(x, 2).alpha() > 0)
+
+        self.assertEqual(tint_right('1:11.1'), tint_right('8:88.8'))
+
     def test_each_line_is_centred_on_its_own(self):
         from turbohud.core.hud import Row
 
@@ -161,7 +308,8 @@ class RedrawTests(unittest.TestCase):
         rows = [Row('12:34', 'medium')]
 
         def tall(share):
-            (_left, top, _right, bottom), _size = self.text_box('localtime', rows, share)
+            # Wide enough for the height to set the size.
+            (_left, top, _right, bottom), _size = self.text_box('localtime', rows, share, wider=3.0)
             return bottom - top
 
         self.assertGreater(tall(2.0), tall(1.0))
@@ -264,10 +412,9 @@ class MovePanelPresetTests(unittest.TestCase):
             for name, box in matched.items():
                 section = by_name[name]
                 base = hud.tight_height(section, theme.scale, text_ink)
-                needed = hud.base_size(section, theme.scale, text_width)[0]
                 # As paintEvent works it out.
-                scale = theme.scale * hud.section_scale(box[2:], base, needed)
-                scale = hud.fitted_scale(section, box[3], scale, text_ink)
+                rows = list(section.samples[0])
+                scale = hud.drawn_scale(section, box[2:], rows, base, theme.scale, text_ink, text_width)
                 fonts.add(hud.hud_lines(list(section.samples[0]), scale)[0].size)
             with self.subTest(group=names):
                 self.assertEqual(len(fonts), 1, matched)

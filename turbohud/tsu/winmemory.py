@@ -308,14 +308,26 @@ def metadata_path(image_path):
 
 
 class CachedReader:
-    """A race reader that starts every read with an empty page cache."""
+    """A race reader that starts every read with an empty page cache. `last_read` says
+    what the latest read took, for the log: (trips to the game's memory, seconds of them
+    spent on that memory or None when not known; `in_game` gives such seconds so far)."""
 
-    def __init__(self, reader, cache):
+    def __init__(self, reader, cache, in_game=None):
         self.reader, self.cache = reader, cache
+        self._in_game = in_game
+        self.last_read = None
 
     def read(self):
         self.cache.clear()
-        return self.reader.read()
+        trips = self.cache.reads
+        spent = self._in_game() if self._in_game else None
+        try:
+            return self.reader.read()
+        finally:
+            self.last_read = (
+                self.cache.reads - trips,
+                self._in_game() - spent if self._in_game else None,
+            )
 
 
 def connect(name='TSU.exe'):
