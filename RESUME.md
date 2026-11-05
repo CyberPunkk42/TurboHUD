@@ -50,7 +50,8 @@
   (Linux; a separate tools environment, never part of the app). Both pass.
 
 ## Next steps
-See `docs/IMPROVEMENT_BACKLOG.md`. In short:
+**Start with `docs/CONTINUE_HERE.md`**: a decision waiting for the user, and what is left to
+test. Then `docs/IMPROVEMENT_BACKLOG.md`. In short:
 0. Tests: keep them from reaching a running TurboHUD (until then run them with
    `XDG_RUNTIME_DIR` set to an empty private folder).
 1. Windows: the overlay over TSU (windowed, Fullscreen, Fullscreen Exclusive), then
@@ -64,6 +65,8 @@ See `docs/IMPROVEMENT_BACKLOG.md`. In short:
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-05: `docs/CONTINUE_HERE.md` notes where the work stopped, asked for by the user: the
+  decision on the online race search, what has not been seen in a race, and the test list.
 - 2026-11-05: The settings window can be dragged by its background, like the move-mode panel,
   reported by the user.
 - 2026-11-05: The proximity radar has no fill behind it, its cars are drawn larger (1.4 times,

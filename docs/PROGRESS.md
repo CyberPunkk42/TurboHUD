@@ -608,3 +608,5 @@ its "Recent changes".
   by the user. A longer radar time zooms the radar out so that such a car still fits.
 - 2026-11-05: The settings window can be dragged by its background, like the move-mode panel,
   reported by the user.
+- 2026-11-05: `docs/CONTINUE_HERE.md` notes where the work stopped, asked for by the user: the
+  decision on the online race search, what has not been seen in a race, and the test list.
