@@ -571,3 +571,8 @@ its "Recent changes".
   font, a quarter wider at 8 px and 4% at 40 px than in proportion to 20 px), so scaling a
   measurement at one size could leave it wider than the box. Sections now measure it at the
   size they draw it, and so does a group's matching.
+- 2026-11-05: Text keeps its size as numbers run, reported by the user on the delta and the
+  running lap, whose size changed with the digits while the tint behind them flickered. The
+  size is now worked out from the section's usual text or the live text, whichever is wider,
+  with digits as zeros, and the tint from the live text with digits as zeros. Short texts such
+  as `-` no longer make the text larger.

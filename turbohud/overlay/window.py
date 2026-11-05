@@ -33,14 +33,14 @@ from turbohud.core.hud import (
     centred_text,
     content_shift,
     content_size,
-    fitted_scale,
+    drawn_scale,
     help_lines,
     hud_lines,
     level_bar,
     level_space,
     pedal_bars,
     pedal_space,
-    section_scale,
+    steady_rows,
     text_can_centre,
     tight_height,
 )
@@ -273,9 +273,15 @@ class SectionWindow(QWidget):
             painter.drawRoundedRect(QRectF(self.rect()).adjusted(1, 1, -1, -1), 8, 8)
             rows = rows or list(self.section.samples[0])  # something to place, also before a race
         bars = pedal_space(self.theme.scale) if self.section.pedals else 0
-        needed = content_size(rows, self.theme.scale, text_width)[0] + bars if rows else None
-        scale = self.theme.scale * section_scale((self.width(), self.height()), self.base[1], needed)
-        scale = fitted_scale(self.section, self.height(), scale, text_ink, self.width(), rows, text_width)
+        scale = drawn_scale(
+            self.section,
+            (self.width(), self.height()),
+            rows,
+            self.base[1],
+            self.theme.scale,
+            text_ink,
+            text_width,
+        )
         left = 0
         down = content_shift(self.section, self.height(), scale, text_ink)
         if self.locked and self.backdrop and rows:
@@ -303,7 +309,8 @@ class SectionWindow(QWidget):
         round it, moved `down` with the text and kept inside the window. A section with a
         right-hand column (the player list) is as wide as its window, where that column
         is drawn."""
-        width, height = content_size(rows, scale, text_width)
+        # Digits as zeros: a tint that follows them would flicker as a number runs.
+        width, height = content_size(steady_rows(rows), scale, text_width)
         pad = round(MARGIN * scale / 2)
         if self.section.level:
             height += level_space(scale) + pad // 2  # the level bar, with a little room below

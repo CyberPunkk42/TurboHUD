@@ -232,6 +232,50 @@ class RedrawTests(unittest.TestCase):
                 edge = [image.pixelColor(image.width() - 1, y) for y in range(image.height())]
                 self.assertEqual([c for c in edge if c.alpha() > 0 and c != QColor(0, 0, 0, 0)], [])
 
+    def drawn(self, name, rows, size, backdrop=False):
+        from turbohud.core.hud import RACE_SECTIONS
+        from turbohud.core.settings import Theme
+        from turbohud.overlay.window import SectionWindow
+
+        class Native:
+            def raise_window(self, window):
+                return 'test'
+
+        window = SectionWindow(Native(), Theme(), next(s for s in RACE_SECTIONS if s.name == name))
+        self.addCleanup(window.close)
+        window.resize(*size)
+        window.backdrop = backdrop
+        window.show_content(rows)
+        return window.grab().toImage()
+
+    def test_a_running_number_keeps_its_height_on_screen(self):
+        from turbohud.core.hud import Row
+
+        def tall(text, style, name, size):
+            image = self.drawn(name, [Row(text, style)], size)
+            rows = [
+                y
+                for y in range(image.height())
+                if any(image.pixelColor(x, y).alpha() > 40 for x in range(image.width()))
+            ]
+            return rows[-1] - rows[0]
+
+        for name, style, first, second, size in (
+            ('current', 'big', '1:11.1', '8:00.8', (210, 46)),
+            ('delta', 'medium', '+1.111 vs best', '+8.800 vs best', (230, 26)),
+        ):
+            with self.subTest(section=name):
+                self.assertEqual(tall(first, style, name, size), tall(second, style, name, size))
+
+    def test_the_tint_does_not_follow_the_digits(self):
+        from turbohud.core.hud import Row
+
+        def tint_right(text):
+            image = self.drawn('current', [Row(text, 'big')], (400, 46), backdrop=True)
+            return max(x for x in range(image.width()) if image.pixelColor(x, 2).alpha() > 0)
+
+        self.assertEqual(tint_right('1:11.1'), tint_right('8:88.8'))
+
     def test_each_line_is_centred_on_its_own(self):
         from turbohud.core.hud import Row
 
@@ -264,7 +308,8 @@ class RedrawTests(unittest.TestCase):
         rows = [Row('12:34', 'medium')]
 
         def tall(share):
-            (_left, top, _right, bottom), _size = self.text_box('localtime', rows, share)
+            # Wide enough for the height to set the size.
+            (_left, top, _right, bottom), _size = self.text_box('localtime', rows, share, wider=3.0)
             return bottom - top
 
         self.assertGreater(tall(2.0), tall(1.0))
@@ -367,11 +412,9 @@ class MovePanelPresetTests(unittest.TestCase):
             for name, box in matched.items():
                 section = by_name[name]
                 base = hud.tight_height(section, theme.scale, text_ink)
-                needed = hud.base_size(section, theme.scale, text_width)[0]
                 # As paintEvent works it out.
-                scale = theme.scale * hud.section_scale(box[2:], base, needed)
                 rows = list(section.samples[0])
-                scale = hud.fitted_scale(section, box[3], scale, text_ink, box[2], rows, text_width)
+                scale = hud.drawn_scale(section, box[2:], rows, base, theme.scale, text_ink, text_width)
                 fonts.add(hud.hud_lines(list(section.samples[0]), scale)[0].size)
             with self.subTest(group=names):
                 self.assertEqual(len(fonts), 1, matched)

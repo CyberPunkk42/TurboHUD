@@ -64,6 +64,11 @@ See `docs/IMPROVEMENT_BACKLOG.md`. In short:
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-05: Text keeps its size as numbers run, reported by the user on the delta and the
+  running lap, whose size changed with the digits while the tint behind them flickered. The
+  size is now worked out from the section's usual text or the live text, whichever is wider,
+  with digits as zeros, and the tint from the live text with digits as zeros. Short texts such
+  as `-` no longer make the text larger.
 - 2026-11-05: Text no longer runs past the side of a narrow box, reported by the user on the
   last and best lap section. Text is not as wide as its font size says (in the Mac's system
   font, a quarter wider at 8 px and 4% at 40 px than in proportion to 20 px), so scaling a
