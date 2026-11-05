@@ -1,8 +1,18 @@
+import math
 import sys
 from functools import lru_cache
 
 from PySide6.QtCore import QPointF, QRectF, Qt
-from PySide6.QtGui import QColor, QFont, QFontMetricsF, QPainterPath, QPainterPathStroker, QPen
+from PySide6.QtGui import (
+    QColor,
+    QFont,
+    QFontMetricsF,
+    QImage,
+    QPainter,
+    QPainterPath,
+    QPainterPathStroker,
+    QPen,
+)
 
 from turbohud.core.hud import FLAG_WIDTH, MARGIN, middle_right, steady_text
 
@@ -59,13 +69,39 @@ def outline_path(text, size):
     return stroker.createStroke(text_path(text, size))
 
 
+@lru_cache(maxsize=2048)
+def text_image(text, size, color, outline, ratio):
+    """(image, left, top) of a line of outlined text, for `ratio` device pixels to a pixel;
+    `left` and `top` are from the text's start on its baseline to the image's corner.
+    `color` and `outline` are QColor.rgba() values.
+
+    Filling the shapes of a letter holds Python's lock and takes long on a real window: at
+    20 frames a second with many sections it left the thread reading the race a second
+    behind (found with a profile of a race on the Mac). The texts come back, as a lap
+    runs through the same times, so each is filled once and then only copied."""
+    shape, edge = text_path(text, size), outline_path(text, size)
+    box = shape.boundingRect().united(edge.boundingRect())
+    left, top = math.floor(box.left() * ratio) / ratio, math.floor(box.top() * ratio) / ratio
+    width = max(1, math.ceil((box.right() - left) * ratio))
+    height = max(1, math.ceil((box.bottom() - top) * ratio))
+    image = QImage(width, height, QImage.Format_ARGB32_Premultiplied)
+    image.setDevicePixelRatio(ratio)
+    image.fill(0)
+    painter = QPainter(image)
+    painter.setRenderHint(QPainter.Antialiasing)
+    painter.translate(-left, -top)
+    painter.fillPath(edge, QColor.fromRgba(outline))
+    painter.fillPath(shape, QColor.fromRgba(color))
+    painter.end()
+    return image, left, top
+
+
 def outlined_text(painter, x, y, text, size, color, outline):
-    """Text with a dark outline, readable over any part of the game."""
-    painter.save()
-    painter.translate(x, y)
-    painter.fillPath(outline_path(text, size), outline)
-    painter.fillPath(text_path(text, size), color)
-    painter.restore()
+    """Text with a dark outline, readable over any part of the game, on whole device
+    pixels: the same text then looks the same wherever it is."""
+    ratio = painter.device().devicePixelRatioF()
+    image, left, top = text_image(text, size, color.rgba(), outline.rgba(), ratio)
+    painter.drawImage(QPointF(round((x + left) * ratio) / ratio, round((y + top) * ratio) / ratio), image)
 
 
 def cap_height(size):

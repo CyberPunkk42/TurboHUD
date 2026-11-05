@@ -248,6 +248,52 @@ class ReaderCase(unittest.TestCase):
 
 
 @unittest.skipIf(sys.platform == 'win32', 'the Mac side selects on a pipe')
+@unittest.skipIf(sys.platform == 'win32', 'the Mac side selects on a pipe')
+class PipeReceivingTests(unittest.TestCase):
+    def pipe(self):
+        source, writer = os.pipe()
+        self.addCleanup(os.close, source)
+        self.addCleanup(os.close, writer)
+        return bt.Pipe(io.BytesIO(), source), writer
+
+    def test_one_wait_is_enough_for_an_answer_that_comes_at_once(self):
+        pipe, writer = self.pipe()
+        os.write(writer, br.pack({'ok': True, 'took': 0.5}, b'data'))
+        with mock.patch.object(bt.select, 'select', wraps=bt.select.select) as waits:
+            self.assertEqual(pipe.receive(1.0), ({'ok': True, 'took': 0.5}, b'data'))
+        self.assertEqual(waits.call_count, 1)
+
+    def test_an_answer_may_come_in_pieces(self):
+        pipe, writer = self.pipe()
+        message = br.pack({'ok': True}, b'x' * 300)
+        os.write(writer, message[:5])
+        thread = threading.Timer(0.02, lambda: os.write(writer, message[5:]))
+        thread.start()
+        self.addCleanup(thread.join)
+        self.assertEqual(pipe.receive(1.0), ({'ok': True}, b'x' * 300))
+
+    def test_what_comes_after_an_answer_is_kept_for_the_next(self):
+        pipe, writer = self.pipe()
+        os.write(writer, br.pack({'n': 1}, b'a') + br.pack({'n': 2}, b'b'))
+        self.assertEqual(pipe.receive(1.0), ({'n': 1}, b'a'))
+        self.assertEqual(pipe.receive(1.0), ({'n': 2}, b'b'))
+
+    def test_a_large_answer_comes_whole(self):
+        pipe, writer = self.pipe()
+        data = bytes(range(256)) * 300
+        thread = threading.Thread(target=os.write, args=(writer, br.pack({'ok': True}, data)))
+        thread.start()
+        self.addCleanup(thread.join)
+        self.assertEqual(pipe.receive(1.0)[1], data)
+
+    def test_the_time_on_the_game_s_memory_adds_up(self):
+        pipe, writer = self.pipe()
+        os.write(writer, br.pack({'ok': True, 'took': 0.25}, b'a') * 2)
+        pipe.read(0, 1)
+        pipe.read(0, 1)
+        self.assertEqual(pipe.in_game, 0.5)
+
+
 class PipeTests(ReaderCase):
     def test_the_first_message_says_it_is_the_reader(self):
         header, _ = self.reader().receive()

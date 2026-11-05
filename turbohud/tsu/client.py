@@ -9,6 +9,7 @@ import logging
 import socket
 import statistics
 import struct
+import sys
 import threading
 import time
 from pathlib import Path
@@ -18,6 +19,7 @@ from turbohud.core.race import RACING, STARTING, WAITING_FOR_GAME, WAITING_FOR_R
 from turbohud.tsu.gamelog import EventLog
 from turbohud.tsu.probe import receive_message, send_message, socket_path
 
+READ_SWITCH_INTERVAL = 0.001  # seconds a thread waits for Python's lock before it asks for it
 READ_INTERVAL = 0.05  # seconds between reads in a race: the live delta updates 20 times a second
 WAIT_INTERVAL = 1.0  # seconds between tries while TSU or a race is not there
 TIMEOUT = 5.0  # seconds before a silent probe counts as gone
@@ -154,6 +156,10 @@ class LiveRace:
             return self._snapshot
 
     def start(self):
+        # This thread lets go of Python's lock at every trip to the game's memory. By default
+        # it then waits 5 ms for it while the overlay draws, about a second for a race read
+        # of 70 trips (seen in races on the Mac).
+        sys.setswitchinterval(READ_SWITCH_INTERVAL)
         self._thread = threading.Thread(target=self._run, name='tsu-live-race', daemon=True)
         self._thread.start()
 

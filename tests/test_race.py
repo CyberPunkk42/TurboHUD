@@ -1343,6 +1343,19 @@ class LiveRaceTests(unittest.TestCase):
             times.flush()
         self.assertIn('100 trips a read, 1.00 ms a trip, 0.20 ms of it on the game', logs.output[0])
 
+    def test_the_reading_thread_gets_python_s_lock_quickly(self):
+        import sys
+
+        from turbohud.tsu import client
+
+        before = sys.getswitchinterval()
+        self.addCleanup(sys.setswitchinterval, before)
+        live = self.reading([0.01])
+        live._run = lambda: None
+        live.start()
+        live._thread.join()
+        self.assertEqual(sys.getswitchinterval(), client.READ_SWITCH_INTERVAL)
+
     def test_no_trips_in_the_line_where_they_are_not_known(self):
         from turbohud.tsu.client import ReadTimes
 

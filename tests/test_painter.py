@@ -39,6 +39,70 @@ class TextPathTests(unittest.TestCase):
 
 
 @unittest.skipUnless(importlib.util.find_spec('PySide6'), 'needs Qt')
+class TextImageTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
+        from PySide6.QtWidgets import QApplication
+
+        cls.app = QApplication.instance() or QApplication([])
+
+    def test_a_text_is_filled_once_and_then_copied(self):
+        from turbohud.hud.painter import text_image
+
+        first = text_image('1:23.4', 40, 0xFFFFFFFF, 0xC8000000, 1.0)
+        self.assertIs(text_image('1:23.4', 40, 0xFFFFFFFF, 0xC8000000, 1.0), first)
+        self.assertIsNot(text_image('1:23.4', 40, 0xFFFF0000, 0xC8000000, 1.0), first)
+        self.assertIsNot(text_image('1:23.4', 40, 0xFFFFFFFF, 0xC8000000, 2.0), first)
+
+    def test_it_holds_the_whole_text_and_its_outline_for_the_screen(self):
+        from turbohud.hud.painter import outline_path, text_image
+
+        image, left, top = text_image('Fuel', 20, 0xFFFFFFFF, 0xC8000000, 2.0)
+        self.assertEqual(image.devicePixelRatio(), 2.0)
+        box = outline_path('Fuel', 20).boundingRect()
+        self.assertLessEqual(left, box.left())
+        self.assertLessEqual(top, box.top())
+        self.assertGreaterEqual(left + image.width() / 2, box.right())
+        self.assertGreaterEqual(top + image.height() / 2, box.bottom())
+
+    def draw(self, draw_it, ratio=1.0):
+        from PySide6.QtGui import QImage, QPainter
+
+        image = QImage(round(300 * ratio), round(60 * ratio), QImage.Format_ARGB32_Premultiplied)
+        image.setDevicePixelRatio(ratio)
+        image.fill(0)
+        painter = QPainter(image)
+        painter.setRenderHint(QPainter.Antialiasing)
+        draw_it(painter)
+        painter.end()
+        return image
+
+    def test_it_looks_as_filling_the_shapes_did(self):
+        from PySide6.QtGui import QColor
+
+        from turbohud.hud.painter import outline_path, outlined_text, text_path
+
+        white, dark = QColor('#ffffff'), QColor(0, 0, 0, 200)
+
+        def by_shapes(painter):
+            painter.translate(10, 40)
+            painter.fillPath(outline_path('Lap 3/13', 24), dark)
+            painter.fillPath(text_path('Lap 3/13', 24), white)
+
+        for ratio in (1.0, 2.0):
+            with self.subTest(ratio=ratio):
+                shapes = self.draw(by_shapes, ratio)
+                copied = self.draw(lambda p: outlined_text(p, 10, 40, 'Lap 3/13', 24, white, dark), ratio)
+                differ = 0
+                for x in range(shapes.width()):
+                    for y in range(shapes.height()):
+                        one, two = shapes.pixelColor(x, y), copied.pixelColor(x, y)
+                        if max(abs(a - b) for a, b in zip(one.getRgb(), two.getRgb())) > 12:
+                            differ += 1
+                self.assertLess(differ, 8)
+
+
 class RedrawTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
