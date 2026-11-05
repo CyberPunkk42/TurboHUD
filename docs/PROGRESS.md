@@ -566,3 +566,8 @@ its "Recent changes".
   from start to start (they waited 50 ms after each, so about 12); the text images are limited
   to 64 MB (they reached 1.3 GB at peak, as large fonts take far more than the 2048 images
   allowed for); the log has a `HUD frames` line on how the overlay draws.
+- 2026-11-05: Text no longer runs past the side of a narrow box, reported by the user on the
+  last and best lap section. Text is not as wide as its font size says (in the Mac's system
+  font, a quarter wider at 8 px and 4% at 40 px than in proportion to 20 px), so scaling a
+  measurement at one size could leave it wider than the box. Sections now measure it at the
+  size they draw it, and so does a group's matching.

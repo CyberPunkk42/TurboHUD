@@ -109,6 +109,27 @@ class TightBoxTests(unittest.TestCase):
                 top, bottom = hud.ink_span(times, hud.fitted_scale(times, height, share, ink), ink)
                 self.assertLessEqual(bottom - top + hud.FIT_ROOM, height)
 
+    def test_text_wider_than_in_proportion_shrinks_to_its_box(self):
+        def wide_when_small(text, size):
+            return len(text) * size * (0.6 if size >= 20 else 0.9)
+
+        times = next(section for section in hud.RACE_SECTIONS if section.name == 'times')
+        rows = [hud.Row('Last 0:48.442   Best 0:48.442', 'medium')]
+        scale = hud.fitted_scale(times, 100, 0.8, ink, 300, rows, wide_when_small)
+        self.assertLess(scale, 0.8)
+        self.assertLessEqual(hud.content_size(rows, scale, wide_when_small)[0], 300)
+
+    def test_text_that_fits_its_width_keeps_its_scale(self):
+        times = next(section for section in hud.RACE_SECTIONS if section.name == 'times')
+        rows = [hud.Row('Last', 'medium')]
+        self.assertEqual(hud.fitted_scale(times, 100, 1.0, ink, 900, rows, measure), 1.0)
+
+    def test_the_pedal_bars_count_across(self):
+        speed = next(section for section in hud.RACE_SECTIONS if section.name == 'speed')
+        rows = [hud.Row('000 km/h', 'medium')]
+        scale = hud.fitted_scale(speed, 100, 1.0, ink, 150, rows, measure)
+        self.assertLessEqual(hud.content_size(rows, scale, measure)[0] + hud.pedal_space(scale), 150)
+
     def test_content_that_fits_keeps_its_scale(self):
         self.assertEqual(hud.fitted_scale(self.TIME, 100, 1.0, ink), 1.0)
 
@@ -503,7 +524,7 @@ class MatchSizesTests(unittest.TestCase):
     def font(self, name, box):
         section = self.SECTIONS[name]
         normal = self.normal(name)
-        return hud._drawn_font(section, box[2:], normal[2:], 1.0, ink)
+        return hud._drawn_font(section, box[2:], normal[2:], 1.0, ink, size_measure)
 
     def test_every_section_gets_the_largest_font_and_one_width(self):
         boxes = {

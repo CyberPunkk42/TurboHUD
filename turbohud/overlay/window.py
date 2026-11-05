@@ -275,7 +275,7 @@ class SectionWindow(QWidget):
         bars = pedal_space(self.theme.scale) if self.section.pedals else 0
         needed = content_size(rows, self.theme.scale, text_width)[0] + bars if rows else None
         scale = self.theme.scale * section_scale((self.width(), self.height()), self.base[1], needed)
-        scale = fitted_scale(self.section, self.height(), scale, text_ink)
+        scale = fitted_scale(self.section, self.height(), scale, text_ink, self.width(), rows, text_width)
         left = 0
         down = content_shift(self.section, self.height(), scale, text_ink)
         if self.locked and self.backdrop and rows:

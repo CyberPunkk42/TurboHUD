@@ -208,6 +208,30 @@ class RedrawTests(unittest.TestCase):
         narrow, wide = (hud_lines([Row(text, 'medium')])[0] for text in ('11:11', '00:00'))
         self.assertEqual(centred_x(narrow, 400, 14), centred_x(wide, 400, 14))
 
+    def test_text_stays_inside_narrow_boxes_at_any_size(self):
+        from PySide6.QtGui import QColor
+
+        from turbohud.core.hud import RACE_SECTIONS, Row
+        from turbohud.core.settings import Theme
+        from turbohud.overlay.window import SectionWindow
+
+        class Native:
+            def raise_window(self, window):
+                return 'test'
+
+        section = next(s for s in RACE_SECTIONS if s.name == 'times')
+        rows = [Row('Last 0:48.442   Best 0:48.442', 'medium')]
+        for width, height in ((120, 60), (160, 60), (200, 120), (240, 40), (284, 69), (391, 88)):
+            with self.subTest(width=width, height=height):
+                window = SectionWindow(Native(), Theme(), section)
+                self.addCleanup(window.close)
+                window.resize(width, height)
+                window.show_content(rows)
+                image = window.grab().toImage()
+                # The window cuts the text off at its edge: look for ink in its last column.
+                edge = [image.pixelColor(image.width() - 1, y) for y in range(image.height())]
+                self.assertEqual([c for c in edge if c.alpha() > 0 and c != QColor(0, 0, 0, 0)], [])
+
     def test_each_line_is_centred_on_its_own(self):
         from turbohud.core.hud import Row
 
@@ -346,7 +370,8 @@ class MovePanelPresetTests(unittest.TestCase):
                 needed = hud.base_size(section, theme.scale, text_width)[0]
                 # As paintEvent works it out.
                 scale = theme.scale * hud.section_scale(box[2:], base, needed)
-                scale = hud.fitted_scale(section, box[3], scale, text_ink)
+                rows = list(section.samples[0])
+                scale = hud.fitted_scale(section, box[3], scale, text_ink, box[2], rows, text_width)
                 fonts.add(hud.hud_lines(list(section.samples[0]), scale)[0].size)
             with self.subTest(group=names):
                 self.assertEqual(len(fonts), 1, matched)

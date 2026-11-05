@@ -64,6 +64,11 @@ See `docs/IMPROVEMENT_BACKLOG.md`. In short:
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-05: Text no longer runs past the side of a narrow box, reported by the user on the
+  last and best lap section. Text is not as wide as its font size says (in the Mac's system
+  font, a quarter wider at 8 px and 4% at 40 px than in proportion to 20 px), so scaling a
+  measurement at one size could leave it wider than the box. Sections now measure it at the
+  size they draw it, and so does a group's matching.
 - 2026-11-05: Follow-up after a race with the fix: reads stayed at about 30 ms, down from about
   1030 ms, and the user felt it was better but not there yet. Reads now come 20 times a second
   from start to start (they waited 50 ms after each, so about 12); the text images are limited

@@ -368,7 +368,7 @@ def pedal_bars(width, height, scale, throttle, brake, inset=4):
 
 TIGHT_PAD = 3  # room between a box's edge and its content, at scale 1
 FIT_ROOM = 2  # pixels kept free in a box that its content only just fits
-FIT_STEP, FIT_STEPS = 0.98, 20  # how far fitted_scale goes, and how often at most
+FIT_STEP, FIT_STEPS = 0.98, 40  # how far fitted_scale goes, and how often at most
 OLD_LABEL_SPACE = 14  # room boxes kept for the section's name before they were tight
 
 
@@ -401,13 +401,25 @@ def tight_height(section, scale, ink):
     return round(bottom - top + 2 * max(1, round(TIGHT_PAD * scale)))
 
 
-def fitted_scale(section, height, scale, ink):
+def fitted_scale(section, height, scale, ink, width=None, rows=(), measure=None):
     """`scale`, a little smaller if the content would not fit a box of `height`: font
     sizes and gaps round to whole pixels, which in a long list adds up. As small as the
-    box allows, within reason: a box can be shorter than any readable text."""
-    for _step in range(FIT_STEPS):
+    box allows, within reason: a box can be shorter than any readable text. With `width`,
+    `rows` and `measure` the same goes across: text is not as wide as its font size says
+    (at 8 px, a quarter wider than in proportion to 20 px in the Mac's system font), so
+    only measuring it at the size it is drawn tells whether it fits."""
+
+    def fits(scale):
         top, bottom = ink_span(section, scale, ink)
-        if bottom - top + FIT_ROOM <= height:
+        if bottom - top + FIT_ROOM > height:
+            return False
+        if width is None or not rows:
+            return True
+        bars = pedal_space(scale) if section.pedals else 0
+        return content_size(rows, scale, measure)[0] + bars <= width
+
+    for _step in range(FIT_STEPS):
+        if fits(scale):
             break
         scale *= FIT_STEP
     return scale
@@ -461,11 +473,12 @@ def _first_font(section, scale):
     return getattr(Sizes.for_scale(scale), section.samples[0][0].style)
 
 
-def _drawn_font(section, size, normal_size, scale, ink):
+def _drawn_font(section, size, normal_size, scale, ink, measure):
     """The font size a section's first row is drawn at in a box of `size` (the painting's
     own steps); `normal_size` is the box at the theme's `scale`."""
     share = section_scale(size, normal_size[1], normal_size[0])
-    return _first_font(section, fitted_scale(section, size[1], scale * share, ink))
+    rows = section.samples[0]
+    return _first_font(section, fitted_scale(section, size[1], scale * share, ink, size[0], rows, measure))
 
 
 def match_sizes(places, scale, measure, ink):
@@ -478,7 +491,8 @@ def match_sizes(places, scale, measure, ink):
         for section in places
     }
     font = max(
-        _drawn_font(section, place[2:], normal[section], scale, ink) for section, place in places.items()
+        _drawn_font(section, place[2:], normal[section], scale, ink, measure)
+        for section, place in places.items()
     )
     heights, needed = {}, 0
     for section, size in normal.items():
@@ -491,7 +505,10 @@ def match_sizes(places, scale, measure, ink):
             ),
             near,
         )
-        needed = max(needed, size[0] * heights[section] / size[1])
+        # Both: what the height's share of the normal width allows the text, and how wide
+        # it really is at that size.
+        share = heights[section] / size[1]
+        needed = max(needed, size[0] * share, base_size(section, scale * share, measure)[0])
     return {
         section.name: (place[0], place[1], math.ceil(needed), heights[section])
         for section, place in places.items()
