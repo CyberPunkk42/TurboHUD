@@ -124,6 +124,7 @@ def build(
     event_running=None,
     recorded=None,
     draft=False,
+    tire_ticks=0,
 ):
     """A fake race; `car` is the car's (x, z) and `gates` the checkpoint lines, both
     optional like in a game without them."""
@@ -277,10 +278,12 @@ def build(
                     ('maxHitPoints', 0x50, False, 0x08),
                     ('hitPoints', 0x54, False, 0x08),
                     ('inPitArea', 0x58, False, 0x02),
+                    ('tireCompoundAndChangeTicks', 0x5C, False, 0x08),
                 ],
             )
         )
         g.put(state + 0x40, struct.pack('<i', 42_000))
+        g.put(state + 0x5C, struct.pack('<i', tire_ticks))
         g.put(state + 0x50, struct.pack('<ii', 500, health if health is not None else 500))
         g.put(state + 0x58, bytes([pit_area]))
         g.put(state + 0x48, struct.pack('<i', 576_000))
@@ -719,6 +722,13 @@ class CarTests(unittest.TestCase):
         self.assertAlmostEqual(car.tire_laps, 36.0)
         self.assertAlmostEqual(car.kmh, 180.0)
 
+    def test_a_tire_change_shows_as_gradual_though_the_game_holds_the_wear(self):
+        self.assertAlmostEqual(self.car(tire_change=0.0).tires_left, 0.9)
+        self.assertAlmostEqual(self.car(tire_change=0.5).tires_left, 0.95)
+        self.assertAlmostEqual(self.car(tire_change=1.0).tires_left, 1.0)
+        self.assertAlmostEqual(self.car(tire_change=0.5, wear_per_lap=144_000).tire_laps, 38.0)
+        self.assertEqual(self.car(tire_change=0.5).tire_wear, 576_000)
+
     def test_off_in_the_event(self):
         car = self.car(fuel_on=False, tires_on=False)
         self.assertIsNone(car.fuel_left)
@@ -1124,6 +1134,18 @@ class CarTests(unittest.TestCase):
         )
         me = next(p for p in reader.read().players if p.local)
         self.assertTrue(me.in_pit)
+
+    def test_reader_follows_a_tire_change(self):
+        def change(ticks):
+            reader = build(
+                [10_000], laps_completed=0, clock=20_000, limit=0, name='A', car=(1.0, 2.0), tire_ticks=ticks
+            )
+            return reader.read().car.tire_change
+
+        self.assertEqual(change(0), 0.0)
+        self.assertEqual(change(600), 0.25)
+        self.assertEqual(change(2400), 1.0)
+        self.assertEqual(change(2401), 0.0)  # another compound's bits: not a measure of progress
 
     def test_reader_reads_each_cars_position_for_the_radar(self):
         reader = build(

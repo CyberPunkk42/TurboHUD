@@ -256,6 +256,7 @@ def _passed(times, k):
 
 
 MAX_TIRE_WEAR = 5_760_000  # TS.TireWearSettings.MaxTireWear (a constant): worn out
+TIRE_CHANGE_END = 2400  # where TS.VehicleState.tireCompoundAndChangeTicks ends a tire change
 KMH_PER_MPH = 1.609344
 SPEED_TO_KMH = 3.6  # m_forwardSpeed is taken as metres per second (not yet compared in game)
 PER_LAP_LAPS = 3  # laps averaged for fuel and tire use per lap
@@ -309,6 +310,7 @@ class CarState:
     draft: float | None = None  # 0 to 1: how strong the slipstream is, of the event's most; None: no drafting
     draft_downforce_loss: float = 0.0  # 0 to 1: downforce lost to the slipstream now
     draft_last_lap: float | None = None  # 0 to 1: share of the last lap spent in a slipstream
+    tire_change: float = 0.0  # 0 to 1: how far a tire change in the pits has come
 
     @property
     def damage_effect(self):
@@ -341,10 +343,16 @@ class CarState:
         return min(max(1 - self.fuel_used / self.fuel_tank, 0.0), 1.0)
 
     @property
+    def tire_wear_shown(self):
+        """The wear to show: during a tire change it falls with the change's progress. The
+        game holds tireWear until the change ends and only then sets it to 0."""
+        return self.tire_wear * (1 - self.tire_change)
+
+    @property
     def tires_left(self):
         if not self.tires_on:
             return None
-        return min(max(1 - self.tire_wear / MAX_TIRE_WEAR, 0.0), 1.0)
+        return min(max(1 - self.tire_wear_shown / MAX_TIRE_WEAR, 0.0), 1.0)
 
     @property
     def fuel_laps(self):
@@ -357,7 +365,7 @@ class CarState:
     def tire_laps(self):
         if self.tires_left is None or not self.wear_per_lap:
             return None
-        return (MAX_TIRE_WEAR - self.tire_wear) / self.wear_per_lap
+        return (MAX_TIRE_WEAR - self.tire_wear_shown) / self.wear_per_lap
 
     @property
     def kmh(self):
@@ -391,6 +399,10 @@ SPECTATE_STILL = 5.0  # seconds a watched race's clock may stand before it count
 CLIENT_LOG_EVERY = 2.0  # seconds between looks at TSU's log while it says no event runs
 QUANTIZED_ZERO, QUANTIZED_SCALE = 1 << 20, 1024  # TS.QuantizedVehicleState positions
 RECORDER_STALE = 10_000  # race clock (1 s) without a new recorder tick: it does not run
+PIT_STOPPED_SPEED = 0.5  # game units a second: slower than this in the pits, the car stands
+PIT_STOP_LEAST = 0.25  # seconds standing before the bracket shows: less is a passing hold-up
+PIT_STOP_MOST = 45.0  # seconds standing: longer shows plain PIT, the driver may have retired
+PIT_TIME_SHOWN = 6  # seconds the times stay next to PIT once the car has left the pits
 STRING_LENGTH, STRING_CHARS = 0x10, 0x14  # System.String: length, then UTF-16 text
 MAX_NAME = 64
 
@@ -411,6 +423,8 @@ class PlayerState:
     forward: tuple | None = None  # the (x, z) way its nose points
     estimated: bool = False  # the position is worked out (DeadReckoning), not read
     draft_drag: float | None = None  # its air resistance multiplier: under 1 while it drafts
+    pit_seconds: float | None = None  # seconds from pit entry to pit exit, while that is shown
+    pit_stopped: float = 0.0  # of those, seconds standing still (refuelling, tires, repairs)
 
     @functools.cached_property
     def passed(self):
@@ -642,6 +656,7 @@ class LapReader:
             # A new event (or the first read): start the caches afresh.
             self._state, self._offsets, self._laps, self._gates = state, {}, {}, None
             self._reckoning = DeadReckoning()
+            self._pit_stops = PitStops()
             self._recorder_tick, self._recorder_moved = None, 0
             self._draft, self._draft_time, self._draft_clock = None, {}, None
             self._fuel_history, self._wear_history, self._fuel_marks, self._types = {}, {}, {}, {}
@@ -715,7 +730,7 @@ class LapReader:
                     else p
                     for p, i in zip(players, self._player_indices)
                 )
-        return self._reckoning.fill(players, gates, clock)
+        return self._pit_stops.update(self._reckoning.fill(players, gates, clock), clock)
 
     def _watched_race(self, state):
         """The race as a spectator sees it: all the players and no car of the player's
@@ -807,7 +822,18 @@ class LapReader:
             slowed_from=slowed_from,
             draft=draft,
             draft_downforce_loss=downforce_loss,
+            tire_change=self._tire_change(state),
         )
+
+    def _tire_change(self, state):
+        """How far a tire change has come, 0 to 1. tireCompoundAndChangeTicks counted from 0
+        to TIRE_CHANGE_END in the stops seen (12 s), with the compound in the same field.
+        Above that it holds another compound's bits, not seen yet: 0, so the bar stays true."""
+        try:
+            ticks = self._number('vstate', state, 'tireCompoundAndChangeTicks')
+        except (NotFound, ReadError):
+            return 0.0
+        return ticks / TIRE_CHANGE_END if 0 < ticks <= TIRE_CHANGE_END else 0.0
 
     def _drafting(self, updater):
         """(draft 0 to 1, downforce lost 0 to 1) of the local car, or (None, 0.0) without
@@ -1199,6 +1225,62 @@ class DeadReckoning:
                     player = dataclasses.replace(player, position=worked_out, estimated=True)
             filled.append(player)
         return tuple(filled)
+
+
+class PitStops:
+    """Two timers for each car in the pits: from pit entry to pit exit, and how long it
+    stood still in all, both live and kept for PIT_TIME_SHOWN after the exit. Standing over
+    PIT_STOP_MOST shows neither: the driver may have retired. Timed with the race clock
+    from the pit area and the velocity, which every car has, online too."""
+
+    def __init__(self):
+        self._visits = {}  # name: [race clock at entry, seconds stood, race clock when it stopped or None]
+        self._kept = {}  # name: (seconds in the pits, seconds stood, race clock when to stop showing them)
+
+    def update(self, players, clock):
+        """`players` with the pit timers set on those to show them. Call once per read."""
+        return tuple(self._updated(player, clock) for player in players)
+
+    def _updated(self, player, clock):
+        name = player.name
+        visit = self._visits.get(name)
+        if player.in_pit:
+            self._kept.pop(name, None)
+            if visit is None:
+                visit = self._visits[name] = [clock, 0.0, None]
+            self._stand(visit, player, clock)
+            seconds, stood = (clock - visit[0]) / UNITS_PER_SECOND, _stood(visit, clock)
+            if stood > PIT_STOP_MOST:
+                return player
+            return dataclasses.replace(player, pit_seconds=seconds, pit_stopped=stood)
+        if visit is not None:
+            del self._visits[name]
+            seconds, stood = (clock - visit[0]) / UNITS_PER_SECOND, _stood(visit, clock)
+            if stood <= PIT_STOP_MOST:
+                self._kept[name] = (seconds, stood, clock + PIT_TIME_SHOWN * UNITS_PER_SECOND)
+        kept = self._kept.get(name)
+        if kept is None:
+            return player
+        if clock >= kept[2]:
+            del self._kept[name]
+            return player
+        return dataclasses.replace(player, pit_seconds=kept[0], pit_stopped=kept[1])
+
+    @staticmethod
+    def _stand(visit, player, clock):
+        """Note in `visit` whether the car stands now. Without a velocity it goes on as it was."""
+        if player.velocity is None:
+            return
+        standing = math.hypot(*player.velocity) < PIT_STOPPED_SPEED
+        if standing and visit[2] is None:
+            visit[2] = clock
+        elif not standing and visit[2] is not None:
+            visit[1], visit[2] = _stood(visit, clock), None
+
+
+def _stood(visit, clock):
+    """The seconds a car in the pits has stood still so far."""
+    return visit[1] + ((clock - visit[2]) / UNITS_PER_SECOND if visit[2] is not None else 0.0)
 
 
 def _known_position(x, z):
@@ -1652,6 +1734,27 @@ def shown_players(players, max_rows=MAX_PLAYER_ROWS, order=None):
     return [order[0]] + order[first : first + around]
 
 
+PIT_TAIL = '  PIT'
+PIT_TAIL_ROOM = '  PIT 00.0s'  # what the player list's sample leaves room for
+
+
+def _pit_time(player):
+    """The time from pit entry to pit exit, for the lists."""
+    return f'PIT {player.pit_seconds:.1f}s'
+
+
+def _pit_bracket(player):
+    """The time it stood still, in brackets, or nothing yet."""
+    return f'({player.pit_stopped:.2f}s)' if player.pit_stopped >= PIT_STOP_LEAST else ''
+
+
+def _pit_tail(player):
+    """PIT with its timers for the player list, also for a while after the pit exit."""
+    if player.pit_seconds is None:
+        return PIT_TAIL if player.in_pit else ''
+    return f'  {_pit_time(player)} {_pit_bracket(player)}'.rstrip()
+
+
 def players_rows(players, order=None, clock=None, gates=(), watching=False):
     """The player list: position, flag, name, PIT, and the gap to the local player
     (live with the race `clock` and the checkpoint lines `gates`, see gap). `watching`:
@@ -1661,9 +1764,13 @@ def players_rows(players, order=None, clock=None, gates=(), watching=False):
         me = (ranked(players) if order is None else order)[0]
     rows = []
     for position, player in shown_players(players, order=order):
+        tail = _pit_tail(player)
+        # The section is sized for a full name and the first timer: the bracket takes its
+        # room from the name.
+        most = MAX_NAME_SHOWN - max(len(tail) - len(PIT_TAIL_ROOM), 0)
         name = player.name or '?'
-        if len(name) > MAX_NAME_SHOWN:
-            name = name[: MAX_NAME_SHOWN - 1] + '…'
+        if len(name) > most:
+            name = name[: most - 1] + '…'
         found = gap(player, me, clock, gates) if me is not None and player is not me else None
         color = (
             'text' if watching or found is None or found[1] == 0 else ('behind' if found[1] < 0 else 'ahead')
@@ -1673,7 +1780,7 @@ def players_rows(players, order=None, clock=None, gates=(), watching=False):
                 f'{position}. {name}',
                 'small',
                 'accent' if player.local else 'text',
-                tail='  PIT' if player.in_pit else '',
+                tail=tail,
                 tail_color='lift',
                 flag=flag_code(player.flag) or flag_text(player.flag),
                 right=gap_text(found),
@@ -1732,18 +1839,29 @@ def lap_times_rows(players, order=None, clock=0):
             name = name[: MAX_NAME_SHOWN - 1] + '…'
         best = bests[id(player)]
         running = player_current_lap(player, clock)
+        timed = player.pit_seconds is not None and not player.finished
+        plain_pit = player.in_pit and not player.finished and not timed
+        bracket = _pit_bracket(player) if timed else ''
+        time_now = 'Fin' if player.finished else format_tenths(running) if running is not None else '-'
         rows.append(
             Row(
                 f'{position}. {name}',
                 'small',
                 'accent' if player.local else 'text',
+                tail=f'  L{player_lap_number(player)}',
                 flag=flag_code(player.flag) or flag_text(player.flag),
-                middle=format_time(best),
-                middle_color='ahead' if best is not None and best == fastest else 'text',
-                right='Fin' if player.finished else format_tenths(running) if running is not None else '-',
+                middle=_pit_time(player) if timed else format_time(best),
+                middle_color='lift' if timed else 'ahead' if best is not None and best == fastest else 'text',
+                right='PIT' if plain_pit else bracket or time_now,
+                right_color='lift' if plain_pit or bracket else 'text',
             )
         )
     return rows
+
+
+def player_lap_number(player):
+    """The lap `player` is on, counted from 1; once finished, the laps it drove."""
+    return player.laps_completed if player.finished else player.laps_completed + 1
 
 
 BLUE_FULL = 0.5  # seconds: this close or closer, the flag is fully visible

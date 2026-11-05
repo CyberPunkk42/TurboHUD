@@ -126,6 +126,151 @@ class RowsTests(unittest.TestCase):
         self.assertEqual(len(rows[0].text), len('1. ') + race.MAX_NAME_SHOWN)
 
 
+SECOND = race.UNITS_PER_SECOND
+
+
+def in_pits(name='Car', moving=False, in_pit=True):
+    velocity = (19.0, 3.0) if moving else (0.0, 0.0)
+    return race.PlayerState(name, GERMANY, 1, (lap(0),), False, in_pit, False, velocity=velocity)
+
+
+class PitStopTests(unittest.TestCase):
+    def visit(self, pits, stood, rolling=10):
+        """In at 0, rolling for `rolling` s, standing for `stood`, out; the car at the exit."""
+        pits.update([in_pits(moving=True)], 0)
+        pits.update([in_pits()], rolling * SECOND)
+        end = (rolling + stood) * SECOND
+        pits.update([in_pits(moving=True)], end)
+        return pits.update([in_pits(moving=True, in_pit=False)], end + 5 * SECOND)[0]
+
+    def test_the_first_timer_runs_from_the_entry(self):
+        pits = race.PitStops()
+        self.assertEqual(pits.update([in_pits(moving=True)], 7 * SECOND)[0].pit_seconds, 0.0)
+        car = pits.update([in_pits(moving=True)], 10 * SECOND)[0]
+        self.assertEqual((car.pit_seconds, car.pit_stopped), (3.0, 0.0))
+
+    def test_nothing_outside_the_pits(self):
+        car = race.PitStops().update([in_pits(moving=True, in_pit=False)], SECOND)[0]
+        self.assertIsNone(car.pit_seconds)
+
+    def test_the_second_timer_runs_only_while_standing(self):
+        pits = race.PitStops()
+        pits.update([in_pits(moving=True)], 0)
+        pits.update([in_pits()], 10 * SECOND)
+        standing = pits.update([in_pits()], 13 * SECOND)[0]
+        self.assertEqual((standing.pit_seconds, standing.pit_stopped), (13.0, 3.0))
+        pits.update([in_pits(moving=True)], 22 * SECOND)
+        rolling = pits.update([in_pits(moving=True)], 25 * SECOND)[0]
+        self.assertEqual((rolling.pit_seconds, rolling.pit_stopped), (25.0, 12.0))
+
+    def test_standing_twice_adds_up(self):
+        pits = race.PitStops()
+        for at, moving in ((0, False), (2, True), (4, False), (7, True)):
+            car = pits.update([in_pits(moving=moving)], at * SECOND)[0]
+        self.assertEqual(car.pit_stopped, 5.0)
+
+    def test_both_stay_for_six_seconds_after_the_exit(self):
+        pits = race.PitStops()
+        self.visit(pits, 12)  # the exit is read at 27
+        kept = pits.update([in_pits(moving=True, in_pit=False)], 32 * SECOND)[0]
+        self.assertEqual((kept.pit_seconds, kept.pit_stopped), (27.0, 12.0))
+
+    def test_they_go_six_seconds_after_the_exit_was_read(self):
+        pits = race.PitStops()
+        pits.update([in_pits()], 0)
+        pits.update([in_pits(moving=True)], 3 * SECOND)
+        out = in_pits(moving=True, in_pit=False)
+        self.assertEqual(pits.update([out], 4 * SECOND)[0].pit_seconds, 4.0)
+        self.assertEqual(pits.update([out], 10 * SECOND - 1)[0].pit_seconds, 4.0)
+        self.assertIsNone(pits.update([out], 10 * SECOND)[0].pit_seconds)
+
+    def test_standing_over_45_seconds_shows_plain_pit(self):
+        pits = race.PitStops()
+        pits.update([in_pits()], 0)
+        self.assertEqual(pits.update([in_pits()], 45 * SECOND)[0].pit_stopped, 45.0)
+        car = pits.update([in_pits()], 46 * SECOND)[0]
+        self.assertIsNone(car.pit_seconds)
+        self.assertTrue(car.in_pit)
+        self.assertEqual(race.players_rows([car])[0].tail, '  PIT')
+        self.assertIsNone(pits.update([in_pits(moving=True, in_pit=False)], 47 * SECOND)[0].pit_seconds)
+
+    def test_a_new_visit_starts_afresh(self):
+        pits = race.PitStops()
+        self.visit(pits, 12)
+        pits.update([in_pits(moving=True, in_pit=False)], 30 * SECOND)
+        car = pits.update([in_pits(moving=True)], 31 * SECOND)[0]
+        self.assertEqual((car.pit_seconds, car.pit_stopped), (0.0, 0.0))
+
+    def test_each_car_has_its_own_timers(self):
+        pits = race.PitStops()
+        pits.update([in_pits('A'), in_pits('B', moving=True, in_pit=False)], 0)
+        pits.update([in_pits('A'), in_pits('B')], 2 * SECOND)
+        a, b = pits.update([in_pits('A'), in_pits('B')], 5 * SECOND)
+        self.assertEqual((a.pit_seconds, b.pit_seconds), (5.0, 3.0))
+
+    def test_without_a_velocity_the_second_timer_goes_on_as_it_was(self):
+        pits = race.PitStops()
+        pits.update([in_pits()], 0)
+        unknown = dataclasses.replace(in_pits(), velocity=None)
+        self.assertEqual(pits.update([unknown], SECOND)[0].pit_stopped, 1.0)
+
+    def test_the_player_list_shows_the_timers_next_to_pit(self):
+        car = player('Me', [lap(0)], local=True, in_pit=True)
+        self.assertEqual(race.players_rows([car])[0].tail, '  PIT')
+        rolling = dataclasses.replace(car, pit_seconds=8.44)
+        self.assertEqual(race.players_rows([rolling])[0].tail, '  PIT 8.4s')
+        standing = dataclasses.replace(rolling, pit_seconds=24.5, pit_stopped=12.034)
+        self.assertEqual(race.players_rows([standing])[0].tail, '  PIT 24.5s (12.03s)')
+        out = dataclasses.replace(standing, in_pit=False)
+        self.assertEqual(race.players_rows([out])[0].tail, '  PIT 24.5s (12.03s)')
+
+    def test_a_passing_hold_up_gets_no_bracket(self):
+        car = dataclasses.replace(
+            player('Me', [lap(0)], local=True, in_pit=True), pit_seconds=8.0, pit_stopped=0.1
+        )
+        self.assertEqual(race.players_rows([car])[0].tail, '  PIT 8.0s')
+
+    def test_the_bracket_takes_its_room_from_a_long_name(self):
+        car = dataclasses.replace(player('A' * 30, [lap(0)], local=True), pit_seconds=24.5, pit_stopped=12.0)
+        row = race.players_rows([car])[0]
+        room = len('1. ') + race.MAX_NAME_SHOWN + len(race.PIT_TAIL_ROOM)
+        self.assertEqual(len(row.text + row.tail), room)
+
+
+class LapTimesPitAndLapTests(unittest.TestCase):
+    def row(self, car):
+        return race.lap_times_rows([car], clock=50_000)[1]
+
+    def test_each_driver_shows_the_lap_it_is_on(self):
+        car = player('Me', [lap(0), lap(40_000), lap(80_000)], laps=2, local=True)
+        self.assertEqual(self.row(car).tail, '  L3')
+
+    def test_a_finished_driver_shows_the_laps_it_drove(self):
+        car = player('Me', [lap(0), lap(40_000), lap(80_000)], laps=2, local=True, finished=True)
+        self.assertEqual((self.row(car).tail, self.row(car).right), ('  L2', 'Fin'))
+
+    def test_the_timers_stand_in_the_columns_while_they_show(self):
+        car = dataclasses.replace(
+            player('Me', [lap(0)], laps=0, local=True, in_pit=True), pit_seconds=24.5, pit_stopped=12.034
+        )
+        row = self.row(car)
+        self.assertEqual((row.middle, row.middle_color), ('PIT 24.5s', 'lift'))
+        self.assertEqual((row.right, row.right_color), ('(12.03s)', 'lift'))
+
+    def test_before_it_stands_the_running_time_stays(self):
+        car = dataclasses.replace(player('Me', [lap(0)], laps=0, local=True, in_pit=True), pit_seconds=3.0)
+        row = self.row(car)
+        self.assertEqual((row.middle, row.right, row.right_color), ('PIT 3.0s', '0:05.0', 'text'))
+
+    def test_plain_pit_after_a_long_stand(self):
+        row = self.row(player('Me', [lap(0)], laps=0, local=True, in_pit=True))
+        self.assertEqual((row.right, row.right_color), ('PIT', 'lift'))
+
+    def test_otherwise_as_ever(self):
+        row = self.row(player('Me', [lap(0)], laps=0, local=True))
+        self.assertEqual((row.right, row.right_color), ('0:05.0', 'text'))
+
+
 class SpeedUnitTests(unittest.TestCase):
     def test_mph(self):
         car = race.CarState(True, 0, 1, True, 0, 200 / 3.6)
