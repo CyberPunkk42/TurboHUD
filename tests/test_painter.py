@@ -39,6 +39,14 @@ class TextPathTests(unittest.TestCase):
 
 
 @unittest.skipUnless(importlib.util.find_spec('PySide6'), 'needs Qt')
+class OutlineTests(unittest.TestCase):
+    def test_the_outline_is_thick_enough_to_read_without_the_tint(self):
+        from turbohud.hud.painter import outline_width
+
+        self.assertEqual(outline_width(8), 3.0)  # 1.5 px outside the letter
+        self.assertEqual(outline_width(70), 10.0)
+
+
 class TextImageTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -304,7 +312,10 @@ class RedrawTests(unittest.TestCase):
             ('delta', 'medium', '+1.111 vs best', '+8.800 vs best', (230, 26)),
         ):
             with self.subTest(section=name):
-                self.assertEqual(tall(first, style, name, size), tall(second, style, name, size))
+                # Within a pixel: round digits reach a little further than flat ones.
+                self.assertAlmostEqual(
+                    tall(first, style, name, size), tall(second, style, name, size), delta=1
+                )
 
     def test_the_tint_does_not_follow_the_digits(self):
         from turbohud.core.hud import Row

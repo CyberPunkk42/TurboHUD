@@ -590,3 +590,7 @@ its "Recent changes".
 - 2026-11-05: The delta's number has a slot as wide as its widest form, so " vs best" also stays
   when the number gets another digit. The log says when a race was found by search and not
   where the last one was.
+- 2026-11-05: A stronger outline round the text, as it was hard to read without the tint (the
+  user): 3 px or a seventh of the font size instead of 2 px or a tenth, half of it outside the
+  letter. Drawing it through the text images looked the same as filling the shapes before, so
+  the images were not the cause.

@@ -61,13 +61,19 @@ def text_path(text, size):
     return path.simplified()
 
 
+def outline_width(size):
+    """The width of the stroke round a letter, half of it outside: enough to read light text
+    on the game's light road and sky, also without the tint behind it."""
+    return max(3.0, size / 7)
+
+
 @lru_cache(maxsize=512)
 def outline_path(text, size):
     """The dark outline round a line of text, as a shape to fill. Stroking the text
     each time it is drawn took most of a frame with many texts (the lap times list);
     filling a kept shape is about five times quicker."""
     stroker = QPainterPathStroker()
-    stroker.setWidth(max(2.0, size / 10))
+    stroker.setWidth(outline_width(size))
     stroker.setCapStyle(Qt.RoundCap)
     stroker.setJoinStyle(Qt.RoundJoin)
     return stroker.createStroke(text_path(text, size))
@@ -130,13 +136,13 @@ def cap_height(size):
 def text_ink(text, size):
     """How far a line of HUD text reaches (above, below) its baseline, with its outline."""
     box = text_path(text, size).boundingRect()
-    outline = max(2.0, size / 10) / 2
+    outline = outline_width(size) / 2
     return -box.top() + outline, box.bottom() + outline
 
 
 def text_width(text, size):
     """How wide a line of HUD text is, in pixels, with its outline."""
-    return text_path(text, size).boundingRect().right() + max(2.0, size / 10)
+    return text_path(text, size).boundingRect().right() + outline_width(size)
 
 
 def draw_bars(painter, bars):
