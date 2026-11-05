@@ -602,3 +602,9 @@ its "Recent changes".
 - 2026-11-05: A Tint tick box for each text section in the move-mode panel, asked for by the
   user: kept with the section and in presets, with Undo. The option for all sections now turns
   it on or off for every one at once; a file from before takes what it had for all.
+- 2026-11-05: The proximity radar has no fill behind it, its cars are drawn larger (1.4 times,
+  and never under 3% of the radar's width), and the settings window sets when the blue flag
+  (1 to 10 s, 2 s by default) and the radar (0.2 to 3 s, 0.5 s by default) show; all asked for
+  by the user. A longer radar time zooms the radar out so that such a car still fits.
+- 2026-11-05: The settings window can be dragged by its background, like the move-mode panel,
+  reported by the user.

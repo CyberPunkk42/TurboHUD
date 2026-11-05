@@ -1320,13 +1320,19 @@ def status_text(snapshot, platform=sys.platform):
     return 'waiting for a race'
 
 
-def race_sections(snapshot, now, speed_unit='kmh', standings=None, radar=None, track_map=None):
+BLUE_FROM = 2.0  # seconds: a car about to lap the local player this close shows the flag
+
+
+def race_sections(
+    snapshot, now, speed_unit='kmh', standings=None, radar=None, track_map=None, blue_within=BLUE_FROM
+):
     """{section name: rows} for a live-reader snapshot (see core.hud.RACE_SECTIONS); a
     section with nothing to show has no rows. Nothing before the grid: in the menus, the
     lobby and while a race loads the HUD keeps out of the way (status_text says why).
     `standings` (a Standings) holds the player list's order steady while cars pass;
     `radar` (a Radar) follows the cars' movement for the proximity radar; `track_map`
-    (a core.trackmap.TrackMap) gives the track map, in the player list's order."""
+    (a core.trackmap.TrackMap) gives the track map, in the player list's order;
+    `blue_within` is how many seconds behind a car shows the blue flag."""
     if not on_grid(snapshot, now):
         return {}
     state = snapshot.state
@@ -1349,7 +1355,9 @@ def race_sections(snapshot, now, speed_unit='kmh', standings=None, radar=None, t
         order = standings.order(state.players, now) if standings is not None else None
         sections['players'] = players_rows(state.players, order, state.clock, state.gates)
         sections['laptimes'] = lap_times_rows(state.players, order, clock_now(snapshot, now))
-        opacity = blue_flag_opacity(blue_flag(state.players, clock_now(snapshot, now)))
+        opacity = blue_flag_opacity(
+            blue_flag(state.players, clock_now(snapshot, now), blue_within), blue_within
+        )
         if opacity is not None:
             sections['blue'] = opacity
         view = radar.update(state.players, snapshot.read_at, state.draft) if radar is not None else None
@@ -1764,14 +1772,14 @@ def lap_times_rows(players, order=None, clock=0):
     return rows
 
 
-BLUE_FROM = 2.0  # seconds: a car about to lap the local player this close shows the flag
 BLUE_FULL = 0.5  # seconds: this close or closer, the flag is fully visible
 BLUE_FAINT = 0.2  # the flag's opacity at BLUE_FROM: faint, but visible
 
 
-def blue_flag(players, now):
+def blue_flag(players, now, within=BLUE_FROM):
     """Seconds until the nearest car that is about to lap the local player reaches them
-    on the track, or None when no such car is within BLUE_FROM. `now` is the race clock.
+    on the track, or None when no such car is `within` that many seconds. `now` is the
+    race clock.
 
     A car is about to lap the local player when it is ahead in the race but behind on
     the track: it has passed more checkpoints, and the difference, taken round a lap, is
@@ -1809,17 +1817,17 @@ def blue_flag(players, now):
         if same + 1 < len(mine) and mine[same + 1] != NO_CHECKPOINT:
             units = max(units, now - mine[same + 1])
         seconds = units / UNITS_PER_SECOND
-        if seconds <= BLUE_FROM and (nearest is None or seconds < nearest):
+        if seconds <= within and (nearest is None or seconds < nearest):
             nearest = seconds
     return nearest
 
 
-def blue_flag_opacity(seconds):
-    """How visible the blue flag is (0 to 1) for a car `seconds` behind: BLUE_FAINT at
+def blue_flag_opacity(seconds, within=BLUE_FROM):
+    """How visible the blue flag is (0 to 1) for a car `seconds` behind, from `within`: BLUE_FAINT at
     BLUE_FROM, rising evenly to 1 at BLUE_FULL; None (no flag) without a car."""
-    if seconds is None or seconds > BLUE_FROM:
+    if seconds is None or seconds > within:
         return None
-    share = min(max((BLUE_FROM - seconds) / (BLUE_FROM - BLUE_FULL), 0.0), 1.0)
+    share = min(max((within - seconds) / max(within - BLUE_FULL, 1e-6), 0.0), 1.0)
     return BLUE_FAINT + (1 - BLUE_FAINT) * share
 
 
@@ -1832,6 +1840,8 @@ CAR_WIDTH = 1.4
 RADAR_FROM = 0.5  # seconds behind or ahead: the radar appears, faint
 RADAR_FULL = 0.1  # seconds behind or alongside: fully visible
 RADAR_FAINT = 0.2  # its opacity at RADAR_FROM
+RADAR_CAR_SCALE = 1.4  # cars are drawn this much larger than their real size on the radar
+RADAR_CAR_LEAST = 0.03  # and at least this wide, as a share of the radar
 RADAR_SIDE = 8.0  # sideways reach: a car farther to the side (another part of the track) does not count
 RADAR_VIEW = 20.0  # the radar shows at least this far behind; more at speed (radar_view)
 RADAR_MIN_SPEED = 3.0  # slower (standing on the grid): no radar, the direction is unknown
@@ -1861,12 +1871,21 @@ class RadarView:
     blips: tuple  # Blip
     view: float = RADAR_VIEW  # how far behind the local car the radar reaches
     cone: tuple | None = None  # (reach, angle in degrees) of the slipstream behind cars ahead
+    within: float = RADAR_FROM  # seconds: a car this close counts
 
 
-def radar_view(speed):
-    """How far behind (and ahead) the radar reaches at `speed`: a car RADAR_FROM away still shows,
-    with room to spare."""
-    return max(RADAR_VIEW, speed * RADAR_FROM + 2 * CAR_LENGTH)
+def radar_view(speed, within=RADAR_FROM):
+    """How far behind (and ahead) the radar reaches at `speed`: a car `within` seconds away
+    still shows, with room to spare."""
+    return max(RADAR_VIEW, speed * within + 2 * CAR_LENGTH)
+
+
+def radar_car_size(per_unit, box):
+    """(width, length) of a car on a radar `box` wide with `per_unit` pixels to the game's
+    unit: larger than life, to see it at a glance, and never so small that a radar zoomed
+    out for a long warning time loses it."""
+    width = max(CAR_WIDTH * per_unit * RADAR_CAR_SCALE, box * RADAR_CAR_LEAST)
+    return width, width * CAR_LENGTH / CAR_WIDTH
 
 
 def _heading(history, now):
@@ -1885,12 +1904,12 @@ def _heading(history, now):
     return (dx / length, dz / length), length / dt
 
 
-def radar_opacity(seconds):
+def radar_opacity(seconds, within=RADAR_FROM):
     """How visible the radar is for the nearest counting car `seconds` away: None (not
-    shown) past RADAR_FROM, RADAR_FAINT there, rising evenly to 1 at RADAR_FULL."""
-    if seconds is None or seconds > RADAR_FROM:
+    shown) past `within`, RADAR_FAINT there, rising evenly to 1 at RADAR_FULL."""
+    if seconds is None or seconds > within:
         return None
-    share = min(max((RADAR_FROM - seconds) / (RADAR_FROM - RADAR_FULL), 0.0), 1.0)
+    share = min(max((within - seconds) / max(within - RADAR_FULL, 1e-6), 0.0), 1.0)
     return RADAR_FAINT + (1 - RADAR_FAINT) * share
 
 
@@ -1967,7 +1986,7 @@ def draft_rows(state):
     return rows
 
 
-def radar_blips(me, speed, others, draft=None):
+def radar_blips(me, speed, others, draft=None, within=RADAR_FROM):
     """Blips for `others` [(position, direction or None)] around the local car at `me`
     ((x, z), direction) at `speed`. A car counts when it is no more than RADAR_SIDE to
     the side, behind, beside or ahead: beside (overlapping in length) is 0 s, behind or
@@ -1981,7 +2000,8 @@ def radar_blips(me, speed, others, draft=None):
         dx, dz = x - mx, z - mz
         ahead = dx * fx + dz * fz
         side = dx * fz - dz * fx  # right of the direction of travel (x right, z forward)
-        if abs(ahead) > radar_view(speed) * 1.5 or abs(side) > radar_view(speed):
+        view = radar_view(speed, within)
+        if abs(ahead) > view * 1.5 or abs(side) > view:
             continue
         angle = 0.0
         if direction is not None:
@@ -2006,7 +2026,8 @@ class Radar:
     from the car's movement. The radar shows at once when a car comes close; when none
     counts any more it stays for RADAR_HOLD and fades, so it does not blink."""
 
-    def __init__(self):
+    def __init__(self, within=RADAR_FROM):
+        self.within = within  # seconds: a car this close counts (a setting)
         self.tracks = {}  # player name -> [(read time, (x, z))], only when it changed
         self.read_at = None
         self.opacity = 0.0
@@ -2071,10 +2092,10 @@ class Radar:
             theirs = self._motion(player, read_at)
             if theirs is not None:
                 others.append((theirs[0], theirs[1]))
-        blips = radar_blips((position, direction), speed, others, draft)
+        blips = radar_blips((position, direction), speed, others, draft, self.within)
         if fresh:
             nearest = min((b.seconds for b in blips if b.seconds is not None), default=None)
-            target = radar_opacity(nearest)
+            target = radar_opacity(nearest, self.within)
             if target is not None:
                 self.counted_at = read_at
                 # Up at once (a car beside matters now), down gently.
@@ -2088,7 +2109,7 @@ class Radar:
         if self.opacity <= 0:
             return None
         cone = (draft.reach, draft.angle) if draft is not None and draft.reach is not None else None
-        return RadarView(self.opacity, blips, radar_view(speed), cone)
+        return RadarView(self.opacity, blips, radar_view(speed, self.within), cone, self.within)
 
 
 def race_rows(snapshot, now):

@@ -5,6 +5,7 @@ broken or partly wrong file gives the defaults for whatever is missing or wrong.
 """
 
 import json
+import math
 import os
 import re
 import sys
@@ -33,6 +34,8 @@ class Theme:
     scale: float = 1.0  # size of everything the HUD draws
 
 
+BLUE_SECONDS = (1.0, 10.0, 0.5)  # the blue flag's warning time: least, most, step
+RADAR_SECONDS = (0.2, 3.0, 0.1)  # the proximity radar's
 GROUPS = ('A', 'B', 'C', 'D')  # section groups; '' is none
 PRESETS = (1, 2, 3)  # the layouts a player can keep
 
@@ -61,6 +64,8 @@ class Settings:
     map_others: bool = False  # the track map also shows the other cars, as faint grey dots
     layout_version: int = 1  # how to read the section sizes: LAYOUT_VERSION is the latest
     presets: dict = field(default_factory=dict)  # number (one of PRESETS) -> a kept `sections`
+    blue_seconds: float = 2.0  # how far behind a car about to lap the player shows the blue flag
+    radar_seconds: float = 0.5  # how far ahead or behind a car shows the proximity radar
 
 
 def settings_dir(platform=sys.platform, environ=None, home=None):
@@ -188,6 +193,13 @@ def _section_data(sections):
     }
 
 
+def _seconds(value, default, limits):
+    """A warning time from the file, within its `limits`; `default` if it is no number."""
+    if not isinstance(value, (int, float)) or isinstance(value, bool) or math.isnan(value):
+        return default
+    return min(max(float(value), limits[0]), limits[1])
+
+
 def _layout_version(value):
     return value if isinstance(value, int) and not isinstance(value, bool) and value >= 1 else 1
 
@@ -208,6 +220,8 @@ def load_settings(path):
         map_others=data.get('map_others') is True,
         layout_version=_layout_version(data.get('layout_version')),
         presets=_presets(data.get('presets'), data.get('backdrop') is True),
+        blue_seconds=_seconds(data.get('blue_seconds'), Settings.blue_seconds, BLUE_SECONDS),
+        radar_seconds=_seconds(data.get('radar_seconds'), Settings.radar_seconds, RADAR_SECONDS),
     )
 
 
@@ -228,6 +242,8 @@ def save_settings(path, settings):
         'backdrop': settings.backdrop,
         'map_others': settings.map_others,
         'layout_version': settings.layout_version,
+        'blue_seconds': settings.blue_seconds,
+        'radar_seconds': settings.radar_seconds,
         'sections': _section_data(settings.sections),
         'presets': {str(number): _section_data(kept) for number, kept in settings.presets.items()},
     }

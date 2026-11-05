@@ -25,11 +25,46 @@ class SettingsWindowTests(unittest.TestCase):
 
         cls.app = QApplication.instance() or QApplication([])
 
-    def window(self, theme=None):
+    def window(self, theme=None, **options):
         from turbohud.overlay.settings_window import SettingsWindow
         from turbohud.overlay.window import window_flags
 
-        return SettingsWindow(FakeNative(), window_flags(), theme or Theme())
+        return SettingsWindow(FakeNative(), window_flags(), theme or Theme(), **options)
+
+    def test_the_warning_times_show_and_say_when_they_change(self):
+        window = self.window(blue_seconds=3.0, radar_seconds=0.8)
+        self.assertEqual((window.blue_seconds.value(), window.radar_seconds.value()), (3.0, 0.8))
+        blue, radar = [], []
+        window.blue_seconds_changed.connect(blue.append)
+        window.radar_seconds_changed.connect(radar.append)
+        window.blue_seconds.stepUp()
+        window.radar_seconds.stepUp()
+        self.assertEqual(blue, [3.5])
+        self.assertAlmostEqual(radar[0], 0.9)
+        window.blue_seconds.setValue(99)
+        self.assertEqual(blue[-1], 10.0)
+
+    def press(self, window, button):
+        from PySide6.QtCore import QPointF, Qt
+        from PySide6.QtGui import QMouseEvent
+
+        event = QMouseEvent(
+            QMouseEvent.MouseButtonPress, QPointF(5, 5), QPointF(5, 5), button, button, Qt.NoModifier
+        )
+        window.mousePressEvent(event)
+
+    def test_it_moves_when_dragged_by_its_background(self):
+        from unittest import mock
+
+        from PySide6.QtCore import Qt
+
+        window = self.window()
+        handle = mock.Mock()
+        with mock.patch.object(window, 'windowHandle', return_value=handle):
+            self.press(window, Qt.RightButton)
+            handle.startSystemMove.assert_not_called()
+            self.press(window, Qt.LeftButton)
+        handle.startSystemMove.assert_called_once()
 
     def test_a_swatch_changes_that_colour_only(self):
         window = self.window()
