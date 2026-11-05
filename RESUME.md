@@ -64,6 +64,12 @@ See `docs/IMPROVEMENT_BACKLOG.md`. In short:
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-05: The HUD shows sooner at the start of an online race after the first, reported by
+  the user. A search took about 9 s (6 s measured apart, the race being the 42nd of 42 hits at
+  18% of the data, the others left by earlier races), and every search after the first gave
+  that same number of hits. So the place of the last race is looked at first, at every retry,
+  with the search as before if it is not there. The log says `race found at the last one's
+  place` when that works; not yet seen in a race.
 - 2026-11-05: Text keeps its size as numbers run, reported by the user on the delta and the
   running lap, whose size changed with the digits while the tint behind them flickered. The
   size is now worked out from the section's usual text or the live text, whichever is wider,
