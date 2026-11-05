@@ -48,8 +48,9 @@ class OutlineTests(unittest.TestCase):
     def test_small_text_keeps_a_thin_outline_that_leaves_its_letters_open(self):
         from turbohud.hud.painter import outline_width
 
-        self.assertEqual(outline_width(8), 2.0)
-        self.assertEqual(outline_width(13), 2.0)
+        self.assertEqual(outline_width(5), 1.2)
+        self.assertAlmostEqual(outline_width(10), 10 / 7)
+        self.assertLess(outline_width(13), 2.0)
         self.assertLess(outline_width(15), 2.2)
 
 

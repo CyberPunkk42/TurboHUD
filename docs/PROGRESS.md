@@ -597,3 +597,5 @@ its "Recent changes".
 - 2026-11-05: The outline is in step with the font again at small sizes: a width of 2 px or a
   seventh of the font size. Its 3 px least made the player and lap time lists harder to read,
   said the user.
+- 2026-11-05: The outline's least width is now 1.2 px (a seventh of the font size above that),
+  as 2 px still filled in the small lines of the draft section (about 10 px), said the user.
