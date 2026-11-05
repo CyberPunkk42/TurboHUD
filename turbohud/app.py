@@ -186,10 +186,11 @@ def run(args, folder):
         free_spot,
         local_time_rows,
         main_screen,
+        match_sizes,
         screen_of,
         session_rows,
     )
-    from turbohud.hud.painter import text_ink
+    from turbohud.hud.painter import text_ink, text_width
     from turbohud.overlay import HOTKEY_LOCK, HOTKEY_PRESETS, HOTKEY_QUIT, choose_platform, native_for
     from turbohud.overlay.settings_window import SettingsWindow
     from turbohud.overlay.window import MovePanel, SectionWindow, window_flags
@@ -458,6 +459,30 @@ def run(args, folder):
         windows[name].set_wanted(wanted)
         log.info('section %s %s', name, 'shown' if wanted else 'hidden')
 
+    def match_group(group):
+        """The group's text sections get the same text size and width (the panel's Match).
+        The settings take these places, not what the desktop says yet (see load_preset)."""
+        nonlocal settings
+        sized = {
+            window.section: tuple(window.placement())
+            for window in windows.values()
+            if window.group == group and not window.section.drawing
+        }
+        if len(sized) < 2:
+            return
+        until = time.monotonic() + 1.0
+        places = dict(settings.sections)
+        for name, box in match_sizes(sized, settings.theme.scale, text_width, text_ink).items():
+            window = windows[name]
+            move_window(window, box, settle=True)
+            mover.known[name] = box  # TurboHUD resized it: not a drag
+            mover.pending[name] = (box, until)
+            x, y, width, height = box
+            places[name] = SectionPlace(x, y, width, height, window.wanted, window.group)
+        settings = replace(settings, sections=places)
+        write_settings()
+        log.info('group %s: same text size and width', group)
+
     def save_preset(number):
         """Keep the layout as it is now in a preset, and in the settings as well."""
         nonlocal settings
@@ -575,6 +600,7 @@ def run(args, folder):
     )
     panel.preset_save_requested.connect(save_preset)
     panel.preset_load_requested.connect(load_preset)
+    panel.match_requested.connect(match_group)
     panel.mph_changed.connect(set_mph)
     panel.backdrop_changed.connect(set_backdrop)
     panel.map_others_changed.connect(set_map_others)

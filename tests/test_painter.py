@@ -182,6 +182,52 @@ class MovePanelPresetTests(unittest.TestCase):
         self.button(panel, 3, 'Load').click()
         self.assertEqual((saved, loaded), ([2], [3]))
 
+    def test_match_works_from_two_text_sections_in_a_group(self):
+        panel = self.panel()
+        got = []
+        panel.match_requested.connect(got.append)
+        self.assertFalse(panel.matches['A'].isEnabled())
+        panel.set_group('lap', 'A')
+        panel.set_group('radar', 'A')  # a drawing has no text to match
+        self.assertFalse(panel.matches['A'].isEnabled())
+        panel.groups['delta'].setCurrentText('A')  # changed by the player
+        self.assertTrue(panel.matches['A'].isEnabled())
+        self.assertFalse(panel.matches['B'].isEnabled())
+        panel.matches['A'].click()
+        self.assertEqual(got, ['A'])
+
+    def test_a_matched_group_is_drawn_at_one_font_size(self):
+        from turbohud.core import hud
+        from turbohud.core.settings import Theme
+        from turbohud.hud.painter import text_ink, text_width
+
+        by_name = {section.name: section for section in hud.RACE_SECTIONS}
+        groups = (
+            ('localtime', 'delta', 'fuel', 'speed'),
+            ('lap', 'current', 'times', 'tires', 'draft'),
+            ('localtime', 'players', 'laptimes'),
+        )
+        theme = Theme()
+        for names in groups:
+            places = {}
+            for name in names:
+                section = by_name[name]
+                width = hud.base_size(section, theme.scale, text_width)[0]
+                places[section] = (0, 0, width, hud.tight_height(section, theme.scale, text_ink))
+            matched = hud.match_sizes(places, theme.scale, text_width, text_ink)
+            fonts = set()
+            for name, box in matched.items():
+                section = by_name[name]
+                base = hud.tight_height(section, theme.scale, text_ink)
+                needed = hud.base_size(section, theme.scale, text_width)[0]
+                # As paintEvent works it out.
+                scale = theme.scale * hud.section_scale(box[2:], base, needed)
+                scale = hud.fitted_scale(section, box[3], scale, text_ink)
+                fonts.add(hud.hud_lines(list(section.samples[0]), scale)[0].size)
+            with self.subTest(group=names):
+                self.assertEqual(len(fonts), 1, matched)
+                self.assertEqual(len({box[2] for box in matched.values()}), 1)
+
     def test_load_names_its_shortcut_where_there_are_shortcuts(self):
         self.assertIn('Ctrl+Shift+2', self.button(self.panel(), 2, 'Load').toolTip())
 

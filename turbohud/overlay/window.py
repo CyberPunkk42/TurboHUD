@@ -520,6 +520,7 @@ class MovePanel(QWidget):
     map_others_changed = Signal(bool)
     preset_save_requested = Signal(int)  # the preset's number
     preset_load_requested = Signal(int)
+    match_requested = Signal(str)  # the group
 
     focusable = True  # it takes clicks on its tick boxes and buttons
 
@@ -559,6 +560,7 @@ class MovePanel(QWidget):
             group.currentTextChanged.connect(
                 lambda text, name=section.name: self.group_changed.emit(name, '' if text == '-' else text)
             )
+            group.currentTextChanged.connect(lambda _text: self._update_matches())
             grid.addWidget(group, row, 1)
             self.groups[section.name] = group
             if section.drawing:  # the blue flag, the radar and the track map can be centred
@@ -578,6 +580,22 @@ class MovePanel(QWidget):
                     )
                     grid.addWidget(button, row, column_)
         column.addLayout(grid)
+        self.text_sections = [section.name for section in sections if not section.drawing]
+        self.matches = {}
+        matches = QHBoxLayout()
+        matches.addWidget(QLabel('Same text size and width:'))
+        for name in GROUPS:
+            match = QPushButton(f'Group {name}')
+            match.setToolTip(
+                f'Give the text sections in group {name} the largest text size among them and one '
+                'width. Save a preset first to be able to go back.'
+            )
+            match.clicked.connect(lambda _checked=False, group=name: self.match_requested.emit(group))
+            matches.addWidget(match)
+            self.matches[name] = match
+        matches.addStretch()
+        column.addLayout(matches)
+        self._update_matches()
         self.mph = QCheckBox('Speed in mph')
         self.mph.setChecked(mph)
         self.mph.toggled.connect(self.mph_changed)
@@ -639,6 +657,13 @@ class MovePanel(QWidget):
             combo.blockSignals(True)
             combo.setCurrentText(text)
             combo.blockSignals(False)
+            self._update_matches()
+
+    def _update_matches(self):
+        """A group's button works from two text sections in it."""
+        for group, button in self.matches.items():
+            members = [name for name in self.text_sections if self.groups[name].currentText() == group]
+            button.setEnabled(len(members) >= 2)
 
     def set_mph(self, mph):
         if self.mph.isChecked() != mph:

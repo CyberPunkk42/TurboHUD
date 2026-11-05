@@ -523,3 +523,9 @@ its "Recent changes".
   out until it is saved; a section off every screen comes back to the default spot. Tested
   through the real app code with a fake window layer; the shortcuts were registered on the
   Mac but not pressed, and Windows has not run this.
+- 2026-11-05: Sections in a group can match, asked for by the user. A button per group in
+  the move-mode panel gives its text sections the largest text size among them and one
+  width; they stay where they are, and heights stay as different as the content is. Resizing
+  a section at its corner now resizes the rest of its group by the same factors. Tested
+  through the real app code with a fake window layer; on Hyprland the followers only take
+  their new size when the resize ends (written for that, not run there).
