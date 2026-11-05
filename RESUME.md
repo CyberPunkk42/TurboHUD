@@ -64,6 +64,14 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-05: Online, the HUD stayed away for a whole TurboHUD session (only the local time), seen
+  by the user in the first races with the faster search: every search ended in `no race`, while
+  a separate connection found the race at once (2.1 s, you the driver among 14). The likely cause:
+  field lists were kept for good, and a search that reads a class before the game has set it up
+  keeps an empty one, so each controller then looks like no race. Field lists are now kept only
+  once the class and its parents are set up. Not yet seen in a race; that the class was not set
+  up then is inferred. The faster search may make this more likely, as it reaches its first hit
+  sooner.
 - 2026-11-05: The online race search is faster, asked for by the user as the HUD showed 7 to 12 s
   after an online race started. In CrossOver a search now reads half of the time instead of a
   quarter (expected: about 4 to 6 s; a little stutter in the first seconds is the risk, not yet

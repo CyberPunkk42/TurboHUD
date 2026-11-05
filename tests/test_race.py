@@ -441,6 +441,45 @@ class ReaderTests(unittest.TestCase):
         self.assertEqual(listed['m_lapsCompleted'], (0x32, False))
         self.assertEqual(runtime.class_name(stats), 'TS.PlayerRaceStats')
 
+    def test_fields_of_a_class_the_game_has_not_set_up_are_not_kept(self):
+        reader = build([10_000], laps_completed=0, clock=20_000, limit=0)
+        g, runtime = reader.game, reader.il
+        parent = g.klass('TS', 'Base', [('m_base', 0x10, False)])
+        child = g.klass('TS', 'Child', [('m_child', 0x18, False)], parent=parent)
+        entries = runtime.memory.u64(child + il.CLASS_FIELDS)
+        g.q(child + il.CLASS_FIELDS, 0)  # the parent is set up, this one not yet
+        self.assertNotIn('m_child', runtime.fields(child))
+        g.q(child + il.CLASS_FIELDS, entries)
+        self.assertEqual(runtime.fields(child)['m_child'], (0x18, False))
+        self.assertEqual(runtime.fields(child)['m_base'], (0x10, False))
+
+    def test_fields_are_kept_once_the_class_is_set_up(self):
+        reader = build([10_000], laps_completed=0, clock=20_000, limit=0)
+        g, runtime = reader.game, reader.il
+        parent = g.klass('TS', 'Base', [('m_base', 0x10, False)])
+        child = g.klass('TS', 'Child', [('m_child', 0x18, False)], parent=parent)
+        runtime.fields(child)
+        g.q(child + il.CLASS_FIELDS, 0)  # would show if it were read again
+        self.assertIn('m_child', runtime.fields(child))
+
+    def test_a_race_is_found_when_the_first_search_came_before_the_game_set_up_its_class(self):
+        reader = build(
+            [10_000, 944_595], laps_completed=1, clock=1_000_000, limit=0, name='Host', online=True
+        )
+        g = reader.game
+        memory = reader.il.memory
+        klass = memory.u64(g.client_controller)
+        parent = memory.u64(klass + il.CLASS_PARENT)  # holds m_eventState
+        entries = memory.u64(klass + il.CLASS_FIELDS), memory.u64(parent + il.CLASS_FIELDS)
+        g.q(klass + il.CLASS_FIELDS, 0)  # the event has just started
+        g.q(parent + il.CLASS_FIELDS, 0)
+        with self.assertRaises(race.NotFound):
+            reader.read()
+        g.q(klass + il.CLASS_FIELDS, entries[0])
+        g.q(parent + il.CLASS_FIELDS, entries[1])
+        reader._next_search = 0.0
+        self.assertEqual(reader.read().laps_completed, 1)
+
     def test_unknown_class_is_reported(self):
         reader = build([10_000], laps_completed=0, clock=20_000, limit=0)
         with self.assertRaises(il.NotFound):

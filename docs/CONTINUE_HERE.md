@@ -12,8 +12,11 @@ none is left.
   it stutters, go back with `WINE_SEARCH_SHARE` in `turbohud/tsu/winmemory.py`. If half speed
   is not fast enough: search from a better starting point (log where the race is relative to
   the data first), or look for a pointer path to the controller. One search measured apart at a
-  quarter: 1.48 GiB in 608 regions, the race at hit 42 of 42, at 18% of the data, 6 s in; the
-  other 41 hits are freed controllers of earlier races.
+  quarter: 1.48 GiB in 608 regions, the race at hit 42 of 42, at 18% of the data, 6 s in. Nearly
+  all the other hits are not controllers at all (seen 2026-11-05 in a TSU's first event: tables
+  and code bytes that hold the class's address), so they do not come from earlier races.
+- The race found on a TSU's first online event, with TurboHUD started before TSU: see the
+  entry of 2026-11-05 in `RESUME.md` on classes not yet set up. The cause is inferred, not seen.
 - The radar without its fill, its larger cars, and the two warning times in the settings
   window (blue flag 1 to 10 s, radar 0.2 to 3 s). A long radar time zooms the radar out.
 - Dragging the settings window with a real mouse (tested only with a stand-in).

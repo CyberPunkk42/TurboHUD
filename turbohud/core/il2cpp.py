@@ -198,13 +198,30 @@ class Il2Cpp:
 
     def fields(self, klass):
         """{name: (offset, is_static)} of `klass` and its parents; a field of the class
-        itself wins over a parent's of the same name."""
-        if klass not in self._fields:
-            found = {}
-            for name, offset, is_static, _code in self.field_list(klass):
-                found.setdefault(name, (offset, is_static))
+        itself wins over a parent's of the same name. Kept only once the class is set up:
+        the game fills in a class's fields when it first uses it, and an empty answer kept
+        from before that would hide them for as long as this connection lasts."""
+        known = self._fields.get(klass)
+        if known is not None:
+            return known
+        found = {}
+        for name, offset, is_static, _code in self.field_list(klass):
+            found.setdefault(name, (offset, is_static))
+        if found and self._set_up(klass):
             self._fields[klass] = found
-        return self._fields[klass]
+        return found
+
+    def _set_up(self, klass):
+        """Whether `klass` and its parents have their fields filled in. A class without
+        fields of its own looks the same as one not set up, and is simply read again; the
+        root class (System.Object) has none."""
+        while True:
+            parent = self.memory.u64(klass + CLASS_PARENT)
+            if not parent:
+                return True
+            if not self.memory.u64(klass + CLASS_FIELDS):
+                return False
+            klass = parent
 
     def class_name(self, obj):
         klass = self.memory.u64(obj)
