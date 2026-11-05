@@ -156,6 +156,11 @@ starting TurboHUD again.
   shorter makes its text bigger or smaller; making it wider gives the text room (text
   only shrinks when the box is too narrow for it). A panel lets you show or hide each section, and **Lock** (or
   Ctrl+Shift+L again) ends move mode. On the Mac, clicking back into the game also locks.
+- **Groups**: sections with the same group in the panel move together, and resizing one at
+  its corner resizes the others by the same factors. **Same text size and width: Group A**
+  (or B, C, D) gives the group's text sections the largest text size among them and one
+  width. They stay where they are, and sections with bars or several rows stay taller. Save
+  a preset first to be able to go back.
 - **Layout presets**: the panel can keep three layouts: where each section sits, its size,
   whether it shows, and its group. **Save** keeps the layout as it is now in that preset,
   replacing what was there; **Load** puts the sections back as it has them. **Ctrl+Shift+1**,

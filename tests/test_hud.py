@@ -394,11 +394,121 @@ class GroupMoverTests(unittest.TestCase):
         self.assertEqual(self.look(mover, seen, 2.0), {})  # lap and speed stayed: no pull back
         self.assertEqual(mover.known['lap'], (10, 10, 100, 40))
 
-    def test_resizing_or_ungrouped_moves_nobody(self):
+    def test_an_ungrouped_section_moves_nobody(self):
         mover, seen = self.start()
-        seen['lap'] = (10, 10, 200, 80)  # resized at its corner
         seen['tires'] = (400, 400, 100, 30)  # no group
         self.assertEqual(self.look(mover, seen, 0.2), {})
+
+    def test_resizing_one_resizes_its_group_by_the_same_factors(self):
+        mover, seen = self.start()
+        seen['lap'] = (10, 10, 200, 80)  # twice as wide and as tall, at its corner
+        self.assertEqual(
+            self.look(mover, seen, 0.2), {'delta': (10, 60, 200, 60), 'speed': (10, 100, 200, 60)}
+        )
+
+    def test_the_followers_arriving_at_their_size_is_not_taken_for_a_resize(self):
+        mover, seen = self.start()
+        seen['lap'] = (10, 10, 200, 80)
+        moves = self.look(mover, seen, 0.2)
+        seen.update(moves)
+        self.assertEqual(self.look(mover, seen, 0.4), {})
+        self.assertEqual(mover.pending, {})
+        self.assertEqual(mover.known['delta'], (10, 60, 200, 60))
+
+    def test_a_follower_not_at_its_size_yet_is_still_on_its_way(self):
+        mover, seen = self.start()
+        seen['lap'] = (10, 10, 200, 80)
+        self.look(mover, seen, 0.2)
+        seen['delta'] = (10, 60, 110, 35)  # moved a little, not there: not a resize of its own
+        self.assertEqual(self.look(mover, seen, 0.4), {})
+        self.assertIn('delta', mover.pending)
+
+    def test_sizes_come_from_the_start_of_a_resize_so_rounding_does_not_add_up(self):
+        mover = hud.GroupMover()
+        groups = {'a': 'A', 'b': 'A'}
+        seen = {'a': (0, 0, 100, 100), 'b': (0, 200, 33, 33)}
+        mover.follow(dict(seen), groups, 0.0)
+        now = 0.0
+        for height in range(101, 301):
+            now += 0.2
+            seen['a'] = (0, 0, 100, height)
+            seen.update(mover.follow(dict(seen), groups, now))
+        self.assertEqual(seen['b'][3], 99)
+        self.assertEqual(seen['b'][2], 33)
+
+    def test_a_new_resize_starts_from_the_sizes_at_that_time(self):
+        mover, seen = self.start()
+        seen['lap'] = (10, 10, 200, 80)
+        seen.update(self.look(mover, seen, 0.2))
+        self.look(mover, seen, 0.4)  # it stopped
+        self.assertEqual(mover.resizing, {})
+        seen['delta'] = (10, 60, 400, 60)  # now another one, twice as wide
+        self.assertEqual(self.look(mover, seen, 0.6)['lap'], (10, 10, 400, 80))
+
+    def test_two_sections_changing_at_once_move_nobody(self):
+        mover, seen = self.start()
+        seen['lap'] = (10, 10, 200, 80)
+        seen['delta'] = (10, 60, 200, 60)
+        self.assertEqual(self.look(mover, seen, 0.2), {})
+
+    def test_dragging_keeps_the_sizes(self):
+        mover, seen = self.start()
+        seen['lap'] = (20, 20, 100, 40)
+        self.assertEqual(self.look(mover, seen, 0.2)['delta'], (20, 70, 100, 30))
+
+
+def size_measure(text, size):
+    return len(text) * size * 0.6
+
+
+class MatchSizesTests(unittest.TestCase):
+    SECTIONS: ClassVar = {section.name: section for section in hud.RACE_SECTIONS}
+
+    def match(self, **boxes):
+        places = {self.SECTIONS[name]: box for name, box in boxes.items()}
+        return hud.match_sizes(places, 1.0, size_measure, ink)
+
+    def normal(self, name, share=1.0):
+        section = self.SECTIONS[name]
+        return (
+            0,
+            0,
+            hud.base_size(section, 1.0, size_measure)[0],
+            round(hud.tight_height(section, 1.0, ink) * share),
+        )
+
+    def font(self, name, box):
+        section = self.SECTIONS[name]
+        normal = self.normal(name)
+        return hud._drawn_font(section, box[2:], normal[2:], 1.0, ink)
+
+    def test_every_section_gets_the_largest_font_and_one_width(self):
+        boxes = {
+            'localtime': self.normal('localtime', 3.0),
+            'delta': self.normal('delta'),
+            'fuel': self.normal('fuel'),
+        }
+        largest = self.font('localtime', boxes['localtime'])
+        matched = self.match(**boxes)
+        self.assertEqual({box[2] for box in matched.values()}, {max(box[2] for box in matched.values())})
+        for name, box in matched.items():
+            with self.subTest(section=name):
+                self.assertEqual(self.font(name, box), largest)
+
+    def test_rows_of_different_styles_get_the_same_font_size(self):
+        matched = self.match(current=self.normal('current'), players=self.normal('players'))
+        self.assertEqual(self.font('current', matched['current']), self.font('players', matched['players']))
+        self.assertEqual(self.font('players', matched['players']), 40)
+
+    def test_they_stay_where_they_are(self):
+        matched = self.match(localtime=(5, 6, 100, 30), delta=(70, 80, 300, 30))
+        self.assertEqual(matched['localtime'][:2], (5, 6))
+        self.assertEqual(matched['delta'][:2], (70, 80))
+
+    def test_matching_again_changes_nothing(self):
+        once = self.match(localtime=self.normal('localtime', 2.0), speed=self.normal('speed'))
+        again = self.match(**once)
+        self.assertEqual(again, once)
 
 
 class FreeSpotTests(unittest.TestCase):

@@ -1,6 +1,7 @@
 """What the HUD shows and where, as plain data that turbohud.hud draws."""
 
 import colorsys
+import math
 from dataclasses import dataclass, field
 
 MARGIN = 14  # space between the box's edge and the text, before scaling
@@ -416,6 +417,48 @@ def tight_place(section, place, scale, ink):
     return x, y - content_shift(section, new_height, scale * share, ink), width, new_height
 
 
+def _first_font(section, scale):
+    """The font size of a section's first row at `scale`."""
+    return getattr(Sizes.for_scale(scale), section.samples[0][0].style)
+
+
+def _drawn_font(section, size, normal_size, scale, ink):
+    """The font size a section's first row is drawn at in a box of `size` (the painting's
+    own steps); `normal_size` is the box at the theme's `scale`."""
+    share = section_scale(size, normal_size[1], normal_size[0])
+    return _first_font(section, fitted_scale(section, size[1], scale * share, ink))
+
+
+def match_sizes(places, scale, measure, ink):
+    """{name: (x, y, width, height)} giving `places` {section: (x, y, width, height)} the
+    same font size, the largest they have, and the same width, the widest they then need.
+    A section's height sets its font size, so heights stay as different as the content
+    is (level bars, several rows). They stay where they are. `scale` is the theme's."""
+    normal = {
+        section: (base_size(section, scale, measure)[0], tight_height(section, scale, ink))
+        for section in places
+    }
+    font = max(
+        _drawn_font(section, place[2:], normal[section], scale, ink) for section, place in places.items()
+    )
+    heights, needed = {}, 0
+    for section, size in normal.items():
+        near = round(font / _first_font(section, scale) * size[1])
+        heights[section] = next(
+            (
+                height
+                for height in range(max(near - 2, 1), near + 4)
+                if _first_font(section, fitted_scale(section, height, scale * height / size[1], ink)) == font
+            ),
+            near,
+        )
+        needed = max(needed, size[0] * heights[section] / size[1])
+    return {
+        section.name: (place[0], place[1], math.ceil(needed), heights[section])
+        for section, place in places.items()
+    }
+
+
 def section_scale(size, base_height, needed_width=None, low=0.3, high=8.0):
     """How much a section of `size` scales its content: the box's height sets it, so
     resizing taller or shorter makes the text bigger or smaller. `needed_width` is how
@@ -537,51 +580,86 @@ GROUP_PENDING = 1.0  # seconds a move TurboHUD asked for may take to arrive
 
 @dataclass
 class GroupMover:
-    """Moves a group's sections along when the player drags one of them (move mode).
+    """Moves and resizes a group's sections along when the player drags or resizes one of
+    them (move mode).
 
-    The desktop moves the dragged window; TurboHUD only sees where windows are when it
+    The desktop changes the dragged window; TurboHUD only sees where windows are when it
     looks (on Wayland only the desktop knows). So `follow` compares each look with the
-    one before: if exactly one section of a group has moved, the others are moved by
-    the same amount. Their own arrival is then expected, not taken for a drag.
+    one before: if exactly one section of a group has moved, the others are moved by the
+    same amount; if exactly one has changed size, the others change by the same factors.
+    Their own arrival is then expected, not taken for a drag. Sizes are worked out from
+    those at the start of a resize, so rounding does not add up over a long one.
     """
 
     known: dict = field(default_factory=dict)  # name -> (x, y, width, height) last seen or set
-    pending: dict = field(default_factory=dict)  # name -> ((x, y), until) moves asked for
+    # name -> (place asked for: (x, y) or (x, y, width, height), until)
+    pending: dict = field(default_factory=dict)
+    # group -> (the section being resized, {name: (width, height) when it began})
+    resizing: dict = field(default_factory=dict)
 
     def follow(self, seen, groups, now):
-        """{name: (x, y, width, height)} to move group mates to, for `seen` {name:
-        place} at monotonic time `now`; `groups` is {name: group or ''}."""
-        moved = {}
+        """{name: (x, y, width, height)} to give group mates, for `seen` {name: place} at
+        monotonic time `now`; `groups` is {name: group or ''}."""
+        moved, resized = {}, {}
         for name, place in seen.items():
             before = self.known.get(name)
             target = self.pending.get(name)
             if target is not None:
-                (tx, ty), until = target
-                arrived = abs(place[0] - tx) <= GROUP_TOLERANCE and abs(place[1] - ty) <= GROUP_TOLERANCE
+                goal, until = target
+                arrived = all(abs(got - wanted) <= GROUP_TOLERANCE for got, wanted in zip(place, goal))
                 if arrived or now > until:
                     # There (or it never got there): this is its place, not a drag.
                     del self.pending[name]
                     self.known[name] = place
                 continue  # else still on its way: neither a drag nor its new place
-            if before is not None and tuple(place[:2]) != tuple(before[:2]):
-                moved[name] = (place[0] - before[0], place[1] - before[1])
+            if before is not None:
+                if tuple(place[:2]) != tuple(before[:2]):
+                    moved[name] = (place[0] - before[0], place[1] - before[1])
+                if tuple(place[2:]) != tuple(before[2:]):
+                    resized[name] = tuple(before[2:])
             self.known[name] = place
         moves = {}
         for group in {g for g in groups.values() if g}:
             members = [name for name in seen if groups.get(name) == group]
             movers = [name for name in members if name in moved]
-            if len(movers) != 1:
-                continue  # nobody dragged, or several moved (not by one drag)
-            dx, dy = moved[movers[0]]
+            resizers = [name for name in members if name in resized]
+            if not resizers:
+                self.resizing.pop(group, None)
+            dx, dy = moved[movers[0]] if len(movers) == 1 else (0, 0)
+            sizes = None
+            if len(resizers) == 1:
+                sizes = self._sizes(group, resizers[0], resized[resizers[0]], members)
+            elif len(movers) != 1:
+                continue  # nobody dragged, or several changed (not by one drag)
+            leaders = {*movers, *resizers}
             for name in members:
-                if name == movers[0] or name not in self.known:
+                if name in leaders or name not in self.known:
                     continue
                 x, y, width, height = self.known[name]
-                moves[name] = (x + dx, y + dy, width, height)
+                if sizes is not None and name in sizes:
+                    width, height = sizes[name]
+                place = (x + dx, y + dy, width, height)
+                if place != self.known[name]:
+                    moves[name] = place
         for name, place in moves.items():
             self.known[name] = place
-            self.pending[name] = (place[:2], now + GROUP_PENDING)
+            self.pending[name] = (place, now + GROUP_PENDING)
         return moves
+
+    def _sizes(self, group, leader, leader_before, members):
+        """{name: (width, height)} for a group whose `leader` is being resized."""
+        started = self.resizing.get(group)
+        if started is None or started[0] != leader:
+            start = {name: tuple(self.known[name][2:]) for name in members if name in self.known}
+            start[leader] = leader_before
+            started = self.resizing[group] = (leader, start)
+        start = started[1]
+        across = self.known[leader][2] / start[leader][0]
+        down = self.known[leader][3] / start[leader][1]
+        return {
+            name: (max(1, round(width * across)), max(1, round(height * down)))
+            for name, (width, height) in start.items()
+        }
 
 
 FREE_STEP = 40  # pixels between the spots free_spot tries

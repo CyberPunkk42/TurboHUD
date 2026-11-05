@@ -58,6 +58,12 @@ See `docs/IMPROVEMENT_BACKLOG.md`. In short:
 4. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-05: Sections in a group can match, asked for by the user. A button per group in
+  the move-mode panel gives its text sections the largest text size among them and one
+  width; they stay where they are, and heights stay as different as the content is. Resizing
+  a section at its corner now resizes the rest of its group by the same factors. Tested
+  through the real app code with a fake window layer; on Hyprland the followers only take
+  their new size when the resize ends (written for that, not run there).
 - 2026-11-05: Three layout presets, asked for by the user. The move-mode panel has Save and
   Load for each: where each section sits, its size, whether it shows and its group, kept in
   `settings.json`. Ctrl+Shift+1, 2 and 3 load one at any time (Mac, Windows); elsewhere
