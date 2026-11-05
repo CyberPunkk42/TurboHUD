@@ -3,10 +3,13 @@
     python tools/build_app.py [--version 2026.10.24] [--smoke]
 
 Needs the packages in requirements-build.txt. PyInstaller builds only for the system it
-runs on, so GitHub Actions runs this once per system (.github/workflows/build.yml).
+runs on, so GitHub Actions runs this once per system (.github/workflows/build.yml). On the
+Mac, build with the Python from tools/get_mac_python.sh: with Homebrew's, the app would
+only start on this Mac's macOS or newer, and the build stops.
 
 - Windows: releases/TurboHUD-<version>-windows-x64.zip, holding TurboHUD/TurboHUD.exe
-- macOS:   releases/TurboHUD-<version>-macos-arm64.zip, holding TurboHUD.app
+- macOS:   releases/TurboHUD-<version>-macos-arm64.dmg, holding TurboHUD.app, a link to
+           Applications to drag it onto, and a read-me (tools/mac_read_me.txt)
 - Linux:   releases/TurboHUD-<version>-linux-x64.tar.gz, holding TurboHUD/TurboHUD
 
 Each archive gets a .sha256 file next to it. --smoke then starts the built app for a few
@@ -23,6 +26,7 @@ import shutil
 import subprocess
 import sys
 import tarfile
+import tempfile
 import zipfile
 from pathlib import Path
 
@@ -32,7 +36,16 @@ RELEASES = ROOT / 'releases'
 VERSION_FILE = ROOT / 'turbohud' / '_build.py'  # gitignored; written for the build only
 NAME = 'TurboHUD'
 ICON = ROOT / 'assets' / 'tsu_turbo_hud_00.png'  # PyInstaller turns it into .ico / .icns with Pillow
-BUNDLE_ID = 'io.github.cyberpunkk42.turbohud'
+BUNDLE_ID = 'local.turbohud.TurboHUD'  # holds nothing personal: it goes out with the app
+MAC_READ_ME = ROOT / 'tools' / 'mac_read_me.txt'
+MAC_NEWEST_MINIMUM = (15, 0)  # the build stops if the app would need a newer macOS than this
+MACH_O_MAGIC = {
+    b'\xcf\xfa\xed\xfe',  # 64-bit
+    b'\xce\xfa\xed\xfe',  # 32-bit
+    b'\xca\xfe\xba\xbe',  # universal
+}
+_MINOS = re.compile(r'^\s*minos\s+(\d+)\.(\d+)', re.MULTILINE)
+_VERSION_MIN = re.compile(r'LC_VERSION_MIN_MACOSX\s*\n(?:\s*cmdsize.*\n)?\s*version\s+(\d+)\.(\d+)')
 SMOKE_SECONDS = 3
 SMOKE_TIMEOUT = 120
 _VERSION = re.compile(r'dev|\d{4}\.\d{2}\.\d{2}')
@@ -53,6 +66,11 @@ def parse_args(argv):
     parser = argparse.ArgumentParser(description='Build the TurboHUD app for this system.')
     parser.add_argument('--version', default='dev', help='dev, or a release date like 2026.10.24')
     parser.add_argument('--smoke', action='store_true', help='start the built app briefly to check it')
+    parser.add_argument(
+        '--any-macos',
+        action='store_true',
+        help='Mac: build even if the app would only start on a new macOS (the build says which)',
+    )
     args = parser.parse_args(argv)
     args.version = args.version.removeprefix('v')
     if not _VERSION.fullmatch(args.version):
@@ -71,7 +89,7 @@ def platform_tag(system=sys.platform, machine=None):
 
 
 def archive_name(version, tag):
-    extension = '.tar.gz' if tag.startswith('linux') else '.zip'
+    extension = '.tar.gz' if tag.startswith('linux') else '.dmg' if tag.startswith('macos') else '.zip'
     return f'{NAME}-{version}-{tag}{extension}'
 
 
@@ -98,29 +116,84 @@ def pyinstaller_args(system=sys.platform):
     return args
 
 
-def mark_mac_app(app, version):
-    """An accessory app (no Dock icon, LSUIElement) with its version, signed again ad hoc
-    because changing Info.plist breaks PyInstaller's signature."""
+def minimum_in(build_text):
+    """The newest macOS a program asks for in `vtool -show-build` text, as (major, minor),
+    or None. A universal program lists each of its parts."""
+    # Not any line called version: the tools that made the program list theirs too.
+    found = _MINOS.findall(build_text) + _VERSION_MIN.findall(build_text)
+    return max(((int(major), int(minor)) for major, minor in found), default=None)
+
+
+def mac_programs(app):
+    """The programs and libraries inside `app`: everything in Mach-O format."""
+    for path in sorted(app.rglob('*')):
+        if path.is_file() and not path.is_symlink():
+            with path.open('rb') as file:
+                if file.read(4) in MACH_O_MAGIC:
+                    yield path
+
+
+def mac_minimum(app):
+    """(the oldest macOS on which all of `app` can start, as (major, minor), the program
+    that asks for it)."""
+    newest, program = (0, 0), None
+    for path in mac_programs(app):
+        text = subprocess.run(
+            ['vtool', '-show-build', str(path)], capture_output=True, text=True, check=False
+        ).stdout
+        minimum = minimum_in(text)
+        if minimum is not None and minimum > newest:
+            newest, program = minimum, path
+    return newest, program
+
+
+def check_mac_minimum(minimum, program, most=MAC_NEWEST_MINIMUM):
+    """Stop the build if the app would not start on the macOS versions it is meant for."""
+    if minimum > most:
+        raise SystemExit(
+            f'{program} needs macOS {minimum[0]}.{minimum[1]}, newer than the '
+            f'{most[0]}.{most[1]} allowed: build with the Python from tools/get_mac_python.sh'
+        )
+
+
+def mark_mac_app(app, version, minimum=None):
+    """An accessory app (no Dock icon, LSUIElement) with its version and the macOS it needs,
+    signed again ad hoc because changing Info.plist breaks PyInstaller's signature."""
     info_path = app / 'Contents' / 'Info.plist'
     with info_path.open('rb') as file:
         info = plistlib.load(file)
     info['LSUIElement'] = True
+    if minimum is not None:
+        info['LSMinimumSystemVersion'] = f'{minimum[0]}.{minimum[1]}'
     if version != 'dev':
         info['CFBundleShortVersionString'] = version
+        info['CFBundleVersion'] = version
     with info_path.open('wb') as file:
         plistlib.dump(info, file)
     subprocess.run(['codesign', '--force', '--deep', '--sign', '-', str(app)], check=True)
+    subprocess.run(['codesign', '--verify', '--deep', '--strict', str(app)], check=True)
 
 
-def pack(dist, archive, system=sys.platform):
+def pack_dmg(app, archive, minimum):
+    """A disk image that opens on the app, a link to Applications and the read-me."""
+    read_me = MAC_READ_ME.read_text(encoding='utf-8').replace('{minimum}', f'{minimum[0]}.{minimum[1]}')
+    with tempfile.TemporaryDirectory() as folder:
+        stage = Path(folder)
+        subprocess.run(['ditto', str(app), str(stage / app.name)], check=True)  # keeps links and signature
+        (stage / 'Applications').symlink_to('/Applications')
+        (stage / 'Read Me First.txt').write_text(read_me, encoding='utf-8')
+        subprocess.run(
+            ['hdiutil', 'create', '-quiet', '-volname', NAME, '-srcfolder', str(stage), '-ov']
+            + ['-format', 'UDZO', str(archive)],
+            check=True,
+        )
+
+
+def pack(dist, archive, system=sys.platform, minimum=(0, 0)):
     archive.parent.mkdir(parents=True, exist_ok=True)
     archive.unlink(missing_ok=True)
     if system == 'darwin':
-        # ditto keeps the app's symbolic links and signature intact.
-        app = dist / f'{NAME}.app'
-        subprocess.run(
-            ['ditto', '-c', '-k', '--sequesterRsrc', '--keepParent', str(app), str(archive)], check=True
-        )
+        pack_dmg(dist / f'{NAME}.app', archive, minimum)
     elif archive.name.endswith('.tar.gz'):
         with tarfile.open(archive, 'w:gz') as tar:
             tar.add(dist / NAME, arcname=NAME)
@@ -164,10 +237,15 @@ def main(argv=None):
     finally:
         VERSION_FILE.unlink(missing_ok=True)
     dist = BUILD / 'dist'
+    minimum = (0, 0)
     if sys.platform == 'darwin':
-        mark_mac_app(dist / f'{NAME}.app', args.version)
+        minimum, program = mac_minimum(dist / f'{NAME}.app')
+        if not args.any_macos:
+            check_mac_minimum(minimum, program)
+        print(f'the app needs macOS {minimum[0]}.{minimum[1]}, because of {program.name}')
+        mark_mac_app(dist / f'{NAME}.app', args.version, minimum)
     archive = RELEASES / archive_name(args.version, platform_tag())
-    digest = pack(dist, archive)
+    digest = pack(dist, archive, minimum=minimum)
     size = archive.stat().st_size / 1e6
     print(f'{archive.relative_to(ROOT)}: {size:.1f} MB, sha256 {digest}')
     if args.smoke:

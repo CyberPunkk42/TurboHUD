@@ -14,6 +14,8 @@ samples/*
 build/
 releases/*.zip
 releases/*.zip.sha256
+releases/*.dmg
+releases/*.dmg.sha256
 releases/*.tar.gz
 releases/*.tar.gz.sha256
 turbohud/_build.py
