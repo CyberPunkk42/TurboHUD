@@ -25,6 +25,19 @@ none is left.
 - The race reads at 20 a second: the logged race ran at about 18 a second, 30 to 45 ms a read,
   with HUD frames 50 ms apart. Check `race reads` and `HUD frames` in `turbohud.log` again.
 
+## Pit stops, not yet seen
+- The pit time and the lap number in a race; the tires bar filling during a 12 s change.
+- Fuel with a stop that needs much more than 2.5%: it should fill at 5% a second, seen in the game's
+  field but not on the bar with a big refill. Health and repairs in an event with damage.
+- AI and online cars in the pits: the time relies on their velocity reading about 0 while they stand.
+- Another tire compound: `tireCompoundAndChangeTicks` holds it too, how is not known. Above 2400 the
+  bar behaves as before.
+
+## Track map hitch, not fixed
+The user sees the map stutter from time to time. Likely cause, not proved: race reads (about 19 a
+second) and HUD frames (20 a second) run on separate timers, so about once a second a frame has no
+new position. Proposed: draw when a new read arrives.
+
 ## Test list: what is left
 Done by the user on the Mac: all of the layout list (tight boxes, centring, groups, presets
 with Ctrl+Shift+1, 2, 3, Undo). AI races online ran many times while fixing the reads, but

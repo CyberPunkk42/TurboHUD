@@ -633,3 +633,12 @@ its "Recent changes".
 - 2026-11-05: The proximity radar has no outline in a race, as it can get in the way of the view,
   asked for by the user. It stays in move mode, to show where the radar's box is; the cross lines
   and the cars are as they were.
+- 2026-11-05: Pit stops, asked for by the user. The player list and the lap times list show how long
+  a car stood in the pits for 6 s once it rolls away (`PIT 12.4s`; in the lap times list PIT, then
+  the time, in the right column), not over 45 s, as the driver may have retired; timed from the
+  velocity with the race clock (`PitStops`). The lap times list shows each driver's lap (`L12`). The
+  tires bar now fills during a change: three recorded stops showed the game holds `tireWear` until
+  `tireCompoundAndChangeTicks` reaches 2400 (12 s) and only then sets it to 0. Fuel needed no fix:
+  the game refills 5% of the tank a second (18000 of 360000 units), so stops that used 2.5% were
+  full in half a second. Not seen: health (the event had no damage), AI or online cars in the pits
+  (the time relies on their velocity), other tire compounds (the bar then behaves as before).

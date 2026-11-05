@@ -304,7 +304,14 @@ RACE_SECTIONS = (
         (
             (Row('Driver', 'small', 'accent', middle='Best', right='Lap'),)
             + tuple(
-                Row(f'{n}. Playername1234567', 'small', flag='DE', middle='0:00.000', right='0:00.0')
+                Row(
+                    f'{n}. Playername1234567',
+                    'small',
+                    tail='  L99',
+                    flag='DE',
+                    middle='0:00.000',
+                    right='0:00.0',
+                )
                 for n in range(10, 10 + LAP_TIME_ROWS)
             ),
         ),
