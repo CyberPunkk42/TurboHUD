@@ -318,6 +318,7 @@ def run(args, folder):
         place = fit_on_screens(place, screens)
         window.setGeometry(*place)
         window.backdrop = saved.tint if saved else settings.backdrop
+        window.radar_cone = settings.radar_cone
         window.show_on_top()
         window.set_wanted(saved.visible if saved else True)
         window.group = saved.group if saved else ''
@@ -412,6 +413,10 @@ def run(args, folder):
         settings = replace(settings, radar_cone=cone)
         radar_cone_action.setChecked(cone)
         panel.set_radar_cone(cone)
+        for window in windows.values():
+            window.radar_cone = cone
+            if window.section.drawing == 'radar':
+                window.update()
         save()
         log.info('slipstream cones on the radar %s', 'on' if cone else 'off')
 

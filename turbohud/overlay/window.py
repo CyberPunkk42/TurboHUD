@@ -11,6 +11,7 @@ import logging
 import math
 import sys
 import time
+from dataclasses import replace
 
 from PySide6.QtCore import QPointF, QRectF, Qt, Signal
 from PySide6.QtGui import QColor, QPainter, QPainterPath, QPen, QPolygonF
@@ -171,6 +172,7 @@ class SectionWindow(QWidget):
         self.group = ''  # sections of the same group move together (move mode)
         self.text_centred = False  # its text in the middle of its box (an option)
         self.delta_view = None  # the delta bar's content (a DeltaBarView)
+        self.radar_cone = True  # the radar's sample in move mode shows slipstream cones (an option)
         self.setWindowTitle(f'TurboHUD - {section.label}')
         self.setAttribute(Qt.WA_TranslucentBackground)
         self.setAttribute(Qt.WA_ShowWithoutActivating)
@@ -351,6 +353,9 @@ class SectionWindow(QWidget):
         view = self.radar
         if not self.locked and view is None:
             view = RadarView(BLUE_SAMPLE, RADAR_SAMPLE, cone=(30, 20))
+            if not self.radar_cone:  # the sample as the race will show it
+                blips = tuple(replace(blip, in_cone=None) for blip in RADAR_SAMPLE)
+                view = RadarView(BLUE_SAMPLE, blips)
         if view is None:
             return
         size = min(self.width(), self.height())

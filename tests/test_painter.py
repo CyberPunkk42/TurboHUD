@@ -159,6 +159,27 @@ class RedrawTests(unittest.TestCase):
         self.assertEqual(image.pixelColor(40, 40).alpha(), 0)  # away from the lines and the cars
         self.assertGreater(image.pixelColor(100, 100).alpha(), 0)  # the local car, in the middle
 
+    def test_the_move_mode_sample_follows_the_cone_option(self):
+        from turbohud.core.hud import RACE_SECTIONS
+        from turbohud.core.settings import Theme
+        from turbohud.overlay.window import SectionWindow
+
+        class Native:
+            def raise_window(self, window):
+                return 'test'
+
+        window = SectionWindow(Native(), Theme(), next(s for s in RACE_SECTIONS if s.name == 'radar'))
+        self.addCleanup(window.close)
+        window.resize(200, 200)
+        window.set_locked(False)
+
+        with_cone = window.grab().toImage()
+        window.radar_cone = False
+        without = window.grab().toImage()
+        self.assertNotEqual(with_cone, without)  # only the cone differs between them
+        window.radar_cone = True
+        self.assertEqual(window.grab().toImage(), with_cone)
+
     def test_the_delta_bar_fills_from_the_middle_towards_the_right_side(self):
         from turbohud.core.hud import RACE_SECTIONS
         from turbohud.core.race import DeltaBarView
