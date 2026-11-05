@@ -39,6 +39,21 @@ class TextPathTests(unittest.TestCase):
 
 
 @unittest.skipUnless(importlib.util.find_spec('PySide6'), 'needs Qt')
+class OutlineTests(unittest.TestCase):
+    def test_the_outline_is_thick_enough_to_read_without_the_tint(self):
+        from turbohud.hud.painter import outline_width
+
+        self.assertEqual(outline_width(70), 10.0)
+
+    def test_small_text_keeps_a_thin_outline_that_leaves_its_letters_open(self):
+        from turbohud.hud.painter import outline_width
+
+        self.assertEqual(outline_width(5), 1.2)
+        self.assertAlmostEqual(outline_width(10), 10 / 7)
+        self.assertLess(outline_width(13), 2.0)
+        self.assertLess(outline_width(15), 2.2)
+
+
 class TextImageTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -248,6 +263,45 @@ class RedrawTests(unittest.TestCase):
         window.show_content(rows)
         return window.grab().toImage()
 
+    def test_only_the_number_changes_and_the_label_stays(self):
+        from turbohud.core.hud import Row
+
+        def picture(number):
+            row = Row(number, 'medium', 'ahead', tail=' vs best', tail_color='ahead', slot='+00.000')
+            return self.drawn('delta', [row], (300, 40))
+
+        first = picture('+1.111')
+        # The label starts past the widest number, whatever the size the box gives.
+        from turbohud.core.hud import MARGIN, RACE_SECTIONS, drawn_scale, hud_lines, tight_height
+        from turbohud.hud.painter import text_advance, text_ink, text_width
+
+        section = next(s for s in RACE_SECTIONS if s.name == 'delta')
+        normal = tight_height(section, 1.0, text_ink)
+        row = Row('+1.111', 'medium', tail=' vs best', slot='+00.000')
+        scale = drawn_scale(section, (300, 40), [row], normal, 1.0, text_ink, text_width)
+        size = hud_lines([row], scale)[0].size
+        from_x = round(MARGIN * scale + text_advance('+00.000 ', size))  # past the space before it
+        for number in ('+8.888', '\u22120.505', '+7.417', '+10.250', '\u221212.000', '0.000'):
+            other = picture(number)
+            with self.subTest(number=number):
+                differ = sum(
+                    first.pixelColor(x, y) != other.pixelColor(x, y)
+                    for x in range(from_x, first.width())
+                    for y in range(first.height())
+                )
+                self.assertEqual(differ, 0)
+        self.assertNotEqual(first, picture('+8.888'))
+
+    def test_digits_are_all_as_wide_in_the_hud_s_font(self):
+        from PySide6.QtGui import QFontInfo
+
+        from turbohud.hud.painter import hud_font, text_advance
+
+        widths = {round(text_advance(digit, 40), 2) for digit in '0123456789'}
+        if len(widths) > 1 and QFontInfo(hud_font(40)).family() != '.AppleSystemUIFont':
+            self.skipTest('this font has no digits of one width')
+        self.assertEqual(len(widths), 1)
+
     def test_a_running_number_keeps_its_height_on_screen(self):
         from turbohud.core.hud import Row
 
@@ -265,7 +319,10 @@ class RedrawTests(unittest.TestCase):
             ('delta', 'medium', '+1.111 vs best', '+8.800 vs best', (230, 26)),
         ):
             with self.subTest(section=name):
-                self.assertEqual(tall(first, style, name, size), tall(second, style, name, size))
+                # Within a pixel: round digits reach a little further than flat ones.
+                self.assertAlmostEqual(
+                    tall(first, style, name, size), tall(second, style, name, size), delta=1
+                )
 
     def test_the_tint_does_not_follow_the_digits(self):
         from turbohud.core.hud import Row

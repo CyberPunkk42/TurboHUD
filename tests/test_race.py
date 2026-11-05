@@ -800,6 +800,79 @@ class CarTests(unittest.TestCase):
         reader.read()
         self.assertEqual(reader.game.searches, searches)  # found once, then kept
 
+    def test_the_next_race_at_the_same_place_needs_no_search(self):
+        reader = build(
+            [10_000, 944_595], laps_completed=1, clock=1_000_000, limit=0, name='Host', online=True
+        )
+        reader.read()
+        g = reader.game
+        state = g.read(g.client_controller + 0x48, 8)
+        g.q(g.client_controller + 0x48, 0)  # the race is over
+        with self.assertRaises(race.NotFound):
+            reader.read()
+        searches = g.searches
+        g.put(g.client_controller + 0x48, state)  # the next race
+        with self.assertLogs('turbohud.core.race', 'INFO') as logs:
+            self.assertEqual(reader.read().laps_completed, 1)
+        self.assertEqual(g.searches, searches)
+        self.assertTrue(any('no search needed' in line for line in logs.output))
+
+    def test_a_race_elsewhere_is_still_searched_for(self):
+        reader = build(
+            [10_000, 944_595], laps_completed=1, clock=1_000_000, limit=0, name='Host', online=True
+        )
+        reader.read()
+        g = reader.game
+        reader._last_controller = g.client_controller + 0x1000  # nothing of it there
+        state = g.read(g.client_controller + 0x48, 8)
+        g.q(g.client_controller + 0x48, 0)
+        with self.assertRaises(race.NotFound):
+            reader.read()
+        reader._last_controller = g.client_controller + 0x1000
+        reader._next_search = 0.0
+        searches = g.searches
+        g.put(g.client_controller + 0x48, state)
+        self.assertEqual(reader.read().laps_completed, 1)
+        self.assertEqual(g.searches, searches + 1)
+        self.assertEqual(reader._last_controller, g.client_controller)
+
+    def test_no_look_at_the_last_place_while_the_games_log_says_no_event_runs(self):
+        running = [True]
+        reader = build(
+            [10_000, 944_595],
+            laps_completed=1,
+            clock=1_000_000,
+            limit=0,
+            name='Host',
+            online=True,
+            event_running=lambda: running[0],
+        )
+        reader.read()
+        reader._controller = None  # dropped between events; what is there is not a new race
+        running[0] = False
+        with self.assertRaises(race.NotFound):
+            reader.read()
+        self.assertIsNone(reader._controller)
+
+    def test_a_race_there_without_the_player_is_not_taken(self):
+        reader = build(
+            [10_000, 944_595], laps_completed=1, clock=1_000_000, limit=0, name='Host', online=True
+        )
+        reader.read()
+        _state, player = reader.local_player()
+        reader.game.put(player + 0x50, struct.pack('<i', -1))  # now only watching
+        reader._controller = None
+        self.assertIsNone(reader._race_at_last_place())
+
+    def test_the_log_says_when_a_race_was_not_where_the_last_one_was(self):
+        reader = build(
+            [10_000, 944_595], laps_completed=1, clock=1_000_000, limit=0, name='Host', online=True
+        )
+        reader._last_controller = 0x1234560  # another place, with nothing of a race there
+        with self.assertLogs('turbohud.core.race', 'INFO') as logs:
+            reader.read()
+        self.assertTrue(any('not where the last one was' in line for line in logs.output))
+
     def test_without_an_online_race_the_search_waits_between_tries(self):
         now = [100.0]
         reader = build(
@@ -1205,17 +1278,18 @@ class RowsTests(unittest.TestCase):
     def test_delta_row_is_green_ahead_and_red_behind(self):
         ahead = race.LapState(1, 0, 1, 13, [0, 900_000], checkpoints=((0, 300_000), (900_000, 1_199_000)))
         row = race.race_rows(racing(ahead), 0)[2]
-        self.assertEqual((row.text, row.color), ('-0.100 vs best', 'ahead'))
+        self.assertEqual((row.text + row.tail, row.color), ('\u22120.100 vs best', 'ahead'))
+        self.assertEqual(row.tail_color, 'ahead')
         behind = race.LapState(1, 0, 1, 13, [0, 900_000], checkpoints=((0, 300_000), (900_000, 1_202_340)))
         row = race.race_rows(racing(behind), 0)[2]
-        self.assertEqual((row.text, row.color), ('+0.234 vs best', 'behind'))
+        self.assertEqual((row.text + row.tail, row.color), ('+0.234 vs best', 'behind'))
 
     def test_a_delta_too_small_to_show_is_even(self):
         self.assertEqual(race.format_delta(-3), '0.000')
         self.assertEqual(race.format_delta(5), '+0.001')
         even = race.LapState(1, 0, 1, 13, [0, 900_000], checkpoints=((0, 300_000), (900_000, 1_199_997)))
         row = race.race_rows(racing(even), 0)[2]
-        self.assertEqual((row.text, row.color), ('0.000 vs best', 'text'))
+        self.assertEqual((row.text + row.tail, row.color), ('0.000 vs best', 'text'))
 
     def test_the_local_time_shows_once_tsu_runs(self):
         import time

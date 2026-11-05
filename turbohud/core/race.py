@@ -450,6 +450,7 @@ class LapReader:
         self._recorder_tick, self._recorder_moved = None, 0
         self._client_class = None  # TS.ClientEventController, once looked up
         self._controller = None  # the online race's event controller, once found
+        self._last_controller = None  # where the last one was: the game tends to reuse the spot
         self._spectated = None  # a controller whose race the player only watches
         self._watched_clock, self._watched_at = None, 0.0  # its race clock, and since when
         self._next_search = 0.0  # when to look for it again
@@ -537,6 +538,9 @@ class LapReader:
             except (NotFound, OSError):
                 self._spectated = None
                 self._next_search = 0.0
+        found = self._race_at_last_place()
+        if found is not None:
+            return found
         find = memory.find_pointers
         if find is None or self._clock() < self._next_search:
             raise error
@@ -558,8 +562,10 @@ class LapReader:
                 except (NotFound, OSError):
                     continue  # a freed controller of an earlier race
                 if driving:
+                    moved = self._last_controller is not None and candidate != self._last_controller
                     self._controller, self._spectated = candidate, None
-                    result = 'race found'
+                    self._last_controller = candidate
+                    result = 'race found, not where the last one was' if moved else 'race found'
                     return state
                 watchable.append((candidate, state))
             result = 'a race to watch, no local player' if watchable else 'no race'
@@ -576,6 +582,26 @@ class LapReader:
         # Not the one whose clock stood still, if there is another: an old race can linger.
         self._spectated, state = next((w for w in watchable if w[0] != self._spectated), watchable[0])
         self._watched_clock = None
+        return state
+
+    def _race_at_last_place(self):
+        """The event state of a new race where the last one was, or None. A search takes
+        up to about 10 s in a CrossOver bottle, with the race already on: between races the
+        game's next controller came at the same place (the same number of hits, every
+        search). One look there is a few small reads, so it is tried at every retry."""
+        last = self._last_controller
+        if last is None or (self._event_running is not None and self._event_running() is False):
+            return None
+        try:
+            if self.il.memory.u64(last) != self._client_class:
+                return None
+            state, driving = self._race_of(last)
+        except (NotFound, OSError):
+            return None
+        if not driving:
+            return None
+        self._controller, self._spectated = last, None
+        log.info('race found at the last one\'s place, no search needed')
         return state
 
     def _watched_clock_runs(self, state):
@@ -1373,7 +1399,9 @@ def _racing_sections(snapshot, now):
         delta_row = Row('vs best  -', 'medium')
     else:
         color = 'text' if abs(delta) < EVEN else 'ahead' if delta < 0 else 'behind'
-        delta_row = Row(f'{format_delta(delta)} vs best', 'medium', color)
+        # The number on its own, with a true minus, as wide as a plus: only the number changes.
+        number = format_delta(delta).replace('-', '\u2212')
+        delta_row = Row(number, 'medium', color, tail=' vs best', tail_color=color, slot=DELTA_SLOT)
     return {
         'lap': [Row(title, 'title')],
         'current': [Row(format_tenths(current_lap_now(snapshot, now)), 'big', 'accent')],
@@ -1454,6 +1482,7 @@ def car_sections(car, laps_to_go=None, speed_unit='kmh'):
     return sections
 
 
+DELTA_SLOT = '+00.000'  # the delta's widest number
 DRAFT_DOWNFORCE_WARN = 0.05  # downforce lost to the slipstream from which the draft section warns
 DRAFT_COUNTS = 0.05  # a draft at least this strong counts as time in a slipstream
 DRAFT_CARD_SECONDS = 20  # the race clock up to which the draft section shows the event's settings

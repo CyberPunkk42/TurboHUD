@@ -64,6 +64,29 @@ See `docs/IMPROVEMENT_BACKLOG.md`. In short:
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-05: The outline's least width is now 1.2 px (a seventh of the font size above that),
+  as 2 px still filled in the small lines of the draft section (about 10 px), said the user.
+- 2026-11-05: The outline is in step with the font again at small sizes: a width of 2 px or a
+  seventh of the font size. Its 3 px least made the player and lap time lists harder to read,
+  said the user.
+- 2026-11-05: A stronger outline round the text, as it was hard to read without the tint (the
+  user): 3 px or a seventh of the font size instead of 2 px or a tenth, half of it outside the
+  letter. Drawing it through the text images looked the same as filling the shapes before, so
+  the images were not the cause.
+- 2026-11-05: The delta's number has a slot as wide as its widest form, so " vs best" also stays
+  when the number gets another digit. The log says when a race was found by search and not
+  where the last one was.
+- 2026-11-05: Only the number changes in the delta, reported by the user: " vs best" moved with
+  the digits. The number and the label are drawn apart, the label from the width with digits
+  as zeros, and the delta has a true minus, as wide as a plus. The HUD's font now asks for
+  digits all of one width (`tnum`, in the Mac's system font: `1111` and `8888` alike, also for
+  the fuel's and the other sections' numbers), where a font has them.
+- 2026-11-05: The HUD shows sooner at the start of an online race after the first, reported by
+  the user. A search took about 9 s (6 s measured apart, the race being the 42nd of 42 hits at
+  18% of the data, the others left by earlier races), and every search after the first gave
+  that same number of hits. So the place of the last race is looked at first, at every retry,
+  with the search as before if it is not there. The log says `race found at the last one's
+  place` when that works; not yet seen in a race.
 - 2026-11-05: Text keeps its size as numbers run, reported by the user on the delta and the
   running lap, whose size changed with the digits while the tint behind them flickered. The
   size is now worked out from the section's usual text or the live text, whichever is wider,

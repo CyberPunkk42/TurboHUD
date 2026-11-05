@@ -21,6 +21,7 @@ class Line:
     right_color: str = 'text'
     middle: str = ''  # a second column, lined up on the right just before `right`
     middle_color: str = 'text'
+    slot: str = ''  # the text is at the right of a slot this wide, with the tail after it
 
 
 @dataclass(frozen=True)
@@ -37,6 +38,7 @@ class Row:
     right_color: str = 'text'
     middle: str = ''  # a second column, lined up on the right just before `right`
     middle_color: str = 'text'
+    slot: str = ''  # the text is at the right of a slot this wide, with the tail after it
 
 
 FLAG_WIDTH = 1.5  # a flag's room before the text, in font sizes
@@ -127,6 +129,7 @@ def _content(rows, sizes):
                 row.right_color,
                 row.middle,
                 row.middle_color,
+                row.slot,
             )
         )
     return lines, baseline
@@ -139,7 +142,7 @@ def hud_lines(rows, scale=1.0):
 
 def _left_width(line, measure):
     """How wide a line's text is with its flag, without the columns."""
-    width = measure(line.text + line.tail, line.size)
+    width = measure((line.slot or line.text) + line.tail, line.size)
     if line.flag:
         width += FLAG_WIDTH * line.size
     return width
@@ -188,12 +191,13 @@ def content_size(rows, scale, measure):
     return round(width + 2 * sizes.margin), round(bottom + sizes.margin)
 
 
-ALL_ZEROS = str.maketrans('123456789', '000000000')
+ALL_ZEROS = str.maketrans('123456789-\u2212', '000000000++')  # and signs as wide as a plus
 
 
 def steady_text(text):
-    """`text` with its digits as zeros, to measure it: in a font whose digits differ in
-    width, text centred by its real width would shake as a number changes."""
+    """`text` with its digits as zeros and its signs as plus, to measure it: in a font
+    whose digits differ in width, text centred by its real width would shake as a number
+    changes."""
     return text.translate(ALL_ZEROS)
 
 

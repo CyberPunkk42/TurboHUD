@@ -35,6 +35,9 @@ def hud_font(size):
         font.setFamilies(LINUX_FAMILIES)
     font.setPixelSize(size)
     font.setBold(True)
+    # Digits all as wide, where the font can: a running number then does not push what
+    # follows it, or shake when it is centred or at the right.
+    font.setFeature(QFont.Tag('tnum'), 1)
     return font
 
 
@@ -58,13 +61,20 @@ def text_path(text, size):
     return path.simplified()
 
 
+def outline_width(size):
+    """The width of the stroke round a letter, half of it outside: enough to read light text
+    on the game's light road and sky, also without the tint behind it, and in step with the
+    font, as a thick one fills in small letters (seen in the lists and the draft section)."""
+    return max(1.2, size / 7)
+
+
 @lru_cache(maxsize=512)
 def outline_path(text, size):
     """The dark outline round a line of text, as a shape to fill. Stroking the text
     each time it is drawn took most of a frame with many texts (the lap times list);
     filling a kept shape is about five times quicker."""
     stroker = QPainterPathStroker()
-    stroker.setWidth(max(2.0, size / 10))
+    stroker.setWidth(outline_width(size))
     stroker.setCapStyle(Qt.RoundCap)
     stroker.setJoinStyle(Qt.RoundJoin)
     return stroker.createStroke(text_path(text, size))
@@ -127,13 +137,13 @@ def cap_height(size):
 def text_ink(text, size):
     """How far a line of HUD text reaches (above, below) its baseline, with its outline."""
     box = text_path(text, size).boundingRect()
-    outline = max(2.0, size / 10) / 2
+    outline = outline_width(size) / 2
     return -box.top() + outline, box.bottom() + outline
 
 
 def text_width(text, size):
     """How wide a line of HUD text is, in pixels, with its outline."""
-    return text_path(text, size).boundingRect().right() + max(2.0, size / 10)
+    return text_path(text, size).boundingRect().right() + outline_width(size)
 
 
 def draw_bars(painter, bars):
@@ -197,7 +207,7 @@ def draw_flag(painter, x, baseline, code, size, outline):
 
 def centred_x(line, width, margin):
     """Where a line starts in the middle of a box `width` wide, between its margins."""
-    steady = text_advance(steady_text(line.text + line.tail), line.size)
+    steady = text_advance(steady_text((line.slot or line.text) + line.tail), line.size)
     return max(round((width - steady) / 2), margin)
 
 
@@ -222,8 +232,12 @@ def draw_hud(painter, lines, theme, scale=None, left=0, width=None, centre=False
         if line.flag:
             draw_flag(painter, x, line.baseline, line.flag, line.size, outline)
             text_x = x + FLAG_WIDTH * line.size
+        # In a slot, the text ends where the slot does, whatever its length, and the tail
+        # stays put: only the number changes.
+        slot = text_advance(steady_text(line.slot), line.size) if line.slot else None
+        number_x = text_x + slot - text_advance(line.text, line.size) if line.slot else text_x
         outlined_text(
-            painter, text_x, line.baseline, line.text, line.size, _pick(colors, line.color), outline
+            painter, number_x, line.baseline, line.text, line.size, _pick(colors, line.color), outline
         )
         if line.right and width is not None:
             right_x = width - margin - text_advance(line.right, line.size)
@@ -247,7 +261,8 @@ def draw_hud(painter, lines, theme, scale=None, left=0, width=None, centre=False
                 outline,
             )
         if line.tail:
-            tail_x = text_x + text_advance(line.text, line.size)
+            # From the width with digits as zeros, so that the tail stays as a number runs.
+            tail_x = text_x + (slot if line.slot else text_advance(steady_text(line.text), line.size))
             outlined_text(
                 painter, tail_x, line.baseline, line.tail, line.size, _pick(colors, line.tail_color), outline
             )
