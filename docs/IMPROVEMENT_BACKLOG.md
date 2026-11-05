@@ -56,6 +56,10 @@ presets with their shortcuts, groups, the Centre buttons, Centre text and Undo. 
 - Windows has run none of this (its shortcut code has only ever run on a build machine).
 
 ## 5. Builds and release
+The Mac app for a tester (2026-11-06): build with `sh tools/get_mac_python.sh`, then
+`.buildtools/mac-build-venv/bin/python tools/build_app.py --version YYYY.MM.DD --smoke`. That Python has
+not been tried yet; with Homebrew's, the app needs macOS 27 (`--any-macos`). A Developer ID
+certificate and notarisation would remove the Open Anyway step.
 Bundled apps from `tools/build_app.py` with the probe and clear launch-option steps for
 Linux; an AppImage instead of the `.tar.gz`. Before the repository goes public for the
 TSU community: the privacy check (pre-push hook), a licence, a README for players.

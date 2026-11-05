@@ -64,6 +64,14 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-06: The Mac app can go to a tester, asked for by the user: `tools/build_app.py` now makes a
+  `.dmg` with the app, a link to Applications and `Read Me First.txt` (`tools/mac_read_me.txt`). It works
+  out which macOS the bundle needs from all its programs, writes that into the app and the read-me, and
+  stops if that is newer than macOS 15, as Homebrew's Python needs the macOS it was built on (27 here).
+  `tools/get_mac_python.sh` fetches a pinned standalone Python that should fix that; it has not run yet, as
+  running a downloaded program needs the user's approval. `--any-macos` builds anyway. PySide6 6.11 itself
+  needs macOS 15. The bundle ID no longer holds the user's handle. Not signed with a paid certificate: a
+  tester goes through Open Anyway once. Not tried on another Mac.
 - 2026-11-05: The lap section shows the leader's lap when the driver is on an earlier lap
   (`Lap 9/20 · Leader 12`), asked for by the user: lapped many times, the driver's own count says little
   about the race. Left out on the leader's lap or in the lead. No more reads of the game.

@@ -25,9 +25,10 @@ runs, you see:
   notification area (Windows; it may be hidden behind the **^** arrow)
 
 ### macOS (Apple silicon)
-1. Download `TurboHUD-<version>-macos-arm64.zip` and double-click it in Downloads. You get
-   `TurboHUD.app`.
-2. Drag `TurboHUD.app` into **Applications**.
+Needs macOS as said in the download's `Read Me First.txt`.
+1. Download `TurboHUD-<version>-macos-arm64.dmg` and double-click it. A window opens with
+   `TurboHUD.app` and a link to **Applications**.
+2. Drag `TurboHUD.app` onto **Applications**, then eject the disk image.
 3. Double-click it. macOS says it "could not verify" TurboHUD: click **Done** (not Move to
    Trash).
 4. Open **System Settings > Privacy & Security** and scroll down to **Security**. Next to

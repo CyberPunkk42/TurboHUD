@@ -2,6 +2,8 @@ import contextlib
 import hashlib
 import importlib.util
 import io
+import os
+import subprocess
 import sys
 import tarfile
 import tempfile
@@ -46,6 +48,9 @@ class NamingTests(unittest.TestCase):
         )
         self.assertEqual(build_app.archive_name('dev', 'linux-x64'), 'TurboHUD-dev-linux-x64.tar.gz')
 
+    def test_the_mac_app_comes_as_a_disk_image(self):
+        self.assertEqual(build_app.archive_name('dev', 'macos-arm64'), 'TurboHUD-dev-macos-arm64.dmg')
+
     def test_executables(self):
         dist = Path('dist')
         self.assertEqual(build_app.executable(dist, 'win32'), dist / 'TurboHUD' / 'TurboHUD.exe')
@@ -53,6 +58,86 @@ class NamingTests(unittest.TestCase):
         self.assertEqual(
             build_app.executable(dist, 'darwin'), dist / 'TurboHUD.app' / 'Contents' / 'MacOS' / 'TurboHUD'
         )
+
+    def test_the_macos_a_program_needs(self):
+        text = (
+            'program (architecture arm64):\n'
+            'Load command 8\n'
+            '      cmd LC_BUILD_VERSION\n'
+            ' platform MACOS\n'
+            '    minos 11.0\n'
+            '      sdk 14.2\n'
+            '   ntools 1\n'
+            '     tool LD\n'
+            '  version 27037.1\n'
+        )
+        self.assertEqual(build_app.minimum_in(text), (11, 0))
+        self.assertEqual(build_app.minimum_in(text + '    minos 13.4\n'), (13, 4))
+        self.assertEqual(
+            build_app.minimum_in('      cmd LC_VERSION_MIN_MACOSX\n  cmdsize 16\n  version 10.15\n'), (10, 15)
+        )
+        self.assertIsNone(build_app.minimum_in('no build version\n'))
+
+    def test_the_build_stops_if_the_app_would_need_too_new_a_macos(self):
+        build_app.check_mac_minimum((13, 0), Path('fine'), most=(15, 0))
+        build_app.check_mac_minimum((15, 0), Path('fine'), most=(15, 0))
+        with self.assertRaises(SystemExit) as stopped:
+            build_app.check_mac_minimum((27, 0), Path('Python'), most=(15, 0))
+        self.assertIn('Python needs macOS 27.0', str(stopped.exception))
+
+    def test_programs_are_told_from_other_files(self):
+        with tempfile.TemporaryDirectory() as folder:
+            app = Path(folder)
+            (app / 'library.dylib').write_bytes(b'\xcf\xfa\xed\xfe' + b'x' * 20)
+            (app / 'universal').write_bytes(b'\xca\xfe\xba\xbe' + b'x' * 20)
+            (app / 'windows.exe').write_bytes(b'MZ' + b'x' * 20)
+            (app / 'text.txt').write_text('hello')
+            (app / 'empty').write_bytes(b'')
+            (app / 'link').symlink_to(app / 'library.dylib')
+            found = [path.name for path in build_app.mac_programs(app)]
+        self.assertEqual(found, ['library.dylib', 'universal'])
+
+    def test_the_read_me_says_what_to_do(self):
+        text = build_app.MAC_READ_ME.read_text(encoding='utf-8')
+        self.assertIn('{minimum}', text)
+        self.assertIn('Open Anyway', text)
+        self.assertIn('D3DMetal', text)
+
+    @unittest.skipUnless(sys.platform == 'darwin', 'makes a disk image')
+    def test_the_disk_image_holds_the_app_the_link_and_the_read_me(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            app = root / 'dist' / 'TurboHUD.app'
+            (app / 'Contents').mkdir(parents=True)
+            (app / 'Contents' / 'Info.plist').write_text('x')
+            archive = root / 'out' / 'TurboHUD-dev-macos-arm64.dmg'
+            build_app.pack(root / 'dist', archive, 'darwin', (13, 0))
+            mount = root / 'mount'
+            subprocess.run(
+                [
+                    'hdiutil',
+                    'attach',
+                    '-quiet',
+                    '-nobrowse',
+                    '-readonly',
+                    '-mountpoint',
+                    str(mount),
+                    str(archive),
+                ],
+                check=True,
+            )
+            try:
+                self.assertEqual(
+                    sorted(path.name for path in mount.iterdir() if not path.name.startswith('.')),
+                    ['Applications', 'Read Me First.txt', 'TurboHUD.app'],
+                )
+                self.assertEqual(os.readlink(mount / 'Applications'), '/Applications')
+                read_me = (mount / 'Read Me First.txt').read_text(encoding='utf-8')
+                self.assertIn('macOS 13.0 or newer', read_me)
+                self.assertNotIn('{minimum}', read_me)
+            finally:
+                subprocess.run(['hdiutil', 'detach', '-quiet', str(mount)], check=True)
+            self.assertTrue(archive.with_name(archive.name + '.sha256').exists())
 
     def test_bundle_id_only_on_the_mac(self):
         self.assertIn('--osx-bundle-identifier', build_app.pyinstaller_args('darwin'))
