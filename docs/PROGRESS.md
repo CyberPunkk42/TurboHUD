@@ -483,3 +483,18 @@ its "Recent changes".
   online race: when it started, how long it took, how many hits and what it found. The
   reader in the bottle: how long it took to start, why it was given up, when it closes.
   No names or IDs.
+- 2026-11-04: Spectator HUD, asked for by the user. A race without a local player (found
+  while spectating an online session with 12 players) used to keep the HUD hidden. Now it
+  is read without a car: "Spectating" with the leader's lap and the time left, the player
+  list with the gaps to the leader, the lap times, and every car on the track map with the
+  leader in gold; the sections about a car of your own stay away. While the watched race's
+  clock runs there are no more searches, as one would hold the reads up for about 30 s on
+  the Mac; once it has stood for 5 s TurboHUD searches every 30 s while an event runs, and
+  prefers another race to the one that stood still. Joining the race needs no search.
+  Tested with a fake game and drawn offscreen with 12 made-up drivers; not yet seen with a
+  real race (TSU had quit). To check: whether a spectator's replay recorder gives real
+  positions, and what fun-mode events show.
+- 2026-11-04: A running game's log is read. TSU's live log is `log.txt`; only the dated
+  copies in `Logs/` were read, so during a run with no new copy yet a running event looked
+  ended and no search for the online race started (found live while spectating). The newest
+  of both counts now. Checked on the real log: it now says an event runs.

@@ -66,6 +66,7 @@ class LapState:
     car: 'CarState | None' = None  # fuel, tires and speed, where the game has them
     players: tuple = ()  # every player in the race (PlayerState), the local one included
     draft: 'DraftSettings | None' = None  # the event's drafting, None where it is off
+    spectating: bool = False  # the player only watches: no car, the lap counts are the leader's
 
     @property
     def lap_times(self):
@@ -385,7 +386,8 @@ def per_lap(history, laps=PER_LAP_LAPS):
 
 
 CLIENT_SEARCH_EVERY = 10.0  # seconds between searches for an online race while there is none
-CLIENT_SPECTATE_EVERY = 60.0  # the same while the race found is one the player only watches
+CLIENT_SPECTATE_EVERY = 30.0  # the same while the race last watched has its clock standing
+SPECTATE_STILL = 5.0  # seconds a watched race's clock may stand before it counts as over
 CLIENT_LOG_EVERY = 2.0  # seconds between looks at TSU's log while it says no event runs
 QUANTIZED_ZERO, QUANTIZED_SCALE = 1 << 20, 1024  # TS.QuantizedVehicleState positions
 RECORDER_STALE = 10_000  # race clock (1 s) without a new recorder tick: it does not run
@@ -449,6 +451,7 @@ class LapReader:
         self._client_class = None  # TS.ClientEventController, once looked up
         self._controller = None  # the online race's event controller, once found
         self._spectated = None  # a controller whose race the player only watches
+        self._watched_clock, self._watched_at = None, 0.0  # its race clock, and since when
         self._next_search = 0.0  # when to look for it again
         self._state = None  # the TS.EventState the caches below belong to
         self._offsets = {}  # (role, field) -> offset
@@ -473,8 +476,12 @@ class LapReader:
             if 'm_activeServer is null' not in str(error):
                 raise
             state = self._online_event_state(error)
-            self._listener = self._controller
+            self._listener = self._online_controller
             return state
+
+    @property
+    def _online_controller(self):
+        return self._controller or self._spectated
 
     def _draft_settings(self):
         """The event's DraftSettings (TS.EventSettings.drafting, through the race
@@ -515,14 +522,17 @@ class LapReader:
             self._controller = None
             self._next_search = 0.0  # gone (race over): look again at once
         if self._spectated is not None:
-            # Spectating has no local player, so no search would ever stop at a good hit
-            # or find more. A look at the same race is cheap, and sees the player join.
+            # The race the player watches, while its clock runs: no search is needed, and
+            # one would hold the reads up for as long as it takes. A look at it each read
+            # is cheap, and sees the player join.
             try:
                 if memory.u64(self._spectated) != self._client_class:
                     raise NotFound('that race is gone')
                 state, driving = self._race_of(self._spectated)
                 if driving:
                     self._controller, self._spectated = self._spectated, None
+                    return state
+                if self._watched_clock_runs(state):
                     return state
             except (NotFound, OSError):
                 self._spectated = None
@@ -537,7 +547,7 @@ class LapReader:
             raise error
         if self._client_class is None:
             self._client_class = il.find_class('TS', 'ClientEventController')
-        spectated = None
+        watchable = []  # (controller, event state) of races without the player
         started, hits, result = self._clock(), 0, 'stopped by an error'
         log.info('searching for the online race')
         try:
@@ -551,17 +561,31 @@ class LapReader:
                     self._controller, self._spectated = candidate, None
                     result = 'race found'
                     return state
-                spectated = spectated or candidate
-            result = 'a race to watch, no local player' if spectated else 'no race'
+                watchable.append((candidate, state))
+            result = 'a race to watch, no local player' if watchable else 'no race'
         finally:
             # Counted from the search's end: in a CrossOver bottle a search of all the
             # data takes longer than the wait, and would start again at once.
-            wait = CLIENT_SPECTATE_EVERY if spectated else CLIENT_SEARCH_EVERY
+            wait = CLIENT_SPECTATE_EVERY if watchable else CLIENT_SEARCH_EVERY
             ended = self._clock()
             self._next_search = ended + wait
             log.info('search: %s, after %.1f s and %d hits', result, ended - started, hits)
-        self._spectated = spectated
-        raise error
+        if not watchable:
+            self._spectated = None
+            raise error
+        # Not the one whose clock stood still, if there is another: an old race can linger.
+        self._spectated, state = next((w for w in watchable if w[0] != self._spectated), watchable[0])
+        self._watched_clock = None
+        return state
+
+    def _watched_clock_runs(self, state):
+        """Whether the watched race's clock moved within SPECTATE_STILL."""
+        times = state + self._offset('state', state, 'times')
+        clock = self.il.memory.i32(times + TIMES_NOW)
+        now = self._clock()
+        if clock != self._watched_clock:
+            self._watched_clock, self._watched_at = clock, now
+        return now - self._watched_at < SPECTATE_STILL
 
     def _race_of(self, controller):
         """(a controller's event state, whether the player drives in it). Raises NotFound
@@ -576,12 +600,19 @@ class LapReader:
 
     def local_player(self):
         """(event state, local TS.EventPlayer); raises NotFound outside a race."""
-        il, memory = self.il, self.il.memory
         state = self.event_state()
+        player = self._local_in(state)
+        if player is None:
+            raise NotFound('no local player')
+        return state, player
+
+    def _local_in(self, state):
+        """The event state's local TS.EventPlayer, or None: the player only watches."""
+        il, memory = self.il, self.il.memory
         for player in il.list_items(il.ref(state, 'players')):
             if player and memory.i32(player + il.offset(player, 'm_localHumanIndex')) >= 0:
-                return state, player
-        raise NotFound('no local player')
+                return player
+        return None
 
     def _offset(self, role, obj, name):
         key = (role, name)
@@ -614,8 +645,12 @@ class LapReader:
             self._recorder_tick, self._recorder_moved = None, 0
             self._draft, self._draft_time, self._draft_clock = None, {}, None
             self._fuel_history, self._wear_history, self._fuel_marks, self._types = {}, {}, {}, {}
-            self._player = self.local_player()[1]
+            self._player = None
+        if self._player is None:
+            self._player = self._local_in(state)  # looked for anew: a spectator may join
         player = self._player
+        if player is None:
+            return self._watched_race(state)
         state_object = state
         times = state + self._offset('state', state, 'times')
         span = struct.unpack('<5i', memory.read(times + TIMES_NOW, TIMES_LIMIT - TIMES_NOW + 4))
@@ -653,17 +688,7 @@ class LapReader:
             gates=gates,
             car=car,
         )
-        players = self._players(state_object)
-        if any(p.position is None for p in players):
-            recorded = self._recorded_positions(clock)
-            if recorded:
-                players = tuple(
-                    dataclasses.replace(p, position=recorded[i])
-                    if p.position is None and i in recorded
-                    else p
-                    for p, i in zip(players, self._player_indices)
-                )
-        players = self._reckoning.fill(players, gates, clock)
+        players = self._players_with_positions(state_object, gates, clock)
         if position is None:
             # Online, as a client, the game keeps no position: the delta and the fuel
             # trend use the worked-out one.
@@ -676,6 +701,53 @@ class LapReader:
             share = self._count_draft(state)
             state = dataclasses.replace(state, car=dataclasses.replace(state.car, draft_last_lap=share))
         return state
+
+    def _players_with_positions(self, state, gates, clock):
+        """Every player, with a position from the replay recorder or worked out where
+        the game keeps none."""
+        players = self._players(state)
+        if any(p.position is None for p in players):
+            recorded = self._recorded_positions(clock)
+            if recorded:
+                players = tuple(
+                    dataclasses.replace(p, position=recorded[i])
+                    if p.position is None and i in recorded
+                    else p
+                    for p, i in zip(players, self._player_indices)
+                )
+        return self._reckoning.fill(players, gates, clock)
+
+    def _watched_race(self, state):
+        """The race as a spectator sees it: all the players and no car of the player's
+        own. The lap count is the leader's, the rest comes from the first driver with
+        statistics, as the limit and the track are the same for all."""
+        il, memory = self.il, self.il.memory
+        times = state + self._offset('state', state, 'times')
+        span = struct.unpack('<5i', memory.read(times + TIMES_NOW, TIMES_LIMIT - TIMES_NOW + 4))
+        clock, time_limit = span[0], span[-1]
+        laps_to_finish, gates = 0, ()
+        for player in il.list_items(self._ref('state', state, 'players')):
+            if not player:
+                continue
+            try:
+                stats = self._ref('player', player, 'm_stats')
+                laps_to_finish = memory.u16(stats + self._offset('stats', stats, 'm_lapsToFinish'))
+                gates = self._position_and_gates(player)[1]
+            except (NotFound, OSError):
+                continue
+            if gates or self._gates is not None:
+                break
+        players = self._players_with_positions(state, gates, clock)
+        return LapState(
+            clock=clock,
+            time_limit=time_limit,
+            laps_completed=max((p.laps_completed for p in players), default=0),
+            laps_to_finish=laps_to_finish,
+            lap_starts=[],
+            gates=gates,
+            players=players,
+            spectating=True,
+        )
 
     def _count_draft(self, state):
         """Add the race time since the last read to this lap's time in a slipstream (when
@@ -818,11 +890,11 @@ class LapReader:
         (value - 2**20) / 1024 (checked online: cars crossing a checkpoint line were
         0.8 from it on average). Empty when the recorder does not run (its tick stands
         still for RECORDER_STALE) or has no states."""
-        if self._controller is None:
+        if self._online_controller is None:
             return {}
         memory = self.il.memory
         try:
-            recorder = self._ref('client', self._controller, 'm_eventRecorder')
+            recorder = self._ref('client', self._online_controller, 'm_eventRecorder')
             tick = memory.i32(recorder + self._offset('recorder', recorder, 'm_stateTick'))
             states = self._ref('recorder', recorder, 'm_lastQuantizedVehicleStates')
             count = memory.u64(states + ARRAY_LENGTH)
@@ -1216,7 +1288,7 @@ def status_text(snapshot, platform=sys.platform):
             return f'waiting: {snapshot.detail or "TSU is not running in CrossOver"}'
         return 'waiting for TSU (start it with the launch option)'
     if on_grid(snapshot, time.monotonic()):
-        return 'racing'
+        return 'spectating' if snapshot.state.spectating else 'racing'
     if snapshot.status in (STARTING, RACING):
         return 'race being set up'
     return 'waiting for a race'
@@ -1232,6 +1304,8 @@ def race_sections(snapshot, now, speed_unit='kmh', standings=None, radar=None, t
     if not on_grid(snapshot, now):
         return {}
     state = snapshot.state
+    if state.spectating:
+        return _watching_sections(snapshot, now, standings, track_map)
     if state.finished or state.laps_to_finish and state.laps_completed >= state.laps_to_finish:
         # Finished: the lap sections say so, and the rest stays (the player list above
         # all) while the others race on, until the race is over and the clock stops.
@@ -1262,9 +1336,23 @@ def race_sections(snapshot, now, speed_unit='kmh', standings=None, radar=None, t
     return sections
 
 
-def _racing_sections(snapshot, now):
-    """The lap sections while the local player races."""
+def _watching_sections(snapshot, now, standings, track_map):
+    """What a spectator sees: the race, with the leader's lap, the player list with the
+    gaps to the leader, the lap times and the map; nothing about a car of their own."""
     state = snapshot.state
+    sections = {'lap': [Row(f'Spectating  -  {_lap_title(state)}', 'title')]}
+    if state.players:
+        order = standings.order(state.players, now) if standings is not None else ranked(state.players)
+        sections['players'] = players_rows(state.players, order, state.clock, state.gates, watching=True)
+        sections['laptimes'] = lap_times_rows(state.players, order, clock_now(snapshot, now))
+        if track_map is not None:
+            shown = track_map.update(state, order)
+            if shown is not None:
+                sections['trackmap'] = shown
+    return sections
+
+
+def _lap_title(state):
     title = (
         f'Lap {state.lap_number}/{state.laps_to_finish}'
         if state.laps_to_finish
@@ -1273,6 +1361,13 @@ def _racing_sections(snapshot, now):
     left = state.time_left
     if left is not None:
         title += f'  -  {clock(math.ceil(left / UNITS_PER_SECOND))} left' if left > 0 else '  -  time is up'
+    return title
+
+
+def _racing_sections(snapshot, now):
+    """The lap sections while the local player races."""
+    state = snapshot.state
+    title = _lap_title(state)
     delta = state.delta_to_best
     if delta is None:
         delta_row = Row('vs best  -', 'medium')
@@ -1546,17 +1641,22 @@ def shown_players(players, max_rows=MAX_PLAYER_ROWS, order=None):
     return [order[0]] + order[first : first + around]
 
 
-def players_rows(players, order=None, clock=None, gates=()):
+def players_rows(players, order=None, clock=None, gates=(), watching=False):
     """The player list: position, flag, name, PIT, and the gap to the local player
-    (live with the race `clock` and the checkpoint lines `gates`, see gap)."""
+    (live with the race `clock` and the checkpoint lines `gates`, see gap). `watching`:
+    a spectator has no car, so the gaps are to the leader."""
     me = next((p for p in players if p.local), None)
+    if watching:
+        me = (ranked(players) if order is None else order)[0]
     rows = []
     for position, player in shown_players(players, order=order):
         name = player.name or '?'
         if len(name) > MAX_NAME_SHOWN:
             name = name[: MAX_NAME_SHOWN - 1] + '…'
-        found = gap(player, me, clock, gates) if me is not None and not player.local else None
-        color = 'text' if found is None or found[1] == 0 else ('behind' if found[1] < 0 else 'ahead')
+        found = gap(player, me, clock, gates) if me is not None and player is not me else None
+        color = (
+            'text' if watching or found is None or found[1] == 0 else ('behind' if found[1] < 0 else 'ahead')
+        )
         rows.append(
             Row(
                 f'{position}. {name}',

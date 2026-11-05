@@ -1,3 +1,4 @@
+import dataclasses
 import struct
 import sys
 import time
@@ -422,7 +423,11 @@ class ReaderTests(unittest.TestCase):
     def test_no_local_player_is_reported(self):
         reader = build([10_000], laps_completed=0, clock=20_000, limit=0, local_index=-1)
         with self.assertRaises(il.NotFound):
-            reader.read()
+            reader.local_player()
+
+    def test_a_race_without_a_local_player_is_watched(self):
+        reader = build([10_000], laps_completed=0, clock=20_000, limit=0, local_index=-1)
+        self.assertTrue(reader.read().spectating)
 
     def test_field_list_gives_names_offsets_and_types(self):
         reader = build([10_000], laps_completed=0, clock=20_000, limit=0)
@@ -820,39 +825,57 @@ class CarTests(unittest.TestCase):
         _state, player = reader.local_player()
         reader.game.put(player + 0x50, struct.pack('<i', -1))
         reader.spectator = player
+        reader.times_at = _state + reader.il.offset(_state, 'times') + race.TIMES_NOW
         reader._controller, reader._next_search = None, 0.0
         reader.game.searches = 0
         return reader
 
-    def test_spectating_searches_rarely(self):
+    def test_spectating_reads_the_race_without_a_car(self):
+        reader = self.spectated([100.0])
+        state = reader.read()
+        self.assertTrue(state.spectating)
+        self.assertIsNone(state.car)
+        self.assertEqual(state.laps_to_finish, 13)
+        self.assertEqual([p.name for p in state.players], ['A'])
+        self.assertFalse(state.players[0].local)
+
+    def test_a_watched_race_with_a_running_clock_is_not_searched_again(self):
         now = [100.0]
         reader = self.spectated(now)
-        with self.assertRaises(race.NotFound):
+        reader.read()
+        for _ in range(3):
+            now[0] += race.SPECTATE_STILL - 1
+            reader.game.put(reader.times_at, struct.pack('<i', int(now[0])))
+            self.assertTrue(reader.read().spectating)
+        self.assertEqual(reader.game.searches, 1)
+
+    def test_a_watched_race_whose_clock_stands_is_searched_for_again(self):
+        now = [100.0]
+        reader = self.spectated(now)
+        reader.read()
+        reader.read()
+        now[0] += race.SPECTATE_STILL + 1
+        with self.assertRaises(race.NotFound):  # before the next search is due
             reader.read()
         self.assertEqual(reader.game.searches, 1)
-        now[0] += race.CLIENT_SEARCH_EVERY + 1
-        with self.assertRaises(race.NotFound):
-            reader.read()
-        self.assertEqual(reader.game.searches, 1)  # the race is known: nothing more to find
         now[0] += race.CLIENT_SPECTATE_EVERY
-        with self.assertRaises(race.NotFound):
-            reader.read()
-        self.assertEqual(reader.game.searches, 2)  # in case that race was an old one
+        reader.read()
+        self.assertEqual(reader.game.searches, 2)
 
     def test_joining_the_spectated_race_needs_no_search(self):
         now = [100.0]
         reader = self.spectated(now)
-        with self.assertRaises(race.NotFound):
-            reader.read()
+        self.assertTrue(reader.read().spectating)
         reader.game.put(reader.spectator + 0x50, struct.pack('<i', 0))
-        self.assertEqual(reader.read().laps_completed, 0)
+        state = reader.read()
+        self.assertFalse(state.spectating)
+        self.assertEqual(state.players[0].local, True)
         self.assertEqual(reader.game.searches, 1)
 
     def test_a_spectated_race_that_ends_is_looked_for_again_at_once(self):
         now = [100.0]
         reader = self.spectated(now)
-        with self.assertRaises(race.NotFound):
-            reader.read()
+        reader.read()
         reader.game.q(reader.game.client_controller + 0x48, 0)  # its race is gone
         with self.assertRaises(race.NotFound):
             reader.read()
@@ -878,7 +901,7 @@ class CarTests(unittest.TestCase):
 
     def test_the_log_says_when_there_is_only_a_race_to_watch(self):
         reader = self.spectated([100.0])
-        with self.assertLogs('turbohud.core.race', 'INFO') as logs, self.assertRaises(race.NotFound):
+        with self.assertLogs('turbohud.core.race', 'INFO') as logs:
             reader.read()
         self.assertIn('a race to watch', logs.output[1])
 
@@ -1407,6 +1430,69 @@ class LiveRaceTests(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as folder, self.assertRaises(OSError):
             self.client.connect(Path(folder, 'missing.sock'))
+
+
+class WatchingTests(unittest.TestCase):
+    """What a spectator's HUD shows."""
+
+    def players(self):
+        first = race.PlayerState(
+            'First', 75, 1, ((1000, 2000, 3000), (9000, 10000)), False, False, False, (1.0, 1.0)
+        )
+        second = race.PlayerState(
+            'Second', 75, 1, ((1000, 2500, 3500), (9500,)), False, True, False, (2.0, 2.0)
+        )
+        return first, second
+
+    def watched(self, **changes):
+        fields = {
+            'clock': 11_000,
+            'time_limit': 0,
+            'laps_completed': 1,
+            'laps_to_finish': 13,
+            'lap_starts': [],
+            'players': self.players(),
+            'spectating': True,
+        }
+        return racing(race.LapState(**{**fields, **changes}))
+
+    def test_shows_the_race_and_nothing_of_a_car(self):
+        sections = race.race_sections(self.watched(), 100.0)
+        self.assertEqual(sorted(sections), ['lap', 'laptimes', 'players'])
+
+    def test_the_title_says_so_with_the_leaders_lap(self):
+        rows = race.race_sections(self.watched(), 100.0)['lap']
+        self.assertEqual(rows[0].text, 'Spectating  -  Lap 2/13')
+
+    def test_the_title_shows_the_time_left(self):
+        rows = race.race_sections(self.watched(time_limit=31_000, laps_to_finish=0), 100.0)['lap']
+        self.assertEqual(rows[0].text, 'Spectating  -  Lap 2  -  0:02 left')
+
+    def test_gaps_are_to_the_leader_without_a_colour(self):
+        rows = race.race_sections(self.watched(), 100.0)['players']
+        self.assertEqual(rows[0].right, '')
+        self.assertTrue(rows[1].right)
+        self.assertEqual(rows[1].right_color, 'text')
+        self.assertEqual(rows[1].tail, '  PIT')
+
+    def test_hidden_when_the_clock_stands(self):
+        self.assertEqual(race.race_sections(self.watched(), 110.0), {})
+
+    def test_without_readable_players_only_the_title(self):
+        self.assertEqual(sorted(race.race_sections(self.watched(players=()), 100.0)), ['lap'])
+
+    def test_the_tooltip_says_so(self):
+        import time
+
+        snapshot = racing(self.watched().state, moved_at=time.monotonic())
+        self.assertEqual(race.status_text(snapshot), 'spectating')
+
+    def test_a_driver_keeps_coloured_gaps_to_themselves(self):
+        first, second = self.players()
+        me = dataclasses.replace(second, local=True)
+        rows = race.players_rows((first, me), None, 11_000)
+        self.assertEqual(rows[1].right, '')
+        self.assertEqual(rows[0].right_color, 'behind')
 
 
 if __name__ == '__main__':

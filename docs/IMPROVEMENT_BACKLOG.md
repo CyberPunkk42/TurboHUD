@@ -37,8 +37,9 @@ hit). The Mac app now does this by itself (`turbohud/tsu/bottle.py`, reader in
   sure). If there is none, a larger share than a quarter finds the race sooner.
 - Throttle and brake on the Mac move in TSU's thirds: the pad's triggers are read through
   the Linux joystick interface only.
-- Possible later: a spectator HUD. Spectating, the race and all its players are found
-  (12 in the session checked), but every section assumes a local car.
+- Check the spectator HUD while watching a real race (built 2026-11-04, seen only with a
+  fake game and offscreen): whether the replay recorder runs for a spectator, so the map's
+  dots and the live gaps use real positions; and what fun-mode events show.
 
 ## 4. Builds and release
 Bundled apps from `tools/build_app.py` with the probe and clear launch-option steps for

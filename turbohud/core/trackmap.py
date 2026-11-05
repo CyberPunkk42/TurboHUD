@@ -10,7 +10,7 @@ driven a whole lap without a break, that lap is the track. Until then the longes
 stretch driven so far shows. A learnt track is saved in TurboHUD's own folder, under a
 name made from the track's checkpoint lines, so the next race there has it at once.
 
-On the map: the local player, the race leader, the next car ahead and the next car
+A spectator sees every car, with the leader marked. On the map otherwise: the local player, the race leader, the next car ahead and the next car
 behind in the race order (the player list's, held steady while cars pass), and smaller
 dots for backmarkers (cars the local player is about to lap) on the road between the
 local player and the next car ahead (a backmarker is never the "next car behind", even
@@ -53,8 +53,8 @@ class TrackOutline:
 
 @dataclass(frozen=True)
 class MapDot:
-    """A car on the map. `role`: 'me', 'leader', 'ahead', 'behind', 'backmarker' or
-    'other'. `ahead_too`: the leader is also the next car ahead."""
+    """A car on the map. `role`: 'me', 'leader', 'ahead', 'behind', 'backmarker', 'other'
+    or, for a spectator, 'car'. `ahead_too`: the leader is also the next car ahead."""
 
     position: tuple
     role: str
@@ -347,14 +347,20 @@ class TrackMap:
 
     def update(self, state, order):
         """The view for the race `state` (LapState) with its players in race `order`,
-        or None without a track or a local player."""
+        or None without a track, or without a local player unless spectating."""
         order = list(order)
         me = next((p for p in order if p.local), None)
-        if me is None:
+        if me is None and not state.spectating:
             return None
         outline = self.outline(order, state.gates, lap_length(order, state.gates))
         if outline is None:
             return None
+        if me is None:
+            # No car of the player's own to relate the others to: all cars, the leader on top.
+            dots = [MapDot(p.position, 'car', p.in_pit) for p in order[1:] if p.position is not None]
+            if order and order[0].position is not None:
+                dots.append(MapDot(order[0].position, 'leader', order[0].in_pit))
+            return TrackMapView(outline, tuple(dots))
         index = order.index(me)
         leader = order[0] if index > 0 else None
         ahead = order[index - 1] if index > 0 else None
