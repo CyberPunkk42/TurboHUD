@@ -245,7 +245,6 @@ def run(args, folder):
     if live is not None:
         from turbohud.core.race import (
             RACING,
-            DeltaBar,
             Radar,
             Standings,
             race_sections,
@@ -263,7 +262,6 @@ def run(args, folder):
 
         standings = Standings()
         radar = Radar()
-        delta_bar = DeltaBar()
         track_map = TrackMap(settings.map_others, folder)  # learnt tracks beside the settings
 
         def contents():
@@ -279,7 +277,6 @@ def run(args, folder):
                 radar,
                 track_map,
                 settings.blue_seconds,
-                delta_bar,
             )
             if pad is not None and 'pedals' in current:
                 current['pedals'] = combined(current['pedals'], pad.pedals())
