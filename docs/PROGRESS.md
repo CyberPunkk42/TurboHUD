@@ -659,3 +659,6 @@ its "Recent changes".
   tuned in a race. It is full at 1 s. And an option
   to turn off the slipstream cones on the radar, in the menu and in move mode, which also takes away
   the cyan outline of a car being drafted. No more reads of the game; the bar keeps about 10 values.
+- 2026-11-05: The lap section shows the leader's lap when the driver is on an earlier lap
+  (`Lap 9/20 · Leader 12`), asked for by the user: lapped many times, the driver's own count says little
+  about the race. Left out on the leader's lap or in the lead. No more reads of the game.

@@ -364,6 +364,49 @@ class DeltaBarTests(unittest.TestCase):
         self.assertIs(bar.update(Lapping(SEC, SEC)), first)
 
 
+class LeaderLapTests(unittest.TestCase):
+    def state(self, laps, leader_laps, to_finish=20, time_limit=0, leader_finished=False):
+        players = (
+            player('Leader', [lap(0)] * (leader_laps + 1), laps=leader_laps, finished=leader_finished),
+            player('Me', [lap(0)] * (laps + 1), laps=laps, local=True),
+        )
+        return race.LapState(
+            clock=0,
+            time_limit=time_limit,
+            laps_completed=laps,
+            laps_to_finish=to_finish,
+            lap_starts=[0],
+            players=players,
+        )
+
+    def test_a_lapped_driver_sees_the_leaders_lap(self):
+        self.assertEqual(race._lap_title(self.state(8, 11)), 'Lap 9/20 · Leader 12')
+
+    def test_on_the_leaders_lap_it_is_left_out(self):
+        self.assertEqual(race._lap_title(self.state(8, 8)), 'Lap 9/20')
+
+    def test_it_is_left_out_while_leading(self):
+        self.assertEqual(race._lap_title(self.state(8, 3)), 'Lap 9/20')
+
+    def test_a_finished_leader_counts_the_laps_it_drove(self):
+        title = race._lap_title(self.state(15, 20, leader_finished=True))
+        self.assertEqual(title, 'Lap 16/20 · Leader 20')
+
+    def test_the_leaders_lap_stops_at_the_last_lap(self):
+        self.assertEqual(race._lap_title(self.state(15, 25)), 'Lap 16/20 · Leader 20')
+
+    def test_it_goes_before_the_time_left(self):
+        state = dataclasses.replace(self.state(8, 11), time_limit=600_000)
+        self.assertEqual(race._lap_title(state), 'Lap 9/20 · Leader 12  -  1:00 left')
+
+    def test_without_a_lap_limit(self):
+        self.assertEqual(race._lap_title(self.state(8, 11, to_finish=0)), 'Lap 9 · Leader 12')
+
+    def test_without_players(self):
+        state = dataclasses.replace(self.state(8, 11), players=())
+        self.assertEqual(race._lap_title(state), 'Lap 9/20')
+
+
 class SpeedUnitTests(unittest.TestCase):
     def test_mph(self):
         car = race.CarState(True, 0, 1, True, 0, 200 / 3.6)

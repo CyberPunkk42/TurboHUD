@@ -1512,12 +1512,23 @@ def _watching_sections(snapshot, now, standings, track_map):
     return sections
 
 
+def leader_lap(state):
+    """The lap the race's furthest driver is on, or None without players."""
+    lap = max((player_lap_number(player) for player in state.players), default=None)
+    if lap is None:
+        return None
+    return min(lap, state.laps_to_finish) if state.laps_to_finish else lap
+
+
 def _lap_title(state):
     title = (
         f'Lap {state.lap_number}/{state.laps_to_finish}'
         if state.laps_to_finish
         else f'Lap {state.lap_number}'
     )
+    leader = leader_lap(state)
+    if leader is not None and leader > state.lap_number:  # the player's own lap says it otherwise
+        title += f' · Leader {leader}'
     left = state.time_left
     if left is not None:
         title += f'  -  {clock(math.ceil(left / UNITS_PER_SECOND))} left' if left > 0 else '  -  time is up'
