@@ -20,6 +20,7 @@ they are passed, so comparing the same checkpoint with the best lap gives the de
 against the game's own lap times on 2026-11-01: they match exactly.
 """
 
+import collections
 import dataclasses
 import functools
 import itertools
@@ -1308,6 +1309,9 @@ def format_delta(units):
 
 
 DELTA_BAR_FULL = 1.0  # seconds of delta that fill the bar to its end
+DELTA_TREND_WINDOW = 0.5  # seconds over which the bar's colour looks at how the delta moves
+DELTA_TREND_LEAST = 0.2  # seconds of this lap's delta before that counts
+DELTA_STEADY = 0.02  # seconds gained or lost a second that still count as steady
 
 
 @dataclass(frozen=True)
@@ -1315,17 +1319,51 @@ class DeltaBarView:
     """The delta bar: the live delta to the best lap as a bar from the middle."""
 
     fill: float  # -1 to 1: how far it reaches, left when ahead of the best lap, right when behind
-    green: bool  # green when ahead of the best lap, red when behind
+    green: bool  # green while gaining on the best lap or, when steady, ahead of it; else red
     text: str  # the delta, as the delta section shows it
 
 
-def delta_bar_view(delta):
-    """The delta bar for a live `delta` to the best lap (0.1 ms each way)."""
-    return DeltaBarView(
-        min(max(delta / UNITS_PER_SECOND / DELTA_BAR_FULL, -1.0), 1.0),
-        delta < 0,
-        format_delta(delta).replace('-', '\u2212'),
-    )
+def delta_green(delta, rate):
+    """Whether the bar is green, not red. `delta` in seconds, `rate` in seconds lost a second.
+    Gaining is green and losing is red, also against the sign of the delta, and it changes at
+    once. While steady the delta itself decides."""
+    if abs(rate) > DELTA_STEADY:
+        return rate < 0
+    return delta < 0
+
+
+class DeltaBar:
+    """Follows the live delta through a lap to give the delta bar (a DeltaBarView), or None
+    without a delta. A new lap starts afresh: the delta jumps there, which is not the driver
+    gaining or losing."""
+
+    def __init__(self):
+        self._lap = self._clock = self._view = None
+        self._history = collections.deque()  # (race clock, delta) over DELTA_TREND_WINDOW
+
+    def update(self, state):
+        """The view for the race `state`; at most once a read does it work anything out."""
+        if state.clock == self._clock and state.laps_completed == self._lap:
+            return self._view
+        delta = state.delta_to_best
+        if state.laps_completed != self._lap or delta is None:
+            self._history.clear()
+        self._lap, self._clock, self._view = state.laps_completed, state.clock, None
+        if delta is None:
+            return None
+        history = self._history
+        history.append((state.clock, delta))
+        while state.clock - history[0][0] > DELTA_TREND_WINDOW * UNITS_PER_SECOND:
+            history.popleft()
+        span = (state.clock - history[0][0]) / UNITS_PER_SECOND
+        rate = (delta - history[0][1]) / UNITS_PER_SECOND / span if span >= DELTA_TREND_LEAST else 0.0
+        seconds = delta / UNITS_PER_SECOND
+        self._view = DeltaBarView(
+            min(max(seconds / DELTA_BAR_FULL, -1.0), 1.0),
+            delta_green(seconds, rate),
+            format_delta(delta).replace('-', '\u2212'),
+        )
+        return self._view
 
 
 def format_tenths(units):
@@ -1401,7 +1439,14 @@ BLUE_FROM = 2.0  # seconds: a car about to lap the local player this close shows
 
 
 def race_sections(
-    snapshot, now, speed_unit='kmh', standings=None, radar=None, track_map=None, blue_within=BLUE_FROM
+    snapshot,
+    now,
+    speed_unit='kmh',
+    standings=None,
+    radar=None,
+    track_map=None,
+    blue_within=BLUE_FROM,
+    delta_bar=None,
 ):
     """{section name: rows} for a live-reader snapshot (see core.hud.RACE_SECTIONS); a
     section with nothing to show has no rows. Nothing before the grid: in the menus, the
@@ -1409,8 +1454,8 @@ def race_sections(
     `standings` (a Standings) holds the player list's order steady while cars pass;
     `radar` (a Radar) follows the cars' movement for the proximity radar; `track_map`
     (a core.trackmap.TrackMap) gives the track map, in the player list's order;
-    `blue_within` is how many seconds behind a car shows the blue flag. The delta bar's
-    content is under 'deltaview'."""
+    `blue_within` is how many seconds behind a car shows the blue flag; `delta_bar` (a
+    DeltaBar) gives the delta bar, under 'deltaview'."""
     if not on_grid(snapshot, now):
         return {}
     state = snapshot.state
@@ -1426,6 +1471,9 @@ def race_sections(
         }
     else:
         sections = _racing_sections(snapshot, now)
+        view = delta_bar.update(state) if delta_bar is not None else None
+        if view is not None:
+            sections['deltaview'] = view
     sections.update(car_sections(state.car, state.laps_to_go, speed_unit))
     if 'draft' in sections and state.draft is not None:
         sections['draft'] = sections['draft'] + draft_rows(state)
@@ -1488,15 +1536,12 @@ def _racing_sections(snapshot, now):
         # The number on its own, with a true minus, as wide as a plus: only the number changes.
         number = format_delta(delta).replace('-', '\u2212')
         delta_row = Row(number, 'medium', color, tail=' vs best', tail_color=color, slot=DELTA_SLOT)
-    sections = {
+    return {
         'lap': [Row(title, 'title')],
         'current': [Row(format_tenths(current_lap_now(snapshot, now)), 'big', 'accent')],
         'delta': [delta_row],
         'times': [Row(f'Last {format_time(state.last_lap)}   Best {format_time(state.best_lap)}', 'medium')],
     }
-    if delta is not None:
-        sections['deltaview'] = delta_bar_view(delta)
-    return sections
 
 
 def _laps_text(laps):

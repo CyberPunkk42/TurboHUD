@@ -274,22 +274,94 @@ class LapTimesPitAndLapTests(unittest.TestCase):
 SEC = race.UNITS_PER_SECOND
 
 
+class Lapping:
+    """A stand-in for LapState, as much as the delta bar needs."""
+
+    def __init__(self, clock, delta, laps=2):
+        self.clock, self.delta_to_best, self.laps_completed = clock, delta, laps
+
+
+class DeltaColourTests(unittest.TestCase):
+    def test_steady_it_follows_the_delta(self):
+        self.assertTrue(race.delta_green(-0.5, 0.0))  # ahead
+        self.assertFalse(race.delta_green(0.5, 0.0))  # behind
+        self.assertTrue(race.delta_green(-0.5, race.DELTA_STEADY))  # still steady
+
+    def test_gaining_while_behind_is_green(self):
+        self.assertTrue(race.delta_green(0.5, -0.05))
+
+    def test_losing_while_ahead_is_red(self):
+        self.assertFalse(race.delta_green(-0.5, 0.05))
+
+    def test_it_is_only_ever_one_or_the_other(self):
+        for delta in (-1.0, 0.0, 1.0):
+            for rate in (-1.0, 0.0, 1.0):
+                self.assertIsInstance(race.delta_green(delta, rate), bool)
+
+
 class DeltaBarTests(unittest.TestCase):
-    def test_ahead_it_fills_left_in_green_with_a_minus(self):
-        view = race.delta_bar_view(round(-0.25 * SEC))
-        self.assertEqual((view.fill, view.green, view.text), (-0.25, True, '\u22120.250'))
+    def run_bar(self, *samples, laps=2):
+        bar = race.DeltaBar()
+        view = None
+        for seconds, delta in samples:
+            view = bar.update(Lapping(round(seconds * SEC), round(delta * SEC), laps))
+        return view, bar
 
-    def test_behind_it_fills_right_in_red_with_a_plus(self):
-        view = race.delta_bar_view(round(0.5 * SEC))
-        self.assertEqual((view.fill, view.green, view.text), (0.5, False, '+0.500'))
+    def test_nothing_without_a_delta(self):
+        self.assertIsNone(race.DeltaBar().update(Lapping(SEC, None)))
 
-    def test_the_colour_changes_at_once_at_zero(self):
-        self.assertTrue(race.delta_bar_view(-1).green)
-        self.assertFalse(race.delta_bar_view(1).green)
+    def test_ahead_it_fills_left_with_a_minus(self):
+        view, _bar = self.run_bar((10.0, -0.25))
+        self.assertEqual((view.fill, view.text), (-0.25, '\u22120.250'))
+
+    def test_behind_it_fills_right_with_a_plus(self):
+        view, _bar = self.run_bar((10.0, 0.5))
+        self.assertEqual((view.fill, view.text), (0.5, '+0.500'))
 
     def test_the_fill_stops_at_the_end(self):
-        self.assertEqual(race.delta_bar_view(5 * SEC).fill, 1.0)
-        self.assertEqual(race.delta_bar_view(-5 * SEC).fill, -1.0)
+        self.assertEqual(self.run_bar((10.0, 5.0))[0].fill, 1.0)
+        self.assertEqual(self.run_bar((10.0, -5.0))[0].fill, -1.0)
+
+    def test_gaining_on_a_positive_delta_is_green(self):
+        view, _bar = self.run_bar((10.0, 0.6), (10.5, 0.5), (11.0, 0.4))
+        self.assertIs(view.green, True)
+        self.assertEqual(view.text, '+0.400')
+
+    def test_losing_on_a_negative_delta_is_red(self):
+        view, _bar = self.run_bar((10.0, -0.6), (10.5, -0.5), (11.0, -0.4))
+        self.assertIs(view.green, False)
+        self.assertEqual(view.text, '\u22120.400')
+
+    def test_only_the_recent_moves_count(self):
+        view, _bar = self.run_bar((10.0, 2.0), (10.3, 0.5), (11.0, 0.5), (11.3, 0.5))
+        self.assertIs(view.green, False)  # steady now, and behind
+
+    def test_the_colour_changes_as_soon_as_the_trend_does(self):
+        bar = race.DeltaBar()
+        for seconds, delta in ((10.0, 0.5), (10.25, 0.4), (10.5, 0.3)):
+            green = bar.update(Lapping(round(seconds * SEC), round(delta * SEC))).green
+        self.assertIs(green, True)  # gaining
+        for seconds, delta in ((10.75, 0.4), (11.0, 0.5)):
+            green = bar.update(Lapping(round(seconds * SEC), round(delta * SEC))).green
+        self.assertIs(green, False)  # losing, within half a second
+
+    def test_a_new_lap_starts_afresh(self):
+        bar = race.DeltaBar()
+        bar.update(Lapping(10 * SEC, 1 * SEC, laps=2))
+        view = bar.update(Lapping(11 * SEC, -1 * SEC, laps=3))
+        self.assertIs(view.green, True)  # from its sign, not from the 2 s jump
+        self.assertEqual(len(bar._history), 1)
+
+    def test_the_history_stays_small(self):
+        bar = race.DeltaBar()
+        for i in range(10_000):
+            bar.update(Lapping(i * 500, 0))
+        self.assertLessEqual(len(bar._history), 11)
+
+    def test_it_works_once_a_read(self):
+        bar = race.DeltaBar()
+        first = bar.update(Lapping(SEC, SEC))
+        self.assertIs(bar.update(Lapping(SEC, SEC)), first)
 
 
 class SpeedUnitTests(unittest.TestCase):

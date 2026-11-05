@@ -652,9 +652,10 @@ its "Recent changes".
   Best, asked for by the user, so the numbers line up. The columns are placed with digits as zeros,
   so they stay put while a pit timer runs.
 - 2026-11-05: Two things asked for by the user. A delta bar (a new section, on by default, top centre
-  below the blue flag; `race.delta_bar_view`): it fills from the middle, left when ahead of the best lap and
-  right when behind, with the delta over it, and it is green when ahead and red when behind, changing at
-  once (the user first asked for a gradual colour by how the delta moved, then for this). It is full
-  at 1 s. And an option
+  below the blue flag; `race.DeltaBar`): it fills from the middle, left when ahead of the best lap and
+  right when behind, with the delta over it. It is green or red and changes at once, never in between:
+  gaining over the last half second is green and losing is red, also against the sign of the delta;
+  when steady (within 0.02 s a second), the delta's sign decides. These are starting values, not yet
+  tuned in a race. It is full at 1 s. And an option
   to turn off the slipstream cones on the radar, in the menu and in move mode, which also takes away
-  the cyan outline of a car being drafted. No more reads of the game.
+  the cyan outline of a car being drafted. No more reads of the game; the bar keeps about 10 values.

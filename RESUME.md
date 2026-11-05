@@ -73,12 +73,13 @@
   0.1 s without one for the times that run on; the log's `HUD frames` line counts frames with no new
   read. The cause was worked out from the log's rates and the code, not measured before the fix.
 - 2026-11-05: Two things asked for by the user. A delta bar (a new section, on by default, top centre
-  below the blue flag; `race.delta_bar_view`): it fills from the middle, left when ahead of the best lap and
-  right when behind, with the delta over it, and it is green when ahead and red when behind, changing at
-  once (the user first asked for a gradual colour by how the delta moved, then for this). It is full
-  at 1 s. And an option
+  below the blue flag; `race.DeltaBar`): it fills from the middle, left when ahead of the best lap and
+  right when behind, with the delta over it. It is green or red and changes at once, never in between:
+  gaining over the last half second is green and losing is red, also against the sign of the delta;
+  when steady (within 0.02 s a second), the delta's sign decides. These are starting values, not yet
+  tuned in a race. It is full at 1 s. And an option
   to turn off the slipstream cones on the radar, in the menu and in move mode, which also takes away
-  the cyan outline of a car being drafted. No more reads of the game.
+  the cyan outline of a car being drafted. No more reads of the game; the bar keeps about 10 values.
 - 2026-11-05: Pit stops, asked for by the user. Both lists show two live timers: `PIT 24.5s`, from
   pit entry to pit exit, and `(12.03s)`, how long the car stood still in all, kept for 6 s after the
   exit; standing over 45 s shows plain PIT, as the driver may have retired (`PitStops`: pit area and
