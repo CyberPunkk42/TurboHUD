@@ -1384,6 +1384,28 @@ class LiveRaceTests(unittest.TestCase):
         self.assertEqual(live.step(), self.client.WAIT_INTERVAL)
         self.assertEqual(live.snapshot().status, race.WAITING_FOR_GAME)
 
+    def test_each_race_read_is_announced_with_the_new_snapshot_in_place(self):
+        class Reader:
+            def read(self):
+                return MID_RACE
+
+        live = self.live(lambda: (Reader(), None))
+        seen = []
+        live.on_read = lambda: seen.append(live.snapshot().status)
+        live.step()
+        live.step()
+        self.assertEqual(seen, [race.RACING, race.RACING])
+
+    def test_no_announcement_without_a_race(self):
+        def connect():
+            raise FileNotFoundError('no socket')
+
+        live = self.live(connect)
+        seen = []
+        live.on_read = lambda: seen.append(1)
+        live.step()
+        self.assertEqual(seen, [])
+
     def test_while_a_race_is_set_up_it_says_race_starting(self):
         class Reader:
             def read(self):

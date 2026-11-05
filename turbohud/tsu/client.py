@@ -146,6 +146,7 @@ class LiveRace:
         self.warning = warning or (lambda: None)  # what to tell the player, for the tray icon
         self._clock = clock
         self._close = close  # what stays open between connects, to end at stop()
+        self.on_read = None  # called from the reading thread after each race read
         self._times = ReadTimes(clock)
         self._lock = threading.Lock()
         self._snapshot = Snapshot()
@@ -215,6 +216,8 @@ class LiveRace:
         now = self._clock()
         moved_at = now if running or before is None else previous.moved_at
         self._set(Snapshot(RACING, state, running, now, moved_at=moved_at))
+        if self.on_read is not None:
+            self.on_read()
         # READ_INTERVAL from the start of this read to the start of the next.
         return max(READ_INTERVAL - (now - began), LEAST_WAIT)
 

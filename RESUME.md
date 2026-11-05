@@ -64,6 +64,11 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-05: The track map's dots should no longer stand still and jump, seen by the user from time
+  to time. Race reads (about 19 a second) and HUD frames (20 a second) ran on separate timers, so
+  about once a second a frame had nothing new. A race frame now comes with each new read, and after
+  0.1 s without one for the times that run on; the log's `HUD frames` line counts frames with no new
+  read. The cause was worked out from the log's rates and the code, not measured before the fix.
 - 2026-11-05: Pit stops, asked for by the user. Both lists show two live timers: `PIT 24.5s`, from
   pit entry to pit exit, and `(12.03s)`, how long the car stood still in all, kept for 6 s after the
   exit; standing over 45 s shows plain PIT, as the driver may have retired (`PitStops`: pit area and

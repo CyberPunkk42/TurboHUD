@@ -26,7 +26,7 @@ from turbohud.core.settings import (
     settings_dir,
 )
 
-FRAME_MS = 50  # redraw interval: 20 times a second, as often as the race is read
+FRAME_MS = 50  # redraw interval, also what checks a race for a late read (hud.FramePacer)
 MIN_SECTION = 20  # pixels: the smallest a section gets from Smaller in the settings
 PLACEMENT_EVERY = 0.2  # seconds between position checks in move mode
 ICON = 'tsu_turbo_hud_00.png'  # in assets/, also the bundled app's icon
@@ -188,13 +188,14 @@ def listen_for_commands(app, on_command):
 
 def run(args, folder):
     import PySide6
-    from PySide6.QtCore import Qt, QTimer
+    from PySide6.QtCore import QObject, Qt, QTimer, Signal
     from PySide6.QtGui import QAction, QGuiApplication, QIcon
     from PySide6.QtWidgets import QApplication, QMenu, QSystemTrayIcon
 
     from turbohud.core.hud import (
         CLOCK_SECTIONS,
         RACE_SECTIONS,
+        FramePacer,
         FrameTimes,
         GroupMover,
         LayoutHistory,
@@ -781,10 +782,18 @@ def run(args, folder):
     shown_status = None
 
     frames = FrameTimes(time.monotonic, log.info)
+    pacer = FramePacer()
     drawn_before = 0.0
 
     def tick():
         nonlocal last_seen, shown_status, drawn_before
+        racing, fresh = False, True
+        if live is not None:
+            snapshot = live.snapshot()
+            racing = snapshot.status == RACING
+            due, fresh = pacer.due(snapshot.read_at, racing, time.monotonic())
+            if not due:
+                return
         began = time.perf_counter()
         current = contents()
         if live is not None:
@@ -802,8 +811,8 @@ def run(args, folder):
                 current.get('levels', {}).get(name),
             ):
                 window.update()  # only what changed: drawing every section each frame stutters
-        if live is not None and live.snapshot().status == RACING:
-            frames.frame(time.perf_counter() - began, SectionWindow.drawing_time - drawn_before)
+        if racing:
+            frames.frame(time.perf_counter() - began, SectionWindow.drawing_time - drawn_before, fresh)
         else:
             frames.flush()
         drawn_before = SectionWindow.drawing_time
@@ -824,6 +833,14 @@ def run(args, folder):
     timer = QTimer()
     timer.timeout.connect(tick)
     timer.start(FRAME_MS)  # also lets Python see Ctrl+C between frames
+    if live is not None:
+
+        class Reads(QObject):
+            arrived = Signal()
+
+        reads = Reads()
+        reads.arrived.connect(tick, Qt.QueuedConnection)  # from the reading thread to this one
+        live.on_read = reads.arrived.emit
     signal.signal(signal.SIGINT, lambda *_: app.quit())
     if args.move or not shortcuts and not tray.isVisible():
         set_locked(False)  # without shortcuts or tray, locked could not be undone
@@ -833,6 +850,7 @@ def run(args, folder):
     else:
         save()
     if live is not None:
+        live.on_read = None
         live.stop()
     if pad is not None:
         pad.stop()

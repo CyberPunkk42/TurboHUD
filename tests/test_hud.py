@@ -636,6 +636,13 @@ class FrameTimesTests(unittest.TestCase):
         self.assertIn('50 ms apart', self.lines[0])
         self.assertIn('content 10% and drawing 20%', self.lines[0])
 
+    def test_it_counts_the_frames_with_no_new_read(self):
+        for fresh in (True, False, True, False, False):
+            self.frames.frame(0.0, 0.0, fresh)
+            self.now += 0.05
+        self.frames.flush()
+        self.assertIn('3 with no new read', self.lines[0])
+
     def test_a_late_frame_shows_as_the_slowest(self):
         self.run_frames(0.05, 10)
         self.now += 0.2
@@ -650,6 +657,36 @@ class FrameTimesTests(unittest.TestCase):
         self.frames.flush()
         self.frames.flush()
         self.assertEqual(len(self.lines), 1)
+
+
+class FramePacerTests(unittest.TestCase):
+    def setUp(self):
+        self.pacer = hud.FramePacer()
+
+    def test_a_race_draws_once_for_each_read(self):
+        self.assertEqual(self.pacer.due(1.0, True, 1.00), (True, True))
+        self.assertEqual(self.pacer.due(1.0, True, 1.05), (False, False))
+        self.assertEqual(self.pacer.due(1.052, True, 1.053), (True, True))
+        self.assertEqual(self.pacer.due(1.052, True, 1.054), (False, False))
+
+    def test_a_read_slower_than_the_frames_gives_no_frame_without_it(self):
+        drawn = 0
+        reads = [i * 0.052 for i in range(100)]
+        for read_at in reads:
+            for now in (read_at, read_at + 0.02, read_at + 0.04):  # the timer goes off between reads
+                drawn += self.pacer.due(read_at, True, now)[0]
+        self.assertEqual(drawn, len(reads))
+
+    def test_a_late_read_still_gets_a_frame_for_the_running_times(self):
+        self.pacer.due(1.0, True, 1.0)
+        self.assertEqual(self.pacer.due(1.0, True, 1.09), (False, False))
+        self.assertEqual(self.pacer.due(1.0, True, 1.1), (True, False))
+        self.assertEqual(self.pacer.due(1.0, True, 1.15), (False, False))
+
+    def test_outside_a_race_it_draws_at_every_call(self):
+        self.pacer.due(1.0, False, 1.0)
+        self.assertEqual(self.pacer.due(1.0, False, 1.05), (True, False))
+        self.assertEqual(self.pacer.due(1.0, False, 1.1), (True, False))
 
 
 class LayoutHistoryTests(unittest.TestCase):
