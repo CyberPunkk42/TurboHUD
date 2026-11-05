@@ -44,6 +44,28 @@ class SettingsWindowTests(unittest.TestCase):
         window.blue_seconds.setValue(99)
         self.assertEqual(blue[-1], 10.0)
 
+    def press(self, window, button):
+        from PySide6.QtCore import QPointF, Qt
+        from PySide6.QtGui import QMouseEvent
+
+        event = QMouseEvent(
+            QMouseEvent.MouseButtonPress, QPointF(5, 5), QPointF(5, 5), button, button, Qt.NoModifier
+        )
+        window.mousePressEvent(event)
+
+    def test_it_moves_when_dragged_by_its_background(self):
+        from unittest import mock
+
+        from PySide6.QtCore import Qt
+
+        window = self.window()
+        handle = mock.Mock()
+        with mock.patch.object(window, 'windowHandle', return_value=handle):
+            self.press(window, Qt.RightButton)
+            handle.startSystemMove.assert_not_called()
+            self.press(window, Qt.LeftButton)
+        handle.startSystemMove.assert_called_once()
+
     def test_a_swatch_changes_that_colour_only(self):
         window = self.window()
         got = []

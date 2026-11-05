@@ -183,6 +183,11 @@ class SettingsWindow(QWidget):
                 button.chosen = button.color.lower() == current
                 button.update()
 
+    def mousePressEvent(self, event):
+        # Dragged by its background, out of the way of a section if need be.
+        if event.button() == Qt.LeftButton and self.windowHandle() is not None:
+            self.windowHandle().startSystemMove()
+
     def show_at(self, x, y):
         self.move(x, y)
         self.show()

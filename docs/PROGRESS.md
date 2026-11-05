@@ -606,3 +606,5 @@ its "Recent changes".
   and never under 3% of the radar's width), and the settings window sets when the blue flag
   (1 to 10 s, 2 s by default) and the radar (0.2 to 3 s, 0.5 s by default) show; all asked for
   by the user. A longer radar time zooms the radar out so that such a car still fits.
+- 2026-11-05: The settings window can be dragged by its background, like the move-mode panel,
+  reported by the user.
