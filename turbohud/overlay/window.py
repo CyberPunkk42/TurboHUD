@@ -10,6 +10,7 @@ on it; the others show their name. The panel says what to do, shows or hides sec
 import logging
 import math
 import sys
+import time
 
 from PySide6.QtCore import QPointF, QRectF, Qt, Signal
 from PySide6.QtGui import QColor, QPainter, QPainterPath, QPen, QPolygonF
@@ -150,6 +151,8 @@ def _set_input(widget, native, transparent):
 
 
 class SectionWindow(QWidget):
+    drawing_time = 0.0  # seconds all sections have spent drawing, for the log
+
     def __init__(self, native, theme, section):
         super().__init__(None, window_flags())
         self.native = native
@@ -240,7 +243,12 @@ class SectionWindow(QWidget):
         if not self.locked and event.button() == Qt.LeftButton:
             self.windowHandle().startSystemMove()
 
-    def paintEvent(self, _event):
+    def paintEvent(self, event):
+        began = time.perf_counter()
+        self._paint(event)
+        SectionWindow.drawing_time += time.perf_counter() - began
+
+    def _paint(self, _event):
         painter = QPainter(self)
         if not self.wanted:
             painter.end()

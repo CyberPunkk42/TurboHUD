@@ -20,6 +20,7 @@ from turbohud.tsu.gamelog import EventLog
 from turbohud.tsu.probe import receive_message, send_message, socket_path
 
 READ_SWITCH_INTERVAL = 0.001  # seconds a thread waits for Python's lock before it asks for it
+LEAST_WAIT = 0.005  # seconds after a read that took its whole interval, for the game's sake
 READ_INTERVAL = 0.05  # seconds between reads in a race: the live delta updates 20 times a second
 WAIT_INTERVAL = 1.0  # seconds between tries while TSU or a race is not there
 TIMEOUT = 5.0  # seconds before a silent probe counts as gone
@@ -188,6 +189,7 @@ class LiveRace:
 
     def step(self):
         """One read; returns the seconds to wait before the next."""
+        began = self._clock()
         try:
             if self._reader is None:
                 self._reader, self._conn = self._connect()
@@ -212,7 +214,8 @@ class LiveRace:
         now = self._clock()
         moved_at = now if running or before is None else previous.moved_at
         self._set(Snapshot(RACING, state, running, now, moved_at=moved_at))
-        return READ_INTERVAL
+        # READ_INTERVAL from the start of this read to the start of the next.
+        return max(READ_INTERVAL - (now - began), LEAST_WAIT)
 
     def _run(self):
         while not self._stop.is_set():

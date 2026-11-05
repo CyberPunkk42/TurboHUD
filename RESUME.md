@@ -64,6 +64,11 @@ See `docs/IMPROVEMENT_BACKLOG.md`. In short:
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-05: Follow-up after a race with the fix: reads stayed at about 30 ms, down from about
+  1030 ms, and the user felt it was better but not there yet. Reads now come 20 times a second
+  from start to start (they waited 50 ms after each, so about 12); the text images are limited
+  to 64 MB (they reached 1.3 GB at peak, as large fonts take far more than the 2048 images
+  allowed for); the log has a `HUD frames` line on how the overlay draws.
 - 2026-11-05: Race reads no longer fall a second behind while driving, reported by the user as
   slow sections and timings. The reads were fine (28 ms from a separate connection, 0.37 ms a
   trip on the game's memory); the thread doing them waited for Python's lock, 5 ms at a time,

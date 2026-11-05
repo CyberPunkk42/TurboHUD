@@ -701,6 +701,52 @@ class GroupMover:
         }
 
 
+FRAMES_EVERY = 30.0  # seconds between the log's lines about how the overlay draws
+
+
+class FrameTimes:
+    """How smoothly the overlay's frames come and how busy they keep its thread, for the
+    log, over FRAMES_EVERY seconds at a time. `frame(worked, drawn)` at each frame: the
+    seconds it spent on the content, and on drawing since the last one."""
+
+    def __init__(self, clock, log_line):
+        self._clock = clock
+        self._log_line = log_line
+        self.clear()
+
+    def clear(self):
+        self._gaps, self._last, self._since = [], None, None
+        self._worked = self._drawn = 0.0
+
+    def frame(self, worked, drawn):
+        now = self._clock()
+        if self._last is not None:
+            self._gaps.append(now - self._last)
+        else:
+            self._since = now
+        self._last = now
+        self._worked += worked
+        self._drawn += drawn
+        if now - self._since >= FRAMES_EVERY:
+            self.flush()
+
+    def flush(self):
+        if self._gaps:
+            span = max(self._clock() - self._since, 1e-6)
+            gaps = sorted(self._gaps)
+            self._log_line(
+                'HUD frames: %d in %.0f s, %.0f ms apart, slowest %.0f ms; content %.0f%% and '
+                'drawing %.0f%% of the time',
+                len(gaps),
+                span,
+                gaps[len(gaps) // 2] * 1000,
+                gaps[-1] * 1000,
+                self._worked / span * 100,
+                self._drawn / span * 100,
+            )
+        self.clear()
+
+
 HISTORY_SETTLE = 1.0  # seconds a dragged layout stays still before it counts as one change
 
 

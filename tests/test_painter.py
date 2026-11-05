@@ -55,6 +55,21 @@ class TextImageTests(unittest.TestCase):
         self.assertIsNot(text_image('1:23.4', 40, 0xFFFF0000, 0xC8000000, 1.0), first)
         self.assertIsNot(text_image('1:23.4', 40, 0xFFFFFFFF, 0xC8000000, 2.0), first)
 
+    def test_large_images_cannot_fill_the_memory(self):
+        from turbohud.hud import painter
+
+        limit = painter.IMAGES_LIMIT
+        self.addCleanup(setattr, painter, 'IMAGES_LIMIT', limit)
+        painter.IMAGES_LIMIT = 200 * 1024
+        first = painter.text_image('oldest', 60, 0xFFFFFFFF, 0xC8000000, 2.0)
+        for number in range(40):
+            painter.text_image(f'{number:04d}', 60, 0xFFFFFFFF, 0xC8000000, 2.0)
+        self.assertLessEqual(painter._images_size, 200 * 1024 + 500 * 1024)
+        self.assertEqual(
+            painter._images_size, sum(entry[0].sizeInBytes() for entry in painter._images.values())
+        )
+        self.assertIsNot(painter.text_image('oldest', 60, 0xFFFFFFFF, 0xC8000000, 2.0), first)
+
     def test_it_holds_the_whole_text_and_its_outline_for_the_screen(self):
         from turbohud.hud.painter import outline_path, text_image
 

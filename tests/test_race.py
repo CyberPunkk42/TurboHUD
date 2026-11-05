@@ -1356,6 +1356,33 @@ class LiveRaceTests(unittest.TestCase):
         live._thread.join()
         self.assertEqual(sys.getswitchinterval(), client.READ_SWITCH_INTERVAL)
 
+    def test_reads_come_at_their_interval_from_start_to_start(self):
+        from turbohud.tsu.client import LEAST_WAIT, READ_INTERVAL
+
+        live = self.reading([0.03, 0.03, 0.2])
+        now = [100.0]
+
+        def clock():
+            return now[0]
+
+        live._clock = clock
+        reader = live._connect()[0]
+        real = reader.read
+
+        def timed():
+            now[0] += 0.03
+            return real()
+
+        live._reader, reader.read = reader, timed
+        self.assertAlmostEqual(live.step(), READ_INTERVAL - 0.03)
+
+        def slow():
+            now[0] += 0.2
+            return real()
+
+        reader.read = slow
+        self.assertEqual(live.step(), LEAST_WAIT)
+
     def test_no_trips_in_the_line_where_they_are_not_known(self):
         from turbohud.tsu.client import ReadTimes
 

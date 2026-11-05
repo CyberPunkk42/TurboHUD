@@ -190,6 +190,7 @@ def run(args, folder):
     from turbohud.core.hud import (
         CLOCK_SECTIONS,
         RACE_SECTIONS,
+        FrameTimes,
         GroupMover,
         LayoutHistory,
         below,
@@ -236,7 +237,7 @@ def run(args, folder):
     live = start_live_race()
     pad = None
     if live is not None:
-        from turbohud.core.race import Radar, Standings, race_sections, status_text, with_local_time
+        from turbohud.core.race import RACING, Radar, Standings, race_sections, status_text, with_local_time
 
         layout = RACE_SECTIONS
         if sys.platform.startswith('linux'):  # the Linux joystick interface
@@ -729,8 +730,12 @@ def run(args, folder):
 
     shown_status = None
 
+    frames = FrameTimes(time.monotonic, log.info)
+    drawn_before = 0.0
+
     def tick():
-        nonlocal last_seen, shown_status
+        nonlocal last_seen, shown_status, drawn_before
+        began = time.perf_counter()
         current = contents()
         if live is not None:
             text = status_text(live.snapshot())
@@ -747,6 +752,11 @@ def run(args, folder):
                 current.get('levels', {}).get(name),
             ):
                 window.update()  # only what changed: drawing every section each frame stutters
+        if live is not None and live.snapshot().status == RACING:
+            frames.frame(time.perf_counter() - began, SectionWindow.drawing_time - drawn_before)
+        else:
+            frames.flush()
+        drawn_before = SectionWindow.drawing_time
         if not locked and time.monotonic() - last_seen >= PLACEMENT_EVERY:
             # In move mode, note where the sections are: on Wayland only the desktop
             # knows, and it may no longer say once TurboHUD is quitting. Grouped sections

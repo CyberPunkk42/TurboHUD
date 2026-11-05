@@ -561,3 +561,8 @@ its "Recent changes".
   windows with 13 sections), the lock is handed over within 1 ms, and a trip waits once.
   With the main thread busy all the time: about 590 ms a read before, about 108 ms now. Not
   yet seen in a race. The log's `race reads` line now also says trips a read and ms a trip.
+- 2026-11-05: Follow-up after a race with the fix: reads stayed at about 30 ms, down from about
+  1030 ms, and the user felt it was better but not there yet. Reads now come 20 times a second
+  from start to start (they waited 50 ms after each, so about 12); the text images are limited
+  to 64 MB (they reached 1.3 GB at peak, as large fonts take far more than the 2048 images
+  allowed for); the log has a `HUD frames` line on how the overlay draws.

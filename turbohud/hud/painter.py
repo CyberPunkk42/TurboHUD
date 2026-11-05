@@ -1,5 +1,6 @@
 import math
 import sys
+from collections import OrderedDict
 from functools import lru_cache
 
 from PySide6.QtCore import QPointF, QRectF, Qt
@@ -69,7 +70,11 @@ def outline_path(text, size):
     return stroker.createStroke(text_path(text, size))
 
 
-@lru_cache(maxsize=2048)
+IMAGES_LIMIT = 64 * 1024 * 1024  # bytes of text images kept: large fonts take far more than small
+_images = OrderedDict()  # (text, size, color, outline, ratio) -> (image, left, top), oldest first
+_images_size = 0
+
+
 def text_image(text, size, color, outline, ratio):
     """(image, left, top) of a line of outlined text, for `ratio` device pixels to a pixel;
     `left` and `top` are from the text's start on its baseline to the image's corner.
@@ -79,6 +84,12 @@ def text_image(text, size, color, outline, ratio):
     20 frames a second with many sections it left the thread reading the race a second
     behind (found with a profile of a race on the Mac). The texts come back, as a lap
     runs through the same times, so each is filled once and then only copied."""
+    global _images_size
+    key = (text, size, color, outline, ratio)
+    found = _images.get(key)
+    if found is not None:
+        _images.move_to_end(key)
+        return found
     shape, edge = text_path(text, size), outline_path(text, size)
     box = shape.boundingRect().united(edge.boundingRect())
     left, top = math.floor(box.left() * ratio) / ratio, math.floor(box.top() * ratio) / ratio
@@ -93,7 +104,11 @@ def text_image(text, size, color, outline, ratio):
     painter.fillPath(edge, QColor.fromRgba(outline))
     painter.fillPath(shape, QColor.fromRgba(color))
     painter.end()
-    return image, left, top
+    found = _images[key] = (image, left, top)
+    _images_size += image.sizeInBytes()
+    while _images_size > IMAGES_LIMIT and len(_images) > 1:
+        _images_size -= _images.popitem(last=False)[1][0].sizeInBytes()
+    return found
 
 
 def outlined_text(painter, x, y, text, size, color, outline):

@@ -534,6 +534,38 @@ class MatchSizesTests(unittest.TestCase):
         self.assertEqual(again, once)
 
 
+class FrameTimesTests(unittest.TestCase):
+    def setUp(self):
+        self.now, self.lines = 0.0, []
+        self.frames = hud.FrameTimes(lambda: self.now, lambda text, *args: self.lines.append(text % args))
+
+    def run_frames(self, gap, count, worked=0.005, drawn=0.01):
+        for _ in range(count):
+            self.frames.frame(worked, drawn)
+            self.now += gap
+
+    def test_it_says_how_the_frames_came_every_so_often(self):
+        self.run_frames(0.05, 601)
+        self.assertEqual(len(self.lines), 1)
+        self.assertIn('50 ms apart', self.lines[0])
+        self.assertIn('content 10% and drawing 20%', self.lines[0])
+
+    def test_a_late_frame_shows_as_the_slowest(self):
+        self.run_frames(0.05, 10)
+        self.now += 0.2
+        self.run_frames(0.05, 3)
+        self.frames.flush()
+        self.assertIn('slowest 250 ms', self.lines[0])
+
+    def test_no_line_without_frames_and_after_the_race_it_starts_afresh(self):
+        self.frames.flush()
+        self.assertEqual(self.lines, [])
+        self.run_frames(0.05, 3)
+        self.frames.flush()
+        self.frames.flush()
+        self.assertEqual(len(self.lines), 1)
+
+
 class LayoutHistoryTests(unittest.TestCase):
     def test_undo_goes_back_one_change_at_a_time_until_none_is_left(self):
         history = hud.LayoutHistory('a')
