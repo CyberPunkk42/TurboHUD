@@ -64,6 +64,11 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-06: TurboHUD leaves a session alone when it holds no race to read. A tester in a custom session
+  (only the clock showed) had a search of all of TSU's memory running about two thirds of the time: over
+  20 s each with 10 s between, without end, as TSU's log says an event runs. The wait now doubles up to
+  60 s, and goes back to 10 s when a race is found or the event ends. Whether this caused the tester's
+  FPS drops is not known yet.
 - 2026-11-06: The Mac app can go to a tester, asked for by the user: `tools/build_app.py` now makes a
   `.dmg` with the app, a link to Applications and `Read Me First.txt` (`tools/mac_read_me.txt`). It works
   out which macOS the bundle needs from all its programs, writes that into the app and the read-me, and

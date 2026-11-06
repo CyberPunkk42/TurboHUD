@@ -41,6 +41,13 @@ The user confirmed both work on 2026-11-05. If the bar's colour ever flickers or
 See it lapped, also as a client, and when the leader finishes: whether the `/20` then still says
 what the driver has left is not known.
 
+## Tester's Mac (2026-11-06)
+- Custom sessions show only the clock: no race is found in them. Not looked into: what such a session
+  holds, and whether the HUD could read it.
+- FPS drops on the tester's Mac: cause not known. See whether they go with the search backoff, and
+  compare with TurboHUD quit. The tester's report showed two CrossOver copies; TurboHUD takes the one in
+  `~/Applications` first, whichever TSU runs from (not fixed, did not stop the reader there).
+
 ## Test list: what is left
 Done by the user on the Mac: all of the layout list (tight boxes, centring, groups, presets
 with Ctrl+Shift+1, 2, 3, Undo). AI races online ran many times while fixing the reads, but
