@@ -1,6 +1,6 @@
 """Build TurboHUD as a ready-to-run app for this system with PyInstaller, and pack it.
 
-    python tools/build_app.py [--version 2026.10.24] [--smoke]
+    python tools/build_app.py [--version 2026.10.24[.2]] [--smoke]
 
 Needs the packages in requirements-build.txt. PyInstaller builds only for the system it
 runs on, so GitHub Actions runs this once per system (.github/workflows/build.yml). On the
@@ -48,7 +48,7 @@ _MINOS = re.compile(r'^\s*minos\s+(\d+)\.(\d+)', re.MULTILINE)
 _VERSION_MIN = re.compile(r'LC_VERSION_MIN_MACOSX\s*\n(?:\s*cmdsize.*\n)?\s*version\s+(\d+)\.(\d+)')
 SMOKE_SECONDS = 3
 SMOKE_TIMEOUT = 120
-_VERSION = re.compile(r'dev|\d{4}\.\d{2}\.\d{2}')
+_VERSION = re.compile(r'dev|\d{4}\.\d{2}\.\d{2}(\.\d+)?')  # a second build of a day: .2
 # The Mac app's reader runs in TSU's CrossOver bottle with its own Windows Python, so it
 # ships as plain files beside the app: these, and that Python (see turbohud/tsu/bottle.py).
 WIN_PYTHON = ROOT / '.buildtools' / 'win-python'
@@ -64,7 +64,11 @@ READER_FILES = (
 
 def parse_args(argv):
     parser = argparse.ArgumentParser(description='Build the TurboHUD app for this system.')
-    parser.add_argument('--version', default='dev', help='dev, or a release date like 2026.10.24')
+    parser.add_argument(
+        '--version',
+        default='dev',
+        help='dev, or a release date like 2026.10.24, with .2 for a second build that day',
+    )
     parser.add_argument('--smoke', action='store_true', help='start the built app briefly to check it')
     parser.add_argument(
         '--any-macos',
@@ -74,7 +78,7 @@ def parse_args(argv):
     args = parser.parse_args(argv)
     args.version = args.version.removeprefix('v')
     if not _VERSION.fullmatch(args.version):
-        parser.error(f'version must be dev or YYYY.MM.DD: {args.version}')
+        parser.error(f'version must be dev or YYYY.MM.DD[.N]: {args.version}')
     return args
 
 

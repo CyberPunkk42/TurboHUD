@@ -25,6 +25,9 @@ class BuildArgsTests(unittest.TestCase):
         self.assertEqual(build_app.parse_args([]).version, 'dev')
         self.assertEqual(build_app.parse_args(['--version', 'v2026.10.24']).version, '2026.10.24')
 
+    def test_a_second_build_of_a_day(self):
+        self.assertEqual(build_app.parse_args(['--version', '2026.11.06.2']).version, '2026.11.06.2')
+
     def test_rejects_other_versions(self):
         for version in ('1.0', '2026-10-24', 'v26.1.1'):
             with (
