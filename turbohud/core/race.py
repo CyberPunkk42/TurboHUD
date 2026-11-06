@@ -395,6 +395,7 @@ def per_lap(history, laps=PER_LAP_LAPS):
 
 
 CLIENT_SEARCH_EVERY = 10.0  # seconds between searches for an online race while there is none
+CLIENT_SEARCH_MOST = 60.0  # the wait doubles up to this while an event holds no race to read
 CLIENT_SPECTATE_EVERY = 30.0  # the same while the race last watched has its clock standing
 SPECTATE_STILL = 5.0  # seconds a watched race's clock may stand before it counts as over
 CLIENT_LOG_EVERY = 2.0  # seconds between looks at TSU's log while it says no event runs
@@ -468,6 +469,7 @@ class LapReader:
         self._spectated = None  # a controller whose race the player only watches
         self._watched_clock, self._watched_at = None, 0.0  # its race clock, and since when
         self._next_search = 0.0  # when to look for it again
+        self._search_wait = CLIENT_SEARCH_EVERY  # how long after a search that found nothing
         self._state = None  # the TS.EventState the caches below belong to
         self._offsets = {}  # (role, field) -> offset
         self._player = None
@@ -553,11 +555,19 @@ class LapReader:
                 self._spectated = None
                 self._next_search = 0.0
         find = memory.find_pointers
-        if find is None or self._clock() < self._next_search:
+        if find is None:
+            raise error
+        if self._clock() < self._next_search:
+            # A long wait ends with the event, so that the next race is found soon.
+            long_wait = self._search_wait > CLIENT_SEARCH_EVERY and self._event_running is not None
+            if long_wait and self._event_running() is False:
+                self._search_wait = CLIENT_SEARCH_EVERY
+                self._next_search = self._clock() + CLIENT_LOG_EVERY
             raise error
         if self._event_running is not None and self._event_running() is False:
             # Menus and lobbies: no event, nothing to search for (a search reads all
             # of the game's data and keeps a CPU core busy for over a second).
+            self._search_wait = CLIENT_SEARCH_EVERY
             self._next_search = self._clock() + CLIENT_LOG_EVERY
             raise error
         if self._client_class is None:
@@ -581,9 +591,20 @@ class LapReader:
         finally:
             # Counted from the search's end: in a CrossOver bottle a search of all the
             # data takes longer than the wait, and would start again at once.
-            wait = CLIENT_SPECTATE_EVERY if watchable else CLIENT_SEARCH_EVERY
+            wait = CLIENT_SPECTATE_EVERY if watchable else self._search_wait
             ended = self._clock()
             self._next_search = ended + wait
+            # An event may hold no race to read at all (a custom session), and in a bottle
+            # a search takes over 20 s: over and over, it would never leave the game alone.
+            found = result == 'race found'
+            nothing = result == 'no race'
+            self._search_wait = (
+                CLIENT_SEARCH_EVERY
+                if found
+                else min(wait * 2, CLIENT_SEARCH_MOST)
+                if nothing
+                else self._search_wait
+            )
             log.info('search: %s, after %.1f s and %d hits', result, ended - started, hits)
         if not watchable:
             self._spectated = None

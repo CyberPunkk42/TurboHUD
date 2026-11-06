@@ -670,3 +670,8 @@ its "Recent changes".
   running a downloaded program needs the user's approval. `--any-macos` builds anyway. PySide6 6.11 itself
   needs macOS 15. The bundle ID no longer holds the user's handle. Not signed with a paid certificate: a
   tester goes through Open Anyway once. Not tried on another Mac.
+- 2026-11-06: TurboHUD leaves a session alone when it holds no race to read. A tester in a custom session
+  (only the clock showed) had a search of all of TSU's memory running about two thirds of the time: over
+  20 s each with 10 s between, without end, as TSU's log says an event runs. The wait now doubles up to
+  60 s, and goes back to 10 s when a race is found or the event ends. Whether this caused the tester's
+  FPS drops is not known yet.

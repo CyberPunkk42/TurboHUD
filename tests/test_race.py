@@ -888,6 +888,69 @@ class CarTests(unittest.TestCase):
         self.assertIsNone(reader._controller)
         self.assertEqual(reader.game.searches, searches)
 
+    def backing_off(self, running=None):
+        now = [100.0]
+        reader = build(
+            [10_000],
+            laps_completed=0,
+            clock=20_000,
+            limit=0,
+            online=True,
+            clock_fn=lambda: now[0],
+            event_running=running,
+        )
+        reader.race_there = reader.game.read(reader.game.client_controller + 0x48, 8)
+        reader.game.q(reader.game.client_controller + 0x48, 0)  # no race in it
+        return reader, now
+
+    def waits_of(self, reader, now, count):
+        """The waits between `count` searches that find nothing."""
+        waits = []
+        for _ in range(count):
+            with self.assertRaises(race.NotFound):
+                reader.read()
+            waits.append(reader._next_search - now[0])
+            now[0] = reader._next_search
+        return waits
+
+    def test_an_event_without_a_race_is_searched_less_and_less(self):
+        reader, now = self.backing_off()
+        self.assertEqual(self.waits_of(reader, now, 6), [10.0, 20.0, 40.0, 60.0, 60.0, 60.0])
+
+    def test_no_search_during_a_long_wait(self):
+        reader, now = self.backing_off()
+        self.waits_of(reader, now, 4)  # the next wait is 60 s
+        with self.assertRaises(race.NotFound):
+            reader.read()
+        searches = reader.game.searches
+        now[0] += 59.0
+        with self.assertRaises(race.NotFound):
+            reader.read()
+        self.assertEqual(reader.game.searches, searches)
+
+    def test_the_end_of_the_event_ends_a_long_wait(self):
+        running = [True]
+        reader, now = self.backing_off(lambda: running[0])
+        self.waits_of(reader, now, 4)
+        with self.assertRaises(race.NotFound):
+            reader.read()
+        self.assertGreater(reader._next_search - now[0], race.CLIENT_LOG_EVERY)
+        running[0] = False
+        now[0] += 1.0
+        with self.assertRaises(race.NotFound):
+            reader.read()
+        self.assertEqual(reader._next_search - now[0], race.CLIENT_LOG_EVERY)
+        self.assertEqual(reader._search_wait, race.CLIENT_SEARCH_EVERY)
+
+    def test_a_race_found_ends_the_long_waits(self):
+        reader, now = self.backing_off()
+        self.waits_of(reader, now, 3)
+        self.assertGreater(reader._search_wait, race.CLIENT_SEARCH_EVERY)
+        reader.game.put(reader.game.client_controller + 0x48, reader.race_there)
+        now[0] = reader._next_search
+        self.assertIsNotNone(reader.read())
+        self.assertEqual(reader._search_wait, race.CLIENT_SEARCH_EVERY)
+
     def test_without_an_online_race_the_search_waits_between_tries(self):
         now = [100.0]
         reader = build(
