@@ -1542,6 +1542,16 @@ class LiveRaceTests(unittest.TestCase):
         live._thread.join()
         self.assertEqual(sys.getswitchinterval(), client.READ_SWITCH_INTERVAL)
 
+    def test_a_lower_read_rate_takes_effect_at_the_next_read(self):
+        from turbohud.tsu.client import READ_INTERVAL
+
+        live = self.reading([0.0, 0.0])
+        self.assertEqual(live.read_interval, READ_INTERVAL)
+        now = [100.0]
+        live._clock = lambda: now[0]
+        live.read_interval = 0.2
+        self.assertAlmostEqual(live.step(), 0.2)
+
     def test_reads_come_at_their_interval_from_start_to_start(self):
         from turbohud.tsu.client import LEAST_WAIT, READ_INTERVAL
 

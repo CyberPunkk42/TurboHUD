@@ -44,6 +44,33 @@ class SettingsWindowTests(unittest.TestCase):
         window.blue_seconds.setValue(99)
         self.assertEqual(blue[-1], 10.0)
 
+    def test_the_reads_show_the_chosen_rate_and_say_when_it_changes(self):
+        window = self.window(reads_per_second=10)
+        self.assertEqual([reads for reads, b in window.read_buttons.items() if b.isChecked()], [10])
+        chosen = []
+        window.reads_changed.connect(chosen.append)
+        window.read_buttons[5].click()
+        self.assertEqual(chosen, [5])
+        self.assertEqual([reads for reads, b in window.read_buttons.items() if b.isChecked()], [5])
+
+    def test_the_chosen_rate_can_be_seen(self):
+        from PySide6.QtGui import QColor
+
+        from turbohud.overlay.settings_window import CHOSEN_RING
+
+        window = self.window(reads_per_second=10)
+        window.show()
+        self.addCleanup(window.close)
+
+        def fill(button):
+            return button.grab().toImage().pixelColor(button.width() // 2, 4)
+
+        self.assertEqual(fill(window.read_buttons[10]), QColor(*CHOSEN_RING))
+        self.assertNotEqual(fill(window.read_buttons[20]), QColor(*CHOSEN_RING))
+
+    def test_without_a_live_race_there_is_no_choice_of_reads(self):
+        self.assertEqual(self.window().read_buttons, {})
+
     def press(self, window, button):
         from PySide6.QtCore import QPointF, Qt
         from PySide6.QtGui import QMouseEvent

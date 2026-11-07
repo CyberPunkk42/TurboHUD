@@ -30,6 +30,9 @@ the race is found after about 15 s and read in about 20 ms
 (`turbohud/tsu/winmemory.py`: page cache, paced search that stops at the first good
 hit). The Mac app now does this by itself (`turbohud/tsu/bottle.py`, reader in
 `bottle_reader.py`, Windows Python inside the app). Still to do:
+- Find what costs a tester's Mac about 50 FPS, and why TSU hung on exit with TurboHUD quit first
+  (`docs/CONTINUE_HERE.md`, "Tester's Mac"). Done so far (2026-11-07): unticked sections are no longer
+  redrawn and leave the screen, and the settings window sets the race reads a second, to compare.
 - Check in races on the Mac, going through the list in `docs/CONTINUE_HERE.md`: offline and
   online, the sections over TSU's Fullscreen, how long the race takes to show, the track map
   and the radar. AI races online have run many times, but the list has not been gone through.

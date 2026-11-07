@@ -36,6 +36,7 @@ class Theme:
 
 BLUE_SECONDS = (1.0, 10.0, 0.5)  # the blue flag's warning time: least, most, step
 RADAR_SECONDS = (0.2, 3.0, 0.1)  # the proximity radar's
+READS_PER_SECOND = (20, 10, 5)  # how often a race may be read; fewer ask less of the game
 GROUPS = ('A', 'B', 'C', 'D')  # section groups; '' is none
 PRESETS = (1, 2, 3)  # the layouts a player can keep
 
@@ -67,6 +68,7 @@ class Settings:
     presets: dict = field(default_factory=dict)  # number (one of PRESETS) -> a kept `sections`
     blue_seconds: float = 2.0  # how far behind a car about to lap the player shows the blue flag
     radar_seconds: float = 0.5  # how far ahead or behind a car shows the proximity radar
+    reads_per_second: int = 20  # how often a race is read and its sections updated (READS_PER_SECOND)
 
 
 def settings_dir(platform=sys.platform, environ=None, home=None):
@@ -224,6 +226,11 @@ def load_settings(path):
         presets=_presets(data.get('presets'), data.get('backdrop') is True),
         blue_seconds=_seconds(data.get('blue_seconds'), Settings.blue_seconds, BLUE_SECONDS),
         radar_seconds=_seconds(data.get('radar_seconds'), Settings.radar_seconds, RADAR_SECONDS),
+        reads_per_second=(
+            data['reads_per_second']
+            if data.get('reads_per_second') in READS_PER_SECOND
+            else Settings.reads_per_second
+        ),
     )
 
 
@@ -247,6 +254,7 @@ def save_settings(path, settings):
         'layout_version': settings.layout_version,
         'blue_seconds': settings.blue_seconds,
         'radar_seconds': settings.radar_seconds,
+        'reads_per_second': settings.reads_per_second,
         'sections': _section_data(settings.sections),
         'presets': {str(number): _section_data(kept) for number, kept in settings.presets.items()},
     }

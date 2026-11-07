@@ -677,3 +677,10 @@ its "Recent changes".
   FPS drops is not known yet.
 - 2026-11-06: A second build of a day can be told apart: `tools/build_app.py --version 2026.11.06.2`.
   The tester's new version carries it, with the search fix; `RESUME.md` and the log say which they run.
+- 2026-11-07: Two steps towards a tester's FPS loss (Mac, about 110 FPS without TurboHUD, 78 with every
+  section unticked, 62 with lap and delta, 58 with all). An unticked section was still redrawn, empty,
+  whenever its content changed, and on the Mac its window stayed above the game: it is now not redrawn,
+  and on the Mac its window leaves the screen. And the settings window sets the race reads a second (20,
+  10 or 5, at once; 20 by default), with fewer HUD frames to match, to compare. Seen with real Mac windows
+  but not over TSU: whether either gives FPS back is not measured. At 5 a second a track learnt then gets
+  a coarser line.

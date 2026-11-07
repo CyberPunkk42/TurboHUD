@@ -51,6 +51,8 @@
 
 ## Next steps
 **Start with `docs/CONTINUE_HERE.md`**: what is left to test. Then `docs/IMPROVEMENT_BACKLOG.md`. In short:
+- First: measure what costs a tester's Mac about 50 FPS with TurboHUD running, and whether quitting
+  TurboHUD before TSU hangs TSU (`docs/CONTINUE_HERE.md`, "Tester's Mac").
 0. Tests: keep them from reaching a running TurboHUD (until then run them with
    `XDG_RUNTIME_DIR` set to an empty private folder).
 1. Windows: the overlay over TSU (windowed, Fullscreen, Fullscreen Exclusive), then
@@ -64,6 +66,13 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-07: Two steps towards a tester's FPS loss (Mac, about 110 FPS without TurboHUD, 78 with every
+  section unticked, 62 with lap and delta, 58 with all). An unticked section was still redrawn, empty,
+  whenever its content changed, and on the Mac its window stayed above the game: it is now not redrawn,
+  and on the Mac its window leaves the screen. And the settings window sets the race reads a second (20,
+  10 or 5, at once; 20 by default), with fewer HUD frames to match, to compare. Seen with real Mac windows
+  but not over TSU: whether either gives FPS back is not measured. At 5 a second a track learnt then gets
+  a coarser line.
 - 2026-11-06: A second build of a day can be told apart: `tools/build_app.py --version 2026.11.06.2`.
   The tester's new version carries it, with the search fix; `RESUME.md` and the log say which they run.
 - 2026-11-06: TurboHUD leaves a session alone when it holds no race to read. A tester in a custom session

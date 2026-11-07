@@ -11,6 +11,7 @@ from dataclasses import replace
 from PySide6.QtCore import QRectF, Qt, Signal
 from PySide6.QtGui import QColor, QPainter, QPen
 from PySide6.QtWidgets import (
+    QButtonGroup,
     QDoubleSpinBox,
     QGridLayout,
     QHBoxLayout,
@@ -20,7 +21,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from turbohud.core.settings import BLUE_SECONDS, RADAR_SECONDS, Theme
+from turbohud.core.settings import BLUE_SECONDS, RADAR_SECONDS, READS_PER_SECOND, Theme
 
 log = logging.getLogger(__name__)
 
@@ -37,6 +38,12 @@ COLOURS = (
 SIZE_STEP = 1.1  # Bigger: 10 % larger; Smaller: the same back
 SWATCH = 22  # pixels
 CHOSEN_RING = (120, 190, 255)
+# On the Mac a plain checkable button looks the same checked or not.
+READS_BUTTON = (
+    'QPushButton { color: white; background: transparent; border: 1px solid white;'
+    ' border-radius: 6px; padding: 3px 14px; }'
+    f' QPushButton:checked {{ color: black; background: rgb{CHOSEN_RING}; border-color: rgb{CHOSEN_RING}; }}'
+)
 
 
 def _qcolor(text):
@@ -81,17 +88,18 @@ class Swatch(QPushButton):
 
 class SettingsWindow(QWidget):
     """Colours for text, highlight and outline; all sections bigger or smaller; when the blue
-    flag and the proximity radar show; reset."""
+    flag and the proximity radar show; how often a race is read (where one can be); reset."""
 
     theme_changed = Signal(object)  # the new Theme
     resize_requested = Signal(float)  # factor for every section's size
     blue_seconds_changed = Signal(float)
     radar_seconds_changed = Signal(float)
+    reads_changed = Signal(int)
     closed = Signal()
 
     focusable = True  # it takes clicks on its buttons
 
-    def __init__(self, native, flags, theme, blue_seconds=2.0, radar_seconds=0.5):
+    def __init__(self, native, flags, theme, blue_seconds=2.0, radar_seconds=0.5, reads_per_second=None):
         super().__init__(None, flags)
         self.native = native
         self.theme = theme
@@ -136,6 +144,9 @@ class SettingsWindow(QWidget):
         timing.addWidget(QLabel('Proximity radar when a car is within:'), 1, 0)
         timing.addWidget(self.radar_seconds, 1, 1)
         column.addLayout(timing)
+        self.read_buttons = {}
+        if reads_per_second is not None:
+            column.addLayout(self._reads_row(reads_per_second))
         row = QHBoxLayout()
         reset, close = QPushButton('Reset colours'), QPushButton('Close')
         reset.clicked.connect(self.reset)
@@ -146,6 +157,26 @@ class SettingsWindow(QWidget):
         column.addLayout(row)
         self.show_chosen()
         self.adjustSize()
+
+    def _reads_row(self, chosen):
+        """Buttons rather than a drop-down, whose list would be one more window."""
+        row = QHBoxLayout()
+        row.addWidget(QLabel('Race reads a second:'))
+        group = QButtonGroup(self)
+        for reads in READS_PER_SECOND:
+            button = QPushButton(str(reads))
+            button.setCheckable(True)
+            button.setChecked(reads == chosen)
+            button.setStyleSheet(READS_BUTTON)
+            button.setToolTip(
+                'Fewer reads ask less of the game; the delta and the track map move less smoothly'
+            )
+            group.addButton(button, reads)
+            row.addWidget(button)
+            self.read_buttons[reads] = button
+        group.idClicked.connect(self.reads_changed)
+        row.addStretch()
+        return row
 
     @staticmethod
     def _seconds_box(value, limits, changed):

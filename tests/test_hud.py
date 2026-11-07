@@ -719,6 +719,15 @@ class FramePacerTests(unittest.TestCase):
         self.assertEqual(self.pacer.due(1.0, True, 1.1), (True, False))
         self.assertEqual(self.pacer.due(1.0, True, 1.15), (False, False))
 
+    def test_at_a_lower_read_rate_the_timer_adds_no_frames_between_reads(self):
+        self.pacer.most = 2 / 5
+        drawn = 0
+        for read in range(50):
+            read_at = read * 0.2
+            for tick in range(4):  # the 50 ms timer between two reads
+                drawn += self.pacer.due(read_at, True, read_at + tick * 0.05)[0]
+        self.assertEqual(drawn, 50)
+
     def test_outside_a_race_it_draws_at_every_call(self):
         self.pacer.due(1.0, False, 1.0)
         self.assertEqual(self.pacer.due(1.0, False, 1.05), (True, False))

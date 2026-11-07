@@ -145,6 +145,7 @@ class LiveRace:
         self._connect = connect
         self.warning = warning or (lambda: None)  # what to tell the player, for the tray icon
         self._clock = clock
+        self.read_interval = READ_INTERVAL  # seconds between reads in a race; may change at any time
         self._close = close  # what stays open between connects, to end at stop()
         self.on_read = None  # called from the reading thread after each race read
         self._times = ReadTimes(clock)
@@ -204,7 +205,7 @@ class LiveRace:
             # being set up, or a pointer led nowhere between two states.
             status = STARTING if any(sign in str(error) for sign in STARTING_SIGNS) else WAITING_FOR_RACE
             self._set(Snapshot(status, read_at=self._clock(), detail=str(error)))
-            return WAIT_INTERVAL if status == WAITING_FOR_RACE else READ_INTERVAL
+            return WAIT_INTERVAL if status == WAITING_FOR_RACE else self.read_interval
         except (OSError, ValueError, KeyError, StopIteration) as error:
             # Not started through the probe, or TSU quit (the socket closed).
             self._drop()
@@ -218,8 +219,8 @@ class LiveRace:
         self._set(Snapshot(RACING, state, running, now, moved_at=moved_at))
         if self.on_read is not None:
             self.on_read()
-        # READ_INTERVAL from the start of this read to the start of the next.
-        return max(READ_INTERVAL - (now - began), LEAST_WAIT)
+        # read_interval from the start of this read to the start of the next.
+        return max(self.read_interval - (now - began), LEAST_WAIT)
 
     def _run(self):
         while not self._stop.is_set():

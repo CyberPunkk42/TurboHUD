@@ -44,9 +44,32 @@ what the driver has left is not known.
 ## Tester's Mac (2026-11-06)
 - Custom sessions show only the clock: no race is found in them. Not looked into: what such a session
   holds, and whether the HUD could read it.
-- FPS drops on the tester's Mac: cause not known. See whether they go with the search backoff, and
-  compare with TurboHUD quit. The tester's report showed two CrossOver copies; TurboHUD takes the one in
-  `~/Applications` first, whichever TSU runs from (not fixed, did not stop the reader there).
+- FPS drops on the tester's Mac (M3 Pro, 120 Hz, Fullscreen, D3DMetal), measured 2026-11-07 on build
+  2026.11.06.2, cause not known:
+
+  | TurboHUD | FPS | ms a frame |
+  | --- | --- | --- |
+  | closed | 110 | 9.1 |
+  | every section unticked | 78 | 12.8 |
+  | lap and delta only | 62 | 16.1 |
+  | all sections | 58 | 17.2 |
+
+  Most of the cost comes before most of the HUD shows, so it is not mainly how much is drawn. Open: the
+  windows above the game (macOS may have to composite the game with them; not measured), or the reads
+  (about 370 trips a second through the Wine server, which also serves the game). The search is not it: no
+  `search:` lines in that run. `mach_vm_read` is no way out, as macOS refuses that access.
+  To measure next, on one track, with TurboHUD closed again at the end in case the Mac has heated up:
+  windows without reads (`experiments/qt_overlay_probe.py`); reads without windows (`Bottle().connect()`
+  from a script); every section unticked, now that their windows leave the screen; lap and delta at 20, 10
+  and 5 race reads a second (settings window). The reads then decide whether to read less, the windows
+  whether to change how the overlay is built.
+- TSU hung on a black screen on the tester's Mac when TurboHUD was quit first (it took Steam's Stop). Cause
+  not known, and not known whether it also happens with TSU quit first or with TurboHUD never started. To
+  try: quit TurboHUD, `pgrep -fl bottle_reader` (is a reader left?), quit TSU. The reader ends when its pipe
+  closes; if it has not after 2 s, `finish()` in `bottle.py` kills the CrossOver launcher, which may not end
+  the reader.
+- The tester's report showed two CrossOver copies; TurboHUD takes the one in `~/Applications` first,
+  whichever TSU runs from (not fixed, did not stop the reader there).
 
 ## Test list: what is left
 Done by the user on the Mac: all of the layout list (tight boxes, centring, groups, presets
