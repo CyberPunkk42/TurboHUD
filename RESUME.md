@@ -64,6 +64,8 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-06: A second build of a day can be told apart: `tools/build_app.py --version 2026.11.06.2`.
+  The tester's new version carries it, with the search fix; `RESUME.md` and the log say which they run.
 - 2026-11-06: TurboHUD leaves a session alone when it holds no race to read. A tester in a custom session
   (only the clock showed) had a search of all of TSU's memory running about two thirds of the time: over
   20 s each with 10 s between, without end, as TSU's log says an event runs. The wait now doubles up to

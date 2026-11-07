@@ -675,3 +675,5 @@ its "Recent changes".
   20 s each with 10 s between, without end, as TSU's log says an event runs. The wait now doubles up to
   60 s, and goes back to 10 s when a race is found or the event ends. Whether this caused the tester's
   FPS drops is not known yet.
+- 2026-11-06: A second build of a day can be told apart: `tools/build_app.py --version 2026.11.06.2`.
+  The tester's new version carries it, with the search fix; `RESUME.md` and the log say which they run.
