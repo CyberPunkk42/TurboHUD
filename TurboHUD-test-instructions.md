@@ -15,7 +15,7 @@ You need:
 
 - A Mac with Apple silicon and macOS 27.0 or newer
 - TSU running in CrossOver
-- The file `TurboHUD-2026.11.08-macos-arm64.dmg`
+- The file `TurboHUD-2026.11.08.2-macos-arm64.dmg`
 - A way to read TSU's FPS, the same one as last time
 
 TurboHUD only reads what the game shows. It changes nothing in TSU or in its CrossOver bottle.
@@ -71,6 +71,18 @@ Step 7 repeats step 1, in case the Mac has warmed up and runs slower by the end.
 
 After step 6, stay in the race and run the command in **What to send back** before you quit TurboHUD.
 
+## If a second display is connected
+
+A second display, including an iPad used as a display, can change how macOS shows a game in Fullscreen. If one is connected to your Mac:
+
+1. Run the whole test as it is, with the second display connected, and write down which display TSU runs on.
+2. Then, if you have time, unplug the second display (or turn off the iPad display) and repeat **step 1** and **step 6** only. Write them down as steps 1b and 6b.
+
+| Step | TurboHUD | Second display | Average FPS | Any stutter? |
+| --- | --- | --- | --- | --- |
+| 1b | Not running | Off |  |  |
+| 6b | Running, all sections, 20 reads a second | Off |  |  |
+
 ## Test TSU hanging on exit
 
 Last time TSU hung on a black screen after TurboHUD was quit first. Do this after you run the command in **What to send back**:
@@ -93,6 +105,7 @@ If TSU hangs, quit it with Steam's **Stop** as before. Then, if you have time, s
 
 Send the filled-in table, the results of the hang test, and the output of the Terminal command below.
 
+- Whether a second display was connected, during this test and the last one, and which display TSU ran on
 - Whether anything about the Mac, the screen or TSU's settings changed since last time. Last time you sent: MacBook Pro M3 Pro, 120 Hz, Fullscreen, D3DMetal.
 - How you measured FPS, if it was not the same way as last time
 

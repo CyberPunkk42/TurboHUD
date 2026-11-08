@@ -58,7 +58,8 @@ what the driver has left is not known.
   windows above the game (macOS may have to composite the game with them; not measured), or the reads
   (about 370 trips a second through the Wine server, which also serves the game). The search is not it: no
   `search:` lines in that run. `mach_vm_read` is no way out, as macOS refuses that access.
-  Build 2026.11.08 and `TurboHUD-test-instructions.md` (2026-11-08) ask the tester for this.
+  Build 2026.11.08.2 and `TurboHUD-test-instructions.md` (2026-11-08) ask the tester for this, and
+  whether a second display is connected (macOS may then composite the game differently).
   To measure next, on one track, with TurboHUD closed again at the end in case the Mac has heated up:
   windows without reads (`experiments/qt_overlay_probe.py`); reads without windows (`Bottle().connect()`
   from a script); every section unticked, now that their windows leave the screen; lap and delta at 20, 10
@@ -72,8 +73,6 @@ what the driver has left is not known.
   On the user's Mac (2026-11-08, build 2026.11.08 and from source) it did not happen: TurboHUD quit first and
   TSU quit first both left no reader, and TSU quit normally. So look at the tester's Mac (two CrossOver copies,
   below) or TSU itself; the tester's instructions ask for it.
-- The reader restarting when TSU starts after TurboHUD (2026-11-08, `KeyError: 'sm_instance'`) is fixed but
-  not yet seen: with TurboHUD running, restart TSU; the log should have no `connection dropped` line.
 - The tester's report showed two CrossOver copies; TurboHUD takes the one in `~/Applications` first,
   whichever TSU runs from (not fixed, did not stop the reader there).
 
