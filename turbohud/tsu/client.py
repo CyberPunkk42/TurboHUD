@@ -208,6 +208,10 @@ class LiveRace:
             return WAIT_INTERVAL if status == WAITING_FOR_RACE else self.read_interval
         except (OSError, ValueError, KeyError, StopIteration) as error:
             # Not started through the probe, or TSU quit (the socket closed).
+            if self._conn is not None:
+                # A connection that worked is closed: say why, as the status may not change
+                # (TSU just started) and would then log nothing.
+                log.info('TSU: connection dropped (%s: %s)', type(error).__name__, error)
             self._drop()
             self._set(Snapshot(WAITING_FOR_GAME, read_at=self._clock(), detail=str(error)))
             return WAIT_INTERVAL
