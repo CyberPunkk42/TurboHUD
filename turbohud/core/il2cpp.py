@@ -242,7 +242,10 @@ class Il2Cpp:
         return obj
 
     def static_ref(self, klass, name):
-        offset, is_static = self.fields(klass)[name]
+        try:
+            offset, is_static = self.fields(klass)[name]
+        except KeyError:  # the game has not set the class up yet (just after it starts)
+            raise NotFound(f'no static {name}') from None
         statics = self.memory.u64(klass + CLASS_STATIC_FIELDS)
         value = self.memory.u64(statics + offset) if is_static and statics else 0
         if not value:

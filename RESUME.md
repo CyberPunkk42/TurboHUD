@@ -66,6 +66,10 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-08: The reader in the bottle no longer restarts when TSU starts after TurboHUD. The new log line
+  told why: `KeyError: 'sm_instance'`, as TSU had not yet set up `TS.Services`, and a missing static field
+  counted as the game being gone (reader closed, started again 3 s later). It now counts as the game still
+  loading, like a missing field of an object, and the same reader tries again.
 - 2026-11-08: Checked on the user's Mac with build 2026.11.08 and from source: unticked sections leave the
   screen and come back in place, and the race reads switch at once (about 19 a second at 20, 5 at 5; at 5 a
   read takes about 47 ms instead of 30). Quitting TurboHUD first or TSU first, no reader was left and TSU

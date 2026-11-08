@@ -72,9 +72,8 @@ what the driver has left is not known.
   On the user's Mac (2026-11-08, build 2026.11.08 and from source) it did not happen: TurboHUD quit first and
   TSU quit first both left no reader, and TSU quit normally. So look at the tester's Mac (two CrossOver copies,
   below) or TSU itself; the tester's instructions ask for it.
-- At each start on the user's Mac the reader started, was closed about a second later and started again 3 s
-  after (2026-11-08). The reason was not logged; it now is, as `TSU: connection dropped (...)`. Read it at the
-  next start, then decide whether it needs fixing (it recovers by itself).
+- The reader restarting when TSU starts after TurboHUD (2026-11-08, `KeyError: 'sm_instance'`) is fixed but
+  not yet seen: with TurboHUD running, restart TSU; the log should have no `connection dropped` line.
 - The tester's report showed two CrossOver copies; TurboHUD takes the one in `~/Applications` first,
   whichever TSU runs from (not fixed, did not stop the reader there).
 

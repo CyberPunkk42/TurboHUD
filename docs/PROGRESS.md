@@ -694,3 +694,7 @@ its "Recent changes".
   quit normally, so the tester's hang did not come back here. At each start the reader was closed about a
   second after it started and started again 3 s later, with no reason in the log: a connection that worked
   and is dropped now logs why (`TSU: connection dropped (...)`).
+- 2026-11-08: The reader in the bottle no longer restarts when TSU starts after TurboHUD. The new log line
+  told why: `KeyError: 'sm_instance'`, as TSU had not yet set up `TS.Services`, and a missing static field
+  counted as the game being gone (reader closed, started again 3 s later). It now counts as the game still
+  loading, like a missing field of an object, and the same reader tries again.
