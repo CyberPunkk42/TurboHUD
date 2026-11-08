@@ -58,6 +58,7 @@ what the driver has left is not known.
   windows above the game (macOS may have to composite the game with them; not measured), or the reads
   (about 370 trips a second through the Wine server, which also serves the game). The search is not it: no
   `search:` lines in that run. `mach_vm_read` is no way out, as macOS refuses that access.
+  Build 2026.11.08 and `TurboHUD-test-instructions.md` (2026-11-08) ask the tester for this.
   To measure next, on one track, with TurboHUD closed again at the end in case the Mac has heated up:
   windows without reads (`experiments/qt_overlay_probe.py`); reads without windows (`Bottle().connect()`
   from a script); every section unticked, now that their windows leave the screen; lap and delta at 20, 10

@@ -684,3 +684,7 @@ its "Recent changes".
   10 or 5, at once; 20 by default), with fewer HUD frames to match, to compare. Seen with real Mac windows
   but not over TSU: whether either gives FPS back is not measured. At 5 a second a track learnt then gets
   a coarser line.
+- 2026-11-08: New test instructions for the tester's Mac (`TurboHUD-test-instructions.md`), asked for by
+  the user, with build 2026.11.08 (`releases/`, macOS 27, built with `--any-macos`). Seven steps tell the
+  windows from the reads: closed, every section unticked at 20 and 5 race reads a second, lap and delta at 5
+  and 20, all at 20, closed again; and a test of TSU hanging on exit with TurboHUD quit first.
