@@ -214,6 +214,23 @@ class WarningTimeTests(unittest.TestCase):
         self.assertEqual((loaded.blue_seconds, loaded.radar_seconds), (s.BLUE_SECONDS[1], s.RADAR_SECONDS[0]))
 
 
+class ReadsPerSecondTests(unittest.TestCase):
+    def path(self):
+        return Path(tempfile.mkdtemp()) / 'settings.json'
+
+    def test_it_round_trips_and_stays_at_20_by_default(self):
+        path = self.path()
+        self.assertEqual(s.Settings().reads_per_second, 20)
+        s.save_settings(path, s.Settings(reads_per_second=5))
+        self.assertEqual(s.load_settings(path).reads_per_second, 5)
+
+    def test_a_file_from_before_or_a_wrong_value_gives_the_default(self):
+        path = self.path()
+        for data in ({}, {'reads_per_second': 7}, {'reads_per_second': 'often'}, {'reads_per_second': [10]}):
+            path.write_text(json.dumps(data))
+            self.assertEqual(s.load_settings(path).reads_per_second, 20)
+
+
 class TextCentredTests(unittest.TestCase):
     def test_it_round_trips_also_in_a_preset_and_is_off_by_default(self):
         path = Path(tempfile.mkdtemp()) / 'settings.json'

@@ -204,14 +204,15 @@ class SectionWindow(QWidget):
         self, rows, pedals=None, opacity=None, radar=None, trackmap=None, level=None, delta_view=None
     ):
         """Take the latest content; True if it differs from what is shown, so the
-        section needs drawing again. Locking, showing, the theme and the tint ask for a
-        redraw themselves."""
+        section needs drawing again. A hidden section keeps the content but needs no
+        drawing: showing it draws what it has. Locking, showing, the theme and the tint
+        ask for a redraw themselves."""
         content = (rows, pedals, opacity, radar, trackmap, level, delta_view)
         shown = (self.rows, self.pedals, self.opacity, self.radar, self.trackmap, self.level, self.delta_view)
         if content == shown:
             return False
         self.rows, self.pedals, self.opacity, self.radar, self.trackmap, self.level, self.delta_view = content
-        return True
+        return self.wanted
 
     def set_locked(self, locked):
         if locked == self.locked:
@@ -233,7 +234,8 @@ class SectionWindow(QWidget):
         """Show or hide the section (the panel's tick boxes). A hidden section keeps its
         window, draws nothing and lets every click through: showing it again then needs
         no new window, which a desktop could place anywhere, or make fullscreen over a
-        fullscreen game."""
+        fullscreen game. A system whose Native says `hides_windows` takes the window off
+        the screen instead, so that nothing of it stays above the game."""
         if wanted == self.wanted:
             return
         self.wanted = wanted
@@ -242,6 +244,9 @@ class SectionWindow(QWidget):
         if movable is not None:
             movable(self, wanted and not self.locked)
         self.grip.setVisible(wanted and not self.locked)
+        if not wanted and getattr(self.native, 'hides_windows', False):
+            self.hide()
+            return
         if not in_place:
             self.show_on_top()
         self.update()

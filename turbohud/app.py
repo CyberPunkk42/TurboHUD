@@ -533,6 +533,13 @@ def run(args, folder):
         save()
         log.info('%s: %.1f s', name, seconds)
 
+    def set_reads(reads):
+        """How often a race is read, from the settings window."""
+        nonlocal settings
+        settings = replace(settings, reads_per_second=reads)
+        save()
+        apply_reads()
+
     def set_theme(theme):
         """New colours from the settings window: every section draws with them."""
         nonlocal settings
@@ -565,8 +572,14 @@ def run(args, folder):
         nonlocal settings_window
         if settings_window is None:
             settings_window = SettingsWindow(
-                native, window_flags(), settings.theme, settings.blue_seconds, settings.radar_seconds
+                native,
+                window_flags(),
+                settings.theme,
+                settings.blue_seconds,
+                settings.radar_seconds,
+                settings.reads_per_second if live is not None else None,
             )
+            settings_window.reads_changed.connect(set_reads)
             settings_window.theme_changed.connect(set_theme)
             settings_window.blue_seconds_changed.connect(lambda seconds: set_seconds('blue_seconds', seconds))
             settings_window.radar_seconds_changed.connect(
@@ -815,6 +828,15 @@ def run(args, folder):
     frames = FrameTimes(time.monotonic, log.info)
     pacer = FramePacer()
     drawn_before = 0.0
+
+    def apply_reads():
+        reads = settings.reads_per_second
+        pacer.most = 2 / reads
+        if live is not None:
+            live.read_interval = 1 / reads
+            log.info('race reads: at most %d a second', reads)
+
+    apply_reads()
 
     def tick():
         nonlocal last_seen, shown_status, drawn_before

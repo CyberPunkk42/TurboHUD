@@ -248,6 +248,52 @@ class RedrawTests(unittest.TestCase):
         self.assertTrue(window.show_content(window.rows, level=(0.5, 'ahead')))
         self.assertEqual(window.level, (0.5, 'ahead'))
 
+    def section_window(self, **native):
+        from turbohud.core.hud import RACE_SECTIONS
+        from turbohud.core.settings import Theme
+        from turbohud.overlay.window import SectionWindow
+
+        class Native:
+            def raise_window(self, window):
+                return 'test'
+
+        fake = Native()
+        vars(fake).update(native)
+        window = SectionWindow(fake, Theme(), RACE_SECTIONS[0])
+        self.addCleanup(window.close)
+        return window
+
+    def test_a_hidden_section_keeps_its_content_but_needs_no_drawing(self):
+        from turbohud.core.race import Row
+
+        window = self.section_window()
+        window.set_wanted(False)
+        self.assertFalse(window.show_content([Row('Lap 1/3', 'title')]))
+        self.assertEqual(window.rows, [Row('Lap 1/3', 'title')])
+        window.set_wanted(True)
+        self.assertEqual(window.rows, [Row('Lap 1/3', 'title')])  # what showing it draws
+        self.assertTrue(window.show_content([Row('Lap 2/3', 'title')]))
+
+    def test_where_the_system_says_so_a_hidden_section_leaves_the_screen(self):
+        window = self.section_window(hides_windows=True)
+        window.setGeometry(50, 60, 300, 80)
+        window.show_on_top()
+        window.set_wanted(False)
+        self.assertFalse(window.isVisible())
+        window.set_locked(False)  # move mode does not bring it back
+        self.assertFalse(window.isVisible())
+        window.set_locked(True)
+        window.set_wanted(True)
+        self.assertTrue(window.isVisible())
+        self.assertEqual(window.size().toTuple(), (300, 80))
+        self.assertEqual(window.pos().toTuple(), (50, 60))
+
+    def test_elsewhere_a_hidden_section_keeps_its_window_on_the_screen(self):
+        window = self.section_window()
+        window.show_on_top()
+        window.set_wanted(False)
+        self.assertTrue(window.isVisible())
+
     def text_box(self, name, rows, size_share=1.0, height=None, centred=False, wider=1.0):
         """(left, top, right, bottom) of the bright pixels in a section at that share of
         its size, and the window's size: the text is white, the pedal bars are not, and

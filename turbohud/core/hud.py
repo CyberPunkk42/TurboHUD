@@ -796,15 +796,17 @@ class FramePacer:
     """Whether to draw a frame now. In a race, one for each new read: on timers of their
     own, 19 reads and 20 frames a second left a frame with nothing new about once a
     second, and the track map's dots stood still and then jumped. A late read still gets a
-    frame after RACE_FRAME_MOST, for the times that run on. Otherwise at every call."""
+    frame after `most` seconds, for the times that run on: two read intervals, so that
+    fewer reads also mean fewer frames. Otherwise at every call."""
 
-    def __init__(self):
+    def __init__(self, most=RACE_FRAME_MOST):
+        self.most = most
         self._read_at = self._drawn_at = None
 
     def due(self, read_at, racing, now):
         """(draw now, the frame has a new read). `read_at`: when the latest read was made."""
         fresh = read_at != self._read_at
-        late = self._drawn_at is None or now - self._drawn_at >= RACE_FRAME_MOST
+        late = self._drawn_at is None or now - self._drawn_at >= self.most
         if not (fresh or late or not racing):
             return False, False
         self._read_at, self._drawn_at = read_at, now
