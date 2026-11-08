@@ -5,6 +5,11 @@ and nothing was pushed or tagged. Delete a point when it is settled, and this fi
 none is left.
 
 ## Not yet seen in a race
+- Joining a public session mid-race (2026-11-08): the HUD found the race after 1.4 s when driving, but
+  as a spectator a search of all the data took 20.5 s, and the race watched went at once, so a second
+  search took 18 s. The other races found are now tried first. Check: join a session mid-race (best
+  right after leaving another); the log should say `another race from the last search` and not search
+  twice. Also see that the HUD says Spectating, and switches to the car with no search on joining.
 - Race start online: the "last place" shortcut is gone and the search reads half of the time
   instead of a quarter. Expected: the HUD shows about 4 to 6 s after the start, where it took 7
   to 12 s. Check the log's `search:` line and the wait, and listen for stutter in the first

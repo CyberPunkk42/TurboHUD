@@ -467,6 +467,7 @@ class LapReader:
         self._client_class = None  # TS.ClientEventController, once looked up
         self._controller = None  # the online race's event controller, once found
         self._spectated = None  # a controller whose race the player only watches
+        self._others = []  # the other races to watch the last search found, tried before a new one
         self._watched_clock, self._watched_at = None, 0.0  # its race clock, and since when
         self._next_search = 0.0  # when to look for it again
         self._search_wait = CLIENT_SEARCH_EVERY  # how long after a search that found nothing
@@ -547,13 +548,17 @@ class LapReader:
                     raise NotFound('that race is gone')
                 state, driving = self._race_of(self._spectated)
                 if driving:
-                    self._controller, self._spectated = self._spectated, None
+                    self._controller, self._spectated, self._others = self._spectated, None, []
                     return state
                 if self._watched_clock_runs(state):
                     return state
-            except (NotFound, OSError):
+            except (NotFound, OSError) as gone:
+                log.info('the watched race is gone (%s)', gone)
                 self._spectated = None
                 self._next_search = 0.0
+                state = self._watch_another()
+                if state is not None:
+                    return state
         find = memory.find_pointers
         if find is None:
             raise error
@@ -583,7 +588,7 @@ class LapReader:
                 except (NotFound, OSError):
                     continue  # a freed controller of an earlier race
                 if driving:
-                    self._controller, self._spectated = candidate, None
+                    self._controller, self._spectated, self._others = candidate, None, []
                     result = 'race found'
                     return state
                 watchable.append((candidate, state))
@@ -607,12 +612,36 @@ class LapReader:
             )
             log.info('search: %s, after %.1f s and %d hits', result, ended - started, hits)
         if not watchable:
-            self._spectated = None
+            self._spectated, self._others = None, []
             raise error
         # Not the one whose clock stood still, if there is another: an old race can linger.
         self._spectated, state = next((w for w in watchable if w[0] != self._spectated), watchable[0])
+        self._others = [controller for controller, _state in watchable if controller != self._spectated]
         self._watched_clock = None
         return state
+
+    def _watch_another(self):
+        """The next race from the last search that is still there, or None. An old race
+        can linger after the player leaves a session and be the one watched; when it goes,
+        a few reads find the right one, where a new search reads all of the game's data
+        (about 20 s in a CrossOver bottle, and the game may stutter meanwhile)."""
+        memory = self.il.memory
+        while self._others:
+            candidate = self._others.pop(0)
+            try:
+                if memory.u64(candidate) != self._client_class:
+                    continue
+                state, driving = self._race_of(candidate)
+            except (NotFound, OSError):
+                continue
+            if driving:
+                self._controller, self._others = candidate, []
+            else:
+                self._spectated, self._watched_clock = candidate, None
+            self._next_search = self._clock() + CLIENT_SPECTATE_EVERY
+            log.info('another race from the last search: %s', 'driving' if driving else 'watching')
+            return state
+        return None
 
     def _watched_clock_runs(self, state):
         """Whether the watched race's clock moved within SPECTATE_STILL."""
