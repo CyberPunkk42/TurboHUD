@@ -27,11 +27,8 @@ none is left.
   yet set up), but needless; not fixed yet.
 - The radar without its fill, its larger cars, and the two warning times in the settings
   window (blue flag 1 to 10 s, radar 0.2 to 3 s). A long radar time zooms the radar out.
-- The move-mode panel: on the screen and clear of the Dock (2026-11-09, it went to the bottom left
-  corner, mostly off the screen, with only the running lap shown). Check with one section near an edge.
-- The settings window: it opens wholly on the screen, near the upper middle, confirmed by the user
-  (2026-11-08; it went past the right edge before). Still to see: with the panel dragged near an edge,
-  and dragging it with a real mouse (tested only with a stand-in).
+- The settings window: dragging it with a real mouse (tested only with a stand-in). The panel and the
+  settings window opening wholly on the screen were confirmed by the user on 2026-11-09.
 
 ## Race start and the map, not yet seen
 - Track map: a frame now comes with each new read (`hud.FramePacer`). The user found it smooth on
@@ -86,7 +83,26 @@ Fullscreen, D3DMetal, FPS read with the in-game / CrossOver HUD.
 - Still to get from the tester (nice to have): measurement 7 (closed again at the end), and whether
   `pgrep -fl bottle_reader` printed nothing.
 
+### CPU per section on the user's Mac (2026-11-09)
+Recorded with `top` every 2 s during a race against AI, matched with the log's tick changes; one
+section shown at a time (the screen at "more space": 2056 x 1329 for Qt). Averages, 100 = one core:
+
+| Shown | WindowServer | TurboHUD |
+| --- | --- | --- |
+| TurboHUD closed (perhaps not racing yet) | 41 | - |
+| nothing | 42 | 7 |
+| local time (changes once a minute) | 48 | 9 |
+| running lap (20 times a second) | 48 | 10 |
+| track map | 49 | 23 |
+| any other single section | 48 to 49 | 9 to 17 |
+
+Each window adds about the same to WindowServer, whatever it shows and however often it changes: a
+window's being there costs, not its redraws. So drawing some sections less often would not help; all
+sections in one window might. CPU is not FPS: the Metal HUD below is to confirm it in frames. TSU's
+own CPU was 243 before TurboHUD started and about 360 after, but the user was probably not racing yet.
+
 ### TODO: measure the windows' cost on the user's Mac with the Metal HUD
+Steps A to E: closed, every section unticked, only local time, every section, closed again.
 Apple's Metal Performance HUD (`MTL_HUD_ENABLED=1`, which D3DMetal honours) shows FPS and frame times
 inside the game's own picture, adding no window above it. Nothing in the bottle or the system changes.
 1. Quit TurboHUD, TSU and Steam in the bottle. `pgrep -fl 'steam.exe|TSU.exe|bottle_reader'` must print

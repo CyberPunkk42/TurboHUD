@@ -763,3 +763,7 @@ its "Recent changes".
   corner; the running lap's was at x = -1, on no screen, so the panel went 40 px from it, below the screen.
   The screen is now the one holding the section's middle (else the main one), and the panel and the
   settings window keep to its usable area, clear of the menu bar and the Dock (`hud.panel_place`).
+- 2026-11-09: Confirmed by the user: the move-mode panel and the settings window open wholly on the screen.
+  A CPU recording per section (`docs/CONTINUE_HERE.md`, "Tester's Mac"): each window adds about the same to
+  WindowServer, whatever it shows and however often it changes, so a window's being there costs, not its
+  redraws. Next: the Metal HUD in frames, then perhaps all sections in one window.
