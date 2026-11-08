@@ -751,3 +751,7 @@ its "Recent changes".
   gradual, asked for by the user: white while neither gaining nor losing, then more and more green or red
   as time is gained or lost, full at 0.15 s a second. It switched between green and red at 0.02 s a
   second, which flickered. Not yet seen in a race.
+- 2026-11-08: The delta is smoother, asked for by the user: shown in hundredths in the delta bar and the
+  delta section (a third digit changed at every read; the player list's gaps keep thousandths), its colour
+  looks at the last second rather than half, and eases towards a new colour over about half a second
+  instead of jumping. The bar's length still follows the delta at once. Not yet seen in a race.

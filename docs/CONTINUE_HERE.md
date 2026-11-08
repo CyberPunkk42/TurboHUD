@@ -42,9 +42,11 @@ none is left.
 ## Delta bar and radar option
 The user confirmed both work on 2026-11-05. On 2026-11-08 the bar was turned round (right when ahead,
 as in sim racing) and its colour made gradual (white when steady, towards green or red as time is
-gained or lost), asked for by the user as it flickered. Not yet seen in a race. To tune:
+gained or lost), asked for by the user as it flickered. Then, as it needed to be smoother: the delta
+in hundredths (bar and delta section; the player list's gaps keep thousandths), the trend over 1 s,
+and the colour easing over about 0.5 s. Not yet seen in a race. To tune, in `turbohud/core/race.py`:
 `DELTA_STEADY` (white up to this rate, 0.02 s a second), `DELTA_RATE_FULL` (full colour, 0.15 s a
-second) and `DELTA_TREND_WINDOW` (0.5 s) in `turbohud/core/race.py`.
+second), `DELTA_TREND_WINDOW` (1 s) and `DELTA_COLOUR_EASE` (0.5 s).
 
 ## Leader's lap, not yet seen in a race
 See it lapped, also as a client, and when the leader finishes: whether the `/20` then still says
