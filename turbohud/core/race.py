@@ -1448,25 +1448,27 @@ def format_delta(units):
 DELTA_BAR_FULL = 1.0  # seconds of delta that fill the bar to its end
 DELTA_TREND_WINDOW = 0.5  # seconds over which the bar's colour looks at how the delta moves
 DELTA_TREND_LEAST = 0.2  # seconds of this lap's delta before that counts
-DELTA_STEADY = 0.02  # seconds gained or lost a second that still count as steady
+DELTA_STEADY = 0.02  # seconds gained or lost a second that still count as steady: white
+DELTA_RATE_FULL = 0.15  # seconds gained or lost a second that give the full green or red
 
 
 @dataclass(frozen=True)
 class DeltaBarView:
     """The delta bar: the live delta to the best lap as a bar from the middle."""
 
-    fill: float  # -1 to 1: how far it reaches, left when ahead of the best lap, right when behind
-    green: bool  # green while gaining on the best lap or, when steady, ahead of it; else red
+    fill: float  # -1 to 1: how far it reaches, right when ahead of the best lap, left when behind
+    trend: float  # -1 gaining fast (green) through 0 steady (white) to 1 losing fast (red)
     text: str  # the delta, as the delta section shows it
 
 
-def delta_green(delta, rate):
-    """Whether the bar is green, not red. `delta` in seconds, `rate` in seconds lost a second.
-    Gaining is green and losing is red, also against the sign of the delta, and it changes at
-    once. While steady the delta itself decides."""
-    if abs(rate) > DELTA_STEADY:
-        return rate < 0
-    return delta < 0
+def delta_trend(rate):
+    """The bar's colour, from `rate` in seconds lost a second: 0 (white) while steady, then
+    more and more towards -1 (green) when gaining or 1 (red) when losing, full from
+    DELTA_RATE_FULL. Gradual, so the colour does not flick between green and red as the
+    rate wavers round nothing, as in sim racing delta bars."""
+    share = (abs(rate) - DELTA_STEADY) / (DELTA_RATE_FULL - DELTA_STEADY)
+    share = min(max(share, 0.0), 1.0)
+    return -share if rate < 0 else share
 
 
 class DeltaBar:
@@ -1496,8 +1498,8 @@ class DeltaBar:
         rate = (delta - history[0][1]) / UNITS_PER_SECOND / span if span >= DELTA_TREND_LEAST else 0.0
         seconds = delta / UNITS_PER_SECOND
         self._view = DeltaBarView(
-            min(max(seconds / DELTA_BAR_FULL, -1.0), 1.0),
-            delta_green(seconds, rate),
+            min(max(-seconds / DELTA_BAR_FULL, -1.0), 1.0),  # ahead (improving) to the right
+            delta_trend(rate),
             format_delta(delta).replace('-', '\u2212'),
         )
         return self._view

@@ -194,17 +194,29 @@ class RedrawTests(unittest.TestCase):
         self.addCleanup(window.close)
         window.resize(400, 40)
         window.set_locked(True)
-        self.assertTrue(window.show_content([], delta_view=DeltaBarView(-0.5, True, '')))
+        self.assertTrue(window.show_content([], delta_view=DeltaBarView(0.5, -1.0, '')))
         image = window.grab().toImage()
-        green = image.pixelColor(120, 20)
-        self.assertGreater(green.green(), green.red())  # ahead: filled on the left, in green
-        self.assertLess(image.pixelColor(300, 20).alpha(), 200)  # the right stays the dark track
-        window.show_content([], delta_view=DeltaBarView(0.5, False, ''))
+        green = image.pixelColor(280, 20)
+        self.assertGreater(green.green(), green.red())  # ahead and gaining: on the right, green
+        self.assertLess(image.pixelColor(100, 20).alpha(), 200)  # the left stays the dark track
+        window.show_content([], delta_view=DeltaBarView(-0.5, 1.0, ''))
         image = window.grab().toImage()
-        red = image.pixelColor(280, 20)
-        self.assertGreater(red.red(), red.green())  # behind: filled on the right, in red
+        red = image.pixelColor(120, 20)
+        self.assertGreater(red.red(), red.green())  # behind and losing: on the left, red
+        window.show_content([], delta_view=DeltaBarView(-0.5, 0.0, ''))
+        white = window.grab().toImage().pixelColor(120, 20)
+        self.assertTrue(white.red() > 240 and white.green() > 240 and white.blue() > 240)  # steady
         window.show_content([])
         self.assertEqual(window.grab().toImage().pixelColor(200, 20).alpha(), 0)  # no delta, no bar
+
+    def test_the_delta_bar_colour_goes_gradually_from_white(self):
+        from turbohud.hud.painter import AHEAD_COLOR, BEHIND_COLOR, DELTA_STEADY_COLOR, delta_bar_color
+
+        self.assertEqual(delta_bar_color(0.0), DELTA_STEADY_COLOR)
+        self.assertEqual(delta_bar_color(-1.0), AHEAD_COLOR)
+        self.assertEqual(delta_bar_color(1.0), BEHIND_COLOR)
+        half = delta_bar_color(-0.5)
+        self.assertNotIn(half, (DELTA_STEADY_COLOR, AHEAD_COLOR))  # in between
 
     def test_the_radar_has_an_outline_only_in_move_mode(self):
         from turbohud.core.hud import RACE_SECTIONS
