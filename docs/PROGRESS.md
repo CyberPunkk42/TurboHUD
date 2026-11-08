@@ -734,3 +734,9 @@ its "Recent changes".
   the finish once), not in King of the Hill, Capture the Flag or Sumo. TSU's EventType names (from its
   metadata) include Race, Points, Battle, Sumo, Tag, Soccer, Collector, Ball and Hill, but not which number
   is which; where the field is not found, the log lists the fields there are. Nothing on the HUD changes yet.
+- 2026-11-08: The track map shows only on a track, asked for by the user: in races and special events
+  (TS.RaceEventMode), not in arena modes (Battle, Collector, Hill, Soccer, Sumo, Tag), where no track is
+  learnt either. TSU keeps the mode in `TS.EventSettings.m_eventMode`, an object whose class names it
+  (seen in a capture event: `TS.BattleEventMode`, level type 6, logic `TS.BattleLogic`). Where the mode
+  cannot be read the map stays as before. The spectator's search that stops early was seen: 2.9 to 4.7 s,
+  where it took 15 to 21 s.

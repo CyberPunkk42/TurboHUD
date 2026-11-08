@@ -5,12 +5,13 @@ and nothing was pushed or tagged. Delete a point when it is settled, and this fi
 none is left.
 
 ## Not yet seen in a race
-- Joining a public session mid-race (2026-11-08): the HUD showed 23 s after TurboHUD started as a
-  spectator (a full search of 19.8 s; the race the only one to watch, at hit 42 of 43). A spectator's search
-  now stops at the first race to watch: expected about 4 s. Check in a session: the `search:` line's time,
-  and whether `has not run: searching past it` shows (an old race picked first). Also still to see: the HUD
-  switching to the car with no search when the player drives the next race, and the 10 s waits for the
-  first minute of empty searches while a race joined in progress is set up.
+- Joining a public session mid-race (2026-11-08): a spectator's search now stops at the first race to
+  watch, seen at 2.9 to 4.7 s (it took 15 to 21 s). Still to see: `has not run: searching past it` (an old
+  race picked first), the HUD switching to the car with no search when the player drives the next race,
+  and the 10 s waits for the first minute of empty searches while a race joined in progress is set up.
+- The track map only in races (2026-11-08, backlog item 7): read the log's `event type:` line in a
+  regular race and a special event (expected `TS.RaceEventMode`, with the map) and in King of the Hill
+  or Sumo (no map).
 - Race start online: the search reads half of the time instead of a quarter. As a driver the race was
   found 1.4 s after the start on 2026-11-08 (goal: 4 to 6 s, where it took 7 to 12 s). Still to listen
   for: stutter in the first seconds. A full-speed search made TSU stutter in earlier checks

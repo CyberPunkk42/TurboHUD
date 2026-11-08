@@ -28,7 +28,7 @@ class FakeGame:
         self.instance_type = self.alloc_heap(16)
         self.put(self.instance_type + il.TYPE_ATTRS, struct.pack('<H', 0))
         self.typed = {}
-        for code in (0x02, 0x08, 0x0C, 0x11):  # bool, int, float, value type (an enum)
+        for code in (0x02, 0x08, 0x0C, 0x11, 0x12):  # bool, int, float, value type (an enum), class
             record = self.alloc_heap(16)
             self.put(record + il.TYPE_ATTRS, struct.pack('<HB', 0, code))
             self.typed[code] = record
@@ -211,10 +211,15 @@ def build(
         logic = g.alloc_obj(g.klass('TS', 'RaceLogic', [('m_eventSettings', 0x10, False)]))
         settings_fields = [('drafting', 0x10, False)]
         if event_type is not None:
-            settings_fields.append(('m_eventType', 0x18, False, 0x11))
+            # (mode class name, level type): the mode an object, as in TSU (seen 2026-11-08).
+            mode_name, level_type = event_type
+            settings_fields.append(('m_eventMode', 0x18, False, 0x12))
+            settings_fields.append(('m_initializedLevelType', 0x20, False, 0x11))
         settings = g.alloc_obj(g.klass('TS', 'EventSettings', settings_fields))
         if event_type is not None:
-            g.put(settings + 0x18, struct.pack('<i', event_type))
+            mode = g.alloc_obj(g.klass('TS', mode_name, [('m_goal', 0x10, False, 0x08)]))
+            g.q(settings + 0x18, mode)
+            g.put(settings + 0x20, struct.pack('<i', level_type))
         g.q(logic + 0x10, settings)
         g.q(controller + 0x70, logic)
     if draft:
@@ -523,14 +528,47 @@ MID_RACE = race.LapState(
 
 class EventTypeTests(unittest.TestCase):
     def test_the_event_type_is_read_and_logged_once_per_event(self):
-        reader = build([10_000], laps_completed=0, clock=20_000, limit=0, event_type=3)
+        reader = build([10_000], laps_completed=0, clock=20_000, limit=0, event_type=('CollectorMode', 6))
         with self.assertLogs('turbohud.core.race', 'INFO') as logs:
             reader.read()
             reader.read()
-        self.assertEqual(reader.event_type, 3)
+        self.assertEqual(reader.event_type, ('TS.CollectorMode', 6))
         lines = [m for m in logs.output if 'event type' in m]
         self.assertEqual(len(lines), 1)
-        self.assertIn('settings.m_eventType = 3 (type code 0x11)', lines[0])
+        self.assertIn(
+            'settings.m_eventMode = TS.CollectorMode (fields: m_goal), m_initializedLevelType = 6, logic TS.RaceLogic',
+            lines[0],
+        )
+
+    def on_a_track(self, mode, spectating=False):
+        reader = build(
+            [10_000],
+            laps_completed=0,
+            clock=20_000,
+            limit=0,
+            event_type=(mode, 6),
+            local_index=-1 if spectating else 0,
+        )
+        return reader.read().on_a_track
+
+    def test_a_race_mode_is_on_a_track(self):
+        self.assertTrue(self.on_a_track('RaceEventMode'))
+        self.assertTrue(self.on_a_track('RaceEventMode', spectating=True))
+
+    def test_the_arena_modes_are_not(self):
+        for mode in (
+            'BattleEventMode',
+            'CollectorEventMode',
+            'HillEventMode',
+            'SumoEventMode',
+            'TagEventMode',
+        ):
+            self.assertFalse(self.on_a_track(mode), mode)
+        self.assertFalse(self.on_a_track('BattleEventMode', spectating=True))
+
+    def test_an_unknown_mode_keeps_the_map(self):
+        reader = build([10_000], laps_completed=0, clock=20_000, limit=0)  # no event settings
+        self.assertTrue(reader.read().on_a_track)
 
     def test_without_the_field_the_log_lists_the_fields_there_are(self):
         reader = build([10_000], laps_completed=0, clock=20_000, limit=0, draft=True)

@@ -76,12 +76,12 @@ through. If XWayland is not enough there, the layer-shell extension (KDE, Sway; 
 GNOME) would need a library outside PySide6.
 
 ## 7. Track map: only in races and special events
-Asked for by the user (2026-11-08): the map in regular races and special events (from A to B,
-crossing the finish once), none in King of the Hill (likely `Hill`), Capture the Flag (`Collector`
-and/or `Ball`) or Sumo, where no track is driven and a learnt one would be a scribble. Step 1 is in:
-the log says each event's type number (`event type: ...`). Step 2: read it in a race, a special event
-and an arena mode, then show the map and learn a track only for the race types. A special event may
-be type Race on a point-to-point track; then it needs nothing more.
+Asked for by the user (2026-11-08), built the same day: the map shows, and a track is learnt, only in
+TS.RaceEventMode (regular races; special events from A to B are expected to be the same mode). The arena
+modes (Battle, Collector, Hill, Soccer, Sumo, Tag) have none. Seen: a capture event is
+`TS.BattleEventMode`, level type 6. Still to see in the log's `event type:` line: a regular race and a
+special event giving `TS.RaceEventMode` (if a special event is another mode, add it to `TRACK_MODES` in
+`turbohud/core/race.py`), and one of King of the Hill or Sumo.
 
 ## 7b. Track map: check in races
 The user saw it work in a race (2026-11-03), and the track is now learnt from the cars

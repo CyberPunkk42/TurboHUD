@@ -68,6 +68,7 @@ class LapState:
     players: tuple = ()  # every player in the race (PlayerState), the local one included
     draft: 'DraftSettings | None' = None  # the event's drafting, None where it is off
     spectating: bool = False  # the player only watches: no car, the lap counts are the leader's
+    on_a_track: bool = True  # a race mode (a circuit, or A to B): False in arena modes, without a map
 
     @property
     def lap_times(self):
@@ -394,8 +395,14 @@ def per_lap(history, laps=PER_LAP_LAPS):
     return (recent[-1] - recent[0]) / (len(recent) - 1)
 
 
-# Where TSU may keep the event's type (names from its metadata: EventType, m_eventType, ...).
-EVENT_TYPE_FIELDS = ('m_eventType', 'eventType', 'm_type', 'type', 'm_gameMode', 'gameMode', 'eventMode')
+# Where TSU keeps the event's type: m_eventMode in TS.EventSettings (seen 2026-11-08 in an online
+# race); the others are names from its metadata, in case a version moves it.
+EVENT_TYPE_FIELDS = ('m_eventMode', 'm_eventType', 'eventType', 'eventMode', 'm_gameMode', 'gameMode')
+# Logged next to it: what kind of level the event runs on (a track, an arena), perhaps the better sign.
+LEVEL_TYPE_FIELD = 'm_initializedLevelType'
+# The event modes driven on a track; TSU's others: Battle, Collector, Hill, Soccer, Sumo, Tag.
+TRACK_MODES = ('TS.RaceEventMode',)
+REFERENCE_TYPES = (0x12, 0x15, 0x1C)  # class, generic instance, object: a field holding an address
 CLIENT_SEARCH_EVERY = 10.0  # seconds between searches for an online race while there is none
 CLIENT_SEARCH_MOST = 60.0  # the wait doubles up to this while an event holds no race to read
 # For this long after a search first found nothing, the wait stays CLIENT_SEARCH_EVERY: a player
@@ -466,7 +473,7 @@ class LapReader:
         self._reckoning = DeadReckoning()  # positions where the game keeps none (online client)
         self._listener = None  # the race controller (TS.EventController) of the event state
         self._draft = None  # the event's drafting settings, once read (False: none)
-        self.event_type = None  # the event's type (TSU's EventType number), once read
+        self.event_type = None  # the event's (mode, level type), once read
         self._draft_time = {}  # lap index -> race time spent in a slipstream (0.1 ms)
         self._draft_clock = None  # race clock at the read before, for that time
         self._player_indices = []
@@ -511,14 +518,16 @@ class LapReader:
         return self._controller or self._spectated
 
     def _event_type(self):
-        """The event's type as TSU stores it (a number of its EventType: race, sumo, hill and
-        so on), logged once per event, or None. Which number is which mode is not known yet:
-        the log is to tell, before the track map is kept to races. Where the field is not
-        found, the log lists the fields there are, to look for it."""
+        """The event's type, logged once per event: (mode, level type), or None. TSU keeps the
+        mode in TS.EventSettings.m_eventMode, an object (seen 2026-11-08) whose class names
+        it, and the level type (track, arena ...) as a number next to it. Which is which mode
+        is not known yet: the log is to tell, before the track map is kept to races. Where
+        the field is not found, the log lists the fields there are, to look for it."""
         il = self.il
         try:
             logic = il.ref(self._listener, 'm_eventLogic')
             objects = [('settings', il.ref(logic, 'm_eventSettings')), ('logic', logic)]
+            logic_class = il.class_name(logic)
         except (NotFound, OSError) as error:
             log.info('event type: no event settings (%s)', error)
             return None
@@ -537,16 +546,46 @@ class LapReader:
                 if name not in fields:
                     continue
                 offset, code = fields[name]
+                detail = ''
                 try:
-                    # An enum is a value type (0x11) holding an int; a plain int works too.
-                    value = il.memory.i32(obj + offset)
-                except OSError:
+                    if code in REFERENCE_TYPES:  # an object: its class says the mode
+                        mode = il.memory.u64(obj + offset)
+                        if not mode:
+                            continue
+                        value = il.class_name(mode)
+                        names = [n for n, _o, static, _c in il.field_list(il.memory.u64(mode)) if not static]
+                        detail = f' (fields: {", ".join(names[:40]) or "none"})'
+                    else:  # an enum is a value type (0x11) holding an int; a plain int too
+                        value = il.memory.i32(obj + offset)
+                except (NotFound, OSError):
                     continue
-                log.info('event type: %s.%s = %d (type code 0x%02x)', role, name, value, code)
-                return value
+                level = None
+                if LEVEL_TYPE_FIELD in fields:
+                    try:
+                        level = il.memory.i32(obj + fields[LEVEL_TYPE_FIELD][0])
+                    except OSError:
+                        pass
+                log.info(
+                    'event type: %s.%s = %s%s, %s = %s, logic %s',
+                    role,
+                    name,
+                    value,
+                    detail,
+                    LEVEL_TYPE_FIELD,
+                    level,
+                    logic_class,
+                )
+                return value, level
         for role, fields in listed:
             log.info('event type: not found; %s fields: %s', role, ', '.join(list(fields)[:80]) or 'none')
         return None
+
+    def _on_a_track(self):
+        """Whether the event is driven on a track: a race (laps of a circuit) or a special
+        event (from A to B), both TS.RaceEventMode. Battle, capture the flag, King of the
+        Hill, Sumo, Soccer and Tag are played in arenas, where a track map would show a
+        scribble of where the cars went. True when the mode is not known, as before."""
+        return self.event_type is None or self.event_type[0] in TRACK_MODES
 
     def _draft_settings(self):
         """The event's DraftSettings (TS.EventSettings.drafting, through the race
@@ -800,7 +839,13 @@ class LapReader:
             # Online, as a client, the game keeps no position: the delta and the fuel
             # trend use the worked-out one.
             position = next((p.position for p in players if p.local), None)
-        state = dataclasses.replace(state, players=players, position=position, draft=self._draft_settings())
+        state = dataclasses.replace(
+            state,
+            players=players,
+            position=position,
+            draft=self._draft_settings(),
+            on_a_track=self._on_a_track(),
+        )
         live = state.live_fuel_trend(self._fuel_marks, self._fuel_history)
         if live is not None:
             state = dataclasses.replace(state, car=dataclasses.replace(car, fuel_trend=live))
@@ -854,6 +899,7 @@ class LapReader:
             gates=gates,
             players=players,
             spectating=True,
+            on_a_track=self._on_a_track(),
         )
 
     def _count_draft(self, state):
@@ -1580,7 +1626,7 @@ def race_sections(
         view = radar.update(state.players, snapshot.read_at, state.draft) if radar is not None else None
         if view is not None:
             sections['radar'] = view
-        if track_map is not None:
+        if track_map is not None and state.on_a_track:  # no map, nor a track learnt, in an arena
             shown = track_map.update(state, order if order is not None else ranked(state.players))
             if shown is not None:
                 sections['trackmap'] = shown
@@ -1596,7 +1642,7 @@ def _watching_sections(snapshot, now, standings, track_map):
         order = standings.order(state.players, now) if standings is not None else ranked(state.players)
         sections['players'] = players_rows(state.players, order, state.clock, state.gates, watching=True)
         sections['laptimes'] = lap_times_rows(state.players, order, clock_now(snapshot, now))
-        if track_map is not None:
+        if track_map is not None and state.on_a_track:
             shown = track_map.update(state, order)
             if shown is not None:
                 sections['trackmap'] = shown

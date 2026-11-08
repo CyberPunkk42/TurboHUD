@@ -67,6 +67,12 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-08: The track map shows only on a track, asked for by the user: in races and special events
+  (TS.RaceEventMode), not in arena modes (Battle, Collector, Hill, Soccer, Sumo, Tag), where no track is
+  learnt either. TSU keeps the mode in `TS.EventSettings.m_eventMode`, an object whose class names it
+  (seen in a capture event: `TS.BattleEventMode`, level type 6, logic `TS.BattleLogic`). Where the mode
+  cannot be read the map stays as before. The spectator's search that stops early was seen: 2.9 to 4.7 s,
+  where it took 15 to 21 s.
 - 2026-11-08: The log says each event's type (`event type: settings.m_eventType = N`), the first step to
   a track map only where it helps, asked for by the user: in races and special events (A to B, across
   the finish once), not in King of the Hill, Capture the Flag or Sumo. TSU's EventType names (from its
