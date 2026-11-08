@@ -394,8 +394,11 @@ def per_lap(history, laps=PER_LAP_LAPS):
     return (recent[-1] - recent[0]) / (len(recent) - 1)
 
 
-# Where TSU may keep the event's type (names from its metadata: EventType, m_eventType, ...).
-EVENT_TYPE_FIELDS = ('m_eventType', 'eventType', 'm_type', 'type', 'm_gameMode', 'gameMode', 'eventMode')
+# Where TSU keeps the event's type: m_eventMode in TS.EventSettings (seen 2026-11-08 in an online
+# race); the others are names from its metadata, in case a version moves it.
+EVENT_TYPE_FIELDS = ('m_eventMode', 'm_eventType', 'eventType', 'eventMode', 'm_gameMode', 'gameMode')
+# Logged next to it: what kind of level the event runs on (a track, an arena), perhaps the better sign.
+LEVEL_TYPE_FIELD = 'm_initializedLevelType'
 CLIENT_SEARCH_EVERY = 10.0  # seconds between searches for an online race while there is none
 CLIENT_SEARCH_MOST = 60.0  # the wait doubles up to this while an event holds no race to read
 # For this long after a search first found nothing, the wait stays CLIENT_SEARCH_EVERY: a player
@@ -542,7 +545,21 @@ class LapReader:
                     value = il.memory.i32(obj + offset)
                 except OSError:
                     continue
-                log.info('event type: %s.%s = %d (type code 0x%02x)', role, name, value, code)
+                level = None
+                if LEVEL_TYPE_FIELD in fields:
+                    try:
+                        level = il.memory.i32(obj + fields[LEVEL_TYPE_FIELD][0])
+                    except OSError:
+                        pass
+                log.info(
+                    'event type: %s.%s = %d (type code 0x%02x), %s = %s',
+                    role,
+                    name,
+                    value,
+                    code,
+                    LEVEL_TYPE_FIELD,
+                    level,
+                )
                 return value
         for role, fields in listed:
             log.info('event type: not found; %s fields: %s', role, ', '.join(list(fields)[:80]) or 'none')

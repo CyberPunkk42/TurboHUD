@@ -211,10 +211,11 @@ def build(
         logic = g.alloc_obj(g.klass('TS', 'RaceLogic', [('m_eventSettings', 0x10, False)]))
         settings_fields = [('drafting', 0x10, False)]
         if event_type is not None:
-            settings_fields.append(('m_eventType', 0x18, False, 0x11))
+            settings_fields.append(('m_eventMode', 0x18, False, 0x11))
+            settings_fields.append(('m_initializedLevelType', 0x1C, False, 0x11))
         settings = g.alloc_obj(g.klass('TS', 'EventSettings', settings_fields))
         if event_type is not None:
-            g.put(settings + 0x18, struct.pack('<i', event_type))
+            g.put(settings + 0x18, struct.pack('<2i', event_type, 1))
         g.q(logic + 0x10, settings)
         g.q(controller + 0x70, logic)
     if draft:
@@ -530,7 +531,7 @@ class EventTypeTests(unittest.TestCase):
         self.assertEqual(reader.event_type, 3)
         lines = [m for m in logs.output if 'event type' in m]
         self.assertEqual(len(lines), 1)
-        self.assertIn('settings.m_eventType = 3 (type code 0x11)', lines[0])
+        self.assertIn('settings.m_eventMode = 3 (type code 0x11), m_initializedLevelType = 1', lines[0])
 
     def test_without_the_field_the_log_lists_the_fields_there_are(self):
         reader = build([10_000], laps_completed=0, clock=20_000, limit=0, draft=True)
