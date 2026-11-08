@@ -67,6 +67,8 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-08: The tester's whole log: reads stayed small (20 trips) and took half as long once the game
+  was near 60 FPS with all sections, so the busy game slows the reads, not the other way round.
 - 2026-11-08: The tester's results with build 2026.11.08.2 (`docs/CONTINUE_HERE.md`, "Tester's Mac"): 115 FPS
   without TurboHUD, 107 with every section unticked (78 before), about 95 with lap and delta (62), about 63
   with all (58). Fewer reads did not help; the windows above the game cost the frames, until the game holds

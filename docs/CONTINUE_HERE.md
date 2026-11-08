@@ -63,10 +63,14 @@ Fullscreen, D3DMetal, FPS read with the in-game / CrossOver HUD.
   with the windows in step with the refresh, instead of showing it directly. Not known yet: whether the
   number of windows or their area matters more.
 - In #5 a big stutter, then about 25 FPS less for 10 s; one read that run took 177 ms. Cause not known.
-- The log had 20 trips a read at 0.95 ms a trip (the user's Mac: about 88 at 0.36 ms); 20 is probably with
-  every section unticked.
-- Still to get from the tester: measurement 7 (closed again at the end) and the whole Terminal output (only
-  three lines arrived: the reader, graphics and screens parts are missing).
+- The tester's log (19:54 to 20:01, measurements 5 and 6): 20 to 21 trips a read all along (the user's race
+  with AI: about 88), so few or no other cars. With lap and delta a read took 17 to 19 ms (0.80 to 0.95 ms a
+  trip); with all sections, the game near 60, 8 ms (0.40 ms a trip). The game leaves the Wine server more
+  room when it waits for the refresh: the busy game slows the reads, not the reads the game. Once or twice
+  in 30 s a read took 150 to 210 ms; whether those are the stutters felt (a game hitch also holds a read up)
+  is not known, and #6 had such reads but no stutter. The reader's log was empty, as on the user's Mac.
+- Still to get from the tester (nice to have): measurement 7 (closed again at the end), and whether
+  `pgrep -fl bottle_reader` printed nothing.
 
 ### TODO: measure the windows' cost on the user's Mac with the Metal HUD
 Apple's Metal Performance HUD (`MTL_HUD_ENABLED=1`, which D3DMetal honours) shows FPS and frame times
