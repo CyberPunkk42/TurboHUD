@@ -925,13 +925,39 @@ class CarTests(unittest.TestCase):
             now[0] = reader._next_search
         return waits
 
-    def test_an_event_without_a_race_is_searched_less_and_less(self):
+    # Searches 10 s apart for the first minute (at 100, 110 ... 160 s): only then does the wait grow.
+    QUICK = 7
+
+    def test_an_event_without_a_race_is_searched_less_and_less_after_a_minute(self):
         reader, now = self.backing_off()
-        self.assertEqual(self.waits_of(reader, now, 6), [10.0, 20.0, 40.0, 60.0, 60.0, 60.0])
+        self.assertEqual(
+            self.waits_of(reader, now, self.QUICK + 4), [10.0] * self.QUICK + [20.0, 40.0, 60.0, 60.0]
+        )
+
+    def test_a_race_joined_in_progress_is_searched_for_every_10_s_at_first(self):
+        # Joining a public session mid-race (2026-11-08): two searches found nothing while
+        # the race was set up, then a 50 s wait held the HUD back.
+        reader, now = self.backing_off()
+        self.assertEqual(self.waits_of(reader, now, 3), [10.0, 10.0, 10.0])
+        reader.game.put(reader.game.client_controller + 0x48, reader.race_there)
+        now[0] = reader._next_search
+        self.assertIsNotNone(reader.read())
+        self.assertIsNone(reader._empty_since)
+
+    def test_the_minute_counts_again_after_a_race(self):
+        reader, now = self.backing_off()
+        self.waits_of(reader, now, self.QUICK + 2)
+        self.assertGreater(reader._search_wait, race.CLIENT_SEARCH_EVERY)
+        reader.game.put(reader.game.client_controller + 0x48, reader.race_there)
+        now[0] = reader._next_search
+        reader.read()
+        reader.game.q(reader.game.client_controller + 0x48, 0)  # that race is over
+        now[0] += 1.0
+        self.assertEqual(self.waits_of(reader, now, 2), [10.0, 10.0])
 
     def test_no_search_during_a_long_wait(self):
         reader, now = self.backing_off()
-        self.waits_of(reader, now, 4)  # the next wait is 60 s
+        self.waits_of(reader, now, self.QUICK + 3)  # the next wait is 60 s
         with self.assertRaises(race.NotFound):
             reader.read()
         searches = reader.game.searches
@@ -943,7 +969,7 @@ class CarTests(unittest.TestCase):
     def test_the_end_of_the_event_ends_a_long_wait(self):
         running = [True]
         reader, now = self.backing_off(lambda: running[0])
-        self.waits_of(reader, now, 4)
+        self.waits_of(reader, now, self.QUICK + 3)
         with self.assertRaises(race.NotFound):
             reader.read()
         self.assertGreater(reader._next_search - now[0], race.CLIENT_LOG_EVERY)
@@ -956,7 +982,7 @@ class CarTests(unittest.TestCase):
 
     def test_a_race_found_ends_the_long_waits(self):
         reader, now = self.backing_off()
-        self.waits_of(reader, now, 3)
+        self.waits_of(reader, now, self.QUICK + 2)
         self.assertGreater(reader._search_wait, race.CLIENT_SEARCH_EVERY)
         reader.game.put(reader.game.client_controller + 0x48, reader.race_there)
         now[0] = reader._next_search
@@ -1110,6 +1136,13 @@ class CarTests(unittest.TestCase):
         with self.assertLogs('turbohud.core.race', 'INFO') as logs:
             reader.read()
         self.assertIn('a race to watch', logs.output[1])
+
+    def test_the_log_says_where_the_watched_race_was_among_the_hits(self):
+        # The fake's class address is found 4 times: two tables, a stale controller, the race.
+        reader = self.spectated([100.0])
+        with self.assertLogs('turbohud.core.race', 'INFO') as logs:
+            reader.read()
+        self.assertIn('watching the race at hit 4 of 4, 1 races to watch', logs.output[2])
 
     def test_the_log_says_when_a_search_failed(self):
         reader = self.spectated([100.0])

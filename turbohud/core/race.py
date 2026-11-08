@@ -396,6 +396,10 @@ def per_lap(history, laps=PER_LAP_LAPS):
 
 CLIENT_SEARCH_EVERY = 10.0  # seconds between searches for an online race while there is none
 CLIENT_SEARCH_MOST = 60.0  # the wait doubles up to this while an event holds no race to read
+# For this long after a search first found nothing, the wait stays CLIENT_SEARCH_EVERY: a player
+# joining a race in progress sees it set up a little later. Only then does the wait grow, for
+# sessions that hold no race at all (a custom session).
+CLIENT_SEARCH_QUICK_FOR = 60.0
 CLIENT_SPECTATE_EVERY = 30.0  # the same while the race last watched has its clock standing
 SPECTATE_STILL = 5.0  # seconds a watched race's clock may stand before it counts as over
 CLIENT_LOG_EVERY = 2.0  # seconds between looks at TSU's log while it says no event runs
@@ -471,6 +475,7 @@ class LapReader:
         self._watched_clock, self._watched_at = None, 0.0  # its race clock, and since when
         self._next_search = 0.0  # when to look for it again
         self._search_wait = CLIENT_SEARCH_EVERY  # how long after a search that found nothing
+        self._empty_since = None  # when the searches began to find nothing, while they do
         self._state = None  # the TS.EventState the caches below belong to
         self._offsets = {}  # (role, field) -> offset
         self._player = None
@@ -539,6 +544,7 @@ class LapReader:
                 pass
             self._controller = None
             self._next_search = 0.0  # gone (race over): look again at once
+            self._empty_since = None
         if self._spectated is not None:
             # The race the player watches, while its clock runs: no search is needed, and
             # one would hold the reads up for as long as it takes. A look at it each read
@@ -555,7 +561,7 @@ class LapReader:
             except (NotFound, OSError) as gone:
                 log.info('the watched race is gone (%s)', gone)
                 self._spectated = None
-                self._next_search = 0.0
+                self._next_search, self._empty_since = 0.0, None
                 state = self._watch_another()
                 if state is not None:
                     return state
@@ -566,18 +572,18 @@ class LapReader:
             # A long wait ends with the event, so that the next race is found soon.
             long_wait = self._search_wait > CLIENT_SEARCH_EVERY and self._event_running is not None
             if long_wait and self._event_running() is False:
-                self._search_wait = CLIENT_SEARCH_EVERY
+                self._search_wait, self._empty_since = CLIENT_SEARCH_EVERY, None
                 self._next_search = self._clock() + CLIENT_LOG_EVERY
             raise error
         if self._event_running is not None and self._event_running() is False:
             # Menus and lobbies: no event, nothing to search for (a search reads all
             # of the game's data and keeps a CPU core busy for over a second).
-            self._search_wait = CLIENT_SEARCH_EVERY
+            self._search_wait, self._empty_since = CLIENT_SEARCH_EVERY, None
             self._next_search = self._clock() + CLIENT_LOG_EVERY
             raise error
         if self._client_class is None:
             self._client_class = il.find_class('TS', 'ClientEventController')
-        watchable = []  # (controller, event state) of races without the player
+        watchable = []  # (controller, event state, hit) of races without the player
         started, hits, result = self._clock(), 0, 'stopped by an error'
         log.info('searching for the online race')
         try:
@@ -591,7 +597,7 @@ class LapReader:
                     self._controller, self._spectated, self._others = candidate, None, []
                     result = 'race found'
                     return state
-                watchable.append((candidate, state))
+                watchable.append((candidate, state, hits))
             result = 'a race to watch, no local player' if watchable else 'no race'
         finally:
             # Counted from the search's end: in a CrossOver bottle a search of all the
@@ -601,23 +607,27 @@ class LapReader:
             self._next_search = ended + wait
             # An event may hold no race to read at all (a custom session), and in a bottle
             # a search takes over 20 s: over and over, it would never leave the game alone.
-            found = result == 'race found'
-            nothing = result == 'no race'
-            self._search_wait = (
-                CLIENT_SEARCH_EVERY
-                if found
-                else min(wait * 2, CLIENT_SEARCH_MOST)
-                if nothing
-                else self._search_wait
-            )
+            # Not at first, though: a race joined in progress is set up a little later.
+            if result == 'no race':
+                if self._empty_since is None:
+                    self._empty_since = started
+                quick = ended - self._empty_since < CLIENT_SEARCH_QUICK_FOR
+                self._search_wait = CLIENT_SEARCH_EVERY if quick else min(wait * 2, CLIENT_SEARCH_MOST)
+            else:
+                self._empty_since = None
+                if result == 'race found':
+                    self._search_wait = CLIENT_SEARCH_EVERY
             log.info('search: %s, after %.1f s and %d hits', result, ended - started, hits)
         if not watchable:
             self._spectated, self._others = None, []
             raise error
         # Not the one whose clock stood still, if there is another: an old race can linger.
-        self._spectated, state = next((w for w in watchable if w[0] != self._spectated), watchable[0])
-        self._others = [controller for controller, _state in watchable if controller != self._spectated]
+        self._spectated, state, hit = next((w for w in watchable if w[0] != self._spectated), watchable[0])
+        self._others = [controller for controller, _state, _hit in watchable if controller != self._spectated]
         self._watched_clock = None
+        # Where it was among the hits, to tell whether a search could stop at the first race to
+        # watch (it reads all of the game's data now, about 20 s in a bottle).
+        log.info('search: watching the race at hit %d of %d, %d races to watch', hit, hits, len(watchable))
         return state
 
     def _watch_another(self):

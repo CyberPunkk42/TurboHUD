@@ -715,3 +715,10 @@ its "Recent changes".
   controllers, the race watched went at once, and a second search took 18 s. Likely an old race from the
   session left. The other races a search finds are now kept and tried first (a few reads), and the log
   says why a watched race was dropped (`the watched race is gone (...)`). Not yet seen in a session.
+- 2026-11-08: Joining a race in progress is found sooner. Seen as a spectator in a public session: two
+  searches found nothing while TSU set the race up, then the wait after empty searches had grown to 50 s,
+  so the HUD showed after about 2 minutes. The wait now stays 10 s for the first minute of empty searches
+  and only grows after it (custom sessions are still searched less and less). The log also says where the
+  watched race was among the hits (`watching the race at hit N of M`), to tell whether a spectator's search
+  could stop at the first race to watch. The same session showed the new `the watched race is gone` line at
+  a race's end: `no players`, the race over, not an old race lingering.
