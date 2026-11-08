@@ -67,6 +67,13 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-08: A spectator's search stops at the first race to watch, as a driver's does at the player's
+  race. In a public session the watched race was the only one, at hit 42 of 43 (21:36 and 21:39): a full
+  search took 15 to 20 s, and in an earlier one the race was at 18% of the data, so about 4 s are expected.
+  If the race picked never runs its clock (an old one, with the race to read, maybe the player's own,
+  further on), the search goes past it at once, only once, rather than after 30 s. The other races a
+  search found are no longer kept (it now stops at the first), so that fallback is gone. Not yet seen in a
+  session.
 - 2026-11-08: Joining a race in progress is found sooner. Seen as a spectator in a public session: two
   searches found nothing while TSU set the race up, then the wait after empty searches had grown to 50 s,
   so the HUD showed after about 2 minutes. The wait now stays 10 s for the first minute of empty searches

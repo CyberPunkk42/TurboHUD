@@ -5,25 +5,12 @@ and nothing was pushed or tagged. Delete a point when it is settled, and this fi
 none is left.
 
 ## Not yet seen in a race
-- Joining a public session mid-race (2026-11-08): the HUD found the race after 1.4 s when driving, but
-  as a spectator a search of all the data took 20.5 s, and the race watched went at once, so a second
-  search took 18 s. The other races found are now tried first. Seen once more (21:27): the watched race
-  went at its end (`no players`), with no other to try, and the next one was searched for when it started.
-  Still to see: `another race from the last search`, and the HUD switching to the car with no search when
-  the player drives the next race. A spectator's search still reads all the data (14 to 22 s): read the
-  log's `watching the race at hit N of M` lines, and if the race is often early, stop the search at the
-  first race to watch whose clock runs. Joining took about 2 minutes, with a 50 s wait after two empty
-  searches; the wait now stays 10 s for a minute (not yet seen in a session).
-- Race start online: the "last place" shortcut is gone and the search reads half of the time
-  instead of a quarter. Expected: the HUD shows about 4 to 6 s after the start, where it took 7
-  to 12 s. Check the log's `search:` line and the wait, and listen for stutter in the first
-  seconds. A full-speed search made TSU stutter in earlier checks (`experiments/README.md`). If
-  it stutters, go back with `WINE_SEARCH_SHARE` in `turbohud/tsu/winmemory.py`. If half speed
-  is not fast enough: search from a better starting point (log where the race is relative to
-  the data first), or look for a pointer path to the controller. One search measured apart at a
-  quarter: 1.48 GiB in 608 regions, the race at hit 42 of 42, at 18% of the data, 6 s in. Nearly
-  all the other hits are not controllers at all (seen 2026-11-05 in a TSU's first event: tables
-  and code bytes that hold the class's address), so they do not come from earlier races.
+- Joining a public session mid-race (2026-11-08): the HUD showed 23 s after TurboHUD started as a
+  spectator (a full search of 19.8 s; the race the only one to watch, at hit 42 of 43). A spectator's search
+  now stops at the first race to watch: expected about 4 s. Check in a session: the `search:` line's time,
+  and whether `has not run: searching past it` shows (an old race picked first). Also still to see: the HUD
+  switching to the car with no search when the player drives the next race, and the 10 s waits for the
+  first minute of empty searches while a race joined in progress is set up.
 - A search at TSU's start: TSU's log can still say an event runs, from before TSU started, so
   TurboHUD searches for about 10 s with no event on (log: `search: no race` right after the
   reader starts). No longer harmful (see the entry of 2026-11-05 in `RESUME.md` on classes not

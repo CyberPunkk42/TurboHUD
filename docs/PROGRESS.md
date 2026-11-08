@@ -722,3 +722,10 @@ its "Recent changes".
   watched race was among the hits (`watching the race at hit N of M`), to tell whether a spectator's search
   could stop at the first race to watch. The same session showed the new `the watched race is gone` line at
   a race's end: `no players`, the race over, not an old race lingering.
+- 2026-11-08: A spectator's search stops at the first race to watch, as a driver's does at the player's
+  race. In a public session the watched race was the only one, at hit 42 of 43 (21:36 and 21:39): a full
+  search took 15 to 20 s, and in an earlier one the race was at 18% of the data, so about 4 s are expected.
+  If the race picked never runs its clock (an old one, with the race to read, maybe the player's own,
+  further on), the search goes past it at once, only once, rather than after 30 s. The other races a
+  search found are no longer kept (it now stops at the first), so that fallback is gone. Not yet seen in a
+  session.
