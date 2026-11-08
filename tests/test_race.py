@@ -456,6 +456,18 @@ class ReaderTests(unittest.TestCase):
         self.assertEqual(runtime.fields(child)['m_child'], (0x18, False))
         self.assertEqual(runtime.fields(child)['m_base'], (0x10, False))
 
+    def test_a_static_field_of_a_class_not_set_up_is_not_found_and_kept_trying(self):
+        # Just after TSU starts, TS.Services has no fields yet (seen on the Mac: a KeyError
+        # for sm_instance restarted the reader in the bottle). The game is loading, not gone.
+        reader = build([10_000], laps_completed=0, clock=20_000, limit=0)
+        g, memory = reader.game, reader.il.memory
+        entries = memory.u64(reader.services_class + il.CLASS_FIELDS)
+        g.q(reader.services_class + il.CLASS_FIELDS, 0)
+        with self.assertRaises(il.NotFound):
+            reader.read()
+        g.q(reader.services_class + il.CLASS_FIELDS, entries)
+        self.assertEqual(reader.read().current_lap, 10_000)
+
     def test_fields_are_kept_once_the_class_is_set_up(self):
         reader = build([10_000], laps_completed=0, clock=20_000, limit=0)
         g, runtime = reader.game, reader.il
