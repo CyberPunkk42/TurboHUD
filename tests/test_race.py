@@ -540,6 +540,36 @@ class EventTypeTests(unittest.TestCase):
             lines[0],
         )
 
+    def on_a_track(self, mode, spectating=False):
+        reader = build(
+            [10_000],
+            laps_completed=0,
+            clock=20_000,
+            limit=0,
+            event_type=(mode, 6),
+            local_index=-1 if spectating else 0,
+        )
+        return reader.read().on_a_track
+
+    def test_a_race_mode_is_on_a_track(self):
+        self.assertTrue(self.on_a_track('RaceEventMode'))
+        self.assertTrue(self.on_a_track('RaceEventMode', spectating=True))
+
+    def test_the_arena_modes_are_not(self):
+        for mode in (
+            'BattleEventMode',
+            'CollectorEventMode',
+            'HillEventMode',
+            'SumoEventMode',
+            'TagEventMode',
+        ):
+            self.assertFalse(self.on_a_track(mode), mode)
+        self.assertFalse(self.on_a_track('BattleEventMode', spectating=True))
+
+    def test_an_unknown_mode_keeps_the_map(self):
+        reader = build([10_000], laps_completed=0, clock=20_000, limit=0)  # no event settings
+        self.assertTrue(reader.read().on_a_track)
+
     def test_without_the_field_the_log_lists_the_fields_there_are(self):
         reader = build([10_000], laps_completed=0, clock=20_000, limit=0, draft=True)
         with self.assertLogs('turbohud.core.race', 'INFO') as logs:

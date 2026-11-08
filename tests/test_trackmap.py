@@ -327,6 +327,34 @@ class RaceSectionsTests(unittest.TestCase):
         self.assertEqual([d.role for d in sections['trackmap'].dots], ['leader', 'me'])
         self.assertNotIn('trackmap', race.race_sections(snapshot, 1.0))
 
+    def arena(self, spectating=False):
+        players = (car('Ahead', 14), car('Me', 13, local=not spectating))
+        lap_state = race.LapState(
+            clock=130_000,
+            time_limit=0,
+            laps_completed=1,
+            laps_to_finish=3,
+            lap_starts=[] if spectating else [0, 80_000],
+            checkpoints=() if spectating else players[1].checkpoints,
+            gates=GATES,
+            players=players,
+            spectating=spectating,
+            on_a_track=False,  # battle, capture the flag, King of the Hill, Sumo ...
+        )
+        return race.Snapshot(race.RACING, lap_state, True, 1.0, moved_at=1.0)
+
+    def test_no_map_and_no_track_learnt_in_an_arena_mode(self):
+        class Watched:
+            calls = 0
+
+            def update(self, *_args):
+                Watched.calls += 1
+
+        for spectating in (False, True):
+            sections = race.race_sections(self.arena(spectating), 1.0, track_map=Watched())
+            self.assertNotIn('trackmap', sections)
+        self.assertEqual(Watched.calls, 0)  # update learns the track: not even called
+
 
 @unittest.skipUnless(importlib.util.find_spec('PySide6'), 'needs Qt')
 class MapWindowTests(unittest.TestCase):

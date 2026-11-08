@@ -68,6 +68,7 @@ class LapState:
     players: tuple = ()  # every player in the race (PlayerState), the local one included
     draft: 'DraftSettings | None' = None  # the event's drafting, None where it is off
     spectating: bool = False  # the player only watches: no car, the lap counts are the leader's
+    on_a_track: bool = True  # a race mode (a circuit, or A to B): False in arena modes, without a map
 
     @property
     def lap_times(self):
@@ -399,6 +400,8 @@ def per_lap(history, laps=PER_LAP_LAPS):
 EVENT_TYPE_FIELDS = ('m_eventMode', 'm_eventType', 'eventType', 'eventMode', 'm_gameMode', 'gameMode')
 # Logged next to it: what kind of level the event runs on (a track, an arena), perhaps the better sign.
 LEVEL_TYPE_FIELD = 'm_initializedLevelType'
+# The event modes driven on a track; TSU's others: Battle, Collector, Hill, Soccer, Sumo, Tag.
+TRACK_MODES = ('TS.RaceEventMode',)
 REFERENCE_TYPES = (0x12, 0x15, 0x1C)  # class, generic instance, object: a field holding an address
 CLIENT_SEARCH_EVERY = 10.0  # seconds between searches for an online race while there is none
 CLIENT_SEARCH_MOST = 60.0  # the wait doubles up to this while an event holds no race to read
@@ -576,6 +579,13 @@ class LapReader:
         for role, fields in listed:
             log.info('event type: not found; %s fields: %s', role, ', '.join(list(fields)[:80]) or 'none')
         return None
+
+    def _on_a_track(self):
+        """Whether the event is driven on a track: a race (laps of a circuit) or a special
+        event (from A to B), both TS.RaceEventMode. Battle, capture the flag, King of the
+        Hill, Sumo, Soccer and Tag are played in arenas, where a track map would show a
+        scribble of where the cars went. True when the mode is not known, as before."""
+        return self.event_type is None or self.event_type[0] in TRACK_MODES
 
     def _draft_settings(self):
         """The event's DraftSettings (TS.EventSettings.drafting, through the race
@@ -829,7 +839,13 @@ class LapReader:
             # Online, as a client, the game keeps no position: the delta and the fuel
             # trend use the worked-out one.
             position = next((p.position for p in players if p.local), None)
-        state = dataclasses.replace(state, players=players, position=position, draft=self._draft_settings())
+        state = dataclasses.replace(
+            state,
+            players=players,
+            position=position,
+            draft=self._draft_settings(),
+            on_a_track=self._on_a_track(),
+        )
         live = state.live_fuel_trend(self._fuel_marks, self._fuel_history)
         if live is not None:
             state = dataclasses.replace(state, car=dataclasses.replace(car, fuel_trend=live))
@@ -883,6 +899,7 @@ class LapReader:
             gates=gates,
             players=players,
             spectating=True,
+            on_a_track=self._on_a_track(),
         )
 
     def _count_draft(self, state):
@@ -1609,7 +1626,7 @@ def race_sections(
         view = radar.update(state.players, snapshot.read_at, state.draft) if radar is not None else None
         if view is not None:
             sections['radar'] = view
-        if track_map is not None:
+        if track_map is not None and state.on_a_track:  # no map, nor a track learnt, in an arena
             shown = track_map.update(state, order if order is not None else ranked(state.players))
             if shown is not None:
                 sections['trackmap'] = shown
@@ -1625,7 +1642,7 @@ def _watching_sections(snapshot, now, standings, track_map):
         order = standings.order(state.players, now) if standings is not None else ranked(state.players)
         sections['players'] = players_rows(state.players, order, state.clock, state.gates, watching=True)
         sections['laptimes'] = lap_times_rows(state.players, order, clock_now(snapshot, now))
-        if track_map is not None:
+        if track_map is not None and state.on_a_track:
             shown = track_map.update(state, order)
             if shown is not None:
                 sections['trackmap'] = shown
