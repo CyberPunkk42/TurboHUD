@@ -743,3 +743,7 @@ its "Recent changes".
 - 2026-11-08: Confirmed by the user on the Mac: the bin button, an offline race with 19 AI (every section,
   20 drivers in the lists, preset shortcuts mid-race), the same race in Fullscreen, and hosting about 13 AI
   online as a driver. The race reads stayed at about 30 ms in these races.
+- 2026-11-08: The settings window opens wholly on the screen, reported by the user: it went 20 px to the right
+  of where the move-mode panel was meant to be (near the middle), so a wide panel put it past the right edge,
+  and it did not follow a panel that was dragged. It now opens beside the panel where it is, on the right
+  if it fits, else on the left, kept on that screen (`hud.beside`). Not yet seen on the Mac.

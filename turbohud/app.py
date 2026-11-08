@@ -200,6 +200,7 @@ def run(args, folder):
         GroupMover,
         LayoutHistory,
         below,
+        beside,
         centred,
         drawing_place,
         first_launch,
@@ -587,8 +588,11 @@ def run(args, folder):
             )
             settings_window.resize_requested.connect(resize_all)
         if not settings_window.isVisible():
-            x, y = panel_spot()
-            settings_window.show_at(x + panel.width() + 20, y)
+            # Beside the panel where it is (it may have been dragged), and wholly on its screen.
+            anchor = panel.geometry().getRect()
+            size = (settings_window.width(), settings_window.height())
+            screen = screen_of(anchor, screens) or anchor
+            settings_window.show_at(*beside(size, anchor, screen))
 
     @undoable
     def set_wanted(name, wanted):
