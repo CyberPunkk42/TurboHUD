@@ -27,9 +27,9 @@ none is left.
   yet set up), but needless; not fixed yet.
 - The radar without its fill, its larger cars, and the two warning times in the settings
   window (blue flag 1 to 10 s, radar 0.2 to 3 s). A long radar time zooms the radar out.
-- The settings window: it opens beside the move-mode panel and wholly on its screen (2026-11-08,
-  it went past the right edge before), also with the panel dragged elsewhere; dragging it with a real
-  mouse (tested only with a stand-in).
+- The settings window: it opens wholly on the screen, near the upper middle, confirmed by the user
+  (2026-11-08; it went past the right edge before). Still to see: with the panel dragged near an edge,
+  and dragging it with a real mouse (tested only with a stand-in).
 
 ## Race start and the map, not yet seen
 - Track map: a frame now comes with each new read (`hud.FramePacer`). The user found it smooth on
@@ -44,7 +44,8 @@ The user confirmed both work on 2026-11-05. On 2026-11-08 the bar was turned rou
 as in sim racing) and its colour made gradual (white when steady, towards green or red as time is
 gained or lost), asked for by the user as it flickered. Then, as it needed to be smoother: the delta
 in hundredths (bar and delta section; the player list's gaps keep thousandths), the trend over 1 s,
-and the colour easing over about 0.5 s. Not yet seen in a race. To tune, in `turbohud/core/race.py`:
+and the colour easing over about 0.5 s. The user found it better and smooth enough in a race (2026-11-08).
+To tune, if needed later, in `turbohud/core/race.py`:
 `DELTA_STEADY` (white up to this rate, 0.02 s a second), `DELTA_RATE_FULL` (full colour, 0.15 s a
 second), `DELTA_TREND_WINDOW` (1 s) and `DELTA_COLOUR_EASE` (0.5 s).
 

@@ -755,3 +755,6 @@ its "Recent changes".
   delta section (a third digit changed at every read; the player list's gaps keep thousandths), its colour
   looks at the last second rather than half, and eases towards a new colour over about half a second
   instead of jumping. The bar's length still follows the delta at once. Not yet seen in a race.
+- 2026-11-08: Confirmed by the user in a race: the delta bar (right when ahead, hundredths, white fading to
+  green or red) is better and smooth enough for now, and the settings window opens on the screen, near the
+  upper middle.
