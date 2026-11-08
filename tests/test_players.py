@@ -318,11 +318,11 @@ class DeltaBarTests(unittest.TestCase):
     def test_ahead_it_fills_right_with_a_minus(self):
         # Improving goes to the right, as in sim racing (the user, 2026-11-08).
         view, _bar = self.run_bar((10.0, -0.25))
-        self.assertEqual((view.fill, view.text), (0.25, '\u22120.250'))
+        self.assertEqual((view.fill, view.text), (0.25, '\u22120.25'))
 
     def test_behind_it_fills_left_with_a_plus(self):
         view, _bar = self.run_bar((10.0, 0.5))
-        self.assertEqual((view.fill, view.text), (-0.5, '+0.500'))
+        self.assertEqual((view.fill, view.text), (-0.5, '+0.50'))
 
     def test_the_fill_stops_at_the_end(self):
         self.assertEqual(self.run_bar((10.0, 5.0))[0].fill, -1.0)
@@ -331,25 +331,35 @@ class DeltaBarTests(unittest.TestCase):
     def test_gaining_on_a_positive_delta_goes_green(self):
         view, _bar = self.run_bar((10.0, 0.6), (10.5, 0.5), (11.0, 0.4))
         self.assertLess(view.trend, 0.0)
-        self.assertEqual(view.text, '+0.400')
+        self.assertEqual(view.text, '+0.40')
 
     def test_losing_on_a_negative_delta_goes_red(self):
         view, _bar = self.run_bar((10.0, -0.6), (10.5, -0.5), (11.0, -0.4))
         self.assertGreater(view.trend, 0.0)
-        self.assertEqual(view.text, '\u22120.400')
+        self.assertEqual(view.text, '\u22120.40')
 
-    def test_steady_it_is_white_whatever_the_delta(self):
+    def test_steady_it_turns_white_whatever_the_delta(self):
         for delta in (-0.5, 0.5):
-            view, _bar = self.run_bar((10.0, 2.0), (10.3, delta), (11.0, delta), (11.3, delta))
-            self.assertEqual(view.trend, 0.0)  # only the recent moves count
+            steady = [(10.3 + i / 20, delta) for i in range(80)]  # 4 s at 20 reads a second
+            view, _bar = self.run_bar((10.0, 2.0), *steady)
+            self.assertLess(abs(view.trend), 0.01)  # only the recent moves count
 
-    def test_the_colour_follows_the_trend_within_half_a_second(self):
+    def test_the_colour_eases_rather_than_jumps(self):
         bar = race.DeltaBar()
-        for seconds, delta in ((10.0, 0.5), (10.25, 0.4), (10.5, 0.3)):
-            trend = bar.update(Lapping(round(seconds * SEC), round(delta * SEC))).trend
+        view = None
+        for i in range(7):  # 0.3 s gaining 0.2 s a second: the full green as a trend
+            view = bar.update(Lapping(round((10 + i / 20) * SEC), round((0.5 - i / 100) * SEC)))
+        self.assertLess(view.trend, 0.0)
+        self.assertGreater(view.trend, -0.5)  # on its way to green, not there at once
+
+    def test_the_colour_follows_the_trend_within_a_second_or_so(self):
+        bar = race.DeltaBar()
+        trend = 0.0
+        for i in range(21):  # a second gaining 0.2 s
+            trend = bar.update(Lapping(round((10 + i / 20) * SEC), round((0.5 - i / 100) * SEC))).trend
         self.assertLess(trend, 0.0)  # gaining
-        for seconds, delta in ((10.75, 0.4), (11.0, 0.5)):
-            trend = bar.update(Lapping(round(seconds * SEC), round(delta * SEC))).trend
+        for i in range(1, 31):  # then losing as fast, for 1.5 s
+            trend = bar.update(Lapping(round((11 + i / 20) * SEC), round((0.3 + i / 100) * SEC))).trend
         self.assertGreater(trend, 0.0)  # losing
 
     def test_a_new_lap_starts_afresh(self):
@@ -363,7 +373,7 @@ class DeltaBarTests(unittest.TestCase):
         bar = race.DeltaBar()
         for i in range(10_000):
             bar.update(Lapping(i * 500, 0))
-        self.assertLessEqual(len(bar._history), 11)
+        self.assertLessEqual(len(bar._history), 21)  # a second of reads at 20 a second
 
     def test_it_works_once_a_read(self):
         bar = race.DeltaBar()

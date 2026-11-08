@@ -45,6 +45,8 @@ MAX_EXTRAPOLATION = 1.0  # seconds
 
 # What the live reader is doing, for Snapshot.status.
 EVEN = 5  # under half a millisecond: shown as 0.000, neither ahead nor behind
+DELTA_PLACES = 2  # the delta to the best lap in hundredths: a third digit changed at every read
+DELTA_EVEN = 50  # under half a hundredth: shown as 0.00, neither ahead nor behind
 NO_CHECKPOINT = 0xFFFF_FFFF  # how a missed checkpoint may be marked
 
 WAITING_FOR_GAME = 'waiting for game'
@@ -1438,15 +1440,17 @@ def format_time(units):
     return f'{sign}{minutes}:{rest / UNITS_PER_SECOND:06.3f}'
 
 
-def format_delta(units):
-    """'-0.412' ahead, '+1.230' behind, '0.000' when too small to show."""
-    if abs(units) < EVEN:
-        return '0.000'
-    return f'{"-" if units < 0 else "+"}{abs(units) / UNITS_PER_SECOND:.3f}'
+def format_delta(units, places=3):
+    """'-0.412' ahead, '+1.230' behind, '0.000' when too small to show; with `places` 2,
+    '-0.41', '+1.23' and '0.00'."""
+    if abs(units) * 10**places < UNITS_PER_SECOND / 2:
+        return f'{0:.{places}f}'
+    return f'{"-" if units < 0 else "+"}{abs(units) / UNITS_PER_SECOND:.{places}f}'
 
 
 DELTA_BAR_FULL = 1.0  # seconds of delta that fill the bar to its end
-DELTA_TREND_WINDOW = 0.5  # seconds over which the bar's colour looks at how the delta moves
+DELTA_TREND_WINDOW = 1.0  # seconds over which the bar's colour looks at how the delta moves
+DELTA_COLOUR_EASE = 0.5  # seconds the bar's colour takes to go most of the way to a new one
 DELTA_TREND_LEAST = 0.2  # seconds of this lap's delta before that counts
 DELTA_STEADY = 0.02  # seconds gained or lost a second that still count as steady: white
 DELTA_RATE_FULL = 0.15  # seconds gained or lost a second that give the full green or red
@@ -1479,6 +1483,7 @@ class DeltaBar:
     def __init__(self):
         self._lap = self._clock = self._view = None
         self._history = collections.deque()  # (race clock, delta) over DELTA_TREND_WINDOW
+        self._trend = 0.0  # the colour shown, easing towards the latest trend
 
     def update(self, state):
         """The view for the race `state`; at most once a read does it work anything out."""
@@ -1487,6 +1492,8 @@ class DeltaBar:
         delta = state.delta_to_best
         if state.laps_completed != self._lap or delta is None:
             self._history.clear()
+            self._trend = 0.0  # white at a lap's start: its jump is not the driver gaining
+        last_clock = self._clock if self._history else None
         self._lap, self._clock, self._view = state.laps_completed, state.clock, None
         if delta is None:
             return None
@@ -1497,10 +1504,14 @@ class DeltaBar:
         span = (state.clock - history[0][0]) / UNITS_PER_SECOND
         rate = (delta - history[0][1]) / UNITS_PER_SECOND / span if span >= DELTA_TREND_LEAST else 0.0
         seconds = delta / UNITS_PER_SECOND
+        if last_clock is not None and state.clock > last_clock:
+            # Eased, so that the colour drifts rather than jumps as the trend wavers.
+            elapsed = (state.clock - last_clock) / UNITS_PER_SECOND
+            self._trend += (delta_trend(rate) - self._trend) * (1 - math.exp(-elapsed / DELTA_COLOUR_EASE))
         self._view = DeltaBarView(
             min(max(-seconds / DELTA_BAR_FULL, -1.0), 1.0),  # ahead (improving) to the right
-            delta_trend(rate),
-            format_delta(delta).replace('-', '\u2212'),
+            self._trend,
+            format_delta(delta, DELTA_PLACES).replace('-', '\u2212'),
         )
         return self._view
 
@@ -1682,9 +1693,9 @@ def _racing_sections(snapshot, now):
     if delta is None:
         delta_row = Row('vs best  -', 'medium')
     else:
-        color = 'text' if abs(delta) < EVEN else 'ahead' if delta < 0 else 'behind'
+        color = 'text' if abs(delta) < DELTA_EVEN else 'ahead' if delta < 0 else 'behind'
         # The number on its own, with a true minus, as wide as a plus: only the number changes.
-        number = format_delta(delta).replace('-', '\u2212')
+        number = format_delta(delta, DELTA_PLACES).replace('-', '\u2212')
         delta_row = Row(number, 'medium', color, tail=' vs best', tail_color=color, slot=DELTA_SLOT)
     return {
         'lap': [Row(title, 'title')],
@@ -1766,7 +1777,7 @@ def car_sections(car, laps_to_go=None, speed_unit='kmh'):
     return sections
 
 
-DELTA_SLOT = '+00.000'  # the delta's widest number
+DELTA_SLOT = '+00.00'  # the delta's widest number
 DRAFT_DOWNFORCE_WARN = 0.05  # downforce lost to the slipstream from which the draft section warns
 DRAFT_COUNTS = 0.05  # a draft at least this strong counts as time in a slipstream
 DRAFT_CARD_SECONDS = 20  # the race clock up to which the draft section shows the event's settings
