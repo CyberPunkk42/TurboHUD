@@ -67,6 +67,9 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-08: Confirmed by the user in a race: the delta bar (right when ahead, hundredths, white fading to
+  green or red) is better and smooth enough for now, and the settings window opens on the screen, near the
+  upper middle.
 - 2026-11-08: The delta is smoother, asked for by the user: shown in hundredths in the delta bar and the
   delta section (a third digit changed at every read; the player list's gaps keep thousandths), its colour
   looks at the last second rather than half, and eases towards a new colour over about half a second
