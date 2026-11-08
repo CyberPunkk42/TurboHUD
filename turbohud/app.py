@@ -204,10 +204,10 @@ def run(args, folder):
         centred,
         drawing_place,
         first_launch,
-        free_spot,
         local_time_rows,
         main_screen,
         match_sizes,
+        panel_place,
         screen_of,
         session_rows,
     )
@@ -297,6 +297,8 @@ def run(args, folder):
 
     started = time.monotonic()
     screens = [screen.geometry().getRect() for screen in QGuiApplication.screens()]
+    # Where TurboHUD's own windows (the panel, the settings) go: not under the menu bar or Dock.
+    usable = [screen.availableGeometry().getRect() for screen in QGuiApplication.screens()]
     settings = upgrade_layout(settings, path, text_ink)
     windows = {section.name: SectionWindow(native, settings.theme, section) for section in layout}
     first = {name: window.base for name, window in windows.items()}
@@ -355,14 +357,7 @@ def run(args, folder):
         section, near the middle a third down, but never over a shown section (it would
         hide it from dragging)."""
         shown = [w for w in windows.values() if w.wanted] or list(windows.values())
-        boxes = [w.placement() for w in shown]
-        x, y = boxes[0][:2]
-        for screen in screens:
-            sx, sy, sw, sh = screen
-            if sx <= x < sx + sw and sy <= y < sy + sh:
-                wanted = (sx + (sw - panel.width()) // 2, sy + sh // 3)
-                return free_spot((panel.width(), panel.height()), screen, boxes, wanted)
-        return x + 40, y + 40
+        return panel_place((panel.width(), panel.height()), [w.placement() for w in shown], usable)
 
     def set_locked(value):
         nonlocal locked, was_active
@@ -591,7 +586,7 @@ def run(args, folder):
             # Beside the panel where it is (it may have been dragged), and wholly on its screen.
             anchor = panel.geometry().getRect()
             size = (settings_window.width(), settings_window.height())
-            screen = screen_of(anchor, screens) or anchor
+            screen = screen_of(anchor, usable) or anchor
             settings_window.show_at(*beside(size, anchor, screen))
 
     @undoable

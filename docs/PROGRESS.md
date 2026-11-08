@@ -758,3 +758,8 @@ its "Recent changes".
 - 2026-11-08: Confirmed by the user in a race: the delta bar (right when ahead, hundredths, white fading to
   green or red) is better and smooth enough for now, and the settings window opens on the screen, near the
   upper middle.
+- 2026-11-09: The move-mode panel stays on the screen, reported by the user: it went to the bottom left
+  corner, mostly off the screen. It was put on the screen holding the first shown section's top-left
+  corner; the running lap's was at x = -1, on no screen, so the panel went 40 px from it, below the screen.
+  The screen is now the one holding the section's middle (else the main one), and the panel and the
+  settings window keep to its usable area, clear of the menu bar and the Dock (`hud.panel_place`).

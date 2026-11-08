@@ -27,6 +27,8 @@ none is left.
   yet set up), but needless; not fixed yet.
 - The radar without its fill, its larger cars, and the two warning times in the settings
   window (blue flag 1 to 10 s, radar 0.2 to 3 s). A long radar time zooms the radar out.
+- The move-mode panel: on the screen and clear of the Dock (2026-11-09, it went to the bottom left
+  corner, mostly off the screen, with only the running lap shown). Check with one section near an edge.
 - The settings window: it opens wholly on the screen, near the upper middle, confirmed by the user
   (2026-11-08; it went past the right edge before). Still to see: with the panel dragged near an edge,
   and dragging it with a real mouse (tested only with a stand-in).
