@@ -108,8 +108,8 @@ log is replaced at each start.
   they found the result "much better" afterwards, but may not have widened it.
 - Offers not taken up yet: a leader-only blue flag; the settings window remembering where it
   was dragged; slots for other numbers (fuel and tires move by a digit at 100 to 99%).
-- `releases/TurboHUD-dev-macos-arm64.zip` is older than all of this. The `.dmg` of 2026-11-06 is built
-  from this code: see backlog item 5 for what it needs before it runs on an older macOS.
+- `releases/` holds only the latest build, 2026.11.08.2 (needs macOS 27): see backlog item 5 for what it
+  needs before it runs on an older macOS.
 
 ## How the slow reads were found
 Worth keeping for the next time the HUD lags. What fooled the first attempts: offscreen drawing
