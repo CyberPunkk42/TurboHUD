@@ -32,8 +32,9 @@ hit). The Mac app now does this by itself (`turbohud/tsu/bottle.py`, reader in
 `bottle_reader.py`, Windows Python inside the app). Still to do:
 - The tester's FPS (`docs/CONTINUE_HERE.md`, "Tester's Mac"): unticked sections leaving the screen
   gave back most of the loss with nothing shown (2026-11-08: 107 of 115 FPS, from 78). Shown sections still
-  cost frames, to about 60 with all: the windows above the game, not the reads. Next: measure with the Metal
-  HUD, then whether fewer windows help. The exit hang has not come back.
+  cost frames, to about 60 with all: the windows above the game, not the reads. A CPU recording on the
+  user's Mac (2026-11-09) has each window cost the same, whatever it shows: so not fewer redraws but fewer
+  windows, perhaps all sections in one. Next: the Metal HUD in frames. The exit hang has not come back.
 - Races on the Mac: confirmed by the user on 2026-11-08, offline with 19 AI, in Fullscreen and
   hosting about 13 AI online (`docs/CONTINUE_HERE.md`, "Test list"). As a driver online the race
   showed 1.4 s after the start.

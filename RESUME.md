@@ -67,6 +67,10 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-09: Confirmed by the user: the move-mode panel and the settings window open wholly on the screen.
+  A CPU recording per section (`docs/CONTINUE_HERE.md`, "Tester's Mac"): each window adds about the same to
+  WindowServer, whatever it shows and however often it changes, so a window's being there costs, not its
+  redraws. Next: the Metal HUD in frames, then perhaps all sections in one window.
 - 2026-11-09: The move-mode panel stays on the screen, reported by the user: it went to the bottom left
   corner, mostly off the screen. It was put on the screen holding the first shown section's top-left
   corner; the running lap's was at x = -1, on no screen, so the panel went 40 px from it, below the screen.
