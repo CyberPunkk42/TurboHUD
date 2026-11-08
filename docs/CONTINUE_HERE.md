@@ -11,6 +11,15 @@ none is left.
   and whether `has not run: searching past it` shows (an old race picked first). Also still to see: the HUD
   switching to the car with no search when the player drives the next race, and the 10 s waits for the
   first minute of empty searches while a race joined in progress is set up.
+- Race start online: the search reads half of the time instead of a quarter. As a driver the race was
+  found 1.4 s after the start on 2026-11-08 (goal: 4 to 6 s, where it took 7 to 12 s). Still to listen
+  for: stutter in the first seconds. A full-speed search made TSU stutter in earlier checks
+  (`experiments/README.md`). If it stutters, go back with `WINE_SEARCH_SHARE` in
+  `turbohud/tsu/winmemory.py`. If half speed is not fast enough: search from a better starting point,
+  or look for a pointer path to the controller. One search measured apart at a quarter: 1.48 GiB in 608
+  regions, the race at hit 42 of 42, at 18% of the data, 6 s in. Nearly all the other hits are not
+  controllers at all (seen 2026-11-05 in a TSU's first event: tables and code bytes that hold the
+  class's address), so they do not come from earlier races.
 - A search at TSU's start: TSU's log can still say an event runs, from before TSU started, so
   TurboHUD searches for about 10 s with no event on (log: `search: no race` right after the
   reader starts). No longer harmful (see the entry of 2026-11-05 in `RESUME.md` on classes not
