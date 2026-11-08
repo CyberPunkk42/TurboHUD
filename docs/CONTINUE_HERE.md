@@ -41,40 +41,59 @@ The user confirmed both work on 2026-11-05. If the bar's colour ever flickers or
 See it lapped, also as a client, and when the leader finishes: whether the `/20` then still says
 what the driver has left is not known.
 
-## Tester's Mac (2026-11-06)
+## Tester's Mac
+The tester's Mac: MacBook Pro 14" (M3 Pro), built-in screen 3024x1964 at 120 Hz, no second screen,
+Fullscreen, D3DMetal, FPS read with the in-game / CrossOver HUD.
+
+### FPS (2026-11-08, build 2026.11.08.2)
+| # | TurboHUD | Old build (11-07) | 2026.11.08.2 |
+| --- | --- | --- | --- |
+| 1 | closed | 110 | 115 |
+| 2 | every section unticked, 20 reads | 78 | 107 |
+| 3 | every section unticked, 5 reads | - | ~100 (90-115) |
+| 4 | lap and delta, 5 reads | - | ~90 (85-107) |
+| 5 | lap and delta, 20 reads | 62 | ~95 (82-110) |
+| 6 | all sections, 20 reads | 58 | ~63, steady near 60 |
+
+- Unticked windows leaving the screen gave back most of the loss with nothing shown (78 to 107).
+- The reads are not the cost: 5 a second was no better than 20. TurboHUD with nothing shown costs about 8
+  FPS (the reader next to the game in the Wine server, or run-to-run noise).
+- Windows above the game are: the more sections, the more frames miss the screen's 8.3 ms refresh, until
+  nearly all do and the game holds near 60 (120 / 2) with all sections. Likely macOS compositing the game
+  with the windows in step with the refresh, instead of showing it directly. Not known yet: whether the
+  number of windows or their area matters more.
+- In #5 a big stutter, then about 25 FPS less for 10 s; one read that run took 177 ms. Cause not known.
+- The log had 20 trips a read at 0.95 ms a trip (the user's Mac: about 88 at 0.36 ms); 20 is probably with
+  every section unticked.
+- Still to get from the tester: measurement 7 (closed again at the end) and the whole Terminal output (only
+  three lines arrived: the reader, graphics and screens parts are missing).
+
+### TODO: measure the windows' cost on the user's Mac with the Metal HUD
+Apple's Metal Performance HUD (`MTL_HUD_ENABLED=1`, which D3DMetal honours) shows FPS and frame times
+inside the game's own picture, adding no window above it. Nothing in the bottle or the system changes.
+1. Quit TurboHUD, TSU and Steam in the bottle. `pgrep -fl 'steam.exe|TSU.exe|bottle_reader'` must print
+   nothing (a Steam still running hands the start to itself, without the variable).
+2. Start Steam in the bottle with the HUD, and leave that Terminal open:
+   `MTL_HUD_ENABLED=1 ~/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine --bottle Steam "C:\\Program Files (x86)\\Steam\\steam.exe"`
+3. Start TSU from that Steam; the HUD shows at the top right.
+4. On one track, Fullscreen, about 30 s each: TurboHUD closed; running with every section unticked; only
+   lap and time left; all sections; closed again. Note FPS, frame time, whether the frame-time graph jumps
+   between about 8 and 17 ms, and any Direct / Composited line. If TSU reaches 120 alone, raise its
+   graphics until it runs at about 100-110, as on the tester's Mac.
+5. Afterwards quit everything; the next normal start has no HUD.
+If no HUD shows: the user may add `"MTL_HUD_ENABLED" = "1"` under `[EnvironmentVariables]` in the bottle's
+`cxbottle.conf` themselves, and remove it after (TurboHUD never writes there).
+Then, with the same HUD: `experiments/qt_overlay_probe.py` with many small windows against one window
+holding all sections, to see whether fewer windows would help before rebuilding the overlay.
+
+### Other points
 - Custom sessions show only the clock: no race is found in them. Not looked into: what such a session
   holds, and whether the HUD could read it.
-- FPS drops on the tester's Mac (M3 Pro, 120 Hz, Fullscreen, D3DMetal), measured 2026-11-07 on build
-  2026.11.06.2, cause not known:
-
-  | TurboHUD | FPS | ms a frame |
-  | --- | --- | --- |
-  | closed | 110 | 9.1 |
-  | every section unticked | 78 | 12.8 |
-  | lap and delta only | 62 | 16.1 |
-  | all sections | 58 | 17.2 |
-
-  Most of the cost comes before most of the HUD shows, so it is not mainly how much is drawn. Open: the
-  windows above the game (macOS may have to composite the game with them; not measured), or the reads
-  (about 370 trips a second through the Wine server, which also serves the game). The search is not it: no
-  `search:` lines in that run. `mach_vm_read` is no way out, as macOS refuses that access.
-  Build 2026.11.08.2 and `TurboHUD-test-instructions.md` (2026-11-08) ask the tester for this, and
-  whether a second display is connected (macOS may then composite the game differently).
-  To measure next, on one track, with TurboHUD closed again at the end in case the Mac has heated up:
-  windows without reads (`experiments/qt_overlay_probe.py`); reads without windows (`Bottle().connect()`
-  from a script); every section unticked, now that their windows leave the screen; lap and delta at 20, 10
-  and 5 race reads a second (settings window). The reads then decide whether to read less, the windows
-  whether to change how the overlay is built.
-- TSU hung on a black screen on the tester's Mac when TurboHUD was quit first (it took Steam's Stop). Cause
-  not known, and not known whether it also happens with TSU quit first or with TurboHUD never started. To
-  try: quit TurboHUD, `pgrep -fl bottle_reader` (is a reader left?), quit TSU. The reader ends when its pipe
-  closes; if it has not after 2 s, `finish()` in `bottle.py` kills the CrossOver launcher, which may not end
-  the reader.
-  On the user's Mac (2026-11-08, build 2026.11.08 and from source) it did not happen: TurboHUD quit first and
-  TSU quit first both left no reader, and TSU quit normally. So look at the tester's Mac (two CrossOver copies,
-  below) or TSU itself; the tester's instructions ask for it.
-- The tester's report showed two CrossOver copies; TurboHUD takes the one in `~/Applications` first,
-  whichever TSU runs from (not fixed, did not stop the reader there).
+- TSU hung on a black screen once, with TurboHUD quit first (2026-11-06). Not seen again: on the user's Mac
+  (2026-11-08, quitting in either order) and on the tester's (2026-11-08, no reader left, TSU quit
+  cleanly). Close it if it does not come back.
+- The tester's Mac had two CrossOver copies; TurboHUD takes the one in `~/Applications` first, whichever
+  TSU runs from (not fixed, did not stop the reader there).
 
 ## Test list: what is left
 Done by the user on the Mac: all of the layout list (tight boxes, centring, groups, presets

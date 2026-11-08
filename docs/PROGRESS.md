@@ -704,3 +704,7 @@ its "Recent changes".
 - 2026-11-08: `releases/` keeps only the latest build (2026.11.08.2); the older builds were deleted, asked for by the user.
 - 2026-11-08: The tester's instructions rewritten as a plain step-by-step checklist, asked for by the user:
   one action a line, a place to write each answer, a summary table, and the log copied before quitting.
+- 2026-11-08: The tester's results with build 2026.11.08.2 (`docs/CONTINUE_HERE.md`, "Tester's Mac"): 115 FPS
+  without TurboHUD, 107 with every section unticked (78 before), about 95 with lap and delta (62), about 63
+  with all (58). Fewer reads did not help; the windows above the game cost the frames, until the game holds
+  near 60 on the 120 Hz screen. The exit hang did not come back. Next: the Metal HUD on the user's Mac.
