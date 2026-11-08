@@ -394,6 +394,8 @@ def per_lap(history, laps=PER_LAP_LAPS):
     return (recent[-1] - recent[0]) / (len(recent) - 1)
 
 
+# Where TSU may keep the event's type (names from its metadata: EventType, m_eventType, ...).
+EVENT_TYPE_FIELDS = ('m_eventType', 'eventType', 'm_type', 'type', 'm_gameMode', 'gameMode', 'eventMode')
 CLIENT_SEARCH_EVERY = 10.0  # seconds between searches for an online race while there is none
 CLIENT_SEARCH_MOST = 60.0  # the wait doubles up to this while an event holds no race to read
 # For this long after a search first found nothing, the wait stays CLIENT_SEARCH_EVERY: a player
@@ -464,6 +466,7 @@ class LapReader:
         self._reckoning = DeadReckoning()  # positions where the game keeps none (online client)
         self._listener = None  # the race controller (TS.EventController) of the event state
         self._draft = None  # the event's drafting settings, once read (False: none)
+        self.event_type = None  # the event's type (TSU's EventType number), once read
         self._draft_time = {}  # lap index -> race time spent in a slipstream (0.1 ms)
         self._draft_clock = None  # race clock at the read before, for that time
         self._player_indices = []
@@ -506,6 +509,44 @@ class LapReader:
     @property
     def _online_controller(self):
         return self._controller or self._spectated
+
+    def _event_type(self):
+        """The event's type as TSU stores it (a number of its EventType: race, sumo, hill and
+        so on), logged once per event, or None. Which number is which mode is not known yet:
+        the log is to tell, before the track map is kept to races. Where the field is not
+        found, the log lists the fields there are, to look for it."""
+        il = self.il
+        try:
+            logic = il.ref(self._listener, 'm_eventLogic')
+            objects = [('settings', il.ref(logic, 'm_eventSettings')), ('logic', logic)]
+        except (NotFound, OSError) as error:
+            log.info('event type: no event settings (%s)', error)
+            return None
+        listed = []
+        for role, obj in objects:
+            try:
+                fields = {
+                    n: (offset, code)
+                    for n, offset, static, code in il.field_list(il.memory.u64(obj))
+                    if not static
+                }
+            except (NotFound, OSError):
+                fields = {}
+            listed.append((role, fields))
+            for name in EVENT_TYPE_FIELDS:
+                if name not in fields:
+                    continue
+                offset, code = fields[name]
+                try:
+                    # An enum is a value type (0x11) holding an int; a plain int works too.
+                    value = il.memory.i32(obj + offset)
+                except OSError:
+                    continue
+                log.info('event type: %s.%s = %d (type code 0x%02x)', role, name, value, code)
+                return value
+        for role, fields in listed:
+            log.info('event type: not found; %s fields: %s', role, ', '.join(list(fields)[:80]) or 'none')
+        return None
 
     def _draft_settings(self):
         """The event's DraftSettings (TS.EventSettings.drafting, through the race
@@ -711,6 +752,7 @@ class LapReader:
             self._draft, self._draft_time, self._draft_clock = None, {}, None
             self._fuel_history, self._wear_history, self._fuel_marks, self._types = {}, {}, {}, {}
             self._player = None
+            self.event_type = self._event_type()
         if self._player is None:
             self._player = self._local_in(state)  # looked for anew: a spectator may join
         player = self._player

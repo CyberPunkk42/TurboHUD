@@ -75,7 +75,15 @@ top should work. Still to try on KDE and GNOME: on top over the game, clicks goi
 through. If XWayland is not enough there, the layer-shell extension (KDE, Sway; not
 GNOME) would need a library outside PySide6.
 
-## 7. Track map: check in races
+## 7. Track map: only in races and special events
+Asked for by the user (2026-11-08): the map in regular races and special events (from A to B,
+crossing the finish once), none in King of the Hill (likely `Hill`), Capture the Flag (`Collector`
+and/or `Ball`) or Sumo, where no track is driven and a learnt one would be a scribble. Step 1 is in:
+the log says each event's type number (`event type: ...`). Step 2: read it in a race, a special event
+and an arena mode, then show the map and learn a track only for the race types. A special event may
+be type Race on a point-to-point track; then it needs nothing more.
+
+## 7b. Track map: check in races
 The user saw it work in a race (2026-11-03), and the track is now learnt from the cars
 (checked live in an AI event; the user confirmed it works). Still to check: the track's shape (tight
 hairpins, tracks that cross themselves, point-to-point tracks), the road's width, the

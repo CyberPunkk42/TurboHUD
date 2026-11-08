@@ -67,6 +67,11 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-08: The log says each event's type (`event type: settings.m_eventType = N`), the first step to
+  a track map only where it helps, asked for by the user: in races and special events (A to B, across
+  the finish once), not in King of the Hill, Capture the Flag or Sumo. TSU's EventType names (from its
+  metadata) include Race, Points, Battle, Sumo, Tag, Soccer, Collector, Ball and Hill, but not which number
+  is which; where the field is not found, the log lists the fields there are. Nothing on the HUD changes yet.
 - 2026-11-08: A spectator's search stops at the first race to watch, as a driver's does at the player's
   race. In a public session the watched race was the only one, at hit 42 of 43 (21:36 and 21:39): a full
   search took 15 to 20 s, and in an earlier one the race was at 18% of the data, so about 4 s are expected.
