@@ -710,3 +710,8 @@ its "Recent changes".
   near 60 on the 120 Hz screen. The exit hang did not come back. Next: the Metal HUD on the user's Mac.
 - 2026-11-08: The tester's whole log: reads stayed small (20 trips) and took half as long once the game
   was near 60 FPS with all sections, so the busy game slows the reads, not the other way round.
+- 2026-11-08: A spectator's HUD no longer searches all of TSU's memory again when the race it watches
+  goes. Seen in a public session joined mid-race, after leaving another: the search (20.5 s) found 43
+  controllers, the race watched went at once, and a second search took 18 s. Likely an old race from the
+  session left. The other races a search finds are now kept and tried first (a few reads), and the log
+  says why a watched race was dropped (`the watched race is gone (...)`). Not yet seen in a session.

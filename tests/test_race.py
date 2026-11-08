@@ -1045,6 +1045,49 @@ class CarTests(unittest.TestCase):
         self.assertEqual(reader.game.searches, 2)
         self.assertIsNone(reader._spectated)
 
+    def spectated_twice(self, now):
+        """A spectator whose search finds two races to watch: the first one watched, as
+        an old race lingering after the player left a session may be."""
+        reader = self.spectated(now)
+        g = reader.game
+        g.obj_next = (g.obj_next + 15) & ~15  # objects are aligned, and a search looks only there
+        other = g.alloc_obj(struct.unpack('<Q', g.read(g.client_controller, 8))[0])
+        g.put(other + 0x48, g.read(g.client_controller + 0x48, 8))
+        reader.other = other
+        self.assertTrue(reader.read().spectating)
+        self.assertEqual(reader._spectated, g.client_controller)
+        return reader
+
+    def test_when_the_watched_race_goes_another_from_the_search_is_watched_without_a_search(self):
+        now = [100.0]
+        reader = self.spectated_twice(now)
+        reader.game.q(reader.game.client_controller + 0x48, 0)  # the old race is gone
+        with self.assertLogs('turbohud.core.race', 'INFO') as logs:
+            self.assertTrue(reader.read().spectating)
+        self.assertEqual(reader.game.searches, 1)
+        self.assertEqual(reader._spectated, reader.other)
+        self.assertIn('the watched race is gone', logs.output[0])
+        self.assertIn('another race from the last search: watching', logs.output[1])
+
+    def test_when_the_other_races_are_gone_too_it_searches_again(self):
+        now = [100.0]
+        reader = self.spectated_twice(now)
+        g = reader.game
+        g.q(g.client_controller + 0x48, 0)
+        g.q(reader.other + 0x48, 0)
+        with self.assertRaises(race.NotFound):
+            reader.read()
+        self.assertEqual(g.searches, 2)
+        self.assertIsNone(reader._spectated)
+
+    def test_joining_the_watched_race_forgets_the_others(self):
+        now = [100.0]
+        reader = self.spectated_twice(now)
+        reader.game.put(reader.spectator + 0x50, struct.pack('<i', 0))  # the player joins
+        self.assertFalse(reader.read().spectating)
+        self.assertEqual(reader._others, [])
+        self.assertEqual(reader.game.searches, 1)
+
     def test_the_log_says_how_a_search_went(self):
         now = [100.0]
         reader = build(
