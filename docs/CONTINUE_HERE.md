@@ -27,7 +27,9 @@ none is left.
   yet set up), but needless; not fixed yet.
 - The radar without its fill, its larger cars, and the two warning times in the settings
   window (blue flag 1 to 10 s, radar 0.2 to 3 s). A long radar time zooms the radar out.
-- Dragging the settings window with a real mouse (tested only with a stand-in).
+- The settings window: it opens beside the move-mode panel and wholly on its screen (2026-11-08,
+  it went past the right edge before), also with the panel dragged elsewhere; dragging it with a real
+  mouse (tested only with a stand-in).
 
 ## Race start and the map, not yet seen
 - Track map: a frame now comes with each new read (`hud.FramePacer`). The user found it smooth on

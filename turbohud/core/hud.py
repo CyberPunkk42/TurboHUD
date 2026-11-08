@@ -941,6 +941,31 @@ def free_spot(size, screen, boxes, wanted, margin=LAYOUT_MARGIN, step=FREE_STEP,
     return min(((x, y) for x in xs for y in ys), key=cost)
 
 
+BESIDE_GAP = 20  # between the move-mode panel and the settings window
+SCREEN_EDGE = 8  # the least room a window beside the panel keeps from the screen's edges
+
+
+def beside(size, anchor, screen, gap=BESIDE_GAP, edge=SCREEN_EDGE):
+    """(x, y) for a window of `size` next to `anchor` (x, y, width, height), wholly on
+    `screen`: to its right if it fits there, else to its left, else as near as the screen
+    allows. Its top is level with the anchor's, moved up if it would run off the bottom.
+    For the settings window beside the move-mode panel, which may be anywhere."""
+    width, height = size
+    ax, ay, aw, _ah = anchor
+    sx, sy, sw, sh = screen
+    left_most, right_most = sx + edge, sx + sw - edge - width
+    top_most, bottom_most = sy + edge, sy + sh - edge - height
+    if ax + aw + gap <= right_most:
+        x = ax + aw + gap
+    elif ax - gap - width >= left_most:
+        x = ax - gap - width
+    else:
+        x = right_most
+    x = max(left_most, min(x, right_most))  # a window wider than the screen keeps its left edge
+    y = max(top_most, min(ay, bottom_most))
+    return x, y
+
+
 def screen_of(place, screens):
     """The screen (x, y, width, height) that holds the middle of `place`, else the
     largest; None without screens."""

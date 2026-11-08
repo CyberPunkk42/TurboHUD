@@ -829,3 +829,35 @@ class CentreTests(unittest.TestCase):
         self.assertEqual(
             {s.name for s in hud.RACE_SECTIONS if s.drawing}, {'blueflag', 'deltabar', 'radar', 'trackmap'}
         )
+
+
+class BesideTests(unittest.TestCase):
+    """The settings window next to the move-mode panel, wholly on the screen."""
+
+    SCREEN = (0, 0, 1728, 1117)  # a MacBook's built-in screen, in points
+
+    def test_to_the_right_of_the_panel_where_it_fits(self):
+        self.assertEqual(hud.beside((400, 500), (100, 300, 600, 400), self.SCREEN), (720, 300))
+
+    def test_to_the_left_when_the_right_has_no_room(self):
+        # The panel in the middle of the screen, as it starts (seen: the window ran off the right).
+        x, y = hud.beside((520, 500), (564, 372, 700, 400), self.SCREEN)
+        self.assertEqual((x, y), (564 - 20 - 520, 372))
+
+    def test_on_the_screen_when_neither_side_has_room(self):
+        x, _y = hud.beside((900, 500), (400, 300, 900, 400), self.SCREEN)
+        self.assertLessEqual(x + 900, 1728)
+        self.assertGreaterEqual(x, 0)
+
+    def test_moved_up_rather_than_off_the_bottom(self):
+        _x, y = hud.beside((400, 700), (100, 800, 300, 200), self.SCREEN)
+        self.assertEqual(y, 1117 - hud.SCREEN_EDGE - 700)
+
+    def test_on_a_second_screen_it_stays_on_that_one(self):
+        screen = (1728, 0, 1920, 1080)
+        x, _y = hud.beside((400, 500), (3000, 100, 600, 400), screen)
+        self.assertGreaterEqual(x, 1728)
+        self.assertLessEqual(x + 400, 1728 + 1920)
+
+    def test_a_window_larger_than_the_screen_keeps_its_top_left_on_it(self):
+        self.assertEqual(hud.beside((2000, 1500), (100, 100, 300, 300), self.SCREEN), (8, 8))
