@@ -28,7 +28,7 @@ class FakeGame:
         self.instance_type = self.alloc_heap(16)
         self.put(self.instance_type + il.TYPE_ATTRS, struct.pack('<H', 0))
         self.typed = {}
-        for code in (0x02, 0x08, 0x0C):  # bool, int, float
+        for code in (0x02, 0x08, 0x0C, 0x11):  # bool, int, float, value type (an enum)
             record = self.alloc_heap(16)
             self.put(record + il.TYPE_ATTRS, struct.pack('<HB', 0, code))
             self.typed[code] = record
@@ -125,6 +125,7 @@ def build(
     recorded=None,
     draft=False,
     tire_ticks=0,
+    event_type=None,
 ):
     """A fake race; `car` is the car's (x, z) and `gates` the checkpoint lines, both
     optional like in a game without them."""
@@ -206,9 +207,17 @@ def build(
             g.recorder = recorder
     state = g.alloc_obj(state_class)
     g.q(controller + 0x48, state)
-    if draft:
+    if draft or event_type is not None:
         logic = g.alloc_obj(g.klass('TS', 'RaceLogic', [('m_eventSettings', 0x10, False)]))
-        settings = g.alloc_obj(g.klass('TS', 'EventSettings', [('drafting', 0x10, False)]))
+        settings_fields = [('drafting', 0x10, False)]
+        if event_type is not None:
+            settings_fields.append(('m_eventType', 0x18, False, 0x11))
+        settings = g.alloc_obj(g.klass('TS', 'EventSettings', settings_fields))
+        if event_type is not None:
+            g.put(settings + 0x18, struct.pack('<i', event_type))
+        g.q(logic + 0x10, settings)
+        g.q(controller + 0x70, logic)
+    if draft:
         drafting = g.alloc_obj(
             g.klass(
                 'TS',
@@ -222,8 +231,6 @@ def build(
         )
         g.put(drafting + 0x10, bytes([1]) + bytes(3) + struct.pack('<2i', 10, 80))
         g.q(settings + 0x10, drafting)
-        g.q(logic + 0x10, settings)
-        g.q(controller + 0x70, logic)
     g.put(state + 0x58, struct.pack('<6i', clock // 200, clock, 10000, 10000, 10000, limit))
 
     stats = g.alloc_obj(stats_class)
@@ -512,6 +519,32 @@ MID_RACE = race.LapState(
     laps_to_finish=13,
     lap_starts=[10_000, 944_595, 1_785_545],
 )
+
+
+class EventTypeTests(unittest.TestCase):
+    def test_the_event_type_is_read_and_logged_once_per_event(self):
+        reader = build([10_000], laps_completed=0, clock=20_000, limit=0, event_type=3)
+        with self.assertLogs('turbohud.core.race', 'INFO') as logs:
+            reader.read()
+            reader.read()
+        self.assertEqual(reader.event_type, 3)
+        lines = [m for m in logs.output if 'event type' in m]
+        self.assertEqual(len(lines), 1)
+        self.assertIn('settings.m_eventType = 3 (type code 0x11)', lines[0])
+
+    def test_without_the_field_the_log_lists_the_fields_there_are(self):
+        reader = build([10_000], laps_completed=0, clock=20_000, limit=0, draft=True)
+        with self.assertLogs('turbohud.core.race', 'INFO') as logs:
+            reader.read()
+        self.assertIsNone(reader.event_type)
+        self.assertTrue(any('not found; settings fields: drafting' in m for m in logs.output))
+
+    def test_without_event_settings_the_race_is_still_read(self):
+        reader = build([10_000, 944_595], laps_completed=1, clock=1_000_000, limit=0)
+        with self.assertLogs('turbohud.core.race', 'INFO') as logs:
+            self.assertEqual(reader.read().laps_completed, 1)
+        self.assertIsNone(reader.event_type)
+        self.assertTrue(any('no event settings' in m for m in logs.output))
 
 
 class DeltaTests(unittest.TestCase):
