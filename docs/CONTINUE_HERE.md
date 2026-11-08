@@ -22,8 +22,6 @@ none is left.
 - The radar without its fill, its larger cars, and the two warning times in the settings
   window (blue flag 1 to 10 s, radar 0.2 to 3 s). A long radar time zooms the radar out.
 - Dragging the settings window with a real mouse (tested only with a stand-in).
-- The race reads at 20 a second: the logged race ran at about 18 a second, 30 to 45 ms a read,
-  with HUD frames 50 ms apart. Check `race reads` and `HUD frames` in `turbohud.log` again.
 
 ## Race start and the map, not yet seen
 - Track map: a frame now comes with each new read (`hud.FramePacer`). The user found it smooth on
