@@ -399,6 +399,7 @@ def per_lap(history, laps=PER_LAP_LAPS):
 EVENT_TYPE_FIELDS = ('m_eventMode', 'm_eventType', 'eventType', 'eventMode', 'm_gameMode', 'gameMode')
 # Logged next to it: what kind of level the event runs on (a track, an arena), perhaps the better sign.
 LEVEL_TYPE_FIELD = 'm_initializedLevelType'
+REFERENCE_TYPES = (0x12, 0x15, 0x1C)  # class, generic instance, object: a field holding an address
 CLIENT_SEARCH_EVERY = 10.0  # seconds between searches for an online race while there is none
 CLIENT_SEARCH_MOST = 60.0  # the wait doubles up to this while an event holds no race to read
 # For this long after a search first found nothing, the wait stays CLIENT_SEARCH_EVERY: a player
@@ -469,7 +470,7 @@ class LapReader:
         self._reckoning = DeadReckoning()  # positions where the game keeps none (online client)
         self._listener = None  # the race controller (TS.EventController) of the event state
         self._draft = None  # the event's drafting settings, once read (False: none)
-        self.event_type = None  # the event's type (TSU's EventType number), once read
+        self.event_type = None  # the event's (mode, level type), once read
         self._draft_time = {}  # lap index -> race time spent in a slipstream (0.1 ms)
         self._draft_clock = None  # race clock at the read before, for that time
         self._player_indices = []
@@ -514,14 +515,16 @@ class LapReader:
         return self._controller or self._spectated
 
     def _event_type(self):
-        """The event's type as TSU stores it (a number of its EventType: race, sumo, hill and
-        so on), logged once per event, or None. Which number is which mode is not known yet:
-        the log is to tell, before the track map is kept to races. Where the field is not
-        found, the log lists the fields there are, to look for it."""
+        """The event's type, logged once per event: (mode, level type), or None. TSU keeps the
+        mode in TS.EventSettings.m_eventMode, an object (seen 2026-11-08) whose class names
+        it, and the level type (track, arena ...) as a number next to it. Which is which mode
+        is not known yet: the log is to tell, before the track map is kept to races. Where
+        the field is not found, the log lists the fields there are, to look for it."""
         il = self.il
         try:
             logic = il.ref(self._listener, 'm_eventLogic')
             objects = [('settings', il.ref(logic, 'm_eventSettings')), ('logic', logic)]
+            logic_class = il.class_name(logic)
         except (NotFound, OSError) as error:
             log.info('event type: no event settings (%s)', error)
             return None
@@ -540,10 +543,18 @@ class LapReader:
                 if name not in fields:
                     continue
                 offset, code = fields[name]
+                detail = ''
                 try:
-                    # An enum is a value type (0x11) holding an int; a plain int works too.
-                    value = il.memory.i32(obj + offset)
-                except OSError:
+                    if code in REFERENCE_TYPES:  # an object: its class says the mode
+                        mode = il.memory.u64(obj + offset)
+                        if not mode:
+                            continue
+                        value = il.class_name(mode)
+                        names = [n for n, _o, static, _c in il.field_list(il.memory.u64(mode)) if not static]
+                        detail = f' (fields: {", ".join(names[:40]) or "none"})'
+                    else:  # an enum is a value type (0x11) holding an int; a plain int too
+                        value = il.memory.i32(obj + offset)
+                except (NotFound, OSError):
                     continue
                 level = None
                 if LEVEL_TYPE_FIELD in fields:
@@ -552,15 +563,16 @@ class LapReader:
                     except OSError:
                         pass
                 log.info(
-                    'event type: %s.%s = %d (type code 0x%02x), %s = %s',
+                    'event type: %s.%s = %s%s, %s = %s, logic %s',
                     role,
                     name,
                     value,
-                    code,
+                    detail,
                     LEVEL_TYPE_FIELD,
                     level,
+                    logic_class,
                 )
-                return value
+                return value, level
         for role, fields in listed:
             log.info('event type: not found; %s fields: %s', role, ', '.join(list(fields)[:80]) or 'none')
         return None
