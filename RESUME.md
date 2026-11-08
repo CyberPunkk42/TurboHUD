@@ -66,6 +66,10 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-08: New test instructions for the tester's Mac (`TurboHUD-test-instructions.md`), asked for by
+  the user, with build 2026.11.08 (`releases/`, macOS 27, built with `--any-macos`). Seven steps tell the
+  windows from the reads: closed, every section unticked at 20 and 5 race reads a second, lap and delta at 5
+  and 20, all at 20, closed again; and a test of TSU hanging on exit with TurboHUD quit first.
 - 2026-11-07: Two steps towards a tester's FPS loss (Mac, about 110 FPS without TurboHUD, 78 with every
   section unticked, 62 with lap and delta, 58 with all). An unticked section was still redrawn, empty,
   whenever its content changed, and on the Mac its window stayed above the game: it is now not redrawn,
