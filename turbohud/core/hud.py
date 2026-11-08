@@ -941,6 +941,18 @@ def free_spot(size, screen, boxes, wanted, margin=LAYOUT_MARGIN, step=FREE_STEP,
     return min(((x, y) for x in xs for y in ys), key=cost)
 
 
+def panel_place(size, boxes, screens, margin=LAYOUT_MARGIN):
+    """(x, y) for the move-mode panel of `size`: on the screen holding the middle of the
+    first of `boxes` (the shown sections; else the main screen), near its middle a third
+    down, and covering none of them where it can. `screens` are the usable areas (without
+    the menu bar and the Dock). A section just past a screen's edge (seen: at x = -1) no
+    longer sends the panel off the screen with it."""
+    screen = (screen_of(boxes[0], screens) if boxes else main_screen(screens)) or (0, 0, 1920, 1080)
+    sx, sy, sw, sh = screen
+    wanted = (sx + (sw - size[0]) // 2, sy + sh // 3)
+    return free_spot(size, screen, boxes, wanted, margin=min(margin, max(0, (sh - size[1]) // 2)))
+
+
 BESIDE_GAP = 20  # between the move-mode panel and the settings window
 SCREEN_EDGE = 8  # the least room a window beside the panel keeps from the screen's edges
 

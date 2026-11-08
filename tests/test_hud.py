@@ -861,3 +861,44 @@ class BesideTests(unittest.TestCase):
 
     def test_a_window_larger_than_the_screen_keeps_its_top_left_on_it(self):
         self.assertEqual(hud.beside((2000, 1500), (100, 100, 300, 300), self.SCREEN), (8, 8))
+
+
+class PanelPlaceTests(unittest.TestCase):
+    """Where the move-mode panel goes (reported by the user on 2026-11-09: in the bottom
+    left corner, mostly off the screen)."""
+
+    # The MacBook's screen as Qt gives it at "more space": its usable area under the menu
+    # bar and above the Dock.
+    USABLE = (0, 40, 2056, 1215)
+    PANEL = (675, 921)
+
+    def on_screen(self, spot):
+        x, y = spot
+        sx, sy, sw, sh = self.USABLE
+        return sx <= x and x + self.PANEL[0] <= sx + sw and sy <= y and y + self.PANEL[1] <= sy + sh
+
+    def test_a_section_just_past_the_left_edge_keeps_the_panel_on_the_screen(self):
+        running_lap = (-1, 1123, 286, 46)  # seen: the only section shown, its corner at x = -1
+        spot = hud.panel_place(self.PANEL, [running_lap], [self.USABLE])
+        self.assertTrue(self.on_screen(spot), spot)
+
+    def test_a_section_off_every_screen_puts_it_on_the_main_one(self):
+        spot = hud.panel_place(self.PANEL, [(5000, 5000, 200, 50)], [self.USABLE])
+        self.assertTrue(self.on_screen(spot), spot)
+
+    def test_it_stays_out_of_the_menu_bar_and_the_dock(self):
+        spot = hud.panel_place(self.PANEL, [(10, 10, 200, 50)], [self.USABLE])
+        self.assertGreaterEqual(spot[1], 40)
+        self.assertLessEqual(spot[1] + self.PANEL[1], 40 + 1215)
+
+    def test_near_the_middle_a_third_down_and_not_over_the_section(self):
+        lap = (857, 40, 342, 47)
+        x, y = hud.panel_place(self.PANEL, [lap], [self.USABLE])
+        self.assertTrue(self.on_screen((x, y)))
+        self.assertLess(abs(x - (2056 - 675) // 2), 200)
+        self.assertGreater(y, lap[1] + lap[3])  # below the lap section, not over it
+
+    def test_on_a_second_screen_with_the_section(self):
+        screens = [self.USABLE, (2056, 0, 1920, 1080)]
+        x, _y = hud.panel_place(self.PANEL, [(2500, 300, 200, 50)], screens)
+        self.assertGreaterEqual(x, 2056)
