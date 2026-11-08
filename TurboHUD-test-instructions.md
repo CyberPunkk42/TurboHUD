@@ -1,145 +1,278 @@
-# TurboHUD: test instructions for the Mac
+# TurboHUD: test for the Mac, step by step
 
-Nov 8, 2026
+Nov 8, 2026 · build 2026.11.08.2 · about 30 minutes
 
-## What this test is for
+Thank you for testing again. Last time, TSU ran at about 110 FPS without TurboHUD and about 58 FPS with it. This test finds out which part of TurboHUD costs the frames. You don't need to understand any of it: just do the steps in order and write down the numbers.
 
-Your last test showed TSU dropping from about 110 FPS to 78 FPS with TurboHUD running and every section unticked, and to 58 FPS with all sections. So most of the cost comes before TurboHUD shows anything. This version changes two things, so we can tell where the cost comes from:
+Go through it from top to bottom. Every step is one thing to do. Where it says **✏️ Write down**, fill in the answer on this sheet.
 
-- An unticked section now leaves the screen completely. Before, its empty window stayed above the game.
-- The settings window has a new setting, **Race reads a second**: 20, 10 or 5. It sets how often TurboHUD reads the race from TSU. 20 is the default.
+TurboHUD only reads what the game shows. It changes nothing in TSU or in CrossOver.
 
-The test takes about 20 minutes, and each measurement takes about a minute. There is also a short test at the end about TSU hanging on exit.
+---
+
+## Part 1: Get ready (5 minutes)
 
 You need:
 
-- A Mac with Apple silicon and macOS 27.0 or newer
-- TSU running in CrossOver
-- The file `TurboHUD-2026.11.08.2-macos-arm64.dmg`
-- A way to read TSU's FPS, the same one as last time
+- [ ] The file `TurboHUD-2026.11.08.2-macos-arm64.dmg`
+- [ ] TSU in CrossOver, as last time
+- [ ] The same way of reading TSU's FPS as last time
+- [ ] The Terminal app (in **Applications > Utilities**)
 
-TurboHUD only reads what the game shows. It changes nothing in TSU or in its CrossOver bottle.
+**✏️ Write down before you start:**
 
-## Install the new version
+| Question | Your answer |
+| --- | --- |
+| Is a second screen connected to the Mac (another monitor, a TV, or an iPad used as a screen)? | |
+| If yes: which screen does TSU run on? | |
+| Was a second screen connected during your last test too? | |
+| Did anything else change since last time (Mac, screen, TSU's graphics settings)? | |
 
-This version replaces the one you have, and your layout and settings stay.
+Pick one track and one car, and use them for every step. Keep TSU in **Fullscreen**, as last time.
 
-1. Quit TurboHUD: press **Control + Shift + Q**, or use **Quit** in its menu bar icon's menu.
-2. Double-click the `.dmg` file. A window opens.
-3. Drag **TurboHUD** onto **Applications**, and choose **Replace** when asked.
-4. Eject the disk image.
-5. Double-click TurboHUD in Applications.
-6. If macOS says it "could not verify" TurboHUD, click **Done**, not Move to Trash. Then open **System Settings > Privacy & Security**, scroll to **Security**, and click **Open Anyway** next to TurboHUD. Enter your password and click **Open Anyway** again.
+---
 
-This prompt appears because the test version is not signed with a paid Apple certificate. Only open it if you trust the person who sent it.
+## Part 2: Install the new TurboHUD (5 minutes)
 
-If there is no **Open Anyway** button, run this in Terminal, then try again:
+1. If TurboHUD is running, quit it: press **Control + Shift + Q**.
+2. Double-click `TurboHUD-2026.11.08.2-macos-arm64.dmg`. A window opens.
+3. Drag **TurboHUD** onto **Applications**. If asked, choose **Replace**.
+4. Close the window. In Finder, click the eject button next to **TurboHUD** in the sidebar.
+5. **Don't open TurboHUD yet.** The first measurement is without it.
 
-```
-xattr -dr com.apple.quarantine /Applications/TurboHUD.app
-```
+Your layout and settings from last time stay.
 
-TurboHUD opens no window and has no Dock icon. Look for its black icon in the menu bar and a small clock at the top left of the screen.
+---
 
-## How to change the setup between steps
+## Part 3: Measure the frame rate (7 measurements, about 15 minutes)
 
-- **Tick or untick sections:** press **Control + Shift + L** for move mode, change the tick boxes, then press **Control + Shift + L** again.
-- **Change the race reads:** in move mode, click **Settings…** in the panel. Click **20**, **10** or **5** next to **Race reads a second**. The change applies at once. Click **Close**, then press **Control + Shift + L** to leave move mode.
-- **Quit TurboHUD:** press **Control + Shift + Q**.
+Each measurement is the same:
 
-Close the settings window and leave move mode before you measure, because both are windows above the game.
+> Drive for **about one minute** on your track, then write down the **average FPS** and whether anything stuttered.
 
-## Run the frame rate test
+Do them in this order. Don't skip ahead.
 
-Run every step in a **real race**, on the same track with the same car and the same graphics settings, with TSU in Fullscreen as last time. A custom session has no race for TurboHUD to read, so only the clock shows there.
+### Shortcuts you'll need
 
-Drive for about a minute at each step, then write down the average FPS. The steps are in an order that keeps the switching short.
+| To do this | Press |
+| --- | --- |
+| Open or close move mode (where the tick boxes are) | **Control + Shift + L** |
+| Quit TurboHUD | **Control + Shift + Q** |
 
-| Step | TurboHUD | Sections ticked | Race reads a second | Average FPS | Any stutter? |
-| --- | --- | --- | --- | --- | --- |
-| 1 | Not running | – | – |  |  |
-| 2 | Running | None | 20 |  |  |
-| 3 | Running | None | 5 |  |  |
-| 4 | Running | Only lap and delta | 5 |  |  |
-| 5 | Running | Only lap and delta | 20 |  |  |
-| 6 | Running | All | 20 |  |  |
-| 7 | Not running | – | – |  |  |
+In move mode, a panel with tick boxes appears. Each box is called **Show** and then the section's name, for example **Show lap and time left**. The panel also has a **Settings…** button.
 
-Step 7 repeats step 1, in case the Mac has warmed up and runs slower by the end. For step 7, quit TurboHUD the way the hang test below describes, and write down what happens.
+Always close move mode (**Control + Shift + L**) before you drive.
 
-"None" means every section unticked, the clock and the local time too. For step 1, start the race with TurboHUD not running. For step 2, start TurboHUD while you are in the race. It may take up to a minute to find the race. Wait until the lap section shows before you untick everything, and drive the minute after that.
+---
 
-After step 6, stay in the race and run the command in **What to send back** before you quit TurboHUD.
+### Measurement 1: without TurboHUD
 
-## If a second display is connected
+1. Make sure TurboHUD is **not** running.
+2. Start TSU and start a race on your track.
+3. Drive for one minute.
 
-A second display, including an iPad used as a display, can change how macOS shows a game in Fullscreen. If one is connected to your Mac:
+**✏️ Write down:** FPS: ______ Stutter? ______
 
-1. Run the whole test as it is, with the second display connected, and write down which display TSU runs on.
-2. Then, if you have time, unplug the second display (or turn off the iPad display) and repeat **step 1** and **step 6** only. Write them down as steps 1b and 6b.
+---
 
-| Step | TurboHUD | Second display | Average FPS | Any stutter? |
-| --- | --- | --- | --- | --- |
-| 1b | Not running | Off |  |  |
-| 6b | Running, all sections, 20 reads a second | Off |  |  |
+### Measurement 2: TurboHUD on, everything hidden
 
-## Test TSU hanging on exit
+1. Stay in the race (or start a new one on the same track).
+2. Open **Applications** and double-click **TurboHUD**.
+   - If macOS says it "could not verify" TurboHUD, see **Help** at the end, then come back here.
+3. Wait until the lap and the times show on the screen. This can take up to a minute.
+4. Press **Control + Shift + L**. The panel appears.
+5. Click **Settings…**. Next to **Race reads a second**, check that **20** is selected (click it if not). Click **Close**.
+6. In the panel, **untick every "Show …" box**, including **Show local time**. Nothing of TurboHUD should be left on the screen except the panel.
+7. Press **Control + Shift + L** to close move mode.
+8. Drive for one minute.
 
-Last time TSU hung on a black screen after TurboHUD was quit first. Do this after you run the command in **What to send back**:
+**✏️ Write down:** FPS: ______ Stutter? ______
 
-1. Quit TurboHUD with **Control + Shift + Q**.
-2. In Terminal, run this, wait 5 seconds, and run it again:
+---
 
-   ```
-   pgrep -fl bottle_reader
-   ```
+### Measurement 3: everything hidden, fewer reads
 
-   Note what each run prints. Nothing printed means no TurboHUD reader is left running.
-3. Do step 7 of the frame rate test.
-4. Quit TSU the normal way, from its menu.
-5. Write down whether TSU quits normally or hangs.
+1. Press **Control + Shift + L**.
+2. Click **Settings…**, click **5** next to **Race reads a second**, then click **Close**.
+3. Press **Control + Shift + L** to close move mode.
+4. Drive for one minute.
 
-If TSU hangs, quit it with Steam's **Stop** as before. Then, if you have time, start TSU with TurboHUD **not running**, do one race, and quit TSU. Write down whether it hangs then too. That tells us whether TurboHUD causes the hang at all.
+**✏️ Write down:** FPS: ______ Stutter? ______
 
-## What to send back
+---
 
-Send the filled-in table, the results of the hang test, and the output of the Terminal command below.
+### Measurement 4: lap and delta only, fewer reads
 
-- Whether a second display was connected, during this test and the last one, and which display TSU ran on
-- Whether anything about the Mac, the screen or TSU's settings changed since last time. Last time you sent: MacBook Pro M3 Pro, 120 Hz, Fullscreen, D3DMetal.
-- How you measured FPS, if it was not the same way as last time
+1. Press **Control + Shift + L**.
+2. Tick **Show lap and time left** and **Show delta to best**. Leave all other boxes unticked.
+3. Press **Control + Shift + L** to close move mode.
+4. Drive for one minute.
 
-Run this while you are still in the race at step 6, **before you quit or restart TurboHUD**, because each start replaces its log. It only reads information and changes nothing:
+**✏️ Write down:** FPS: ______ Stutter? ______
+
+---
+
+### Measurement 5: lap and delta only, normal reads
+
+1. Press **Control + Shift + L**.
+2. Click **Settings…**, click **20** next to **Race reads a second**, then click **Close**.
+3. Press **Control + Shift + L** to close move mode.
+4. Drive for one minute.
+
+**✏️ Write down:** FPS: ______ Stutter? ______
+
+---
+
+### Measurement 6: everything shown
+
+1. Press **Control + Shift + L**.
+2. **Tick every "Show …" box.**
+3. Press **Control + Shift + L** to close move mode.
+4. Drive for one minute.
+
+**✏️ Write down:** FPS: ______ Stutter? ______
+
+**Stay in the race now and go to Part 4.** Don't quit or restart TurboHUD yet.
+
+---
+
+## Part 4: Copy TurboHUD's log (2 minutes)
+
+TurboHUD keeps a log, and it's replaced each time TurboHUD starts. So copy it now, while TurboHUD is still running.
+
+1. Open **Terminal**.
+2. Copy all the lines in the box below, paste them into Terminal, and press **Return**:
 
 ```
 T=~/Library/Application\ Support/TurboHUD
 echo "--- version"; grep -m1 'TurboHUD 2026' "$T/turbohud.log"
-echo "--- reads and frames"; grep -E 'race reads|HUD frames|search:' "$T/turbohud.log" | tail -30
+echo "--- reads and frames"; grep -E 'race reads|HUD frames|search:|connection dropped' "$T/turbohud.log" | tail -30
 echo "--- reader"; tail -20 "$T/bottle_reader.log"
 echo "--- graphics"; grep -h CX_GRAPHICS_BACKEND ~/Library/Application\ Support/CrossOver/Bottles/Steam/cxbottle.conf
 echo "--- screens"; system_profiler SPDisplaysDataType | grep -E 'Chipset|Resolution|UI Looks|Main Display'
 ```
 
-The command assumes TSU is in a bottle called `Steam`. If yours has another name, change that word. The output can include player names and your Mac's user name, so look it over before you send it.
+3. Select all the text Terminal printed, copy it, and save it in a note or an email to send back.
 
-When you are done, set **Race reads a second** back to **20** and tick the sections you use. TurboHUD remembers both.
+This only reads information and changes nothing. It may include player names and your Mac's user name: look it over before you send it.
 
-## If something goes wrong
+(If TSU is in a CrossOver bottle with a name other than **Steam**, change the word `Steam` in the fourth line to your bottle's name.)
 
-Hover over the TurboHUD menu bar icon first, because its text says what TurboHUD is waiting for.
+---
 
-| What you see | What it means | What to do |
-| --- | --- | --- |
-| Only the clock, and you are in a menu, lobby or custom session | There is no race to read | Nothing is wrong: enter a race and wait for the grid |
-| Only the clock, and you are in a race | TurboHUD has not found the race | Wait a minute, then send the output of the command above |
-| Cannot tell which bottle TSU runs in | You have more than one bottle | Quit TurboHUD, then start it with the command below |
-| A warning that the graphics setting is not D3DMetal | TSU may stutter on this setting | Set the bottle's graphics to D3DMetal in CrossOver and restart TSU, then tell us you changed it |
-| TurboHUD will not open | macOS is blocking it | Repeat the **Open Anyway** step in the install section |
+## Part 5: Quit, and the last measurement (3 minutes)
 
-To choose the bottle yourself, run this with your bottle's name in place of `Steam`:
+Last time, TSU froze on a black screen after TurboHUD was quit. This part checks that.
+
+1. Press **Control + Shift + Q** to quit TurboHUD.
+2. In Terminal, paste this and press **Return**:
+
+   ```
+   pgrep -fl bottle_reader
+   ```
+
+3. Wait 5 seconds, then press **↑** (up arrow) and **Return** to run it again.
+
+**✏️ Write down:** Did either run print anything? If yes, what? ______
+
+### Measurement 7: without TurboHUD again
+
+This checks whether the Mac got slower because it warmed up.
+
+1. TurboHUD is now closed. Stay in the race, or start a new one on the same track.
+2. Drive for one minute.
+
+**✏️ Write down:** FPS: ______ Stutter? ______
+
+### Quit TSU
+
+1. Quit TSU the normal way, from its menu.
+
+**✏️ Write down:** Did TSU quit normally, or freeze? ______
+
+If TSU freezes: quit it with **Stop** in Steam, as last time. Then, only if you have time: start TSU **without** TurboHUD, do one race, quit TSU again, and write down whether it froze that time too. ______
+
+---
+
+## Part 6 (only with a second screen, optional, 3 minutes)
+
+Skip this part if no second screen is connected.
+
+1. Unplug the second screen, or turn off the iPad's screen.
+2. Do **Measurement 1** again (without TurboHUD).
+   **✏️ Write down:** FPS: ______
+3. Start TurboHUD from Applications, wait for the lap to show, and do **Measurement 6** again (everything shown).
+   **✏️ Write down:** FPS: ______
+4. Quit TurboHUD with **Control + Shift + Q**.
+
+---
+
+## Part 7: Put things back (1 minute)
+
+Next time you use TurboHUD:
+
+1. Press **Control + Shift + L**, click **Settings…**, and make sure **20** is selected next to **Race reads a second**.
+2. Tick the sections you like to use, then press **Control + Shift + L**.
+
+TurboHUD remembers both.
+
+---
+
+## What to send back
+
+- [ ] This sheet with everything you wrote down (or just the answers)
+- [ ] The Terminal text from Part 4
+- [ ] How you read the FPS, if it wasn't the same way as last time
+
+### Summary table (copy your numbers here)
+
+| # | Setup | FPS | Stutter? |
+| --- | --- | --- | --- |
+| 1 | No TurboHUD | | |
+| 2 | TurboHUD, everything hidden, 20 reads | | |
+| 3 | TurboHUD, everything hidden, 5 reads | | |
+| 4 | Lap and delta, 5 reads | | |
+| 5 | Lap and delta, 20 reads | | |
+| 6 | Everything shown, 20 reads | | |
+| 7 | No TurboHUD again | | |
+| 1b | No TurboHUD, second screen off (optional) | | |
+| 6b | Everything shown, second screen off (optional) | | |
+
+---
+
+## Help
+
+**macOS says it "could not verify" TurboHUD**
+
+1. Click **Done** (not Move to Trash).
+2. Open **System Settings > Privacy & Security**.
+3. Scroll down to **Security** and click **Open Anyway** next to TurboHUD.
+4. Enter your password and click **Open Anyway** again.
+
+This happens because the test version isn't signed with a paid Apple certificate. Only open it if you trust the person who sent it.
+
+If there's no **Open Anyway** button, paste this into Terminal, press **Return**, and try again:
+
+```
+xattr -dr com.apple.quarantine /Applications/TurboHUD.app
+```
+
+**Other problems**
+
+Hover the mouse over TurboHUD's black icon in the menu bar: its text says what TurboHUD is waiting for.
+
+| What you see | What to do |
+| --- | --- |
+| No window, no Dock icon after starting TurboHUD | That's normal. Look for its black icon in the menu bar. |
+| Only a clock, in a menu, lobby or custom session | That's normal: there's no race to read. Start a real race. |
+| Only a clock, during a race | Wait a minute. If nothing changes, do Part 4 and send the text. |
+| A warning that the graphics setting is not D3DMetal | In CrossOver, set the bottle's graphics to **D3DMetal**, restart TSU, and tell us you changed it. |
+| Can't tell which bottle TSU runs in | Quit TurboHUD and start it with the command below, using your bottle's name instead of `Steam`. |
+| TurboHUD won't open | Do the **Open Anyway** steps above again. |
 
 ```
 TURBOHUD_BOTTLE=Steam /Applications/TurboHUD.app/Contents/MacOS/TurboHUD
 ```
 
-To remove TurboHUD, quit it and move it from Applications to the Bin. Its settings and logs are in `~/Library/Application Support/TurboHUD`.
+**Removing TurboHUD:** quit it and move it from Applications to the Bin. Its settings and logs are in `~/Library/Application Support/TurboHUD`.

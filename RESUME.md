@@ -66,6 +66,8 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-08: The tester's instructions rewritten as a plain step-by-step checklist, asked for by the user:
+  one action a line, a place to write each answer, a summary table, and the log copied before quitting.
 - 2026-11-08: `releases/` keeps only the latest build (2026.11.08.2); the older builds were deleted, asked for by the user.
 - 2026-11-08: Build 2026.11.08.2 for the tester, with the reader fixes of the day; the test instructions
   name it and ask whether a second display is connected, with steps 1 and 6 again without it. The fix for the
