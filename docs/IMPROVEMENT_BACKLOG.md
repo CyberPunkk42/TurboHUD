@@ -30,9 +30,10 @@ the race is found after about 15 s and read in about 20 ms
 (`turbohud/tsu/winmemory.py`: page cache, paced search that stops at the first good
 hit). The Mac app now does this by itself (`turbohud/tsu/bottle.py`, reader in
 `bottle_reader.py`, Windows Python inside the app). Still to do:
-- Find what costs a tester's Mac about 50 FPS, and why TSU hung on exit with TurboHUD quit first
-  (`docs/CONTINUE_HERE.md`, "Tester's Mac"). Done so far (2026-11-07): unticked sections are no longer
-  redrawn and leave the screen, and the settings window sets the race reads a second, to compare.
+- The tester's FPS (`docs/CONTINUE_HERE.md`, "Tester's Mac"): unticked sections leaving the screen
+  gave back most of the loss with nothing shown (2026-11-08: 107 of 115 FPS, from 78). Shown sections still
+  cost frames, to about 60 with all: the windows above the game, not the reads. Next: measure with the Metal
+  HUD, then whether fewer windows help. The exit hang has not come back.
 - Check in races on the Mac, going through the list in `docs/CONTINUE_HERE.md`: offline and
   online, the sections over TSU's Fullscreen, how long the race takes to show, the track map
   and the radar. AI races online have run many times, but the list has not been gone through.
