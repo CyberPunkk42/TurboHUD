@@ -66,6 +66,12 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-08: Checked on the user's Mac with build 2026.11.08 and from source: unticked sections leave the
+  screen and come back in place, and the race reads switch at once (about 19 a second at 20, 5 at 5; at 5 a
+  read takes about 47 ms instead of 30). Quitting TurboHUD first or TSU first, no reader was left and TSU
+  quit normally, so the tester's hang did not come back here. At each start the reader was closed about a
+  second after it started and started again 3 s later, with no reason in the log: a connection that worked
+  and is dropped now logs why (`TSU: connection dropped (...)`).
 - 2026-11-08: New test instructions for the tester's Mac (`TurboHUD-test-instructions.md`), asked for by
   the user, with build 2026.11.08 (`releases/`, macOS 27, built with `--any-macos`). Seven steps tell the
   windows from the reads: closed, every section unticked at 20 and 5 race reads a second, lap and delta at 5

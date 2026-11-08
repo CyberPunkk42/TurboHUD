@@ -1495,6 +1495,34 @@ class LiveRaceTests(unittest.TestCase):
         self.assertEqual(live.snapshot().status, race.WAITING_FOR_RACE)
         self.assertEqual(len(calls), 1)
 
+    def test_a_dropped_connection_says_why_in_the_log(self):
+        closed = []
+
+        class Conn:
+            def close(self):
+                closed.append(1)
+
+        class Reader:
+            def read(self):
+                raise OSError('cannot read 8 bytes at 0x10')
+
+        live = self.live(lambda: (Reader(), Conn()))
+        with self.assertLogs('turbohud.tsu.client', 'INFO') as logs:
+            self.assertEqual(live.step(), self.client.WAIT_INTERVAL)
+        self.assertEqual(closed, [1])
+        self.assertTrue(
+            any('connection dropped (OSError: cannot read 8 bytes at 0x10)' in m for m in logs.output)
+        )
+
+    def test_no_connection_to_drop_logs_no_drop(self):
+        def connect():
+            raise FileNotFoundError('no socket')
+
+        live = self.live(connect)
+        live.step()  # the first status change logs
+        with self.assertNoLogs('turbohud.tsu.client', 'INFO'):
+            live.step()
+
     def reading(self, durations):
         """A LiveRace whose reader takes these many seconds, one read after another."""
         durations = iter(durations)
