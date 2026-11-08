@@ -73,7 +73,7 @@ BLUE_FLAG_EDGE_WIDTH = 2
 PEDAL_INSET = 4  # pedal_bars' default inset
 BACKDROP = (0, 0, 0, 40)  # the light tint behind a section's text (option), RGBA
 BLUE_SAMPLE = 0.6  # the bar's opacity in move mode, to place it
-DELTA_BAR_SAMPLE = DeltaBarView(-0.4, True, '\u22120.400')  # the delta bar in move mode
+DELTA_BAR_SAMPLE = DeltaBarView(0.4, -0.6, '\u22120.400')  # the delta bar in move mode: ahead, gaining
 LEVEL_SAMPLE = (0.7, 'ahead')  # a level bar in move mode, to place the section
 RADAR_CAR_AT = 0.5  # the local car's height in the radar, from the top: the middle
 CONE_STEPS = 8  # points along a slipstream cone's far edge
@@ -526,7 +526,7 @@ class SectionWindow(QWidget):
             view = DELTA_BAR_SAMPLE
         if view is None:
             return
-        draw_delta_bar(painter, self.width(), self.height(), view.fill, view.green, view.text, self.theme)
+        draw_delta_bar(painter, self.width(), self.height(), view.fill, view.trend, view.text, self.theme)
         if not self.locked:
             painter.setPen(QPen(QColor(*BORDER), 2))
             painter.setBrush(Qt.NoBrush)

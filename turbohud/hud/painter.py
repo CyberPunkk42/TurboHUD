@@ -15,7 +15,7 @@ from PySide6.QtGui import (
     QPen,
 )
 
-from turbohud.core.hud import FLAG_WIDTH, MARGIN, before_right, middle_right, steady_text
+from turbohud.core.hud import FLAG_WIDTH, MARGIN, before_right, blend, middle_right, steady_text
 
 # On Linux the desktop's default font may be a monospace or icon font; prefer a plain
 # sans-serif one. Qt uses the first that is installed. Windows and macOS keep their
@@ -299,14 +299,23 @@ def delta_bar_parts(width, height, fill):
     return (inset, inset, inner, height - 2 * inset), (left, inset, reach, height - 2 * inset), middle
 
 
-def draw_delta_bar(painter, width, height, fill, green, text, theme):
-    """The delta bar: a dark track, filled from the middle in green or red, with the delta
-    over it."""
+DELTA_STEADY_COLOR = '#ffffff'  # the delta bar while neither gaining nor losing
+
+
+def delta_bar_color(trend):
+    """'#rrggbb' for a delta bar's `trend` (-1 to 1): white when steady, going over to green
+    when gaining (below 0) or red when losing (above 0) as the trend grows."""
+    return blend(DELTA_STEADY_COLOR, AHEAD_COLOR if trend < 0 else BEHIND_COLOR, abs(trend))
+
+
+def draw_delta_bar(painter, width, height, fill, trend, text, theme):
+    """The delta bar: a dark track, filled from the middle (right when ahead), white when
+    steady and green or red as time is gained or lost, with the delta over it."""
     track, filled, middle = delta_bar_parts(width, height, fill)
     painter.setPen(Qt.NoPen)
     painter.setBrush(QColor(*DELTA_BAR_TRACK))
     painter.drawRoundedRect(QRectF(*track), 4, 4)
-    painter.setBrush(QColor(AHEAD_COLOR if green else BEHIND_COLOR))
+    painter.setBrush(QColor(delta_bar_color(trend)))
     painter.drawRect(QRectF(*filled))
     painter.fillRect(QRectF(middle - 1, track[1], 2, track[3]), QColor(255, 255, 255, 170))
     size = max(round(height * DELTA_BAR_TEXT), 8)

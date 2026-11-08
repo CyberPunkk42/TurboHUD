@@ -747,3 +747,7 @@ its "Recent changes".
   of where the move-mode panel was meant to be (near the middle), so a wide panel put it past the right edge,
   and it did not follow a panel that was dragged. It now opens beside the panel where it is, on the right
   if it fits, else on the left, kept on that screen (`hud.beside`). Not yet seen on the Mac.
+- 2026-11-08: The delta bar goes right when ahead of the best lap, as in sim racing, and its colour is
+  gradual, asked for by the user: white while neither gaining nor losing, then more and more green or red
+  as time is gained or lost, full at 0.15 s a second. It switched between green and red at 0.02 s a
+  second, which flickered. Not yet seen in a race.
