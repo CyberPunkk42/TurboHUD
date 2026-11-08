@@ -105,25 +105,18 @@ holding all sections, to see whether fewer windows would help before rebuilding 
 
 ## Test list: what is left
 Done by the user on the Mac: all of the layout list (tight boxes, centring, groups, presets
-with Ctrl+Shift+1, 2, 3, Undo). AI races online ran many times while fixing the reads, but
-the list below was not gone through.
+with Ctrl+Shift+1, 2, 3, Undo), and on 2026-11-08 the bin button, an offline race with 19 AI
+(lap times, fuel, tires, health, speed, pedals, map, radar, the player and lap times lists with
+20 drivers, preset shortcuts mid-race), the same race in Fullscreen, and hosting about 13 AI
+online as a driver.
 
-1. Bin button: greyed out while empty; deleting leaves the sections where they are; Undo
-   brings the preset back; still gone after a restart.
-2. Offline race, 19 AI if the event allows: sections on the grid, lap times match the game's,
-   fuel, tires, health and speed, pedal bars, track map and radar, players show 8 rows, lap
-   times list all 20 drivers without overlapping what is below; preset shortcuts during the race
-   (no hitch, the game does not react to the keys).
-3. Same race in Fullscreen: sections over the game, clicks and steering reach it.
-4. Online, hosting about 13 AI, as a driver: player list, gaps, map, radar.
-5. Spectating: "Spectating" shows, lap times update, map dots follow the road, joining as a
-   driver brings the normal HUD, what a fun mode shows. TSU may not allow spectating one's own
-   AI event; then a public session.
-6. Later: a race on someone else's server, ideally 20 players. Hyprland: `--preset`, group
+1. Spectating, in public sessions (2026-11-08): "Spectating" shows and the map with it; a
+   capture event (an arena mode) has no map. Still to see: joining as a driver brings the
+   normal HUD with no search.
+2. Later: a race on someone else's server, ideally 20 players. Hyprland: `--preset`, group
    resizing, Undo, the bin. Windows: none of this has run there, and live data is not built.
 
-The most valuable are 2 and 4. Ask the user to say when done before restarting TurboHUD: the
-log is replaced at each start.
+Ask the user to say when done before restarting TurboHUD: the log is replaced at each start.
 
 ## Smaller open points
 - Stutter: settled on 2026-11-05, it was CrossOver's graphics setting. It stuttered alone on a

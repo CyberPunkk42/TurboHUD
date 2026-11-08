@@ -34,27 +34,22 @@ hit). The Mac app now does this by itself (`turbohud/tsu/bottle.py`, reader in
   gave back most of the loss with nothing shown (2026-11-08: 107 of 115 FPS, from 78). Shown sections still
   cost frames, to about 60 with all: the windows above the game, not the reads. Next: measure with the Metal
   HUD, then whether fewer windows help. The exit hang has not come back.
-- Check in races on the Mac, going through the list in `docs/CONTINUE_HERE.md`: offline and
-  online, the sections over TSU's Fullscreen, how long the race takes to show, the track map
-  and the radar. AI races online have run many times, but the list has not been gone through.
+- Races on the Mac: confirmed by the user on 2026-11-08, offline with 19 AI, in Fullscreen and
+  hosting about 13 AI online (`docs/CONTINUE_HERE.md`, "Test list"). As a driver online the race
+  showed 1.4 s after the start.
 - Listen for stutter while the reader searches (in an online event, the first seconds; a
   search of all the data at once made TSU stutter). It now reads half of the time, up from a
   quarter (2026-11-05), to show the HUD sooner.
-- See that race reads now stay quick in a race with AI (2026-11-05: they took about 1000 ms a
-  read while driving, 28 ms from a separate connection, 14 ms a trip of which 0.37 ms on the
-  game's memory). The fix is in; the log's `race reads` line tells. The stutter came from
-  CrossOver's graphics setting, not the many AI: D3DMetal cured it (2026-11-05).
 - Throttle and brake on the Mac move in TSU's thirds: the pad's triggers are read through
   the Linux joystick interface only.
-- Check the spectator HUD while watching a real race (built 2026-11-04, seen only with a
-  fake game and offscreen): whether the replay recorder runs for a spectator, so the map's
-  dots and the live gaps use real positions; and what fun-mode events show.
+- The spectator HUD: seen in public sessions on 2026-11-08 ("Spectating", the map; no map in an
+  arena mode). Still to see: joining as a driver from spectating.
 
 ## 4. Layout: what is left to check
 The user went through it all by hand on the Mac on 2026-11-05 and it worked: the tight boxes,
 presets with their shortcuts, groups, the Centre buttons, Centre text and Undo. Still to see:
-- The lap times list with 20 drivers in a race: does it fit, and does a race read stay quick?
-- The preset shortcuts with TSU in front, during a race (a hitch when switching?).
+- Confirmed on 2026-11-08: the lap times list with 20 drivers, and the preset shortcuts with TSU
+  in front during a race.
 - Linux: `--preset`, and moving and resizing through Hyprland (followers take their size when
   a resize ends), and Undo there.
 - Windows has run none of this (its shortcut code has only ever run on a build machine).

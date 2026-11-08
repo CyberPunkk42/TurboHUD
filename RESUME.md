@@ -67,6 +67,9 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-08: Confirmed by the user on the Mac: the bin button, an offline race with 19 AI (every section,
+  20 drivers in the lists, preset shortcuts mid-race), the same race in Fullscreen, and hosting about 13 AI
+  online as a driver. The race reads stayed at about 30 ms in these races.
 - 2026-11-08: The track map shows only on a track, asked for by the user: in races and special events
   (TS.RaceEventMode), not in arena modes (Battle, Collector, Hill, Soccer, Sumo, Tag), where no track is
   learnt either. TSU keeps the mode in `TS.EventSettings.m_eventMode`, an object whose class names it

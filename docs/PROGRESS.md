@@ -740,3 +740,6 @@ its "Recent changes".
   (seen in a capture event: `TS.BattleEventMode`, level type 6, logic `TS.BattleLogic`). Where the mode
   cannot be read the map stays as before. The spectator's search that stops early was seen: 2.9 to 4.7 s,
   where it took 15 to 21 s.
+- 2026-11-08: Confirmed by the user on the Mac: the bin button, an offline race with 19 AI (every section,
+  20 drivers in the lists, preset shortcuts mid-race), the same race in Fullscreen, and hosting about 13 AI
+  online as a driver. The race reads stayed at about 30 ms in these races.
