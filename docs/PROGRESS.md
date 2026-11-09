@@ -817,3 +817,5 @@ its "Recent changes".
   has a tick box with its name, a narrow group list, small ↔ and ↕ buttons and unlabelled tick boxes under
   "Mid text" and "Tint" headings; the presets are on one row, and the group-match buttons are A to D. Every
   control keeps its tooltip. Drawn offscreen; not yet seen on the Mac or Hyprland.
+- 2026-11-09: Build 2026.11.09.2 for the tester, with the smaller move-mode panel; it replaces 2026.11.09
+  (never sent), and the test instructions name it and the panel's "Show" column.

@@ -70,6 +70,8 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-09: Build 2026.11.09.2 for the tester, with the smaller move-mode panel; it replaces 2026.11.09
+  (never sent), and the test instructions name it and the panel's "Show" column.
 - 2026-11-09: The move-mode panel is smaller, asked for by the user: 568 x 642 px instead of 675 x 978. The
   five options for the whole HUD (mph, tint behind all sections, radar cones, other cars on the map,
   sector bars) moved to the settings window (they stay in the TurboHUD icon's menu); each section's row
