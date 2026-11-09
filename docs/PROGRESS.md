@@ -767,3 +767,7 @@ its "Recent changes".
   A CPU recording per section (`docs/CONTINUE_HERE.md`, "Tester's Mac"): each window adds about the same to
   WindowServer, whatever it shows and however often it changes, so a window's being there costs, not its
   redraws. Next: the Metal HUD in frames, then perhaps all sections in one window.
+- 2026-11-09: The Metal HUD on the user's Mac, in a race against AI: 120 FPS with TurboHUD closed and with
+  only the local time shown, 80 to 110 with every section. So the number of windows costs frames. TSU then
+  froze around being quit, with TurboHUD quit first and its reader ended at once (TSU at 1% CPU, Steam at
+  100%): the second time such a freeze was seen; no way for the reader to cause it is known yet.
