@@ -449,6 +449,32 @@ class RedrawTests(unittest.TestCase):
         self.assertGreater(purple_pixels('#c77dff'), 50)
         self.assertEqual(purple_pixels(''), 0)
 
+    def test_sector_bars_turned_off_are_not_drawn(self):
+        from turbohud.core.hud import RACE_SECTIONS, Row, Sectors
+        from turbohud.core.settings import Theme
+        from turbohud.overlay.window import SectionWindow
+
+        class Native:
+            def raise_window(self, window):
+                return 'test'
+
+        def purple_pixels(shown):
+            window = SectionWindow(Native(), Theme(), next(s for s in RACE_SECTIONS if s.name == 'times'))
+            self.addCleanup(window.close)
+            window.resize(400, 60)
+            window.sector_bars = shown
+            window.show_content(
+                [Row('Last 1:20.000   Best 1:19.000', 'medium')], level=Sectors(('#c77dff',) * 3)
+            )
+            image = window.grab().toImage()
+            colours = (image.pixelColor(x, y) for x in range(0, 400, 2) for y in range(0, 60, 2))
+            return sum(
+                1 for c in colours if c.alpha() > 0 and c.red() > c.green() + 60 and c.blue() > c.green() + 60
+            )
+
+        self.assertGreater(purple_pixels(True), 20)
+        self.assertEqual(purple_pixels(False), 0)
+
     def test_only_the_number_changes_and_the_label_stays(self):
         from turbohud.core.hud import Row
 
@@ -757,6 +783,17 @@ class MovePanelPresetTests(unittest.TestCase):
         self.assertEqual(got, [('fuel', True)])
         self.assertFalse(panel.tints['fuel'].isChecked())
         panel.set_tint('radar', True)  # none: nothing happens
+
+    def test_the_sector_bars_option_reports_its_changes(self):
+        panel = self.panel(sector_bars=False)
+        got = []
+        panel.sector_bars_changed.connect(got.append)
+        self.assertFalse(panel.sector_bars.isChecked())
+        panel.sector_bars.setChecked(True)
+        self.assertEqual(got, [True])
+        panel.set_sector_bars(False)  # from the menu: no change to report
+        self.assertEqual(got, [True])
+        self.assertFalse(panel.sector_bars.isChecked())
 
     def test_load_names_its_shortcut_where_there_are_shortcuts(self):
         self.assertIn('Ctrl+Shift+2', self.button(self.panel(), 2, 'Load').toolTip())

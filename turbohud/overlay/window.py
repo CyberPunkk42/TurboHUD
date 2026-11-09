@@ -178,6 +178,7 @@ class SectionWindow(QWidget):
         self.text_centred = False  # its text in the middle of its box (an option)
         self.delta_view = None  # the delta bar's content (a DeltaBarView)
         self.radar_cone = True  # the radar's sample in move mode shows slipstream cones (an option)
+        self.sector_bars = True  # a section with sector bars shows them (an option)
         # While locked, a HudCanvas may draw this section with every other in one window per
         # screen, and this window stays hidden: 17 windows above the game cost it frames.
         self.canvas = None
@@ -338,6 +339,8 @@ class SectionWindow(QWidget):
         if self.section.level and rows:
             sample = SECTORS_SAMPLE if self.section.sectors else LEVEL_SAMPLE
             level = self.level or (None if self.locked else sample)
+            if self.section.sectors and not self.sector_bars:
+                level = None  # turned off: the room stays, so the text keeps its size
             if level is not None:
                 content_height = content_size(rows, scale, text_width)[1]
                 if isinstance(level, Sectors):
@@ -688,6 +691,7 @@ class MovePanel(QWidget):
     backdrop_changed = Signal(bool)
     map_others_changed = Signal(bool)
     radar_cone_changed = Signal(bool)
+    sector_bars_changed = Signal(bool)
     preset_save_requested = Signal(int)  # the preset's number
     preset_load_requested = Signal(int)
     preset_delete_requested = Signal(int)
@@ -709,6 +713,7 @@ class MovePanel(QWidget):
         map_others=False,
         saved_presets=(),
         radar_cone=True,
+        sector_bars=True,
     ):
         super().__init__(None, window_flags())
         self.native = native
@@ -808,6 +813,11 @@ class MovePanel(QWidget):
             column.addWidget(self.radar_cone)
         if any(section.drawing == 'map' for section in sections):
             column.addWidget(self.map_others)
+        self.sector_bars = QCheckBox('Sector bars below the last and best lap')
+        self.sector_bars.setChecked(sector_bars)
+        self.sector_bars.toggled.connect(self.sector_bars_changed)
+        if any(section.sectors for section in sections):
+            column.addWidget(self.sector_bars)
         presets = QGridLayout()
         self.preset_loads = {}
         self.preset_deletes = {}
@@ -917,6 +927,12 @@ class MovePanel(QWidget):
             self.radar_cone.blockSignals(True)
             self.radar_cone.setChecked(cone)
             self.radar_cone.blockSignals(False)
+
+    def set_sector_bars(self, shown):
+        if self.sector_bars.isChecked() != shown:
+            self.sector_bars.blockSignals(True)
+            self.sector_bars.setChecked(shown)
+            self.sector_bars.blockSignals(False)
 
     def set_map_others(self, others):
         if self.map_others.isChecked() != others:

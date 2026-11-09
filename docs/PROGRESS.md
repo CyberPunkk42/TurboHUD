@@ -804,3 +804,6 @@ its "Recent changes".
   thinner with many sectors. The section's box grows by the bars' room once (`settings.json` goes to
   layout 5, `settings.before-layout-5.json` keeps the old file), so its text keeps its size. No more reads
   of the game (`race.sector_colours`). Not yet seen in a race.
+- 2026-11-09: The sector bars can be turned off, asked for by the user: "Sector bars below the last and best
+  lap" in the TurboHUD icon's menu and the move-mode panel, on by default, saved as `sector_bars`. Off, the
+  room below the times stays, so their text keeps its size (make the box shorter in move mode to taste).
