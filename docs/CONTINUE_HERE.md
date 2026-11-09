@@ -101,31 +101,49 @@ window's being there costs, not its redraws. So drawing some sections less often
 sections in one window might. CPU is not FPS: the Metal HUD below is to confirm it in frames. TSU's
 own CPU was 243 before TurboHUD started and about 360 after, but the user was probably not racing yet.
 
-### TODO: measure the windows' cost on the user's Mac with the Metal HUD
-Steps A to E: closed, every section unticked, only local time, every section, closed again.
-Apple's Metal Performance HUD (`MTL_HUD_ENABLED=1`, which D3DMetal honours) shows FPS and frame times
-inside the game's own picture, adding no window above it. Nothing in the bottle or the system changes.
-1. Quit TurboHUD, TSU and Steam in the bottle. `pgrep -fl 'steam.exe|TSU.exe|bottle_reader'` must print
-   nothing (a Steam still running hands the start to itself, without the variable).
-2. Start Steam in the bottle with the HUD, and leave that Terminal open:
-   `MTL_HUD_ENABLED=1 ~/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine --bottle Steam "C:\\Program Files (x86)\\Steam\\steam.exe"`
-3. Start TSU from that Steam; the HUD shows at the top right.
-4. On one track, Fullscreen, about 30 s each: TurboHUD closed; running with every section unticked; only
-   lap and time left; all sections; closed again. Note FPS, frame time, whether the frame-time graph jumps
-   between about 8 and 17 ms, and any Direct / Composited line. If TSU reaches 120 alone, raise its
-   graphics until it runs at about 100-110, as on the tester's Mac.
-5. Afterwards quit everything; the next normal start has no HUD.
-If no HUD shows: the user may add `"MTL_HUD_ENABLED" = "1"` under `[EnvironmentVariables]` in the bottle's
-`cxbottle.conf` themselves, and remove it after (TurboHUD never writes there).
-Then, with the same HUD: `experiments/qt_overlay_probe.py` with many small windows against one window
-holding all sections, to see whether fewer windows would help before rebuilding the overlay.
+### FPS on the user's Mac with the Metal HUD (2026-11-09)
+Apple's Metal Performance HUD (`MTL_HUD_ENABLED=1`, which D3DMetal honours) shows FPS inside the game's
+own picture, adding no window above it; nothing in the bottle or the system changes. How to start it:
+quit TurboHUD, TSU and Steam in the bottle (`pgrep -fl 'steam.exe|TSU.exe|bottle_reader'` must print
+nothing, or the running Steam takes the start without the variable), then, leaving that Terminal open:
+`MTL_HUD_ENABLED=1 ~/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine --bottle Steam "C:\\Program Files (x86)\\Steam\\steam.exe"`,
+and start TSU from that Steam. If no HUD shows, the user may add `"MTL_HUD_ENABLED" = "1"` under
+`[EnvironmentVariables]` in the bottle's `cxbottle.conf` themselves, and remove it after.
+
+In a race against AI on the 120 Hz built-in screen:
+
+| TurboHUD | FPS |
+| --- | --- |
+| closed | 120 (the screen's most) |
+| running, only the local time shown | 120 |
+| running, every section shown | 80 to 110, unsteady |
+
+One window costs nothing that shows here; all 17 cost 10 to 40 FPS. With the CPU recording above, the
+number of windows is what costs, not what they show. TSU has room to spare on this Mac, so the cost shows
+only with many windows; on the tester's it shows sooner. Not measured: every section hidden, and closed
+again at the end (TSU froze then, see below).
+
+Next: `experiments/` gets a probe with 17 small windows against one large window holding 17 boxes, to
+measure the same way before the overlay is rebuilt as one window. One large see-through window may
+cost by its area instead, which only a measurement tells.
 
 ### Other points
 - Custom sessions show only the clock: no race is found in them. Not looked into: what such a session
   holds, and whether the HUD could read it.
-- TSU hung on a black screen once, with TurboHUD quit first (2026-11-06). Not seen again: on the user's Mac
-  (2026-11-08, quitting in either order) and on the tester's (2026-11-08, no reader left, TSU quit
-  cleanly). Close it if it does not come back.
+- TSU freezing when it is quit. Seen twice, each time with TurboHUD quit first:
+
+  | When | TurboHUD | Steam started | TSU |
+  | --- | --- | --- | --- |
+  | tester, 2026-11-06 | quit first | normally | froze on a black screen (Steam's Stop) |
+  | user, 2026-11-08, twice | quit first, and TSU first | normally | quit normally |
+  | tester, 2026-11-08 | quit first | normally | quit cleanly, no reader left |
+  | user, 2026-11-09, 01:10 | quit first (reader ended at once) | from Terminal, Metal HUD | froze, between the race and quitting |
+
+  When frozen: TSU at about 1% CPU (about 300% while running), steam.exe at about 100%, no reader left.
+  The reader opens TSU only to read memory and ask for its layout (`PROCESS_VM_READ`,
+  `PROCESS_QUERY_LIMITED_INFORMATION`), pausing, attaching to or changing nothing; it ends within a
+  second. So no way in the code for it to freeze TSU is known. To tell: the user notes, at each quit of
+  TSU, whether it froze and whether TurboHUD ran; and one session with TurboHUD never started.
 - The tester's Mac had two CrossOver copies; TurboHUD takes the one in `~/Applications` first, whichever
   TSU runs from (not fixed, did not stop the reader there).
 
