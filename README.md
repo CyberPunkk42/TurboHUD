@@ -142,7 +142,8 @@ starting TurboHUD again.
   highlight and outline colours, and makes all sections bigger or smaller at once.
 - **Tint**, for each text section in the move-mode panel, or **Light tint behind all sections**
   for all of them at once (also in the TurboHUD icon's menu), puts
-  a faint dark box behind each section's text, for reading it on bright tracks.
+  a faint dark box behind each section's text, for reading it on bright tracks. The track
+  map's **Tint** turns its dark square on (the default) or off.
 - The **proximity radar** shows your car and the cars around you when one is within
   half a second behind or ahead (faint) up to alongside (fully visible): red beside you, yellow
   closing in.

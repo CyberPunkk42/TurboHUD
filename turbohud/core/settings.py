@@ -22,7 +22,9 @@ MIN_SECTION_SIZE = 8  # a saved section smaller than this is broken
 SPEED_UNITS = ('kmh', 'mph')
 MIN_SCALE = 0.5
 MAX_SCALE = 3.0
-LAYOUT_VERSION = 3  # 2: a text section's box fits closely round its text; 3: 20 lap times
+# 2: a text section's box fits closely round its text; 3: 20 lap times; 4: the track map's
+# dark square is its tint (on), where its saved tint meant nothing before
+LAYOUT_VERSION = 4
 _COLOR = re.compile(r'#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?')
 
 
@@ -52,7 +54,7 @@ class SectionPlace:
     visible: bool = True
     group: str = ''  # sections with the same group (one of GROUPS) move together
     text_centred: bool = False  # its text in the middle of its box, not at the left
-    tint: bool = False  # a light tint behind its text while locked
+    tint: bool = False  # a light tint behind its text while locked; for the track map, its dark square
 
 
 @dataclass(frozen=True)
@@ -61,7 +63,7 @@ class Settings:
     theme: Theme = field(default_factory=Theme)
     sections: dict = field(default_factory=dict)  # section name -> SectionPlace
     speed_unit: str = 'kmh'  # 'kmh' or 'mph'
-    backdrop: bool = False  # every text section has its tint on (see SectionPlace.tint)
+    backdrop: bool = False  # every section with a tint has it on (see SectionPlace.tint)
     map_others: bool = False  # the track map also shows the other cars, as faint grey dots
     radar_cone: bool = True  # the proximity radar shows the slipstream behind cars ahead
     layout_version: int = 1  # how to read the section sizes: LAYOUT_VERSION is the latest

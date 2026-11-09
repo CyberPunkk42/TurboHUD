@@ -35,6 +35,7 @@ from turbohud.core.hud import (
     content_shift,
     content_size,
     drawn_scale,
+    has_tint,
     help_lines,
     hud_lines,
     level_bar,
@@ -166,7 +167,7 @@ class SectionWindow(QWidget):
         self.radar = None  # the radar's turbohud.core.race.RadarView; None: not shown
         self.trackmap = None  # the track map's turbohud.core.trackmap.TrackMapView; None: not shown
         self.level = None  # (0 to 1, colour) for a section with a level bar
-        self.backdrop = False  # a light tint behind its text while locked (its own option)
+        self.backdrop = False  # its tint (its own option): behind the text while locked, the map's square
         self.locked = True
         self.wanted = True  # the player wants it shown
         self.group = ''  # sections of the same group move together (move mode)
@@ -471,9 +472,10 @@ class SectionWindow(QWidget):
             size = min(self.width(), self.height())
             left, top = (self.width() - size) / 2, (self.height() - size) / 2
             box = QRectF(left, top, size, size).adjusted(1, 1, -1, -1)
-            painter.setPen(Qt.NoPen)
-            painter.setBrush(QColor(*MAP_BACK))
-            painter.drawRoundedRect(box, 10, 10)
+            if self.backdrop:  # its Tint option, also in move mode, to see what it does
+                painter.setPen(Qt.NoPen)
+                painter.setBrush(QColor(*MAP_BACK))
+                painter.drawRoundedRect(box, 10, 10)
             outline = view.outline
             scale, x_off, y_off = map_transform(outline.bounds, (size, size), size * MAP_PADDING)
 
@@ -746,9 +748,13 @@ class MovePanel(QWidget):
                 )
                 grid.addWidget(centre, row, 4)
                 self.centres[section.name] = centre
-            if not section.drawing:
+            if has_tint(section):
                 tint = QCheckBox('Tint')
-                tint.setToolTip('A light tint behind the text of this section while locked')
+                tint.setToolTip(
+                    'The dark square behind the track map'
+                    if section.drawing
+                    else 'A light tint behind the text of this section while locked'
+                )
                 tint.toggled.connect(lambda checked, name=section.name: self.tint_changed.emit(name, checked))
                 grid.addWidget(tint, row, 5)
                 self.tints[section.name] = tint

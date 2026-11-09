@@ -780,3 +780,8 @@ its "Recent changes".
   none). Move mode keeps a window per section, so dragging, groups and Undo are as before. A section asks the
   canvas to draw it again where it is and where it was; moves and resizes while locked do too.
   `TURBOHUD_ONE_WINDOW=0` turns it off; Linux and Windows keep a window each for now. Not yet seen over TSU.
+- 2026-11-09: The track map has a Tint tick box in the move-mode panel, asked for by the user, like the text
+  sections: it turns the map's dark square on or off (off leaves the road and the dots). It is on by default
+  and for maps saved before (`settings.json` goes to layout 4 once, `settings.before-layout-4.json` keeps the
+  file as it was), kept with the section and in presets, with Undo, and "Light tint behind all sections"
+  includes it. Move mode shows the choice too. Not yet seen over TSU.
