@@ -13,7 +13,7 @@ import sys
 import time
 from dataclasses import replace
 
-from PySide6.QtCore import QPointF, QRectF, Qt, Signal
+from PySide6.QtCore import QPointF, QRect, QRectF, Qt, Signal
 from PySide6.QtGui import QColor, QPainter, QPainterPath, QPen, QPolygonF
 from PySide6.QtWidgets import (
     QCheckBox,
@@ -173,6 +173,9 @@ class SectionWindow(QWidget):
         self.text_centred = False  # its text in the middle of its box (an option)
         self.delta_view = None  # the delta bar's content (a DeltaBarView)
         self.radar_cone = True  # the radar's sample in move mode shows slipstream cones (an option)
+        # While locked, a HudCanvas may draw this section with every other in one window per
+        # screen, and this window stays hidden: 17 windows above the game cost it frames.
+        self.canvas = None
         self.setWindowTitle(f'TurboHUD - {section.label}')
         self.setAttribute(Qt.WA_TranslucentBackground)
         self.setAttribute(Qt.WA_ShowWithoutActivating)
@@ -197,8 +200,23 @@ class SectionWindow(QWidget):
         return (native and native(self)) or (self.x(), self.y(), self.width(), self.height())
 
     def show_on_top(self):
+        if self.on_canvas:
+            self.hide()  # the canvas draws it
+            return
         self.show()
         log.info('%s: %s', self.section.name, self.native.raise_window(self))
+
+    @property
+    def on_canvas(self):
+        """Whether the canvas draws this section now, not its own window: while locked."""
+        return self.canvas is not None and self.locked
+
+    def update(self, *args):
+        """Draw the section again: on the canvas while it draws it, else on this window."""
+        if self.on_canvas:
+            self.canvas.redraw(self)
+        else:
+            super().update(*args)
 
     def show_content(
         self, rows, pedals=None, opacity=None, radar=None, trackmap=None, level=None, delta_view=None
@@ -226,8 +244,8 @@ class SectionWindow(QWidget):
             movable(self, not locked)
         self.grip.setVisible(not locked)
         self.setCursor(Qt.ArrowCursor if locked else Qt.OpenHandCursor)
-        if not in_place:
-            self.show_on_top()  # changing a window flag hides the window
+        if not in_place or self.canvas is not None:
+            self.show_on_top()  # changing a window flag hides the window; the canvas hides it
         self.update()
 
     def set_wanted(self, wanted):
@@ -246,6 +264,8 @@ class SectionWindow(QWidget):
         self.grip.setVisible(wanted and not self.locked)
         if not wanted and getattr(self.native, 'hides_windows', False):
             self.hide()
+            if self.on_canvas:
+                self.canvas.redraw(self)  # its place on the canvas is cleared
             return
         if not in_place:
             self.show_on_top()
@@ -255,32 +275,30 @@ class SectionWindow(QWidget):
         if not self.locked and event.button() == Qt.LeftButton:
             self.windowHandle().startSystemMove()
 
-    def paintEvent(self, event):
+    def paintEvent(self, _event):
         began = time.perf_counter()
-        self._paint(event)
+        painter = QPainter(self)
+        self.draw(painter)
+        painter.end()
         SectionWindow.drawing_time += time.perf_counter() - began
 
-    def _paint(self, _event):
-        painter = QPainter(self)
+    def draw(self, painter):
+        """Draw the section into `painter`, its top-left corner at (0, 0) and as large as
+        this window: on the window itself, or on a HudCanvas that holds every section."""
         if not self.wanted:
-            painter.end()
             return
         painter.setRenderHint(QPainter.Antialiasing)
         if self.section.drawing == 'radar':
             self._paint_radar(painter)
-            painter.end()
             return
         if self.section.drawing == 'map':
             self._paint_map(painter)
-            painter.end()
             return
         if self.section.drawing == 'delta':
             self._paint_delta(painter)
-            painter.end()
             return
         if self.section.bar:
             self._paint_bar(painter)
-            painter.end()
             return
         rows = self.rows
         if not self.locked:
@@ -318,7 +336,6 @@ class SectionWindow(QWidget):
                 content_height = content_size(rows, scale, text_width)[1]
                 draw_level(painter, level_bar(self.width(), content_height, scale, *level))
         painter.translate(0, -down)
-        painter.end()
 
     def _paint_backdrop(self, painter, rows, scale, bars, down=0):
         """The light tint, only as large as the text (and pedal bars): half the margin
@@ -564,6 +581,80 @@ class SectionWindow(QWidget):
             painter.drawText(
                 self.rect().adjusted(6, 0, -20, 0), Qt.AlignVCenter | Qt.AlignLeft, self.section.label
             )
+
+
+class HudCanvas(QWidget):
+    """One see-through, click-through window over a whole screen that draws every shown
+    section at its place, while locked. Each section in its own window cost the game
+    frames: on a Mac 120 FPS fell to 85 with 17 windows, and stayed at 115 with the same
+    boxes in one window (experiments/window_count_probe.py, 2026-11-09). The sections'
+    own windows stay hidden then and keep their places; in move mode they come back."""
+
+    def __init__(self, native, place, windows):
+        super().__init__(None, window_flags())
+        self.native = native
+        self.windows = windows  # every SectionWindow, in drawing order
+        self.drawn = {}  # section name -> QRect (screen) it was last asked to be drawn in
+        self.setWindowTitle('TurboHUD')
+        self.setAttribute(Qt.WA_TranslucentBackground)
+        self.setAttribute(Qt.WA_ShowWithoutActivating)
+        self.setWindowFlag(Qt.WindowTransparentForInput, True)
+        self.setGeometry(*place)
+
+    def redraw(self, window):
+        """Draw `window`'s section again, where it is and where it was (it may have moved)."""
+        now = QRect(window.x(), window.y(), window.width(), window.height())
+        before = self.drawn.get(window.section.name)
+        self.drawn[window.section.name] = now
+        for rect in (before, now):
+            if rect is None:
+                continue
+            local = rect.translated(-self.x(), -self.y()).adjusted(-2, -2, 2, 2).intersected(self.rect())
+            if not local.isEmpty():
+                QWidget.update(self, local)
+
+    def show_on_top(self):
+        self.show()
+        log.info('canvas: %s', self.native.raise_window(self))
+
+    def paintEvent(self, event):
+        began = time.perf_counter()
+        painter = QPainter(self)
+        area = event.rect()
+        painter.setCompositionMode(QPainter.CompositionMode_Clear)  # what was there goes
+        painter.fillRect(area, Qt.transparent)
+        painter.setCompositionMode(QPainter.CompositionMode_SourceOver)
+        for window in self.windows:
+            if not window.wanted:
+                continue
+            place = QRect(window.x() - self.x(), window.y() - self.y(), window.width(), window.height())
+            if not place.intersects(area):
+                continue
+            painter.save()
+            painter.translate(place.topLeft())
+            painter.setClipRect(QRect(0, 0, place.width(), place.height()))
+            window.draw(painter)
+            painter.restore()
+        painter.end()
+        SectionWindow.drawing_time += time.perf_counter() - began
+
+
+class HudCanvases:
+    """A HudCanvas for each screen, as one: a section is drawn on every screen it reaches."""
+
+    def __init__(self, native, screens, windows):
+        self.canvases = [HudCanvas(native, screen, windows) for screen in screens]
+
+    def redraw(self, window):
+        for canvas in self.canvases:
+            canvas.redraw(window)
+
+    def set_shown(self, shown):
+        for canvas in self.canvases:
+            if shown:
+                canvas.show_on_top()
+            else:
+                canvas.hide()
 
 
 class MovePanel(QWidget):

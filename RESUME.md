@@ -67,6 +67,11 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-09: While locked, on the Mac, every section is drawn in one see-through window per screen, asked
+  for by the user: a probe with their layout gave 85 FPS with 17 windows and 115 with one window (120 with
+  none). Move mode keeps a window per section, so dragging, groups and Undo are as before. A section asks the
+  canvas to draw it again where it is and where it was; moves and resizes while locked do too.
+  `TURBOHUD_ONE_WINDOW=0` turns it off; Linux and Windows keep a window each for now. Not yet seen over TSU.
 - 2026-11-09: A probe for the overlay's FPS cost, `experiments/window_count_probe.py`: 17 small windows
   against one large window holding the same 17 boxes, in TurboHUD's own layout, phase by phase on its own.
   It tells whether rebuilding the overlay as one window would help. Seen running with real windows on the
