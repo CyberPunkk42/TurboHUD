@@ -138,6 +138,21 @@ class DeltaBarPlaceTests(unittest.TestCase):
         self.assertGreater(bar[1], flag[1] + flag[3])
 
 
+class TintTests(unittest.TestCase):
+    def test_text_sections_and_the_track_map_have_a_tint(self):
+        tinted = {section.name for section in hud.RACE_SECTIONS if hud.has_tint(section)}
+        self.assertIn('trackmap', tinted)
+        self.assertIn('fuel', tinted)
+        self.assertTrue({'radar', 'blueflag', 'deltabar'}.isdisjoint(tinted))
+
+    def test_the_map_starts_with_its_square_and_text_follows_the_option(self):
+        sections = {section.name: section for section in hud.RACE_SECTIONS}
+        self.assertTrue(hud.default_tint(sections['trackmap']))
+        self.assertTrue(hud.default_tint(sections['trackmap'], backdrop=False))
+        self.assertFalse(hud.default_tint(sections['fuel']))
+        self.assertTrue(hud.default_tint(sections['fuel'], backdrop=True))
+
+
 class TextCanCentreTests(unittest.TestCase):
     def test_sections_with_plain_text_can(self):
         can = {section.name for section in hud.RACE_SECTIONS if hud.text_can_centre(section)}

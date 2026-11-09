@@ -265,6 +265,18 @@ LAP_TIME_ROWS = 20  # how many drivers the lap times section is made for
 OLD_LAP_TIME_ROWS = 16  # before layout 3
 
 
+def has_tint(section):
+    """Whether a section has a Tint option: every text section (a light tint behind its
+    text) and the track map (its dark square)."""
+    return not section.drawing or section.drawing == 'map'
+
+
+def default_tint(section, backdrop=False):
+    """A section's tint where nothing saved says: the track map has its dark square, as
+    before it had the option; a text section follows `backdrop` (Settings.backdrop)."""
+    return True if section.drawing == 'map' else backdrop
+
+
 def text_can_centre(section):
     """Whether a section's text can go in the middle of its box: not the speed, which is
     always between its pedal bars, nor a drawing, nor a list with columns."""

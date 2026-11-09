@@ -12,7 +12,7 @@ from functools import partial
 from pathlib import Path
 
 from turbohud import __version__
-from turbohud.core.hud import CLOCK_SECTIONS, RACE_SECTIONS, more_lap_rows_place, tight_place
+from turbohud.core.hud import CLOCK_SECTIONS, RACE_SECTIONS, default_tint, more_lap_rows_place, tight_place
 from turbohud.core.settings import (
     LAYOUT_VERSION,
     LOG_FILE,
@@ -49,8 +49,12 @@ def upgrade_layout(settings, path, ink):
                 box = (place.x, place.y, place.width, place.height)
                 if version < 2:
                     box = tight_place(known[name], box, scale, ink)
-                x, y, width, height = more_lap_rows_place(known[name], box, scale, ink)
+                if version < 3:
+                    box = more_lap_rows_place(known[name], box, scale, ink)
+                x, y, width, height = box
                 place = replace(place, x=x, y=y, width=width, height=height)
+                if version < 4 and known[name].drawing == 'map':
+                    place = replace(place, tint=True)  # its dark square, always there before
             places[name] = place
         return places
 
@@ -210,6 +214,7 @@ def run(args, folder):
         centred,
         drawing_place,
         first_launch,
+        has_tint,
         local_time_rows,
         main_screen,
         match_sizes,
@@ -336,7 +341,7 @@ def run(args, folder):
         place = (saved.x, saved.y, saved.width, saved.height) if saved else defaults[name]
         place = fit_on_screens(place, screens)
         window.setGeometry(*place)
-        window.backdrop = saved.tint if saved else settings.backdrop
+        window.backdrop = saved.tint if saved else default_tint(window.section, settings.backdrop)
         window.radar_cone = settings.radar_cone
         window.show_on_top()
         window.set_wanted(saved.visible if saved else True)
@@ -359,7 +364,7 @@ def run(args, folder):
         write_settings()
 
     def all_tinted():
-        return all(w.backdrop for w in windows.values() if not w.section.drawing)
+        return all(w.backdrop for w in windows.values() if has_tint(w.section))
 
     def write_settings():
         try:
@@ -409,8 +414,10 @@ def run(args, folder):
         log.info('speed in %s', settings.speed_unit)
 
     def set_backdrop(backdrop):
-        """The tint on or off for every section at once."""
+        """The tint on or off for every section that has one, the track map's square too."""
         for name, window in windows.items():
+            if not has_tint(window.section):
+                continue
             window.backdrop = backdrop
             panel.set_tint(name, backdrop)
             window.update()

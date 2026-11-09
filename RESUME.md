@@ -70,6 +70,11 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-09: The track map has a Tint tick box in the move-mode panel, asked for by the user, like the text
+  sections: it turns the map's dark square on or off (off leaves the road and the dots). It is on by default
+  and for maps saved before (`settings.json` goes to layout 4 once, `settings.before-layout-4.json` keeps the
+  file as it was), kept with the section and in presets, with Undo, and "Light tint behind all sections"
+  includes it. Move mode shows the choice too. Not yet seen over TSU.
 - 2026-11-09: While locked, on the Mac, every section is drawn in one see-through window per screen, asked
   for by the user: a probe with their layout gave 85 FPS with 17 windows and 115 with one window (120 with
   none). Move mode keeps a window per section, so dragging, groups and Undo are as before. A section asks the

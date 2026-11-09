@@ -4,6 +4,7 @@ import sys
 import tempfile
 import threading
 import unittest
+from dataclasses import replace
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -33,7 +34,7 @@ class UpgradeLayoutTests(unittest.TestCase):
         self.assertEqual(place.height, 50)
         self.assertEqual((place.visible, place.group), (False, 'A'))
         self.assertEqual(settings.load_settings(self.path), upgraded)
-        self.assertEqual(self.path.with_name('settings.before-layout-3.json').read_bytes(), old)
+        self.assertEqual(self.path.with_name('settings.before-layout-4.json').read_bytes(), old)
         # A second start finds them converted.
         self.assertEqual(app.upgrade_layout(upgraded, self.path, self.ink), upgraded)
 
@@ -66,6 +67,25 @@ class UpgradeLayoutTests(unittest.TestCase):
         settings.save_settings(self.path, current)
         upgraded = app.upgrade_layout(settings.load_settings(self.path), self.path, self.ink)
         self.assertEqual(upgraded.sections['localtime'], place)
+
+    def test_a_lap_times_box_from_layout_3_keeps_its_size(self):
+        settings.save_settings(self.path, self.lap_times(3, 300))
+        upgraded = app.upgrade_layout(settings.load_settings(self.path), self.path, self.ink)
+        self.assertEqual(upgraded.sections['laptimes'].height, 300)
+
+    def test_the_track_map_gets_its_dark_square_once_also_in_a_preset(self):
+        place = settings.SectionPlace(10, 20, 240, 240, tint=False)  # saved when its tint meant nothing
+        old = settings.Settings(
+            sections={'trackmap': place}, presets={1: {'trackmap': place}}, layout_version=3
+        )
+        settings.save_settings(self.path, old)
+        upgraded = app.upgrade_layout(settings.load_settings(self.path), self.path, self.ink)
+        self.assertTrue(upgraded.sections['trackmap'].tint)
+        self.assertTrue(upgraded.presets[1]['trackmap'].tint)
+        self.assertEqual(upgraded.sections['trackmap'], replace(place, tint=True))
+        # Turned off afterwards, it stays off.
+        off = replace(upgraded, sections={'trackmap': place})
+        self.assertFalse(app.upgrade_layout(off, self.path, self.ink).sections['trackmap'].tint)
 
     def test_converted_sizes_stay(self):
         current = self.saved(layout_version=settings.LAYOUT_VERSION)

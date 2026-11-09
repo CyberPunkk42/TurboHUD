@@ -394,7 +394,7 @@ class RedrawTests(unittest.TestCase):
                 edge = [image.pixelColor(image.width() - 1, y) for y in range(image.height())]
                 self.assertEqual([c for c in edge if c.alpha() > 0 and c != QColor(0, 0, 0, 0)], [])
 
-    def drawn(self, name, rows, size, backdrop=False):
+    def drawn(self, name, rows, size, backdrop=False, locked=True):
         from turbohud.core.hud import RACE_SECTIONS
         from turbohud.core.settings import Theme
         from turbohud.overlay.window import SectionWindow
@@ -407,8 +407,22 @@ class RedrawTests(unittest.TestCase):
         self.addCleanup(window.close)
         window.resize(*size)
         window.backdrop = backdrop
+        window.locked = locked
         window.show_content(rows)
         return window.grab().toImage()
+
+    def test_the_maps_tint_is_its_dark_square(self):
+        from PySide6.QtGui import QColor
+
+        from turbohud.overlay.window import MAP_BACK
+
+        def corner(backdrop):
+            image = self.drawn('trackmap', [], (240, 240), backdrop=backdrop, locked=False)
+            return image.pixelColor(14, 14)
+
+        self.assertGreater(corner(True).alpha(), 0)
+        self.assertEqual(corner(True).alpha(), QColor(*MAP_BACK).alpha())
+        self.assertEqual(corner(False).alpha(), 0)
 
     def test_only_the_number_changes_and_the_label_stays(self):
         from turbohud.core.hud import Row
@@ -703,13 +717,15 @@ class MovePanelPresetTests(unittest.TestCase):
                 )
                 self.assertEqual(hud.Sizes.for_scale(before).small, hud.Sizes.for_scale(now).small)
 
-    def test_text_sections_have_a_tint_tick_box_and_drawings_none(self):
+    def test_text_sections_and_the_map_have_a_tint_tick_box_and_other_drawings_none(self):
         from turbohud.core.hud import RACE_SECTIONS
 
         panel = self.panel()
         got = []
         panel.tint_changed.connect(lambda *change: got.append(change))
-        self.assertEqual(set(panel.tints), {s.name for s in RACE_SECTIONS if not s.drawing})
+        self.assertEqual(set(panel.tints), {s.name for s in RACE_SECTIONS if not s.drawing} | {'trackmap'})
+        panel.tints['trackmap'].setChecked(True)
+        self.assertEqual(got.pop(), ('trackmap', True))
         panel.tints['fuel'].setChecked(True)
         self.assertEqual(got, [('fuel', True)])
         panel.set_tint('fuel', False)  # from a preset or Undo: no change to report
