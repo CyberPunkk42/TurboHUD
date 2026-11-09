@@ -22,6 +22,9 @@ switch a running TurboHUD to move mode. The same goes for a build's `--smoke`: w
 built app only hands it "move" and quits, so the smoke test passes without starting the new app.
 
 ## Not yet seen in a race
+- The track map's kept road (2026-11-09): the map should look as before (road, start line, tint, the purple
+  or green road after a fast lap, the move-mode oval), and TurboHUD's CPU with only the map shown should
+  drop from about 23% of a core (`top -pid $(pgrep -f launch_turbohud)` during a race).
 - Race reads in one go (2026-11-09): the log's `race reads` line should say 1 to 3 trips a read (it said
   about 20 on the tester's Mac and 75 to 88 in races with AI) and how many reads of the game they made;
   the median read time, about 20 to 30 ms before, should drop. Also whether TSU's FPS with nothing shown
