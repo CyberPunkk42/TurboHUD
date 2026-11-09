@@ -119,6 +119,12 @@ def setup_log(folder):
     )
 
 
+def one_window_wanted(native, environ=os.environ):
+    """Whether the sections are drawn in one window per screen while locked: where the
+    platform's Native says it works (the Mac), unless TURBOHUD_ONE_WINDOW=0 turns it off."""
+    return bool(getattr(native, 'one_window', False)) and environ.get('TURBOHUD_ONE_WINDOW', '1') != '0'
+
+
 def tray_text(status, warning=None):
     """The tray icon's tooltip: what TurboHUD is doing, and a warning if there is one."""
     return f'TurboHUD - {status}' + (f'\n{warning}' if warning else '')
@@ -214,7 +220,7 @@ def run(args, folder):
     from turbohud.hud.painter import text_ink, text_width
     from turbohud.overlay import HOTKEY_LOCK, HOTKEY_PRESETS, HOTKEY_QUIT, choose_platform, native_for
     from turbohud.overlay.settings_window import SettingsWindow
-    from turbohud.overlay.window import MovePanel, SectionWindow, window_flags
+    from turbohud.overlay.window import HudCanvases, MovePanel, SectionWindow, window_flags
 
     platform = choose_platform()
     if platform is not None:
@@ -301,6 +307,15 @@ def run(args, folder):
     usable = [screen.availableGeometry().getRect() for screen in QGuiApplication.screens()]
     settings = upgrade_layout(settings, path, text_ink)
     windows = {section.name: SectionWindow(native, settings.theme, section) for section in layout}
+    canvas = None
+    if one_window_wanted(native):
+        # While locked, every section in one window per screen: one window per section cost the
+        # game frames (experiments/window_count_probe.py). Before the sections are first shown.
+        canvas = HudCanvases(native, screens, list(windows.values()))
+        for window in windows.values():
+            window.canvas = canvas
+        canvas.set_shown(True)
+        log.info('locked: the sections in one window per screen (%d)', len(screens))
     first = {name: window.base for name, window in windows.items()}
     screen = main_screen(screens)
     defaults = first_launch(layout, first, screen[:2] if screen else (0, 0))
@@ -366,6 +381,8 @@ def run(args, folder):
         locked = value
         for window in windows.values():
             window.set_locked(value)
+        if canvas is not None:
+            canvas.set_shown(value)  # locked: the canvas; move mode: the sections' own windows
         move_action.setChecked(not value)
         was_active = False
         if value:
@@ -474,6 +491,8 @@ def run(args, folder):
             native_move(window, place, settle)
         else:
             window.setGeometry(*place)
+        if window.on_canvas:
+            window.update()  # a hidden window does not draw itself again: the canvas does
 
     def follow_groups(now):
         """Move mode: move the rest of a group along with the section being dragged; once

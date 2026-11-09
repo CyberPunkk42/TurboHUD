@@ -34,8 +34,9 @@ hit). The Mac app now does this by itself (`turbohud/tsu/bottle.py`, reader in
   gave back most of the loss with nothing shown (2026-11-08: 107 of 115 FPS, from 78). Shown sections still
   cost frames, to about 60 with all: the windows above the game, not the reads. A CPU recording on the
   user's Mac (2026-11-09) has each window cost the same, whatever it shows: so not fewer redraws but fewer
-  windows, perhaps all sections in one. The Metal HUD on the user's Mac (2026-11-09): 120 FPS closed and
-  with one section, 80 to 110 with all. Next: a probe of 17 windows against one, then perhaps one window.
+  windows. The Metal HUD on the user's Mac (2026-11-09): 120 FPS closed and with one section, 80 to 110
+  with all; the window count probe: 17 windows 85, one window 115. Built: locked, on the Mac, all sections
+  in one window per screen. Next: check it over TSU (`docs/CONTINUE_HERE.md`), then the tester's build.
   TSU froze once more on quitting, with TurboHUD quit first (`docs/CONTINUE_HERE.md`, "Other points").
 - Races on the Mac: confirmed by the user on 2026-11-08, offline with 19 AI, in Fullscreen and
   hosting about 13 AI online (`docs/CONTINUE_HERE.md`, "Test list"). As a driver online the race

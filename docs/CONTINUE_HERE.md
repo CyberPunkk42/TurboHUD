@@ -123,10 +123,16 @@ number of windows is what costs, not what they show. TSU has room to spare on th
 only with many windows; on the tester's it shows sooner. Not measured: every section hidden, and closed
 again at the end (TSU froze then, see below).
 
-Next: `experiments/window_count_probe.py` (see `experiments/README.md`): 17 small windows against one
-large window holding the same 17 boxes, measured the same way, before the overlay is rebuilt as one
-window. One large see-through window (nearly the whole screen with the user's layout) may cost by its
-area instead, which only the measurement tells.
+The probe (`experiments/window_count_probe.py`, 2026-11-09, the user's layout, one large window
+nearly the whole screen): nothing 120 FPS, 17 windows 85, one window 115, nothing again 120. So the
+number of windows costs, not their area.
+
+Built the same day (backlog item 3): locked, on the Mac, every section is drawn in one window per screen
+(`HudCanvas` in `turbohud/overlay/window.py`); move mode keeps a window per section. Not yet seen over
+TSU. To check: the Metal HUD with every section shown (expected near 115 to 120, from 80 to 110); move
+mode as before (drag, resize, groups, Undo); while locked, a preset shortcut and "bigger"/"smaller" in
+the settings moving the sections with nothing left behind; the tint and the theme; the map and the
+radar. If anything is wrong, `TURBOHUD_ONE_WINDOW=0 sh run_turbohud.sh` goes back to a window each.
 
 ### Other points
 - Custom sessions show only the clock: no race is found in them. Not looked into: what such a session

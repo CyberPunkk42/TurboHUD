@@ -78,6 +78,7 @@ carbon.GetEventParameter.argtypes = [c_void_p, c_uint32, c_uint32, c_void_p, c_u
 class Native:
     name = 'macOS'
     hides_windows = True  # a hidden section leaves the screen; showing it again stays in place
+    one_window = True  # locked, every section drawn in one window per screen (HudCanvas)
 
     def __init__(self):
         self.app = send(cls('NSApplication'), 'sharedApplication')

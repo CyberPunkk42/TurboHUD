@@ -723,3 +723,88 @@ class MovePanelPresetTests(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+@unittest.skipUnless(importlib.util.find_spec('PySide6'), 'needs Qt')
+class CanvasTests(unittest.TestCase):
+    """Locked, every section drawn in one window per screen (asked for on 2026-11-09: on a
+    Mac 17 windows cost 35 FPS where one window with the same boxes cost 5)."""
+
+    @classmethod
+    def setUpClass(cls):
+        os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
+        from PySide6.QtWidgets import QApplication
+
+        cls.app = QApplication.instance() or QApplication([])
+
+    def setUp(self):
+        from turbohud.core.hud import RACE_SECTIONS
+        from turbohud.core.race import DeltaBarView
+        from turbohud.core.settings import Theme
+        from turbohud.overlay.window import HudCanvases, SectionWindow
+
+        class Native:
+            hides_windows = True
+            one_window = True
+
+            def raise_window(self, window):
+                return 'test'
+
+        self.native = Native()
+        self.bar = SectionWindow(self.native, Theme(), next(s for s in RACE_SECTIONS if s.name == 'deltabar'))
+        self.addCleanup(self.bar.close)
+        self.bar.setGeometry(100, 100, 400, 40)
+        self.canvases = HudCanvases(self.native, [(0, 0, 800, 600)], [self.bar])
+        self.canvas = self.canvases.canvases[0]
+        self.addCleanup(self.canvas.close)
+        self.bar.canvas = self.canvases
+        self.bar.show_on_top()
+        self.bar.show_content([], delta_view=DeltaBarView(0.5, -1.0, ''))
+        self.bar.update()
+
+    def pixel(self, x, y):
+        return self.canvas.grab().toImage().pixelColor(x, y)
+
+    def test_the_canvas_draws_the_section_at_its_place_and_its_window_stays_hidden(self):
+        green = self.pixel(100 + 280, 120)  # ahead and gaining: the right half, green
+        self.assertGreater(green.green(), green.red())
+        self.assertEqual(self.pixel(50, 50).alpha(), 0)  # elsewhere the game shows through
+        self.assertFalse(self.bar.isVisible())
+
+    def test_a_redraw_while_locked_goes_to_the_canvas(self):
+        asked = []
+        self.bar.canvas = type('Canvas', (), {'redraw': lambda _self, window: asked.append(window)})()
+        self.bar.update()
+        self.assertEqual(asked, [self.bar])
+
+    def test_a_moved_section_leaves_nothing_where_it_was(self):
+        self.pixel(0, 0)  # drawn once at (100, 100)
+        self.bar.setGeometry(100, 300, 400, 40)
+        self.bar.update()
+        self.assertEqual(self.pixel(100 + 280, 120).alpha(), 0)
+        moved = self.pixel(100 + 280, 320)
+        self.assertGreater(moved.green(), moved.red())
+
+    def test_a_hidden_window_moved_without_a_redraw_is_still_drawn_where_it_now_is(self):
+        # As a preset or "all sections bigger" moves it while locked: the canvas draws from
+        # where the window is, not from where it was last asked to.
+        self.bar.setGeometry(300, 400, 400, 40)
+        moved = self.pixel(300 + 280, 420)
+        self.assertGreater(moved.green(), moved.red())
+
+    def test_a_section_hidden_by_its_tick_box_goes_from_the_canvas(self):
+        self.bar.set_wanted(False)
+        self.assertEqual(self.pixel(100 + 280, 120).alpha(), 0)
+
+    def test_in_move_mode_the_section_has_its_own_window_again(self):
+        self.bar.set_locked(False)
+        self.assertTrue(self.bar.isVisible())
+        self.bar.set_locked(True)
+        self.assertFalse(self.bar.isVisible())
+
+    def test_it_is_on_where_the_platform_says_so_unless_turned_off(self):
+        from turbohud.app import one_window_wanted
+
+        self.assertTrue(one_window_wanted(self.native, {}))
+        self.assertFalse(one_window_wanted(self.native, {'TURBOHUD_ONE_WINDOW': '0'}))
+        self.assertFalse(one_window_wanted(object(), {}))  # Linux and Windows: not yet

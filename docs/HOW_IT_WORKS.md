@@ -12,7 +12,11 @@ clock and the local time. The rest of this document describes Linux where they d
 ## What it shows
 
 Each part of the HUD is its own box ("section"). In move mode you drag, resize, hide,
-group and centre them; their places are saved.
+group and centre them; their places are saved. In move mode each section has a window of
+its own. While locked, on the Mac, all of them are drawn in one see-through window per
+screen instead: every window above the game costs it frames (17 windows took a Mac from
+120 to 85 FPS, one window with the same boxes to 115). `TURBOHUD_ONE_WINDOW=0` turns this
+off. On Linux and Windows each section keeps its own window for now.
 
 | Section | What it shows |
 |---|---|
