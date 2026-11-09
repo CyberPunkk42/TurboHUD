@@ -1120,8 +1120,10 @@ class LapTimesTests(unittest.TestCase):
         self.assertEqual([r.text for r in rows[1:]], ['1. Done', '2. Ahead', '3. Me', '4. Fresh'])
         self.assertEqual([r.middle for r in rows[1:]], ['0:02.900', '0:03.900', '0:03.800', '-'])
         self.assertEqual([r.right for r in rows[1:]], ['Fin', '0:01.2', '0:01.0', '0:09.0'])
-        # The race's fastest lap is green; my name in the accent colour.
-        self.assertEqual([r.middle_color for r in rows[1:]], ['ahead', 'text', 'text', 'text'])
+        # The race's fastest lap is purple, as in F1; my name in the accent colour.
+        self.assertEqual(
+            [r.middle_color for r in rows[1:]], [race.SESSION_BEST_COLOR, 'text', 'text', 'text']
+        )
         self.assertEqual(rows[3].color, 'accent')
 
     def test_at_most_the_most_drivers_it_shows(self):

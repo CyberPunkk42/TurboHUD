@@ -122,7 +122,8 @@ starting TurboHUD again.
 
 - The HUD is made of sections, each in its own small box: lap and time left, the running
   lap, the delta to your best lap, last and best lap (purple for the race's fastest lap,
-  green for your best short of it, white for a slower lap), fuel and tires left (with the laps
+  green for your best short of it, white for a slower lap; the track map's road shows
+  the same purple or green for 6 seconds after such a lap), fuel and tires left (with the laps
   they last), health (in events with damage), the draft (slipstream) with the downforce it costs, the fuel to spare or short for the finish, speed with throttle and brake
   bars (km/h or mph), the player list with flags, pit status and gaps, the lap times
   (every driver's best lap and running lap), the local time

@@ -791,3 +791,7 @@ its "Recent changes".
   driver's best lap, else white (no better than the best before, also when as fast). At the finish the last
   lap keeps its colour. The other drivers' best laps come from their start-line passes, as in the lap
   times list (`race.lap_colours`). No more reads of the game. Not yet seen in a race.
+- 2026-11-09: Purple for the race's fastest lap in the lap times list (it was green), and the track map's road
+  takes a fast lap's colour, both asked for by the user: for 6 s of race clock after the driver ends a lap,
+  purple for the race's fastest lap, green for a best of their own, then white again; a slower lap leaves
+  it white (`race.lap_flash`). Not yet seen in a race.

@@ -491,7 +491,11 @@ class SectionWindow(QWidget):
             painter.setBrush(Qt.NoBrush)
             painter.setPen(QPen(QColor(*MAP_ROAD_EDGE), road + 3, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin))
             painter.drawPath(path)
-            painter.setPen(QPen(QColor(*MAP_ROAD), road, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin))
+            colour = (
+                QColor(view.road) if view.road else QColor(*MAP_ROAD)
+            )  # a fast lap's colour, for a moment
+            colour.setAlpha(MAP_ROAD[3])
+            painter.setPen(QPen(colour, road, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin))
             painter.drawPath(path)
             if outline.start is not None:
                 # The start line: across the road, a little wider than it.
