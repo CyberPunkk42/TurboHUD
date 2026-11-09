@@ -31,6 +31,28 @@ class SettingsWindowTests(unittest.TestCase):
 
         return SettingsWindow(FakeNative(), window_flags(), theme or Theme(), **options)
 
+    OPTIONS = (
+        ('mph', 'Speed in mph', False, 'tip'),
+        ('sector_bars', 'Sector bars below the last and best lap', True, 'tip'),
+    )
+
+    def test_the_options_show_and_say_which_changed(self):
+        window = self.window(options=self.OPTIONS)
+        self.assertEqual(
+            {key: box.isChecked() for key, box in window.options.items()}, {'mph': False, 'sector_bars': True}
+        )
+        got = []
+        window.option_changed.connect(lambda *change: got.append(change))
+        window.options['mph'].click()
+        self.assertEqual(got, [('mph', True)])
+        window.set_option('sector_bars', False)  # changed in the menu: nothing to say back
+        self.assertEqual(got, [('mph', True)])
+        self.assertFalse(window.options['sector_bars'].isChecked())
+        window.set_option('radar_cone', True)  # not listed: nothing happens
+
+    def test_without_options_there_are_none(self):
+        self.assertEqual(self.window().options, {})
+
     def test_the_warning_times_show_and_say_when_they_change(self):
         window = self.window(blue_seconds=3.0, radar_seconds=0.8)
         self.assertEqual((window.blue_seconds.value(), window.radar_seconds.value()), (3.0, 0.8))

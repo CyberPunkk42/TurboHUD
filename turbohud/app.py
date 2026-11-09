@@ -420,7 +420,7 @@ def run(args, folder):
         nonlocal settings
         settings = replace(settings, speed_unit='mph' if mph else 'kmh')
         mph_action.setChecked(mph)
-        panel.set_mph(mph)
+        show_option('mph', mph)
         save()
         log.info('speed in %s', settings.speed_unit)
 
@@ -438,13 +438,60 @@ def run(args, folder):
 
     def show_all_tinted():
         backdrop_action.setChecked(all_tinted())
-        panel.set_backdrop(all_tinted())
+        show_option('backdrop', all_tinted())
+
+    settings_window = None  # made when first opened (open_settings)
+
+    def show_option(key, on):
+        """An option changed: the settings window's tick box shows it, where it is open."""
+        if settings_window is not None:
+            settings_window.set_option(key, on)
+
+    def options():
+        """The settings window's options for the whole HUD: (key, label, on, tooltip)."""
+        listed = [
+            ('mph', 'Speed in mph', settings.speed_unit == 'mph', 'The speed in mph instead of km/h'),
+            (
+                'backdrop',
+                'Light tint behind all sections',
+                all_tinted(),
+                'A light tint behind every section; each has its own Tint in the move-mode panel',
+            ),
+        ]
+        if any(section.drawing == 'radar' for section in layout):
+            listed.append(
+                (
+                    'radar_cone',
+                    'Slipstream cones on the proximity radar',
+                    settings.radar_cone,
+                    'The slipstream behind each car ahead on the radar',
+                )
+            )
+        if any(section.drawing == 'map' for section in layout):
+            listed.append(
+                (
+                    'map_others',
+                    'Other cars on the track map',
+                    settings.map_others,
+                    'Every other car as a faint grey dot',
+                )
+            )
+        if any(section.sectors for section in layout):
+            listed.append(
+                (
+                    'sector_bars',
+                    'Sector bars below the last and best lap',
+                    settings.sector_bars,
+                    'One bar per stretch between checkpoints: purple, green or dark yellow',
+                )
+            )
+        return listed
 
     def set_radar_cone(cone):
         nonlocal settings
         settings = replace(settings, radar_cone=cone)
         radar_cone_action.setChecked(cone)
-        panel.set_radar_cone(cone)
+        show_option('radar_cone', cone)
         for window in windows.values():
             window.radar_cone = cone
             if window.section.drawing == 'radar':
@@ -456,7 +503,7 @@ def run(args, folder):
         nonlocal settings
         settings = replace(settings, sector_bars=shown)
         sector_bars_action.setChecked(shown)
-        panel.set_sector_bars(shown)
+        show_option('sector_bars', shown)
         for window in windows.values():
             window.sector_bars = shown
             if window.section.sectors:
@@ -468,7 +515,7 @@ def run(args, folder):
         nonlocal settings
         settings = replace(settings, map_others=others)
         map_others_action.setChecked(others)
-        panel.set_map_others(others)
+        show_option('map_others', others)
         save()
         log.info('other cars on the track map %s', 'on' if others else 'off')
 
@@ -611,8 +658,6 @@ def run(args, folder):
         save()
         log.info('all sections %s', 'bigger' if factor > 1 else 'smaller')
 
-    settings_window = None
-
     def open_settings():
         nonlocal settings_window
         if settings_window is None:
@@ -623,7 +668,16 @@ def run(args, folder):
                 settings.blue_seconds,
                 settings.radar_seconds,
                 settings.reads_per_second if live is not None else None,
+                options(),
             )
+            setters = {
+                'mph': set_mph,
+                'backdrop': set_backdrop,
+                'radar_cone': set_radar_cone,
+                'map_others': set_map_others,
+                'sector_bars': set_sector_bars,
+            }
+            settings_window.option_changed.connect(lambda key, on: setters[key](on))
             settings_window.reads_changed.connect(set_reads)
             settings_window.theme_changed.connect(set_theme)
             settings_window.blue_seconds_changed.connect(lambda seconds: set_seconds('blue_seconds', seconds))
@@ -826,13 +880,8 @@ def run(args, folder):
         native,
         layout,
         shortcuts,
-        settings.speed_unit == 'mph',
-        settings.backdrop,
         commands,
-        settings.map_others,
         tuple(settings.presets),
-        settings.radar_cone,
-        settings.sector_bars,
     )
     panel.preset_save_requested.connect(save_preset)
     panel.preset_load_requested.connect(load_preset)
@@ -841,11 +890,6 @@ def run(args, folder):
     panel.undo_requested.connect(undo)
     panel.text_centred_changed.connect(set_text_centred)
     panel.tint_changed.connect(set_tint)
-    panel.mph_changed.connect(set_mph)
-    panel.backdrop_changed.connect(set_backdrop)
-    panel.map_others_changed.connect(set_map_others)
-    panel.radar_cone_changed.connect(set_radar_cone)
-    panel.sector_bars_changed.connect(set_sector_bars)
     panel.settings_requested.connect(open_settings)
     for name, window in windows.items():
         panel.set_wanted(name, window.wanted)

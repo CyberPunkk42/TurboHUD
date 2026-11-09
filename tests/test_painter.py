@@ -697,7 +697,7 @@ class MovePanelPresetTests(unittest.TestCase):
         panel = self.panel()
         got = []
         panel.align_requested.connect(lambda *request: got.append(request))
-        for text in ('Centre ↔', 'Centre ↕'):
+        for text in ('↔', '↕'):
             for button in panel.findChildren(QPushButton):
                 if button.text() == text:
                     button.click()
@@ -784,16 +784,12 @@ class MovePanelPresetTests(unittest.TestCase):
         self.assertFalse(panel.tints['fuel'].isChecked())
         panel.set_tint('radar', True)  # none: nothing happens
 
-    def test_the_sector_bars_option_reports_its_changes(self):
-        panel = self.panel(sector_bars=False)
-        got = []
-        panel.sector_bars_changed.connect(got.append)
-        self.assertFalse(panel.sector_bars.isChecked())
-        panel.sector_bars.setChecked(True)
-        self.assertEqual(got, [True])
-        panel.set_sector_bars(False)  # from the menu: no change to report
-        self.assertEqual(got, [True])
-        self.assertFalse(panel.sector_bars.isChecked())
+    def test_the_panel_stays_compact(self):
+        # It was 675 x 978 px with the options and a row per preset: most of a laptop's screen.
+        panel = self.panel()
+        self.assertLess(panel.height(), 800)
+        self.assertLess(panel.width(), 600)
+        self.assertFalse(hasattr(panel, 'mph'))  # the options for the whole HUD are in the settings
 
     def test_load_names_its_shortcut_where_there_are_shortcuts(self):
         self.assertIn('Ctrl+Shift+2', self.button(self.panel(), 2, 'Load').toolTip())

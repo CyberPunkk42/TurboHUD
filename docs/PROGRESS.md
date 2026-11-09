@@ -811,3 +811,9 @@ its "Recent changes".
   one-window HUD, the map's tint, the lap colours and the sector bars. `TurboHUD-test-instructions.md`
   rewritten, shorter: FPS without TurboHUD and with every section shown, a quick look (as before, sector
   bars, a section moved), the log, and the quit check (reader left, TSU freezing).
+- 2026-11-09: The move-mode panel is smaller, asked for by the user: 568 x 642 px instead of 675 x 978. The
+  five options for the whole HUD (mph, tint behind all sections, radar cones, other cars on the map,
+  sector bars) moved to the settings window (they stay in the TurboHUD icon's menu); each section's row
+  has a tick box with its name, a narrow group list, small ↔ and ↕ buttons and unlabelled tick boxes under
+  "Mid text" and "Tint" headings; the presets are on one row, and the group-match buttons are A to D. Every
+  control keeps its tooltip. Drawn offscreen; not yet seen on the Mac or Hyprland.
