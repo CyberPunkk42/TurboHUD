@@ -449,6 +449,77 @@ class RedrawTests(unittest.TestCase):
         self.assertGreater(purple_pixels('#c77dff'), 50)
         self.assertEqual(purple_pixels(''), 0)
 
+    def map_window(self):
+        from turbohud.core.hud import RACE_SECTIONS
+        from turbohud.core.settings import Theme
+        from turbohud.overlay.window import SectionWindow
+
+        class Native:
+            def raise_window(self, window):
+                return 'test'
+
+        window = SectionWindow(Native(), Theme(), next(s for s in RACE_SECTIONS if s.name == 'trackmap'))
+        self.addCleanup(window.close)
+        window.resize(240, 240)
+        return window
+
+    def test_the_maps_road_is_drawn_once_while_only_the_cars_move(self):
+        from dataclasses import replace
+
+        from turbohud.core.trackmap import MapDot
+        from turbohud.overlay.window import _sample_map
+
+        window = self.map_window()
+        sample = _sample_map()
+        for step in range(5):
+            dot = MapDot(sample.outline.points[step * 7], 'me')
+            window.show_content([], trackmap=replace(sample, dots=(dot,)))
+            window.grab()
+        self.assertEqual(window.road_draws, 1)
+
+    def test_the_maps_road_is_drawn_again_when_what_it_shows_changes(self):
+        from dataclasses import replace
+
+        from turbohud.core.trackmap import outline_from_path
+        from turbohud.overlay.window import _sample_map
+
+        window = self.map_window()
+        sample = _sample_map()
+        window.show_content([], trackmap=sample)
+        window.grab()
+        changes = (
+            ('size', lambda: window.resize(200, 200)),
+            ('tint', lambda: setattr(window, 'backdrop', True)),
+            ('road colour', lambda: window.show_content([], trackmap=replace(sample, road='#c77dff'))),
+            (
+                'track',
+                lambda: window.show_content(
+                    [],
+                    trackmap=replace(sample, outline=outline_from_path([(0, 0), (50, 10), (90, 40)], False)),
+                ),
+            ),
+        )
+        for count, (what, change) in enumerate(changes, start=2):
+            with self.subTest(what=what):
+                change()
+                window.grab()
+                self.assertEqual(window.road_draws, count)
+
+    def test_the_kept_road_shows_the_same_map(self):
+        from turbohud.overlay.window import _sample_map
+
+        window = self.map_window()
+        window.backdrop = True
+        window.show_content([], trackmap=_sample_map())
+        first = window.grab().toImage()
+        second = window.grab().toImage()
+        self.assertEqual(window.road_draws, 1)
+        self.assertEqual(first, second)
+        road = [first.pixelColor(x, 120) for x in range(240)]
+        self.assertTrue(
+            any(c.alpha() > 200 and c.red() > 150 for c in road)
+        )  # the light road crosses the middle row
+
     def test_sector_bars_turned_off_are_not_drawn(self):
         from turbohud.core.hud import RACE_SECTIONS, Row, Sectors
         from turbohud.core.settings import Theme
