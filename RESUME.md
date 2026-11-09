@@ -72,6 +72,13 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-10: The sector bars show the track's sectors, reported by the user: they showed a bar for every
+  checkpoint (68 on the track driven, up to about 120), where TSU tracks can have sector lines set by their
+  maker. TSU keeps each checkpoint's kind in `TS.CheckpointProperties.type` (TS.CheckpointType, one byte:
+  Sector 0, Normal 1, Minor 2, from the game's metadata), read with the checkpoint lines, once a race. A
+  bar now starts at the start line and at each sector line: the track driven has sector lines at
+  checkpoints 15, 28 and 38 (read live), so 4 sectors. A track without any is split into 3 even sectors, as
+  in F1, asked for by the user. Not yet seen in a race.
 - 2026-11-09: Race reads on the Mac ask the reader in the bottle for all the pages the read before used in
   one question, asked for by the user: the game keeps its objects in place during a race, so a read needs
   nearly the same pages each time. Only pages new to a read still go one at a time. The reader reads pages
