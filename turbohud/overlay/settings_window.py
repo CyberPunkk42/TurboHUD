@@ -12,6 +12,7 @@ from PySide6.QtCore import QRectF, Qt, Signal
 from PySide6.QtGui import QColor, QPainter, QPen
 from PySide6.QtWidgets import (
     QButtonGroup,
+    QCheckBox,
     QDoubleSpinBox,
     QGridLayout,
     QHBoxLayout,
@@ -87,19 +88,25 @@ class Swatch(QPushButton):
 
 
 class SettingsWindow(QWidget):
-    """Colours for text, highlight and outline; all sections bigger or smaller; when the blue
-    flag and the proximity radar show; how often a race is read (where one can be); reset."""
+    """Colours for text, highlight and outline; all sections bigger or smaller; the options
+    for the whole HUD; when the blue flag and the proximity radar show; how often a race is
+    read (where one can be); reset."""
 
     theme_changed = Signal(object)  # the new Theme
     resize_requested = Signal(float)  # factor for every section's size
     blue_seconds_changed = Signal(float)
     radar_seconds_changed = Signal(float)
     reads_changed = Signal(int)
+    option_changed = Signal(str, bool)  # an option's key (see `options`), on or off
     closed = Signal()
 
     focusable = True  # it takes clicks on its buttons
 
-    def __init__(self, native, flags, theme, blue_seconds=2.0, radar_seconds=0.5, reads_per_second=None):
+    def __init__(
+        self, native, flags, theme, blue_seconds=2.0, radar_seconds=0.5, reads_per_second=None, options=()
+    ):
+        """`options` are tick boxes for the whole HUD: (key, label, on, tooltip) each; a
+        change says its key through option_changed."""
         super().__init__(None, flags)
         self.native = native
         self.theme = theme
@@ -134,6 +141,15 @@ class SettingsWindow(QWidget):
         size.addWidget(bigger)
         size.addStretch()
         column.addLayout(size)
+        self.options = {}
+        for key, label, on, tip in options:
+            box = QCheckBox(label)
+            box.setStyleSheet('QCheckBox { color: white; }')
+            box.setChecked(on)
+            box.setToolTip(tip)
+            box.toggled.connect(lambda checked, k=key: self.option_changed.emit(k, checked))
+            column.addWidget(box)
+            self.options[key] = box
         timing = QGridLayout()
         self.blue_seconds = self._seconds_box(blue_seconds, BLUE_SECONDS, self.blue_seconds_changed)
         self.blue_seconds.setToolTip('How far behind you a car about to lap you shows the blue flag')
@@ -190,6 +206,14 @@ class SettingsWindow(QWidget):
         box.setKeyboardTracking(False)  # the time typed, not each digit on the way
         box.valueChanged.connect(changed)
         return box
+
+    def set_option(self, key, on):
+        """Show an option changed elsewhere (the menu, the panel), saying nothing back."""
+        box = self.options.get(key)
+        if box is not None and box.isChecked() != on:
+            box.blockSignals(True)
+            box.setChecked(on)
+            box.blockSignals(False)
 
     def choose(self, field, color):
         self.theme = replace(self.theme, **{field: color})

@@ -125,7 +125,7 @@ starting TurboHUD again.
   green for your best short of it, white for a slower lap; the track map's road shows
   the same purple or green for 6 seconds after such a lap; small bars below them, one per
   stretch between checkpoints, colour each sector the same way, dark yellow when slower; **Sector bars below the last
-  and best lap** in the menu or the move-mode panel turns them off), fuel and tires left (with the laps
+  and best lap** in the menu or the settings turns them off), fuel and tires left (with the laps
   they last), health (in events with damage), the draft (slipstream) with the downforce it costs, the fuel to spare or short for the finish, speed with throttle and brake
   bars (km/h or mph), the player list with flags, pit status and gaps, the lap times
   (every driver's best lap and running lap), the local time
@@ -143,9 +143,12 @@ starting TurboHUD again.
 - The **blue flag** is a navy bar that shows when a car about to lap you is within 2
   seconds behind: faint at 2 s, fully visible from 0.5 s, gone once it has passed.
 - **Settings…** (TurboHUD icon's menu, or the move-mode panel) picks the text,
-  highlight and outline colours, and makes all sections bigger or smaller at once.
+  highlight and outline colours, makes all sections bigger or smaller at once, and holds
+  the options for the whole HUD: mph, the tint behind all sections, the radar's
+  slipstream cones, other cars on the track map and the sector bars (also in the TurboHUD
+  icon's menu).
 - **Tint**, for each text section in the move-mode panel, or **Light tint behind all sections**
-  for all of them at once (also in the TurboHUD icon's menu), puts
+  for all of them at once (in the settings and the TurboHUD icon's menu), puts
   a faint dark box behind each section's text, for reading it on bright tracks. The track
   map's **Tint** turns its dark square on (the default) or off.
 - The **proximity radar** shows your car and the cars around you when one is within
@@ -155,13 +158,13 @@ starting TurboHUD again.
   (gold), the next car ahead (red) and the next car behind (green); when you pass a
   car, the next one ahead takes the red dot. Smaller bluish dots are backmarkers (cars
   you are about to lap) on the road between you and the car ahead. **Other cars on the
-  track map** (TurboHUD icon's menu, or the move-mode panel) adds everyone else as faint
+  track map** (TurboHUD icon's menu, or the settings) adds everyone else as faint
   grey dots. It is square; resize it at its corner in move mode. The track's shape
   is learnt from where the cars drive: on a track new to TurboHUD the map grows during
   the first lap and is complete once any car has driven a whole lap; after that it is
   saved and shows at once.
-- Every section has **Centre ↔** and **Centre ↕** buttons in the move-mode panel: they
-  centre its box across or down the screen it is on. **Centre text** puts a section's text
+- Every section has **↔** and **↕** buttons under **Centre** in the move-mode panel: they
+  centre its box across or down the screen it is on. **Mid text** puts a section's text
   in the middle of its box instead of at the left, so with both the text is in the middle
   of the screen.
 - **Groups:** in the move-mode panel, put sections in the same group (A to D). Dragging
