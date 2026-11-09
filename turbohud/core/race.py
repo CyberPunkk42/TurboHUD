@@ -48,6 +48,8 @@ EVEN = 5  # under half a millisecond: shown as 0.000, neither ahead nor behind
 DELTA_PLACES = 2  # the delta to the best lap in hundredths: a third digit changed at every read
 DELTA_EVEN = 50  # under half a hundredth: shown as 0.00, neither ahead nor behind
 SESSION_BEST_COLOR = '#c77dff'  # purple, as in F1: the fastest lap of anyone in the race
+PERSONAL_BEST_COLOR = '#5ee07a'  # green: the driver's own best (the HUD's 'ahead' colour)
+LAP_FLASH = 6 * UNITS_PER_SECOND  # how long the track map's road shows a fast lap's colour
 NO_CHECKPOINT = 0xFFFF_FFFF  # how a missed checkpoint may be marked
 
 WAITING_FOR_GAME = 'waiting for game'
@@ -1650,7 +1652,8 @@ def race_sections(
         if track_map is not None and state.on_a_track:  # no map, nor a track learnt, in an arena
             shown = track_map.update(state, order if order is not None else ranked(state.players))
             if shown is not None:
-                sections['trackmap'] = shown
+                flash = lap_flash(state)
+                sections['trackmap'] = dataclasses.replace(shown, road=flash) if flash else shown
     return sections
 
 
@@ -1760,6 +1763,20 @@ def lap_colours(state):
 
 def _last_colour(state):
     return lap_colours(state)[0] or 'text'
+
+
+def lap_flash(state):
+    """The track map road's colour for LAP_FLASH after the local player ends a lap: purple
+    for the race's fastest lap, green for a best of their own; '' otherwise (a slower
+    lap, or after that time)."""
+    if not state.lap_times or len(state.lap_starts) <= len(state.lap_times):
+        return ''
+    if not 0 <= state.clock - state.lap_starts[len(state.lap_times)] < LAP_FLASH:
+        return ''
+    last = lap_colours(state)[0]
+    return (
+        SESSION_BEST_COLOR if last == SESSION_BEST_COLOR else PERSONAL_BEST_COLOR if last == 'ahead' else ''
+    )
 
 
 def times_row(state):
@@ -2118,7 +2135,7 @@ def player_current_lap(player, clock):
 def lap_times_rows(players, order=None, clock=0):
     """The lap times list: a heading, then each driver in race order with flag and name,
     their best lap and the running time of their current lap ('Fin' once finished) at
-    race `clock`. The race's fastest lap is green. Up to MAX_LAP_TIME_ROWS drivers."""
+    race `clock`. The race's fastest lap is purple, as in F1. Up to MAX_LAP_TIME_ROWS drivers."""
     shown = shown_players(players, MAX_LAP_TIME_ROWS, order)
     bests = {id(player): min(player_lap_times(player), default=None) for _pos, player in shown}
     fastest = min((best for best in bests.values() if best is not None), default=None)
@@ -2151,7 +2168,13 @@ def lap_times_rows(players, order=None, clock=0):
                 before=f'L{player_lap_number(player)}',
                 flag=flag_code(player.flag) or flag_text(player.flag),
                 middle=_pit_time(player) if timed else format_time(best),
-                middle_color='lift' if timed else 'ahead' if best is not None and best == fastest else 'text',
+                middle_color=(
+                    'lift'
+                    if timed
+                    else SESSION_BEST_COLOR
+                    if best is not None and best == fastest
+                    else 'text'
+                ),
                 right='PIT' if plain_pit else bracket or time_now,
                 right_color='lift' if plain_pit or bracket else 'text',
             )

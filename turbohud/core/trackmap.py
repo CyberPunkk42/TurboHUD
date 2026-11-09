@@ -66,6 +66,7 @@ class MapDot:
 class TrackMapView:
     outline: TrackOutline
     dots: tuple  # MapDot, drawn in this order (the local player last, on top)
+    road: str = ''  # the road's colour for a moment after a fast lap ('#rrggbb'); '' is the usual
 
 
 def _middle(gate):

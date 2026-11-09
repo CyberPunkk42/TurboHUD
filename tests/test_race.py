@@ -1539,6 +1539,23 @@ class LapColourTests(unittest.TestCase):
     def test_others_without_a_lap_change_nothing(self):
         self.assertEqual(race.lap_colours(self.me(80.0, others=[[]])), (self.PURPLE, self.PURPLE))
 
+    @staticmethod
+    def at(state, seconds):
+        """`state` with the race clock `seconds` after its last lap ended."""
+        return dataclasses.replace(state, clock=state.lap_starts[-1] + round(seconds * 10_000))
+
+    def test_the_maps_road_shows_a_fast_laps_colour_for_six_seconds(self):
+        fastest = self.me(80.0, 78.0, others=[[79.0]])
+        self.assertEqual(race.lap_flash(self.at(fastest, 0)), self.PURPLE)
+        self.assertEqual(race.lap_flash(self.at(fastest, 5.9)), self.PURPLE)
+        self.assertEqual(race.lap_flash(self.at(fastest, 6.0)), '')
+        personal = self.me(82.0, 80.0, others=[[79.0]])
+        self.assertEqual(race.lap_flash(self.at(personal, 1)), race.PERSONAL_BEST_COLOR)
+
+    def test_a_slower_lap_or_none_leaves_the_road_as_it_is(self):
+        self.assertEqual(race.lap_flash(self.at(self.me(79.0, 80.0), 1)), '')
+        self.assertEqual(race.lap_flash(self.me()), '')
+
     def test_the_row_has_each_time_in_its_colour(self):
         row = race.times_row(self.me(80.0, 81.0, others=[[79.0]]))
         self.assertEqual((row.text, row.color), ('Last 1:21.000   ', 'text'))

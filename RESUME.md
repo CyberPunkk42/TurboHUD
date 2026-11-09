@@ -70,6 +70,10 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-09: Purple for the race's fastest lap in the lap times list (it was green), and the track map's road
+  takes a fast lap's colour, both asked for by the user: for 6 s of race clock after the driver ends a lap,
+  purple for the race's fastest lap, green for a best of their own, then white again; a slower lap leaves
+  it white (`race.lap_flash`). Not yet seen in a race.
 - 2026-11-09: The last and best lap have colours, asked for by the user, as on F1's timing screens. The best
   lap is purple while nobody else in the race has gone faster (a time as fast belongs to whoever set it
   first), else green; alone it is always purple. The last lap takes the best's colour when it is the

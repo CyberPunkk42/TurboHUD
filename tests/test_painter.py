@@ -424,6 +424,31 @@ class RedrawTests(unittest.TestCase):
         self.assertEqual(corner(True).alpha(), QColor(*MAP_BACK).alpha())
         self.assertEqual(corner(False).alpha(), 0)
 
+    def test_the_maps_road_takes_a_fast_laps_colour(self):
+        from dataclasses import replace
+
+        from turbohud.core.hud import RACE_SECTIONS
+        from turbohud.core.settings import Theme
+        from turbohud.overlay.window import SectionWindow, _sample_map
+
+        class Native:
+            def raise_window(self, window):
+                return 'test'
+
+        def purple_pixels(road):
+            window = SectionWindow(Native(), Theme(), next(s for s in RACE_SECTIONS if s.name == 'trackmap'))
+            self.addCleanup(window.close)
+            window.resize(240, 240)
+            window.show_content([], trackmap=replace(_sample_map(), road=road))
+            image = window.grab().toImage()
+            colours = (image.pixelColor(x, y) for x in range(0, 240, 2) for y in range(0, 240, 2))
+            return sum(
+                1 for c in colours if c.alpha() > 0 and c.red() > c.green() + 60 and c.blue() > c.green() + 60
+            )
+
+        self.assertGreater(purple_pixels('#c77dff'), 50)
+        self.assertEqual(purple_pixels(''), 0)
+
     def test_only_the_number_changes_and_the_label_stays(self):
         from turbohud.core.hud import Row
 
