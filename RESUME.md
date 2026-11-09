@@ -70,6 +70,10 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-09: Build 2026.11.09 for the tester (`releases/`, macOS 27, built with `--any-macos`), with the
+  one-window HUD, the map's tint, the lap colours and the sector bars. `TurboHUD-test-instructions.md`
+  rewritten, shorter: FPS without TurboHUD and with every section shown, a quick look (as before, sector
+  bars, a section moved), the log, and the quit check (reader left, TSU freezing).
 - 2026-11-09: The sector bars can be turned off, asked for by the user: "Sector bars below the last and best
   lap" in the TurboHUD icon's menu and the move-mode panel, on by default, saved as `sector_bars`. Off, the
   room below the times stays, so their text keeps its size (make the box shorter in move mode to taste).
