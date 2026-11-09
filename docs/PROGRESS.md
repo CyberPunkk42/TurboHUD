@@ -834,6 +834,12 @@ its "Recent changes".
   reads of the game a read makes. A binary header in place of JSON (idea 5) was left out: with one or two
   trips a read it would save microseconds. The same fetch is used by TurboHUD's own Windows reading. Not yet
   seen in a race.
+- 2026-11-09: The track map draws its road once and keeps it, asked for by the user: the square (with its
+  tint), the road and the start line are drawn into an image, drawn again only when the track, the
+  section's size, the tint or the road's colour changes; each frame then only copies it and draws the
+  cars. Measured offscreen at Retina scale with the user's most detailed learnt track (1427 points):
+  3.30 ms a frame before, 0.35 ms after. The map was the costliest section in TurboHUD's own CPU (23% of a
+  core against 9 to 17); not yet measured in a race.
 - 2026-11-10: The sector bars show the track's sectors, reported by the user: they showed a bar for every
   checkpoint (68 on the track driven, up to about 120), where TSU tracks can have sector lines set by their
   maker. TSU keeps each checkpoint's kind in `TS.CheckpointProperties.type` (TS.CheckpointType, one byte:

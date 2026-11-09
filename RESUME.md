@@ -79,6 +79,12 @@
   bar now starts at the start line and at each sector line: the track driven has sector lines at
   checkpoints 15, 28 and 38 (read live), so 4 sectors. A track without any is split into 3 even sectors, as
   in F1, asked for by the user. Not yet seen in a race.
+- 2026-11-09: The track map draws its road once and keeps it, asked for by the user: the square (with its
+  tint), the road and the start line are drawn into an image, drawn again only when the track, the
+  section's size, the tint or the road's colour changes; each frame then only copies it and draws the
+  cars. Measured offscreen at Retina scale with the user's most detailed learnt track (1427 points):
+  3.30 ms a frame before, 0.35 ms after. The map was the costliest section in TurboHUD's own CPU (23% of a
+  core against 9 to 17); not yet measured in a race.
 - 2026-11-09: Race reads on the Mac ask the reader in the bottle for all the pages the read before used in
   one question, asked for by the user: the game keeps its objects in place during a race, so a read needs
   nearly the same pages each time. Only pages new to a read still go one at a time. The reader reads pages

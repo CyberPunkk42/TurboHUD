@@ -7,6 +7,7 @@ section's box fits closely round its text, so its name shows only when the point
 on it; the others show their name. The panel says what to do, shows or hides sections, and locks or quits.
 """
 
+import functools
 import logging
 import math
 import sys
@@ -14,7 +15,7 @@ import time
 from dataclasses import replace
 
 from PySide6.QtCore import QPointF, QRect, QRectF, Qt, Signal
-from PySide6.QtGui import QColor, QPainter, QPainterPath, QPen, QPolygonF
+from PySide6.QtGui import QColor, QImage, QPainter, QPainterPath, QPen, QPolygonF
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -125,6 +126,7 @@ MAP_PIT_OPACITY = 0.4  # a car in the pits is dimmed
 MAP_RING = 0.4  # the local player's ring: its width, as a share of its radius
 
 
+@functools.cache  # the same one each time, so the map's road layer is kept (SectionWindow._road_layer)
 def _sample_map():
     """A track map to place the section in move mode: an oval with a car of each kind."""
 
@@ -185,6 +187,10 @@ class SectionWindow(QWidget):
         # While locked, a HudCanvas may draw this section with every other in one window per
         # screen, and this window stays hidden: 17 windows above the game cost it frames.
         self.canvas = None
+        # The track map's square, road and start line, drawn once into an image and kept while
+        # the track, the size, the tint and the road's colour stay: (what it was drawn for, image).
+        self._road_layer = None
+        self.road_draws = 0  # times that image was drawn, for tests
         self.setWindowTitle(f'TurboHUD - {section.label}')
         self.setAttribute(Qt.WA_TranslucentBackground)
         self.setAttribute(Qt.WA_ShowWithoutActivating)
@@ -489,38 +495,13 @@ class SectionWindow(QWidget):
             size = min(self.width(), self.height())
             left, top = (self.width() - size) / 2, (self.height() - size) / 2
             box = QRectF(left, top, size, size).adjusted(1, 1, -1, -1)
-            if self.backdrop:  # its Tint option, also in move mode, to see what it does
-                painter.setPen(Qt.NoPen)
-                painter.setBrush(QColor(*MAP_BACK))
-                painter.drawRoundedRect(box, 10, 10)
             outline = view.outline
             scale, x_off, y_off = map_transform(outline.bounds, (size, size), size * MAP_PADDING)
 
             def at(point):
                 return QPointF(left + x_off + point[0] * scale, top + y_off - point[1] * scale)
 
-            path = QPainterPath(at(outline.points[0]))
-            for point in outline.points[1:]:
-                path.lineTo(at(point))
-            if outline.closed:
-                path.closeSubpath()
-            road = road_width(size)
-            painter.setBrush(Qt.NoBrush)
-            painter.setPen(QPen(QColor(*MAP_ROAD_EDGE), road + 3, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin))
-            painter.drawPath(path)
-            colour = (
-                QColor(view.road) if view.road else QColor(*MAP_ROAD)
-            )  # a fast lap's colour, for a moment
-            colour.setAlpha(MAP_ROAD[3])
-            painter.setPen(QPen(colour, road, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin))
-            painter.drawPath(path)
-            if outline.start is not None:
-                # The start line: across the road, a little wider than it.
-                (sx, sz), (fx, fz) = outline.start
-                reach = (road * 0.8 + 2) / scale
-                ux, uz = -fz * reach, fx * reach  # across the direction of travel
-                painter.setPen(QPen(QColor(MAP_START), max(2.0, road / 3), Qt.SolidLine, Qt.FlatCap))
-                painter.drawLine(at((sx - ux, sz - uz)), at((sx + ux, sz + uz)))
+            painter.drawImage(QPointF(0, 0), self._road_image(painter, view, box, at, scale, size))
             radius = max(2.5, size * MAP_DOT)
             painter.setClipRect(box)  # a car off the learnt track (a road from the grid) stays inside
             for dot in view.dots:
@@ -558,6 +539,59 @@ class SectionWindow(QWidget):
             painter.drawText(
                 self.rect().adjusted(6, 0, -20, -3), Qt.AlignBottom | Qt.AlignLeft, self.section.label
             )
+
+    def _road_image(self, painter, view, box, at, scale, size):
+        """The map's square (with its tint), road and start line as an image as large as
+        this window, drawn again only when what it shows changes: stroking a learnt track
+        of a thousand points or more took a few ms at every frame."""
+        ratio = painter.device().devicePixelRatioF() if painter.device() else 1.0
+        key = (self.width(), self.height(), ratio, self.backdrop, view.road)
+        if self._road_layer is not None:
+            outline, was, image = self._road_layer
+            if outline is view.outline and was == key:
+                return image
+        image = QImage(
+            max(1, round(self.width() * ratio)),
+            max(1, round(self.height() * ratio)),
+            QImage.Format_ARGB32_Premultiplied,
+        )
+        image.setDevicePixelRatio(ratio)
+        image.fill(Qt.transparent)
+        layer = QPainter(image)
+        layer.setRenderHint(QPainter.Antialiasing)
+        self._paint_road(layer, view, box, at, scale, size)
+        layer.end()
+        self._road_layer = (view.outline, key, image)
+        self.road_draws += 1
+        return image
+
+    def _paint_road(self, painter, view, box, at, scale, size):
+        """The map's square (with its Tint option), the road and the start line."""
+        if self.backdrop:  # its Tint option, also in move mode, to see what it does
+            painter.setPen(Qt.NoPen)
+            painter.setBrush(QColor(*MAP_BACK))
+            painter.drawRoundedRect(box, 10, 10)
+        outline = view.outline
+        path = QPainterPath(at(outline.points[0]))
+        for point in outline.points[1:]:
+            path.lineTo(at(point))
+        if outline.closed:
+            path.closeSubpath()
+        road = road_width(size)
+        painter.setBrush(Qt.NoBrush)
+        painter.setPen(QPen(QColor(*MAP_ROAD_EDGE), road + 3, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin))
+        painter.drawPath(path)
+        colour = QColor(view.road) if view.road else QColor(*MAP_ROAD)  # a fast lap's colour, for a moment
+        colour.setAlpha(MAP_ROAD[3])
+        painter.setPen(QPen(colour, road, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin))
+        painter.drawPath(path)
+        if outline.start is not None:
+            # The start line: across the road, a little wider than it.
+            (sx, sz), (fx, fz) = outline.start
+            reach = (road * 0.8 + 2) / scale
+            ux, uz = -fz * reach, fx * reach  # across the direction of travel
+            painter.setPen(QPen(QColor(MAP_START), max(2.0, road / 3), Qt.SolidLine, Qt.FlatCap))
+            painter.drawLine(at((sx - ux, sz - uz)), at((sx + ux, sz + uz)))
 
     def _paint_delta(self, painter):
         """The delta bar. In move mode a sample, with a border and its name."""
