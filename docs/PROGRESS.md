@@ -824,3 +824,13 @@ its "Recent changes".
   as a Windows app inside TSU's CrossOver bottle: what it gains (one app, fewer parts), what it costs (no
   overlay over TSU's Fullscreen, tested; the window count, the Wine server, soft text on Retina) and a plan
   to try it, cheapest first (backlog item 2b).
+- 2026-11-09: Race reads on the Mac ask the reader in the bottle for all the pages the read before used in
+  one question, asked for by the user: the game keeps its objects in place during a race, so a read needs
+  nearly the same pages each time. Only pages new to a read still go one at a time. The reader reads pages
+  at most 16 apart (64 KiB) in one call of up to 256 KiB, as a large read costs little more than a small
+  one; where such a call fails, it reads those pages one by one (`winmemory.read_pages`, `PageCache.prefetch`,
+  the reader's `read_pages`). Expected: 20 to 88 trips through the pipe become 1 to 3, and fewer calls to the
+  Wine server, which TSU also uses; worked out, not measured. The log's `race reads` line now also says the
+  reads of the game a read makes. A binary header in place of JSON (idea 5) was left out: with one or two
+  trips a read it would save microseconds. The same fetch is used by TurboHUD's own Windows reading. Not yet
+  seen in a race.

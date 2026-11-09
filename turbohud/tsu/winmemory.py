@@ -7,6 +7,10 @@ read is a round trip to the server, about 250 µs whatever its size up to 4 KiB,
 the server also serves the game. Two things follow:
 - `PageCache`: a race read makes hundreds of small reads on a few dozen pages, so each
   4 KiB page is read once per race read and the small reads are served from it.
+- `read_pages`: the game keeps its objects where they are during a race, so a race read
+  needs nearly the same pages as the one before. The cache asks for all of those at once,
+  and pages close together are read in one call: a large read costs little more than a
+  small one (about 0.8 GiB/s, so 64 KiB in about 80 µs on top of the 250 µs).
 - `search` goes in pieces with pauses between them, so a search of the whole game
   (about 2 GiB) does not hold the server for seconds at a time (TSU stuttered then).
 
@@ -35,6 +39,8 @@ STILL_ACTIVE = 259
 READ = {0x02, 0x04, 0x08, 0x20, 0x40, 0x80}
 WRITE = {0x04, 0x08, 0x40, 0x80}
 EXECUTE = {0x10, 0x20, 0x40, 0x80}
+MERGE_GAP = 16  # pages: wanted pages at most this far apart are read in one call
+SPAN_MOST = 64  # pages a merged read covers at most (256 KiB)
 WINE_SEARCH_SHARE = 0.5  # in Wine, the share of the time a search may read
 
 
@@ -62,19 +68,78 @@ def searchable(item):
     return perms.startswith('rw') and perms.endswith('p')
 
 
+def spans(pages, gap=MERGE_GAP, most=SPAN_MOST):
+    """(first, last) page numbers of the reads that cover `pages`: pages at most `gap`
+    apart share a read, which covers at most `most` pages."""
+    found = []
+    for number in sorted(set(pages)):
+        if found and number - found[-1][1] <= gap and number - found[-1][0] < most:
+            found[-1][1] = number
+        else:
+            found.append([number, number])
+    return [tuple(span) for span in found]
+
+
+def read_pages(read, pages, page=PAGE, gap=MERGE_GAP, most=SPAN_MOST):
+    """({page number: its bytes}, reads made) for the `pages` that can be read, with
+    pages close together read in one call (`spans`). Where such a read fails (it reaches
+    memory that is not there), its wanted pages are read one by one, and pages that
+    cannot be read are left out."""
+    wanted = set(pages)
+    found, calls = {}, 0
+    for first, last in spans(wanted, gap, most):
+        calls += 1
+        try:
+            data = read(first * page, (last - first + 1) * page)
+        except OSError:
+            data = None
+        if data is not None:
+            for number in range(first, last + 1):
+                if number in wanted:
+                    offset = (number - first) * page
+                    found[number] = data[offset : offset + page]
+            continue
+        if first == last:
+            continue
+        for number in range(first, last + 1):
+            if number in wanted:
+                calls += 1
+                try:
+                    found[number] = read(number * page, page)
+                except OSError:
+                    pass
+    return found, calls
+
+
 class PageCache:
     """Serves small reads from whole pages, each read once until `clear()`. Call
-    `clear()` before every race read, so each one sees the game as it is then."""
+    `clear()` before every race read, so each one sees the game as it is then.
 
-    def __init__(self, read, page=PAGE, largest=4 * PAGE):
+    With `fetch_many` (page numbers -> {page number: bytes}), `prefetch()` after `clear()`
+    asks for the pages the read before used, in one go; pages new to this read are still
+    read one at a time."""
+
+    def __init__(self, read, page=PAGE, largest=4 * PAGE, fetch_many=None):
         self._read = read
         self._page = page
         self._largest = largest  # larger reads go straight through
+        self._fetch_many = fetch_many
         self._pages = {}
+        self._used = set()  # pages served since the last clear()
+        self._last = set()  # pages the read before used
         self.reads = 0  # reads passed on, for measuring
 
     def clear(self):
+        self._last = self._used
+        self._used = set()
         self._pages.clear()
+
+    def prefetch(self):
+        """Fetch the pages the read before used, in one go (with `fetch_many`)."""
+        if self._fetch_many is None or not self._last:
+            return
+        self.reads += 1
+        self._pages.update(self._fetch_many(sorted(self._last)))
 
     def read(self, address, size):
         if size > self._largest:
@@ -95,6 +160,7 @@ class PageCache:
                     self.reads += 1
                     return self._read(address, size)
                 self._pages[number] = data
+            self._used.add(number)
             parts.append(data)
         start = address - first * page
         return b''.join(parts)[start : start + size]
@@ -308,25 +374,31 @@ def metadata_path(image_path):
 
 
 class CachedReader:
-    """A race reader that starts every read with an empty page cache. `last_read` says
-    what the latest read took, for the log: (trips to the game's memory, seconds of them
-    spent on that memory or None when not known; `in_game` gives such seconds so far)."""
+    """A race reader that starts every read with an empty page cache, and fetches the
+    pages the read before used in one go. `last_read` says what the latest read took, for
+    the log: (trips for the game's memory, seconds of them spent on that memory or None
+    when not known, reads of that memory or None). `in_game` and `game_reads` give such
+    seconds and reads so far."""
 
-    def __init__(self, reader, cache, in_game=None):
+    def __init__(self, reader, cache, in_game=None, game_reads=None):
         self.reader, self.cache = reader, cache
         self._in_game = in_game
+        self._game_reads = game_reads
         self.last_read = None
 
     def read(self):
         self.cache.clear()
         trips = self.cache.reads
         spent = self._in_game() if self._in_game else None
+        calls = self._game_reads() if self._game_reads else None
         try:
+            self.cache.prefetch()
             return self.reader.read()
         finally:
             self.last_read = (
                 self.cache.reads - trips,
                 self._in_game() - spent if self._in_game else None,
+                self._game_reads() - calls if self._game_reads else None,
             )
 
 
@@ -352,7 +424,7 @@ def connect(name='TSU.exe'):
         def paced(search_regions, value):
             return search(process.read, search_regions, value, share=share)
 
-        cache = PageCache(process.read)
+        cache = PageCache(process.read, fetch_many=lambda pages: read_pages(process.read, pages)[0])
         memory = Memory(
             cache.read,
             process.regions,  # listed anew for each search: the memory grows towards a race

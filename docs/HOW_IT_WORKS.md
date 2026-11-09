@@ -118,7 +118,9 @@ reader ends when the pipe closes or TSU quits.
 
 It answers the same kind of read-only questions as the Linux probe. A read of the game
 costs about 250 µs there (a round trip through the Wine server, which also serves the
-game), so TurboHUD reads each 4 KiB page once per race read: about 20 ms. A search reads
+game), so TurboHUD reads each 4 KiB page once per race read: about 20 ms. As the game keeps
+its objects in place during a race, each race read starts with one question for all the
+pages the read before used, and the reader reads pages close together in one call. A search reads
 in 1 MiB pieces, half of the time, and takes about 15 s if it has to cover all the data; it
 stops at the first good hit, so a race is expected within about 4 to 6 s (worked out from a
 search at a quarter of the time; not yet seen in a race).
