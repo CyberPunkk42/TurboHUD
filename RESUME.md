@@ -78,7 +78,7 @@
   Sector 0, Normal 1, Minor 2, from the game's metadata), read with the checkpoint lines, once a race. A
   bar now starts at the start line and at each sector line: the track driven has sector lines at
   checkpoints 15, 28 and 38 (read live), so 4 sectors. A track without any is split into 3 even sectors, as
-  in F1, asked for by the user. Not yet seen in a race.
+  in F1, asked for by the user. Seen by the user in an AI race: 4 bars there, fine as it is.
 - 2026-11-09: The track map draws its road once and keeps it, asked for by the user: the square (with its
   tint), the road and the start line are drawn into an image, drawn again only when the track, the
   section's size, the tint or the road's colour changes; each frame then only copies it and draws the
