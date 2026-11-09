@@ -117,8 +117,8 @@ inside the game's own picture, adding no window above it. Nothing in the bottle 
 5. Afterwards quit everything; the next normal start has no HUD.
 If no HUD shows: the user may add `"MTL_HUD_ENABLED" = "1"` under `[EnvironmentVariables]` in the bottle's
 `cxbottle.conf` themselves, and remove it after (TurboHUD never writes there).
-Then, with the same HUD: `experiments/qt_overlay_probe.py` with many small windows against one window
-holding all sections, to see whether fewer windows would help before rebuilding the overlay.
+Then, with the same HUD: `experiments/window_count_probe.py` (17 small windows against one large
+window; see `experiments/README.md`), to see whether one window would help before rebuilding the overlay.
 
 ### Other points
 - Custom sessions show only the clock: no race is found in them. Not looked into: what such a session

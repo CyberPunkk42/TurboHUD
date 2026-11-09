@@ -414,3 +414,22 @@ code serves TurboHUD on Windows itself, there without a socket.
 Settled and built (2026-11-04, `turbohud/tsu/bottle.py`, `bottle_reader.py`): TurboHUD
 starts the reader with CrossOver's `wine --bottle` and asks it over its standard input and
 output, so there is no socket, port or secret.
+
+## Window count probe (`window_count_probe.py`)
+Do 17 small overlay windows cost the game more frames than one large window holding the same 17
+boxes? TurboHUD draws each section in its own window; on the user's Mac (2026-11-09, Metal HUD) TSU
+ran at 120 FPS with TurboHUD closed or one section shown, and at 80 to 110 with all 17. The probe
+answers whether rebuilding the overlay as one window would help, or whether one large, mostly
+see-through window costs by its area instead.
+
+1. Quit TurboHUD. Start TSU with the Metal HUD (`docs/CONTINUE_HERE.md`, "FPS on the user's Mac with
+   the Metal HUD"), in Fullscreen, and start a race.
+2. From the repository: `.buildtools/venv/bin/python -B experiments/window_count_probe.py`
+3. It runs by itself and quits: nothing (30 s), 17 small windows (45 s), one large window with all 17
+   boxes (45 s), nothing again (30 s). The boxes show the phase's name; the terminal prints each
+   phase's start. Note the FPS in each. `--rest` and `--each` change the times; Ctrl+C quits early.
+
+The boxes have the places and sizes of TurboHUD's sections, read (only read) from its settings file,
+and change 20 times a second. With the user's layout the one window is nearly the whole screen
+(2055 x 1290). Checked 2026-11-09 with real windows on the Mac (all four phases, quits by itself); not
+yet measured over TSU.

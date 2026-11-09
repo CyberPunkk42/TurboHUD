@@ -67,6 +67,10 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-09: A probe for the overlay's FPS cost, `experiments/window_count_probe.py`: 17 small windows
+  against one large window holding the same 17 boxes, in TurboHUD's own layout, phase by phase on its own.
+  It tells whether rebuilding the overlay as one window would help. Seen running with real windows on the
+  Mac; not yet measured over TSU.
 - 2026-11-09: Confirmed by the user: the move-mode panel and the settings window open wholly on the screen.
   A CPU recording per section (`docs/CONTINUE_HERE.md`, "Tester's Mac"): each window adds about the same to
   WindowServer, whatever it shows and however often it changes, so a window's being there costs, not its
