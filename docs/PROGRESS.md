@@ -819,3 +819,8 @@ its "Recent changes".
   control keeps its tooltip. Drawn offscreen; not yet seen on the Mac or Hyprland.
 - 2026-11-09: Build 2026.11.09.2 for the tester, with the smaller move-mode panel; it replaces 2026.11.09
   (never sent), and the test instructions name it and the panel's "Show" column.
+- 2026-11-09: `docs/WINDOWS_AND_CROSSOVER.md`, asked for by the user: what Windows still needs (live data
+  is built in `winmemory.py` but not wired into the app there), and an analysis of running all of TurboHUD
+  as a Windows app inside TSU's CrossOver bottle: what it gains (one app, fewer parts), what it costs (no
+  overlay over TSU's Fullscreen, tested; the window count, the Wine server, soft text on Retina) and a plan
+  to try it, cheapest first (backlog item 2b).

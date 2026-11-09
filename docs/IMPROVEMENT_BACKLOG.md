@@ -20,6 +20,14 @@ of scope.
 Then live data: Windows lets a program read another of the same user
 (`OpenProcess` with `PROCESS_VM_READ`, `ReadProcessMemory`), so no probe or launch
 option should be needed; the lookup by name (`turbohud/core`) stays as it is.
+What is built and what is left on Windows: `docs/WINDOWS_AND_CROSSOVER.md`.
+
+## 2b. CrossOver: all of TurboHUD inside the bottle (a trial)
+Asked for by the user (2026-11-09): try TurboHUD as a Windows app inside TSU's bottle instead of a
+native Mac app with a reader in the bottle. Analysis and plan: `docs/WINDOWS_AND_CROSSOVER.md`. A
+window from inside CrossOver never shows over TSU's Fullscreen (tested 2026-10-23), so at best a
+second mode for windowed TSU. Next: the Qt overlay probe in the bottle (plan step 1), then FPS
+against the native app with TSU windowed. Needs item 2's live data in-process for the real app.
 
 ## 3. macOS: live data in CrossOver
 Answered 2026-11-04 (`experiments/README.md`, "Memory inside the CrossOver bottle"):
