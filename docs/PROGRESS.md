@@ -780,3 +780,9 @@ its "Recent changes".
   none). Move mode keeps a window per section, so dragging, groups and Undo are as before. A section asks the
   canvas to draw it again where it is and where it was; moves and resizes while locked do too.
   `TURBOHUD_ONE_WINDOW=0` turns it off; Linux and Windows keep a window each for now. Not yet seen over TSU.
+- 2026-11-09: The last and best lap have colours, asked for by the user, as on F1's timing screens. The best
+  lap is purple while nobody else in the race has gone faster (a time as fast belongs to whoever set it
+  first), else green; alone it is always purple. The last lap takes the best's colour when it is the
+  driver's best lap, else white (no better than the best before, also when as fast). At the finish the last
+  lap keeps its colour. The other drivers' best laps come from their start-line passes, as in the lap
+  times list (`race.lap_colours`). No more reads of the game. Not yet seen in a race.

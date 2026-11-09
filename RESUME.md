@@ -70,6 +70,12 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-09: The last and best lap have colours, asked for by the user, as on F1's timing screens. The best
+  lap is purple while nobody else in the race has gone faster (a time as fast belongs to whoever set it
+  first), else green; alone it is always purple. The last lap takes the best's colour when it is the
+  driver's best lap, else white (no better than the best before, also when as fast). At the finish the last
+  lap keeps its colour. The other drivers' best laps come from their start-line passes, as in the lap
+  times list (`race.lap_colours`). No more reads of the game. Not yet seen in a race.
 - 2026-11-09: While locked, on the Mac, every section is drawn in one see-through window per screen, asked
   for by the user: a probe with their layout gave 85 FPS with 17 windows and 115 with one window (120 with
   none). Move mode keeps a window per section, so dragging, groups and Undo are as before. A section asks the
