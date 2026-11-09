@@ -61,6 +61,8 @@
    `XDG_RUNTIME_DIR` set to an empty private folder).
 1. Windows: the overlay over TSU (windowed, Fullscreen, Fullscreen Exclusive), then
    live data (reading memory as the same user, without a probe).
+   Also a trial of all of TurboHUD inside the CrossOver bottle (backlog item 2b,
+   `docs/WINDOWS_AND_CROSSOVER.md`): first the Qt probe in the bottle.
 2. macOS: live data is connected; check it in races (offline and online), over
    Fullscreen, and listen for stutter while the race is searched for.
 3. Layout: checked by hand on the Mac; what is left is in races, on Linux and on Windows
@@ -70,6 +72,11 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-09: `docs/WINDOWS_AND_CROSSOVER.md`, asked for by the user: what Windows still needs (live data
+  is built in `winmemory.py` but not wired into the app there), and an analysis of running all of TurboHUD
+  as a Windows app inside TSU's CrossOver bottle: what it gains (one app, fewer parts), what it costs (no
+  overlay over TSU's Fullscreen, tested; the window count, the Wine server, soft text on Retina) and a plan
+  to try it, cheapest first (backlog item 2b).
 - 2026-11-09: Build 2026.11.09.2 for the tester, with the smaller move-mode panel; it replaces 2026.11.09
   (never sent), and the test instructions name it and the panel's "Show" column.
 - 2026-11-09: The move-mode panel is smaller, asked for by the user: 568 x 642 px instead of 675 x 978. The
