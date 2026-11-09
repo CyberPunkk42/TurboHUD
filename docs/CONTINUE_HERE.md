@@ -10,7 +10,7 @@ none is left.
    before); it looks as before (text, delta bar, map, radar, tint); move mode (drag, resize, a group,
    Undo, then locking leaves nothing behind); while locked, a preset shortcut and "bigger"/"smaller" in
    the settings. If anything is wrong: `TURBOHUD_ONE_WINDOW=0 sh run_turbohud.sh`, and read the log.
-2. Build 2026.11.09 went to the tester (2026-11-09) with the shorter `TurboHUD-test-instructions.md`. Put
+2. Build 2026.11.09.2 went to the tester (2026-11-09) with the shorter `TurboHUD-test-instructions.md`. Put
    their results under "Tester's Mac": FPS without TurboHUD and with every section shown (63 before), the
    quick look, the log, whether a reader was left and whether TSU froze on quitting.
 3. At each quit of TSU the user notes whether it froze and whether TurboHUD ran ("Other points").
@@ -206,7 +206,7 @@ Ask the user to say when done before restarting TurboHUD: the log is replaced at
   they found the result "much better" afterwards, but may not have widened it.
 - Offers not taken up yet: a leader-only blue flag; the settings window remembering where it
   was dragged; slots for other numbers (fuel and tires move by a digit at 100 to 99%).
-- `releases/` holds only the latest build, 2026.11.09 (needs macOS 27): see backlog item 5 for what it
+- `releases/` holds only the latest build, 2026.11.09.2 (needs macOS 27): see backlog item 5 for what it
   needs before it runs on an older macOS.
 
 ## How the slow reads were found

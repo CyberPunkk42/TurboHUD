@@ -1,6 +1,6 @@
 # TurboHUD: test for the Mac, step by step
 
-Nov 9, 2026 · build 2026.11.09 · about 20 minutes
+Nov 9, 2026 · build 2026.11.09.2 · about 20 minutes
 
 Thank you for testing again. Last time, with every section shown, TSU dropped from about 115 FPS to about 63. This build draws all of TurboHUD in one window instead of one window per section, which should give most of those frames back. This test checks that, and that TSU still quits normally.
 
@@ -14,7 +14,7 @@ TurboHUD only reads what the game shows. It changes nothing in TSU or in CrossOv
 
 You need:
 
-- [ ] The file `TurboHUD-2026.11.09-macos-arm64.dmg`
+- [ ] The file `TurboHUD-2026.11.09.2-macos-arm64.dmg`
 - [ ] TSU in CrossOver, as last time
 - [ ] The same way of reading TSU's FPS as last time
 - [ ] The Terminal app (in **Applications > Utilities**)
@@ -28,12 +28,12 @@ Pick one track and one car, and use them for every step. Keep TSU in **Fullscree
 ## Part 2: Install the new TurboHUD (3 minutes)
 
 1. If TurboHUD is running, quit it: press **Control + Shift + Q**.
-2. Double-click `TurboHUD-2026.11.09-macos-arm64.dmg`. A window opens.
+2. Double-click `TurboHUD-2026.11.09.2-macos-arm64.dmg`. A window opens.
 3. Drag **TurboHUD** onto **Applications**. If asked, choose **Replace**.
 4. Close the window. In Finder, click the eject button next to **TurboHUD** in the sidebar.
 5. **Don't open TurboHUD yet.** The first measurement is without it.
 
-Your layout and settings from last time stay.
+Your layout and settings from last time stay. The move-mode panel is smaller now: options such as **Speed in mph** moved to **Settings…**.
 
 ---
 
@@ -68,7 +68,7 @@ Always close move mode (**Control + Shift + L**) before you drive.
 3. Wait until the lap and the times show on the screen. This can take up to a minute.
 4. Press **Control + Shift + L**. The panel appears.
 5. Click **Settings…**. Next to **Race reads a second**, check that **20** is selected (click it if not). Click **Close**.
-6. **Tick every "Show …" box.**
+6. **Tick every box in the "Show" column** (the one with the section names).
 7. Press **Control + Shift + L** to close move mode.
 8. Drive for one minute.
 
