@@ -1601,6 +1601,7 @@ def race_sections(
     track_map=None,
     blue_within=BLUE_FROM,
     delta_bar=None,
+    sector_bars=True,
 ):
     """{section name: rows} for a live-reader snapshot (see core.hud.RACE_SECTIONS); a
     section with nothing to show has no rows. Nothing before the grid: in the menus, the
@@ -1609,7 +1610,8 @@ def race_sections(
     `radar` (a Radar) follows the cars' movement for the proximity radar; `track_map`
     (a core.trackmap.TrackMap) gives the track map, in the player list's order;
     `blue_within` is how many seconds behind a car shows the blue flag; `delta_bar` (a
-    DeltaBar) gives the delta bar, under 'deltaview'."""
+    DeltaBar) gives the delta bar, under 'deltaview'; `sector_bars` False leaves the sector
+    bars out (an option)."""
     if not on_grid(snapshot, now):
         return {}
     state = snapshot.state
@@ -1636,7 +1638,7 @@ def race_sections(
         if view is not None:
             sections['deltaview'] = view
     sections.update(car_sections(state.car, state.laps_to_go, speed_unit))
-    sectors = sector_colours(state)
+    sectors = sector_colours(state) if sector_bars else None
     if sectors is not None:
         sections['levels'] = {**sections.get('levels', {}), 'times': Sectors(sectors)}
     if 'draft' in sections and state.draft is not None:

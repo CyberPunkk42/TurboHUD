@@ -301,6 +301,7 @@ def run(args, folder):
                 track_map,
                 settings.blue_seconds,
                 delta_bar,
+                settings.sector_bars,
             )
             if pad is not None and 'pedals' in current:
                 current['pedals'] = combined(current['pedals'], pad.pedals())
@@ -352,6 +353,7 @@ def run(args, folder):
         window.setGeometry(*place)
         window.backdrop = saved.tint if saved else default_tint(window.section, settings.backdrop)
         window.radar_cone = settings.radar_cone
+        window.sector_bars = settings.sector_bars
         window.show_on_top()
         window.set_wanted(saved.visible if saved else True)
         window.group = saved.group if saved else ''
@@ -449,6 +451,18 @@ def run(args, folder):
                 window.update()
         save()
         log.info('slipstream cones on the radar %s', 'on' if cone else 'off')
+
+    def set_sector_bars(shown):
+        nonlocal settings
+        settings = replace(settings, sector_bars=shown)
+        sector_bars_action.setChecked(shown)
+        panel.set_sector_bars(shown)
+        for window in windows.values():
+            window.sector_bars = shown
+            if window.section.sectors:
+                window.update()
+        save()
+        log.info('sector bars %s', 'on' if shown else 'off')
 
     def set_map_others(others):
         nonlocal settings
@@ -748,6 +762,11 @@ def run(args, folder):
     radar_cone_action.triggered.connect(lambda checked: set_radar_cone(checked))
     if any(section.drawing == 'radar' for section in layout):
         menu.addAction(radar_cone_action)
+    sector_bars_action = QAction('Sector bars below the last and best lap', menu, checkable=True)
+    sector_bars_action.setChecked(settings.sector_bars)
+    sector_bars_action.triggered.connect(lambda checked: set_sector_bars(checked))
+    if any(section.sectors for section in layout):
+        menu.addAction(sector_bars_action)
     map_others_action = QAction('Other cars on the track map', menu, checkable=True)
     map_others_action.setChecked(settings.map_others)
     map_others_action.triggered.connect(lambda checked: set_map_others(checked))
@@ -813,6 +832,7 @@ def run(args, folder):
         settings.map_others,
         tuple(settings.presets),
         settings.radar_cone,
+        settings.sector_bars,
     )
     panel.preset_save_requested.connect(save_preset)
     panel.preset_load_requested.connect(load_preset)
@@ -825,6 +845,7 @@ def run(args, folder):
     panel.backdrop_changed.connect(set_backdrop)
     panel.map_others_changed.connect(set_map_others)
     panel.radar_cone_changed.connect(set_radar_cone)
+    panel.sector_bars_changed.connect(set_sector_bars)
     panel.settings_requested.connect(open_settings)
     for name, window in windows.items():
         panel.set_wanted(name, window.wanted)

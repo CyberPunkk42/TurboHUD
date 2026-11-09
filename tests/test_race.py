@@ -1652,6 +1652,14 @@ class SectorTests(unittest.TestCase):
         )
         self.assertEqual(race.sector_colours(state), (self.PURPLE, None))
 
+    def test_the_option_leaves_them_out_of_the_sections(self):
+        snapshot = racing(self.state([], [20.0]), read_at=0.0, moved_at=0.0)
+        shown = race.race_sections(snapshot, 0.0)
+        self.assertEqual(shown['levels']['times'], race.Sectors((self.PURPLE, None, None)))
+        hidden = race.race_sections(snapshot, 0.0, sector_bars=False)
+        self.assertNotIn('times', hidden.get('levels', {}))
+        self.assertIn('times', hidden)  # the times themselves stay
+
     def test_after_the_finish_they_go_once_the_last_lap_has_shown(self):
         laps = [[20.0, 30.0, 25.0]]
         self.assertIsNotNone(race.sector_colours(self.state(laps, after=2, finished=True)))

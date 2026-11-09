@@ -124,7 +124,8 @@ starting TurboHUD again.
   lap, the delta to your best lap, last and best lap (purple for the race's fastest lap,
   green for your best short of it, white for a slower lap; the track map's road shows
   the same purple or green for 6 seconds after such a lap; small bars below them, one per
-  stretch between checkpoints, colour each sector the same way, dark yellow when slower), fuel and tires left (with the laps
+  stretch between checkpoints, colour each sector the same way, dark yellow when slower; **Sector bars below the last
+  and best lap** in the menu or the move-mode panel turns them off), fuel and tires left (with the laps
   they last), health (in events with damage), the draft (slipstream) with the downforce it costs, the fuel to spare or short for the finish, speed with throttle and brake
   bars (km/h or mph), the player list with flags, pit status and gaps, the lap times
   (every driver's best lap and running lap), the local time

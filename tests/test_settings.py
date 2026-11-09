@@ -143,6 +143,10 @@ class SpeedUnitSettingTests(unittest.TestCase):
             self.assertTrue(s.load_settings(path).radar_cone)  # as it was before the option
             s.save_settings(path, s.Settings(radar_cone=False))
             self.assertFalse(s.load_settings(path).radar_cone)
+            path.write_text(json.dumps({}))
+            self.assertTrue(s.load_settings(path).sector_bars)  # on, as before the option
+            s.save_settings(path, s.Settings(sector_bars=False))
+            self.assertFalse(s.load_settings(path).sector_bars)
 
 
 class FitOnScreensTests(unittest.TestCase):

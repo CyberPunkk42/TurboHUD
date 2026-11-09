@@ -70,6 +70,9 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-09: The sector bars can be turned off, asked for by the user: "Sector bars below the last and best
+  lap" in the TurboHUD icon's menu and the move-mode panel, on by default, saved as `sector_bars`. Off, the
+  room below the times stays, so their text keeps its size (make the box shorter in move mode to taste).
 - 2026-11-09: Sector bars below the last and best lap, asked for by the user: one bar per stretch between
   two checkpoints (TSU has no sectors of its own), all of equal width across the section, so a track with
   10 checkpoints has 10. As on F1's timing screens, a sector is purple when faster than anyone else had
