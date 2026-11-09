@@ -30,6 +30,7 @@ from PySide6.QtWidgets import (
 
 from turbohud.core.hud import (
     MARGIN,
+    Sectors,
     base_size,
     centred_text,
     content_shift,
@@ -42,6 +43,7 @@ from turbohud.core.hud import (
     level_space,
     pedal_bars,
     pedal_space,
+    sector_bars,
     steady_rows,
     text_can_centre,
     tight_height,
@@ -59,6 +61,7 @@ from turbohud.hud.painter import (
     draw_delta_bar,
     draw_hud,
     draw_level,
+    draw_sectors,
     text_ink,
     text_width,
 )
@@ -76,6 +79,7 @@ BACKDROP = (0, 0, 0, 40)  # the light tint behind a section's text (option), RGB
 BLUE_SAMPLE = 0.6  # the bar's opacity in move mode, to place it
 DELTA_BAR_SAMPLE = DeltaBarView(0.4, -0.6, '\u22120.40')  # the delta bar in move mode: ahead, gaining
 LEVEL_SAMPLE = (0.7, 'ahead')  # a level bar in move mode, to place the section
+SECTORS_SAMPLE = Sectors(('#c77dff', '#5ee07a', None))  # the sector bars in move mode
 RADAR_CAR_AT = 0.5  # the local car's height in the radar, from the top: the middle
 CONE_STEPS = 8  # points along a slipstream cone's far edge
 CONE_OUT, CONE_IN = 30, 80  # a slipstream cone's opacity (0-255): elsewhere, local car in it
@@ -332,10 +336,17 @@ class SectionWindow(QWidget):
         centre = self.text_centred and text_can_centre(self.section)
         draw_hud(painter, hud_lines(rows, scale), self.theme, scale, left, self.width() - left, centre)
         if self.section.level and rows:
-            level = self.level or (None if self.locked else LEVEL_SAMPLE)
+            sample = SECTORS_SAMPLE if self.section.sectors else LEVEL_SAMPLE
+            level = self.level or (None if self.locked else sample)
             if level is not None:
                 content_height = content_size(rows, scale, text_width)[1]
-                draw_level(painter, level_bar(self.width(), content_height, scale, *level))
+                if isinstance(level, Sectors):
+                    count = len(level.colours)
+                    draw_sectors(
+                        painter, sector_bars(self.width(), content_height, scale, count), level.colours
+                    )
+                else:
+                    draw_level(painter, level_bar(self.width(), content_height, scale, *level))
         painter.translate(0, -down)
 
     def _paint_backdrop(self, painter, rows, scale, bars, down=0):

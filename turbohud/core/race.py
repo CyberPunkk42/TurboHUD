@@ -32,7 +32,7 @@ import time
 from dataclasses import dataclass
 
 from turbohud.core.flags import flag_code, flag_text
-from turbohud.core.hud import Row, blend, clock, local_time_rows
+from turbohud.core.hud import Row, Sectors, blend, clock, local_time_rows
 from turbohud.core.il2cpp import ARRAY_DATA, ARRAY_LENGTH, LIST_ITEMS, SIMPLE_TYPES, NotFound, ReadError
 
 log = logging.getLogger(__name__)
@@ -51,6 +51,7 @@ SESSION_BEST_COLOR = '#c77dff'  # purple, as in F1: the fastest lap of anyone in
 PERSONAL_BEST_COLOR = '#5ee07a'  # green: the driver's own best (the HUD's 'ahead' colour)
 LAP_FLASH = 6 * UNITS_PER_SECOND  # how long the track map's road shows a fast lap's colour
 NO_CHECKPOINT = 0xFFFF_FFFF  # how a missed checkpoint may be marked
+SECTOR_SLOW_COLOR = '#c9a227'  # dark yellow: a sector slower than the driver's best
 
 WAITING_FOR_GAME = 'waiting for game'
 WAITING_FOR_RACE = 'waiting for race'
@@ -1635,6 +1636,9 @@ def race_sections(
         if view is not None:
             sections['deltaview'] = view
     sections.update(car_sections(state.car, state.laps_to_go, speed_unit))
+    sectors = sector_colours(state)
+    if sectors is not None:
+        sections['levels'] = {**sections.get('levels', {}), 'times': Sectors(sectors)}
     if 'draft' in sections and state.draft is not None:
         sections['draft'] = sections['draft'] + draft_rows(state)
     if state.players:
@@ -1777,6 +1781,76 @@ def lap_flash(state):
     return (
         SESSION_BEST_COLOR if last == SESSION_BEST_COLOR else PERSONAL_BEST_COLOR if last == 'ahead' else ''
     )
+
+
+def sector_starts(count):
+    """The checkpoint each sector starts at, for a lap of `count` checkpoints (the start
+    line is checkpoint 0): a sector from each checkpoint to the next, as many as the
+    track has (TSU has no sectors of its own)."""
+    return tuple(range(max(count, 0)))
+
+
+def _sector_times(laps, index, starts):
+    """[(time, when it ended) or None] for each sector of lap `index` of `laps` (each a
+    lap's checkpoint times); the last sector ends at the next lap's start line. None for a
+    sector not driven yet, or with a missed checkpoint."""
+    passes = laps[index]
+    line = laps[index + 1][0] if index + 1 < len(laps) and laps[index + 1] else None
+    times = []
+    for number, start in enumerate(starts):
+        begin = passes[start] if start < len(passes) else None
+        if number + 1 < len(starts):
+            end = passes[starts[number + 1]] if starts[number + 1] < len(passes) else None
+        else:
+            end = line
+        known = begin is not None and end is not None and NO_CHECKPOINT not in (begin, end) and end > begin
+        times.append((end - begin, end) if known else None)
+    return times
+
+
+def sector_colours(state):
+    """The colours of the sector bars below the last and best lap, or None: for the lap
+    being driven, and for LAP_FLASH after the start line the lap just ended (until a
+    sector of the new one is done). Each sector as on F1's timing screens: purple when
+    faster than anyone else in the race had driven it by then and than the driver's own
+    earlier laps, green when only the latter, dark yellow when slower than the driver's
+    best; None while still to come."""
+    laps = state.checkpoints
+    count = len(state.gates) or max((len(lap) for lap in laps[: state.laps_completed]), default=0)
+    starts = sector_starts(count)
+    if not starts or not laps:
+        return None
+    current = state.laps_completed
+    driving = current < len(laps) and not state.finished
+    shown = current if driving else None
+    if current >= 1 and current - 1 < len(laps):
+        ended = state.lap_starts[current] if current < len(state.lap_starts) else None
+        recent = ended is not None and 0 <= state.clock - ended < LAP_FLASH
+        if recent and not (driving and any(_sector_times(laps, current, starts))):
+            shown = current - 1
+    if shown is None:
+        return None
+    mine = _sector_times(laps, shown, starts)
+    earlier = [_sector_times(laps, index, starts) for index in range(shown)]
+    others = []
+    for player in state.players:
+        if not player.local:
+            theirs = player.checkpoints[: player.laps_completed + 1]
+            others.extend(_sector_times(theirs, index, starts) for index in range(len(theirs)))
+    colours = []
+    for number, sector in enumerate(mine):
+        if sector is None:
+            colours.append(None)
+            continue
+        time, end = sector
+        own = [lap[number][0] for lap in earlier if lap[number] is not None]
+        personal = not own or time < min(own)
+        before = [lap[number][0] for lap in others if lap[number] is not None and lap[number][1] < end]
+        if personal and (not before or time < min(before)):
+            colours.append(SESSION_BEST_COLOR)
+        else:
+            colours.append(PERSONAL_BEST_COLOR if personal else SECTOR_SLOW_COLOR)
+    return tuple(colours)
 
 
 def times_row(state):

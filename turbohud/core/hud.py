@@ -259,6 +259,7 @@ class Section:
     bar: tuple = ()  # (width, height) at scale 1 for a drawing without text
     drawing: str = ''  # what it draws instead of text: 'flag' (blue flag), 'radar' or 'map'
     level: bool = False  # a bar below the text showing how much is left (fuel, tires, health)
+    sectors: bool = False  # with `level`: the room below the text holds the lap's sector bars
 
 
 LAP_TIME_ROWS = 20  # how many drivers the lap times section is made for
@@ -297,7 +298,13 @@ RACE_SECTIONS = (
     ),
     Section('current', 'Running lap', ((Row('0:00.0', 'big'),), (Row('10:00.000', 'big'),))),
     Section('delta', 'Delta to best', ((Row('+00.00 vs best', 'medium'),),)),
-    Section('times', 'Last and best lap', ((Row('Last 0:00.000   Best 0:00.000', 'medium'),),)),
+    Section(
+        'times',
+        'Last and best lap',
+        ((Row('Last 0:00.000   Best 0:00.000', 'medium'),),),
+        level=True,
+        sectors=True,
+    ),
     Section('fuel', 'Fuel', ((Row('Fuel 100.0%', 'medium', tail='  ~10.0 laps  +0.00%'),),), level=True),
     Section('fuelfinish', 'Fuel to finish', ((Row('Finish +00.0 laps', 'medium'),),)),
     Section('tires', 'Tires', ((Row('Tires 100%  ~10.0 laps', 'medium'),),), level=True),
@@ -383,6 +390,42 @@ def level_bar(width, content_height, scale, fill, color):
     return Bar(
         margin, top, max(width - 2 * margin, 1), max(level_space(scale), 2), min(max(fill, 0.0), 1.0), color
     )
+
+
+@dataclass(frozen=True)
+class Sectors:
+    """The sector bars below the last and best lap: one colour per sector of the lap
+    shown ('#rrggbb', or None while that sector is still to come)."""
+
+    colours: tuple
+
+
+SECTOR_GAP = 4  # between two sector bars, at scale 1, at most
+SECTOR_GAP_SHARE = 0.25  # and at most this share of a bar's room: many sectors, thin gaps
+
+
+def sector_bars(width, content_height, scale, count):
+    """`count` equal bars side by side where a level bar goes (see level_bar), as Bars
+    with no fill: the caller colours them."""
+    whole = level_bar(width, content_height, scale, 0.0, '')
+    gap = max(min(SECTOR_GAP * scale, whole.width / count * SECTOR_GAP_SHARE), 1) if count > 1 else 0
+    each = max((whole.width - gap * (count - 1)) / count, 1)
+    bars = []
+    for index in range(count):
+        left = round(whole.x + index * (each + gap))
+        right = round(whole.x + index * (each + gap) + each)
+        bars.append(Bar(left, whole.y, max(right - left, 1), whole.height, 0.0, ''))
+    return bars
+
+
+def sector_bar_place(section, place, scale, ink):
+    """`place` (x, y, width, height) of a section saved before it had sector bars (layout
+    5): taller by their room, so that its text stays the same size."""
+    if not section.sectors:
+        return place
+    x, y, width, height = place
+    old = tight_height(replace(section, level=False, sectors=False), scale, ink)
+    return x, y, width, round(height / old * tight_height(section, scale, ink))
 
 
 PEDAL_WIDTH = 10  # a pedal bar's width at scale 1

@@ -12,7 +12,14 @@ from functools import partial
 from pathlib import Path
 
 from turbohud import __version__
-from turbohud.core.hud import CLOCK_SECTIONS, RACE_SECTIONS, default_tint, more_lap_rows_place, tight_place
+from turbohud.core.hud import (
+    CLOCK_SECTIONS,
+    RACE_SECTIONS,
+    default_tint,
+    more_lap_rows_place,
+    sector_bar_place,
+    tight_place,
+)
 from turbohud.core.settings import (
     LAYOUT_VERSION,
     LOG_FILE,
@@ -51,6 +58,8 @@ def upgrade_layout(settings, path, ink):
                     box = tight_place(known[name], box, scale, ink)
                 if version < 3:
                     box = more_lap_rows_place(known[name], box, scale, ink)
+                if version < 5:
+                    box = sector_bar_place(known[name], box, scale, ink)
                 x, y, width, height = box
                 place = replace(place, x=x, y=y, width=width, height=height)
                 if version < 4 and known[name].drawing == 'map':

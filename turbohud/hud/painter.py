@@ -180,6 +180,16 @@ def draw_level(painter, bar):
         painter.drawRoundedRect(QRectF(bar.x, bar.y, bar.width * bar.fill, bar.height), radius, radius)
 
 
+def draw_sectors(painter, bars, colours):
+    """The sector bars from turbohud.core.hud.sector_bars, each in its colour from
+    `colours` ('#rrggbb'), grey while its sector is still to come (None)."""
+    painter.setPen(QPen(QColor(0, 0, 0, 160), 1))
+    for bar, colour in zip(bars, colours):
+        radius = min(bar.height / 2, 3)
+        painter.setBrush(QColor(colour) if colour else QColor(*BAR_OFF))
+        painter.drawRoundedRect(QRectF(bar.x, bar.y, bar.width, bar.height), radius, radius)
+
+
 EMOJI_FAMILIES = ['Noto Color Emoji', 'Apple Color Emoji', 'Segoe UI Emoji', 'Twemoji']
 
 

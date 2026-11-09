@@ -23,8 +23,9 @@ SPEED_UNITS = ('kmh', 'mph')
 MIN_SCALE = 0.5
 MAX_SCALE = 3.0
 # 2: a text section's box fits closely round its text; 3: 20 lap times; 4: the track map's
-# dark square is its tint (on), where its saved tint meant nothing before
-LAYOUT_VERSION = 4
+# dark square is its tint (on), where its saved tint meant nothing before; 5: the last and
+# best lap has sector bars below its text
+LAYOUT_VERSION = 5
 _COLOR = re.compile(r'#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?')
 
 

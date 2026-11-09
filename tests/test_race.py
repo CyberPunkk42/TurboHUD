@@ -1566,6 +1566,99 @@ class LapColourTests(unittest.TestCase):
         )
 
 
+def _passes(laps, current=(), start=0):
+    """Checkpoint times per lap for a track of 3 checkpoints, one sector each: `laps` are
+    whole laps as [s1, s2, s3] seconds, `current` the sectors done on the lap being driven."""
+    unit, at, out = 10_000, start, []
+    for lap in laps:
+        out.append((at, at + round(lap[0] * unit), at + round((lap[0] + lap[1]) * unit)))
+        at += round(sum(lap) * unit)
+    passes = [at]
+    for sector in current[:2]:
+        passes.append(passes[-1] + round(sector * unit))
+    out.append(tuple(passes))
+    return out
+
+
+class SectorTests(unittest.TestCase):
+    """The sector bars below the last and best lap, as on F1's timing screens."""
+
+    PURPLE, GREEN, YELLOW = race.SESSION_BEST_COLOR, race.PERSONAL_BEST_COLOR, race.SECTOR_SLOW_COLOR
+    GATES = (((0, 0), (1, 1)),) * 3
+
+    def state(self, laps, current=(), after=1.0, others=(), finished=False, gates=GATES):
+        mine = _passes(laps, current)
+        players = [race.PlayerState('other', 0, len(theirs), tuple(_passes(theirs))) for theirs in others]
+        players.append(race.PlayerState('me', 0, len(laps), tuple(mine), local=True))
+        return race.LapState(
+            clock=mine[-1][-1] + round(after * 10_000),
+            time_limit=0,
+            laps_completed=len(laps),
+            laps_to_finish=20,
+            lap_starts=[lap[0] for lap in mine],
+            checkpoints=tuple(mine),
+            gates=gates,
+            players=tuple(players),
+            finished=finished,
+        )
+
+    def test_sectors_follow_the_checkpoints(self):
+        self.assertEqual(race.sector_starts(0), ())
+        self.assertEqual(race.sector_starts(1), (0,))
+        self.assertEqual(race.sector_starts(2), (0, 1))
+        self.assertEqual(race.sector_starts(3), (0, 1, 2))
+        self.assertEqual(race.sector_starts(10), tuple(range(10)))
+        self.assertEqual(len(race.sector_starts(63)), 63)
+
+    def test_the_first_lap_fills_in_as_it_is_driven(self):
+        self.assertEqual(race.sector_colours(self.state([])), (None, None, None))
+        self.assertEqual(race.sector_colours(self.state([], [20.0])), (self.PURPLE, None, None))
+
+    def test_slower_than_the_drivers_best_is_yellow_and_faster_purple(self):
+        lap = [20.0, 30.0, 25.0]
+        self.assertEqual(
+            race.sector_colours(self.state([lap], [21.0, 29.0], after=7)), (self.YELLOW, self.PURPLE, None)
+        )
+
+    def test_someone_faster_before_makes_a_personal_best_green(self):
+        state = self.state([], [20.0, 30.0], others=[[[19.0, 31.0, 25.0]]])
+        self.assertEqual(race.sector_colours(state), (self.GREEN, self.PURPLE, None))
+
+    def test_someone_faster_later_leaves_it_purple(self):
+        # Their fast first sector comes on their second lap, after mine was set.
+        state = self.state([], [20.0], others=[[[30.0, 30.0, 30.0]], [[30.0, 30.0, 30.0], [10.0, 1.0, 1.0]]])
+        self.assertEqual(race.sector_colours(state)[0], self.PURPLE)
+
+    def test_the_lap_just_ended_shows_for_six_seconds(self):
+        laps = [[20.0, 30.0, 25.0], [21.0, 29.0, 24.0]]
+        self.assertEqual(
+            race.sector_colours(self.state(laps, after=5.9)), (self.YELLOW, self.PURPLE, self.PURPLE)
+        )
+        self.assertEqual(race.sector_colours(self.state(laps, after=6.0)), (None, None, None))
+
+    def test_a_sector_of_the_new_lap_ends_the_last_ones_showing(self):
+        laps = [[20.0, 30.0, 25.0]]
+        self.assertEqual(race.sector_colours(self.state(laps, [4.0], after=1.0)), (self.PURPLE, None, None))
+
+    def test_a_track_with_two_checkpoints_has_two_sectors(self):
+        state = race.LapState(
+            clock=100_000,
+            time_limit=0,
+            laps_completed=0,
+            laps_to_finish=5,
+            lap_starts=[0],
+            checkpoints=((0, 50_000),),
+            gates=self.GATES[:2],
+        )
+        self.assertEqual(race.sector_colours(state), (self.PURPLE, None))
+
+    def test_after_the_finish_they_go_once_the_last_lap_has_shown(self):
+        laps = [[20.0, 30.0, 25.0]]
+        self.assertIsNotNone(race.sector_colours(self.state(laps, after=2, finished=True)))
+        self.assertIsNone(race.sector_colours(self.state(laps, after=7, finished=True)))
+        self.assertIsNone(race.sector_colours(self.state([], gates=())))
+
+
 class RowsTests(unittest.TestCase):
     def test_format_tenths_cuts_off(self):
         self.assertEqual(race.format_tenths(365_459), '0:36.5')

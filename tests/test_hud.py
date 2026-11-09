@@ -138,6 +138,30 @@ class DeltaBarPlaceTests(unittest.TestCase):
         self.assertGreater(bar[1], flag[1] + flag[3])
 
 
+class SectorBarTests(unittest.TestCase):
+    def test_equal_bars_side_by_side_across_the_level_bars_room(self):
+        whole = hud.level_bar(300, 40, 1.0, 0.0, '')
+        for count in (1, 2, 3, 10, 63):
+            with self.subTest(count=count):
+                bars = hud.sector_bars(300, 40, 1.0, count)
+                self.assertEqual(len(bars), count)
+                self.assertEqual(bars[0].x, whole.x)
+                self.assertLessEqual(bars[-1].x + bars[-1].width, whole.x + whole.width)
+                self.assertGreaterEqual(bars[-1].x + bars[-1].width, whole.x + whole.width - 1)
+                self.assertLessEqual(max(b.width for b in bars) - min(b.width for b in bars), 1)
+                self.assertTrue(all(a.x + a.width < b.x for a, b in itertools.pairwise(bars)))
+
+    def test_a_section_saved_before_the_bars_keeps_its_text_size(self):
+        times = next(section for section in hud.RACE_SECTIONS if section.name == 'times')
+        ink = lambda _text, size: (size * 0.7, 0)
+        old = hud.tight_height(hud.replace(times, level=False, sectors=False), 1.0, ink)
+        x, y, width, height = hud.sector_bar_place(times, (5, 6, 300, old * 2), 1.0, ink)
+        self.assertEqual((x, y, width), (5, 6, 300))
+        self.assertEqual(height, 2 * hud.tight_height(times, 1.0, ink))
+        fuel = next(section for section in hud.RACE_SECTIONS if section.name == 'fuel')
+        self.assertEqual(hud.sector_bar_place(fuel, (5, 6, 300, 40), 1.0, ink), (5, 6, 300, 40))
+
+
 class TintTests(unittest.TestCase):
     def test_text_sections_and_the_track_map_have_a_tint(self):
         tinted = {section.name for section in hud.RACE_SECTIONS if hud.has_tint(section)}
