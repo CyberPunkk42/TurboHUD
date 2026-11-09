@@ -1932,6 +1932,20 @@ class LiveRaceTests(unittest.TestCase):
         with self.assertLogs('turbohud.tsu.client', 'INFO') as logs:
             times.flush()
         self.assertIn('100 trips a read, 1.00 ms a trip, 0.20 ms of it on the game', logs.output[0])
+        self.assertNotIn('reads of it', logs.output[0])
+
+    def test_the_log_says_how_many_reads_of_the_game_a_read_made(self):
+        from turbohud.tsu.client import ReadTimes
+
+        times = ReadTimes(lambda: 100.0)
+        for calls in (8, 9, 30):
+            times.add(0.01, (2, 0.008, calls))
+        with self.assertLogs('turbohud.tsu.client', 'INFO') as logs:
+            times.flush()
+        self.assertIn(
+            '2 trips a read, 5.00 ms a trip, 4.00 ms of it on the game\'s memory, 9 reads of it a read',
+            logs.output[0],
+        )
 
     def test_the_reading_thread_gets_python_s_lock_quickly(self):
         import sys

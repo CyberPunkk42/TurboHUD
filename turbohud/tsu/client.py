@@ -94,17 +94,19 @@ class ReadTimes:
     def __init__(self, clock):
         self._clock = clock
         self._times = []
-        self._details = []  # (trips, seconds on the game's memory or None, seconds in all)
+        self._details = []  # (trips, seconds on the game's memory or None, seconds in all, reads of it or None)
         self._since = None
 
     def add(self, seconds, detail=None):
-        """`detail`: (trips to the game's memory, seconds on it or None), where known."""
+        """`detail`: (trips for the game's memory, seconds on it or None[, reads of it or
+        None]), where known."""
         now = self._clock()
         if self._since is None:
             self._since = now - seconds
         self._times.append(seconds)
         if detail is not None:
-            self._details.append((*detail, seconds))
+            trips, in_game, *more = detail
+            self._details.append((trips, in_game, seconds, more[0] if more else None))
         if now - self._since >= TIMES_EVERY:
             self.flush()
 
@@ -135,6 +137,9 @@ class ReadTimes:
         in_game = [detail[1] / detail[0] for detail in self._details if detail[0] and detail[1] is not None]
         if in_game:
             text += f', {statistics.median(in_game) * 1000:.2f} ms of it on the game\'s memory'
+        calls = [detail[3] for detail in self._details if detail[0] and detail[3] is not None]
+        if calls:
+            text += f', {statistics.median(calls):.0f} reads of it a read'
         return text
 
 

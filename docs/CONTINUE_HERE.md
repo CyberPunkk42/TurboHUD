@@ -22,6 +22,10 @@ switch a running TurboHUD to move mode. The same goes for a build's `--smoke`: w
 built app only hands it "move" and quits, so the smoke test passes without starting the new app.
 
 ## Not yet seen in a race
+- Race reads in one go (2026-11-09): the log's `race reads` line should say 1 to 3 trips a read (it said
+  about 20 on the tester's Mac and 75 to 88 in races with AI) and how many reads of the game they made;
+  the median read time, about 20 to 30 ms before, should drop. Also whether TSU's FPS with nothing shown
+  comes closer to the FPS with TurboHUD closed (the tester lost about 8).
 - The sector bars below the last and best lap (2026-11-09): one per checkpoint stretch, purple, green,
   dark yellow or grey. To see: how they read on a track with many checkpoints (about 60 seen), and online
   as a client, where the other drivers' checkpoint times come from the server a little late.

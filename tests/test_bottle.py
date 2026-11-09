@@ -180,6 +180,21 @@ class ServiceTests(unittest.TestCase):
         self.assertTrue(header['ok'])
         self.assertEqual(payload, bytes(range(16, 20)))
 
+    def test_read_pages(self):
+        process = FakeProcess(base=0x10000, data=bytes(range(256)) * 16 * 4)  # pages 16 to 19
+        header, payload = self.service(process).handle({'op': 'read_pages', 'pages': [19, 16, 99]})
+        self.assertTrue(header['ok'])
+        self.assertEqual(header['got'], [16, 19])
+        self.assertGreaterEqual(header['took'], 0.0)
+        self.assertEqual(header['calls'], 2)  # pages 16 and 19 in one read, page 99 alone
+        self.assertEqual(payload, process.data[:4096] + process.data[3 * 4096 :])
+
+    def test_read_pages_is_limited(self):
+        for pages in ([], [-1], list(range(br.MAX_READ // 4096 + 1))):
+            with self.subTest(count=len(pages)):
+                header, _ = self.service().handle({'op': 'read_pages', 'pages': pages})
+                self.assertFalse(header['ok'])
+
     def test_read_size_is_limited(self):
         for size in (0, -1, br.MAX_READ + 1):
             with self.subTest(size=size):
@@ -326,6 +341,13 @@ class PipeReceivingTests(unittest.TestCase):
         pipe.read(0, 1)
         pipe.read(0, 1)
         self.assertEqual(pipe.in_game, 0.5)
+        self.assertEqual(pipe.game_reads, 2)
+
+    def test_pages_that_do_not_add_up_are_a_read_error(self):
+        pipe, writer = self.pipe()
+        os.write(writer, br.pack({'ok': True, 'got': [1, 2], 'took': 0.0, 'calls': 1}, bytes(4096)))
+        with self.assertRaises(ReadError):
+            pipe.read_pages([1, 2])
 
 
 class PipeTests(ReaderCase):
@@ -338,6 +360,16 @@ class PipeTests(ReaderCase):
         pipe.receive()
         self.assertEqual(pipe.read(0x10001, 2), b'\x01\x02')
         self.assertEqual(pipe.maps(), [(0x10000, 0x10100, 'rw-p', 0, '[heap]')])
+
+    def test_read_pages_through_the_pipe(self):
+        process = FakeProcess(base=0x10000, data=bytes(range(256)) * 16 * 4)
+        pipe = self.reader(process)
+        pipe.receive()
+        pages = pipe.read_pages([16, 18, 99])
+        self.assertEqual(sorted(pages), [16, 18])
+        self.assertEqual(pages[18], process.data[2 * 4096 : 3 * 4096])
+        self.assertEqual(process.reads, 2)  # 16 to 18 at once, then 99 alone
+        self.assertEqual(pipe.game_reads, 2)
 
     def test_a_refused_read_is_a_read_error(self):
         pipe = self.reader()

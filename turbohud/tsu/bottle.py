@@ -5,7 +5,9 @@ with the hardened runtime), so TurboHUD looks for TSU among the running programs
 CrossOver and the bottle, and starts `turbohud/tsu/bottle_reader.py` there with a
 portable Windows Python. `Bottle.connect` then gives `LiveRace` a race reader, as the
 Linux probe's `connect` does. The page cache is on this side: a question through the pipe
-costs about 15 µs, a read of the game about 250 µs.
+costs about 15 µs, a read of the game about 250 µs. Each race read starts with one
+question for all the pages the read before used (`Pipe.read_pages`), which the reader
+reads in as few calls as it can.
 
 Nothing here changes the bottle: the reader is run from outside it, and installs nothing,
 and the bottle's settings are only read, to warn about a graphics setting that makes TSU stutter.
@@ -25,7 +27,7 @@ from turbohud.core.il2cpp import Il2Cpp, Memory, NotFound, ReadError
 from turbohud.core.race import LapReader
 from turbohud.core.settings import settings_dir
 from turbohud.tsu.bottle_reader import HEADER, READY, pack
-from turbohud.tsu.winmemory import CachedReader, PageCache, searchable
+from turbohud.tsu.winmemory import PAGE, CachedReader, PageCache, searchable
 
 START_TIMEOUT = 30.0  # seconds for a reader to start: a sleeping bottle wakes up slowly
 TIMEOUT = 5.0  # seconds before a silent reader counts as stuck
@@ -128,6 +130,7 @@ class Pipe:
         self.on_close = on_close
         self.metadata = None  # (base, bytes), kept while this reader lasts
         self.in_game = 0.0  # seconds its reads have spent on the game's memory, for the log
+        self.game_reads = 0  # reads of the game's memory it asked for, for the log
         self._received = b''  # what has come but was not asked for yet
 
     def _take(self, size, timeout):
@@ -166,7 +169,18 @@ class Pipe:
     def read(self, address, size):
         header, payload = self.ask({'op': 'read', 'address': address, 'size': size})
         self.in_game += header.get('took', 0.0)
+        self.game_reads += 1
         return payload
+
+    def read_pages(self, pages):
+        """{page number: its 4 KiB} for those of `pages` the reader could read, in one question."""
+        header, payload = self.ask({'op': 'read_pages', 'pages': list(pages)})
+        self.in_game += header.get('took', 0.0)
+        self.game_reads += header.get('calls', 0)
+        got = header['got']
+        if len(payload) != len(got) * PAGE:
+            raise ReadError('the pages from the reader do not add up')
+        return {number: payload[i * PAGE : (i + 1) * PAGE] for i, number in enumerate(got)}
 
     def maps(self):
         """The game's memory as it is now: it grows as the game goes from menu to race."""
@@ -323,7 +337,7 @@ class Bottle:
         pipe = self._open()
         try:
             base, metadata = pipe.game_metadata()
-            cache = PageCache(pipe.read)
+            cache = PageCache(pipe.read, fetch_many=pipe.read_pages)
             memory = Memory(
                 cache.read,
                 pipe.maps,  # listed anew for each search: see Pipe.maps
@@ -331,7 +345,7 @@ class Bottle:
                 searcher=pipe.search,
             )
             reader = LapReader(Il2Cpp(memory, metadata, base), event_running=pipe.event_running)
-            return CachedReader(reader, cache, lambda: pipe.in_game), self
+            return CachedReader(reader, cache, lambda: pipe.in_game, lambda: pipe.game_reads), self
         except (NotFound, ReadError):
             raise  # the game is loading: the same reader tries again
         except BaseException as error:

@@ -6,7 +6,7 @@ starts this file there with a portable Windows Python and asks it through its st
 input and output, in place of the Linux probe's socket. Only TurboHUD holds the pipe, so
 there is no port and no secret, and nothing else can ask.
 
-It can only read: the memory list, bytes, the game's metadata file, whether TSU's log
+It can only read: the memory list, bytes (also many pages at once), the game's metadata file, whether TSU's log
 says an event runs, and a search that goes on only as far as its hits are taken. It ends
 when the pipe closes (TurboHUD quit or was killed) or TSU has quit.
 
@@ -28,11 +28,13 @@ if __name__ == '__main__':
 
 from turbohud.tsu.gamelog import EventLog
 from turbohud.tsu.winmemory import (
+    PAGE,
     WINE_SEARCH_SHARE,
     WindowsProcess,
     find_process,
     metadata_base,
     metadata_path,
+    read_pages,
     search,
     tsu_data,
     under_wine,
@@ -84,6 +86,17 @@ class Service:
             began = time.perf_counter()
             data = self.process.read(int(request['address']), size)
             return {'ok': True, 'took': time.perf_counter() - began}, data
+        if op == 'read_pages':
+            # Many 4 KiB pages in one answer: those that could be read, in the order of
+            # `got`, with pages close together read in one call (winmemory.read_pages).
+            pages = [int(number) for number in request['pages']]
+            if not 0 < len(pages) <= MAX_READ // PAGE or min(pages) < 0:
+                return {'ok': False, 'error': 'pages out of range'}, b''
+            began = time.perf_counter()
+            found, calls = read_pages(self.process.read, pages)
+            took = time.perf_counter() - began
+            got = sorted(found)
+            return {'ok': True, 'got': got, 'took': took, 'calls': calls}, b''.join(found[n] for n in got)
         if op == 'metadata':
             metadata = Path(self.metadata_file()).read_bytes()
             base = metadata_base(self.process.regions(), self.process.read, metadata)

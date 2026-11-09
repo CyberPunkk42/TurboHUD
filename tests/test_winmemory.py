@@ -24,9 +24,9 @@ class CachedReaderDetailTests(unittest.TestCase):
 
         reader = wm.CachedReader(Reader(), cache, lambda: spent[0])
         self.assertEqual(reader.read(), 'state')
-        self.assertEqual(reader.last_read, (2, 0.5))
+        self.assertEqual(reader.last_read, (2, 0.5, None))
         self.assertEqual(reader.read(), 'state')
-        self.assertEqual(reader.last_read, (2, 0.5))
+        self.assertEqual(reader.last_read, (2, 0.5, None))
 
     def test_a_failed_read_says_so_too(self):
         cache = wm.PageCache(lambda address, size: bytes(size))
@@ -39,7 +39,7 @@ class CachedReaderDetailTests(unittest.TestCase):
         reader = wm.CachedReader(Reader(), cache)
         with self.assertRaises(OSError):
             reader.read()
-        self.assertEqual(reader.last_read, (1, None))
+        self.assertEqual(reader.last_read, (1, None, None))
 
 
 class FakeMemory:
@@ -119,6 +119,101 @@ class PageCacheTests(unittest.TestCase):
     def test_a_read_outside_still_fails(self):
         with self.assertRaises(OSError):
             self.cache.read(0x40000, 8)
+
+
+class SpansTests(unittest.TestCase):
+    def test_pages_close_together_share_a_read(self):
+        self.assertEqual(wm.spans([1, 2, 5, 40, 41], gap=4), [(1, 5), (40, 41)])
+
+    def test_order_and_repeats_do_not_matter(self):
+        self.assertEqual(wm.spans([5, 1, 2, 2], gap=4), [(1, 5)])
+
+    def test_a_read_covers_at_most_most_pages(self):
+        self.assertEqual(wm.spans(range(10), gap=1, most=4), [(0, 3), (4, 7), (8, 9)])
+
+    def test_nothing_wanted_nothing_read(self):
+        self.assertEqual(wm.spans([]), [])
+
+
+class ReadPagesTests(unittest.TestCase):
+    def setUp(self):
+        self.memory = FakeMemory(0x10000, bytes(range(256)) * 16 * 8)  # pages 16 to 23
+
+    def test_close_pages_come_from_one_read(self):
+        found, calls = wm.read_pages(self.memory.read, [16, 18])
+        self.assertEqual(calls, 1)
+        self.assertEqual(self.memory.calls, [(16 * 4096, 3 * 4096)])
+        self.assertEqual(sorted(found), [16, 18])
+        self.assertEqual(found[18], bytes(self.memory.data[2 * 4096 : 3 * 4096]))
+
+    def test_a_read_that_fails_reads_its_pages_one_by_one(self):
+        found, calls = wm.read_pages(self.memory.read, [22, 23, 24])  # 24 is not there
+        self.assertEqual(sorted(found), [22, 23])
+        self.assertEqual(calls, 4)
+        self.assertEqual(found[23], bytes(self.memory.data[7 * 4096 :]))
+
+    def test_a_single_page_that_fails_is_left_out(self):
+        self.assertEqual(wm.read_pages(self.memory.read, [100]), ({}, 1))
+
+
+class PrefetchTests(unittest.TestCase):
+    def setUp(self):
+        self.memory = FakeMemory(0x10000, bytes(range(256)) * 16 * 8)
+        self.fetched = []
+
+        def fetch_many(pages):
+            self.fetched.append(list(pages))
+            return wm.read_pages(self.memory.read, pages)[0]
+
+        self.cache = wm.PageCache(self.memory.read, page=4096, fetch_many=fetch_many)
+
+    def test_the_next_read_fetches_the_pages_used_in_one_go(self):
+        self.cache.read(0x10010, 8)
+        self.cache.read(0x13000, 8)
+        self.cache.clear()
+        self.memory.calls.clear()
+        self.cache.prefetch()
+        self.assertEqual(self.fetched, [[16, 19]])
+        self.memory.data[0x10] = 0xAA  # changed after the prefetch: this read sees it as fetched
+        self.assertEqual(self.cache.read(0x10010, 1), b'\x10')
+        self.cache.read(0x13000, 8)
+        self.assertEqual(self.memory.calls, [(16 * 4096, 4 * 4096)])
+
+    def test_pages_no_longer_used_are_not_fetched_again(self):
+        self.cache.read(0x10010, 8)
+        self.cache.clear()
+        self.cache.prefetch()
+        self.cache.read(0x12000, 8)  # this read used another page only
+        self.cache.clear()
+        self.cache.prefetch()
+        self.assertEqual(self.fetched, [[16], [18]])
+
+    def test_a_page_the_fetch_missed_is_read_on_its_own(self):
+        self.cache.read(0x10010, 8)
+        self.cache.clear()
+        self.cache.prefetch = lambda: None  # as if the fetch got nothing
+        self.memory.calls.clear()
+        self.cache.read(0x10010, 8)
+        self.assertEqual(self.memory.calls, [(16 * 4096, 4096)])
+
+    def test_nothing_to_fetch_asks_nothing(self):
+        self.cache.clear()
+        self.cache.prefetch()
+        self.assertEqual(self.fetched, [])
+        self.assertEqual(self.cache.reads, 0)
+
+    def test_a_cached_reader_makes_one_trip_for_what_it_read_before(self):
+        cache = self.cache
+
+        class Reader:
+            def read(self):
+                return cache.read(0x10010, 8) + cache.read(0x14000, 8)
+
+        reader = wm.CachedReader(Reader(), cache, game_reads=lambda: len(self.memory.calls))
+        reader.read()
+        self.assertEqual(reader.last_read, (2, None, 2))
+        reader.read()
+        self.assertEqual(reader.last_read, (1, None, 1))
 
 
 class SearchTests(unittest.TestCase):

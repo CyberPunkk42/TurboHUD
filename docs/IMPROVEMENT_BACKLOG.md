@@ -38,6 +38,8 @@ hit). The Mac app now does this by itself (`turbohud/tsu/bottle.py`, reader in
   with all; the window count probe: 17 windows 85, one window 115. Built: locked, on the Mac, all sections
   in one window per screen. Next: check it over TSU (`docs/CONTINUE_HERE.md`), then the tester's build.
   TSU froze once more on quitting, with TurboHUD quit first (`docs/CONTINUE_HERE.md`, "Other points").
+- Race reads in one go (2026-11-09, `docs/CONTINUE_HERE.md`, "Not yet seen in a race"): see the
+  log's `race reads` line in a race, before and after.
 - Races on the Mac: confirmed by the user on 2026-11-08, offline with 19 AI, in Fullscreen and
   hosting about 13 AI online (`docs/CONTINUE_HERE.md`, "Test list"). As a driver online the race
   showed 1.4 s after the start.
