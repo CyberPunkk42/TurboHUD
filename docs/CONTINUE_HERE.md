@@ -21,6 +21,9 @@ Run the tests only while TurboHUD is not running (`pgrep -fl launch_turbohud`), 
 switch a running TurboHUD to move mode.
 
 ## Not yet seen in a race
+- The sector bars below the last and best lap (2026-11-09): one per checkpoint stretch, purple, green,
+  dark yellow or grey. To see: how they read on a track with many checkpoints (about 60 seen), and online
+  as a client, where the other drivers' checkpoint times come from the server a little late.
 - The track map's Tint tick box (2026-11-09): unticked, only the road and the dots over the game, also
   while locked on the one-window canvas; ticked, the dark square as before.
 - The last and best lap's colours (2026-11-09): purple for the race's fastest lap, green for a personal

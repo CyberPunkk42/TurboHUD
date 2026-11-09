@@ -70,6 +70,15 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-09: Sector bars below the last and best lap, asked for by the user: one bar per stretch between
+  two checkpoints (TSU has no sectors of its own), all of equal width across the section, so a track with
+  10 checkpoints has 10. As on F1's timing screens, a sector is purple when faster than anyone else had
+  driven it by then and than the driver's own earlier laps, green when only faster than their own, dark
+  yellow when slower than their best, and grey while still to come. They show the lap being driven, and
+  for 6 s after the start line the lap just ended (until a sector of the new lap is done). The gaps get
+  thinner with many sectors. The section's box grows by the bars' room once (`settings.json` goes to
+  layout 5, `settings.before-layout-5.json` keeps the old file), so its text keeps its size. No more reads
+  of the game (`race.sector_colours`). Not yet seen in a race.
 - 2026-11-09: Purple for the race's fastest lap in the lap times list (it was green), and the track map's road
   takes a fast lap's colour, both asked for by the user: for 6 s of race clock after the driver ends a lap,
   purple for the race's fastest lap, green for a best of their own, then white again; a slower lap leaves

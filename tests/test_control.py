@@ -34,7 +34,7 @@ class UpgradeLayoutTests(unittest.TestCase):
         self.assertEqual(place.height, 50)
         self.assertEqual((place.visible, place.group), (False, 'A'))
         self.assertEqual(settings.load_settings(self.path), upgraded)
-        self.assertEqual(self.path.with_name('settings.before-layout-4.json').read_bytes(), old)
+        self.assertEqual(self.path.with_name('settings.before-layout-5.json').read_bytes(), old)
         # A second start finds them converted.
         self.assertEqual(app.upgrade_layout(upgraded, self.path, self.ink), upgraded)
 
@@ -86,6 +86,18 @@ class UpgradeLayoutTests(unittest.TestCase):
         # Turned off afterwards, it stays off.
         off = replace(upgraded, sections={'trackmap': place})
         self.assertFalse(app.upgrade_layout(off, self.path, self.ink).sections['trackmap'].tint)
+
+    def test_the_last_and_best_lap_grows_by_its_sector_bars_once(self):
+        place = settings.SectionPlace(100, 200, 400, 50)
+        old = settings.Settings(sections={'times': place}, presets={3: {'times': place}}, layout_version=4)
+        settings.save_settings(self.path, old)
+        upgraded = app.upgrade_layout(settings.load_settings(self.path), self.path, self.ink)
+        times = next(s for s in hud.RACE_SECTIONS if s.name == 'times')
+        grown = hud.sector_bar_place(times, (100, 200, 400, 50), 1.0, self.ink)
+        self.assertGreater(grown[3], 50)
+        self.assertEqual((upgraded.sections['times'].x, upgraded.sections['times'].height), (100, grown[3]))
+        self.assertEqual(upgraded.presets[3]['times'], upgraded.sections['times'])
+        self.assertEqual(app.upgrade_layout(upgraded, self.path, self.ink), upgraded)
 
     def test_converted_sizes_stay(self):
         current = self.saved(layout_version=settings.LAYOUT_VERSION)
