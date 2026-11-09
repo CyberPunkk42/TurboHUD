@@ -126,6 +126,7 @@ def build(
     draft=False,
     tire_ticks=0,
     event_type=None,
+    gate_types=None,
 ):
     """A fake race; `car` is the car's (x, z) and `gates` the checkpoint lines, both
     optional like in a game without them."""
@@ -357,13 +358,16 @@ def build(
         track = g.alloc_obj(g.klass('TS', 'Checkpoints', [('m_checkpoints', 0x10, False)]))
         g.q(updater + 0x18, track)
         point_class = g.klass('TS', 'Checkpoint', [('m_properties', 0x20, False)])
-        properties_class = g.klass(
-            'TS', 'CheckpointProperties', [('position1', 0x10, False), ('position2', 0x1C, False)]
-        )
+        fields = [('position1', 0x10, False), ('position2', 0x1C, False)]
+        if gate_types is not None:  # TS.CheckpointType, one byte: 0 Sector, 1 Normal, 2 Minor
+            fields.append(('type', 0x28, False))
+        properties_class = g.klass('TS', 'CheckpointProperties', fields)
         items = []
-        for (x1, z1), (x2, z2) in gates:
+        for number, ((x1, z1), (x2, z2)) in enumerate(gates):
             properties = g.alloc_obj(properties_class)
             g.put(properties + 0x10, struct.pack('<6f', x1, 0.0, z1, x2, 0.0, z2))
+            if gate_types is not None:
+                g.put(properties + 0x28, bytes([gate_types[number]]))
             checkpoint = g.alloc_obj(point_class)
             g.q(checkpoint + 0x20, properties)
             items.append(checkpoint)
@@ -773,6 +777,21 @@ class CachingReaderTests(unittest.TestCase):
         state = reader.read()
         self.assertEqual(state.position, (1.0, 2.0))
         self.assertEqual(state.gates, STRAIGHT)
+        self.assertEqual(state.sector_lines, ())  # a game without the type field
+
+    def test_reads_which_checkpoints_are_sector_lines(self):
+        types = [1] * len(STRAIGHT)
+        types[1] = 0
+        reader = build(
+            [10_000, 944_595],
+            laps_completed=1,
+            clock=1_000_000,
+            limit=0,
+            car=(1.0, 2.0),
+            gates=STRAIGHT,
+            gate_types=types,
+        )
+        self.assertEqual(reader.read().sector_lines, (1,))
 
     def test_finished_laps_are_read_once(self):
         reader = build([10_000, 944_595, 1_785_545], laps_completed=2, clock=2_000_000, limit=0)
@@ -1602,13 +1621,25 @@ class SectorTests(unittest.TestCase):
             finished=finished,
         )
 
-    def test_sectors_follow_the_checkpoints(self):
+    def test_without_sector_lines_a_lap_has_three_even_sectors(self):
         self.assertEqual(race.sector_starts(0), ())
         self.assertEqual(race.sector_starts(1), (0,))
         self.assertEqual(race.sector_starts(2), (0, 1))
         self.assertEqual(race.sector_starts(3), (0, 1, 2))
-        self.assertEqual(race.sector_starts(10), tuple(range(10)))
-        self.assertEqual(len(race.sector_starts(63)), 63)
+        self.assertEqual(race.sector_starts(10), (0, 3, 6))
+        self.assertEqual(race.sector_starts(120), (0, 40, 80))
+
+    def test_the_tracks_sector_lines_make_the_sectors(self):
+        # As on the track seen on 2026-11-10: 68 checkpoints, sector lines at 15, 28 and 38.
+        self.assertEqual(race.sector_starts(68, (15, 28, 38)), (0, 15, 28, 38))
+        self.assertEqual(race.sector_starts(68, (38, 15, 28, 15)), (0, 15, 28, 38))
+        # The start line is a sector's start anyway; a line past the lap's end is not one.
+        self.assertEqual(race.sector_starts(68, (0, 40, 90)), (0, 40))
+
+    def test_a_track_with_sector_lines_has_a_bar_for_each_sector(self):
+        gates = (((0, 0), (1, 1)),) * 6
+        state = dataclasses.replace(self.state([], [20.0, 10.0, 10.0], gates=gates), sector_lines=(2, 4))
+        self.assertEqual(race.sector_colours(state), (self.PURPLE, None, None))
 
     def test_the_first_lap_fills_in_as_it_is_driven(self):
         self.assertEqual(race.sector_colours(self.state([])), (None, None, None))

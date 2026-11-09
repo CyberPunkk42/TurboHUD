@@ -52,6 +52,8 @@ PERSONAL_BEST_COLOR = '#5ee07a'  # green: the driver's own best (the HUD's 'ahea
 LAP_FLASH = 6 * UNITS_PER_SECOND  # how long the track map's road shows a fast lap's colour
 NO_CHECKPOINT = 0xFFFF_FFFF  # how a missed checkpoint may be marked
 SECTOR_SLOW_COLOR = '#c9a227'  # dark yellow: a sector slower than the driver's best
+SECTORS_WITHOUT_LINES = 3  # sectors of a lap on a track without sector lines, as in F1
+CHECKPOINT_SECTOR = 0  # TS.CheckpointType.Sector (Normal is 1, Minor 2), from the game's metadata
 
 WAITING_FOR_GAME = 'waiting for game'
 WAITING_FOR_RACE = 'waiting for race'
@@ -70,6 +72,7 @@ class LapState:
     checkpoints: tuple = ()  # per started lap, when each checkpoint was passed, 0.1 ms
     position: tuple | None = None  # the car's (x, z)
     gates: tuple = ()  # the checkpoint lines, ((x1, z1), (x2, z2)), in checkpoint order
+    sector_lines: tuple = ()  # the checkpoints the track's maker made sector lines, in order
     car: 'CarState | None' = None  # fuel, tires and speed, where the game has them
     players: tuple = ()  # every player in the race (PlayerState), the local one included
     draft: 'DraftSettings | None' = None  # the event's drafting, None where it is off
@@ -498,6 +501,7 @@ class LapReader:
         self._player = None
         self._laps = {}  # finished lap object -> its checkpoint times
         self._gates = None  # checkpoint lines, ((x1, z1), (x2, z2)) each
+        self._sector_lines = ()  # the checkpoints of type Sector (TS.CheckpointType), read with the lines
         self._fuel_history = {}  # lap index -> fuel used when it started
         self._wear_history = {}  # lap index -> tire wear when it started
         self._fuel_marks = {}  # lap index -> {checkpoint: fuel used when passed}
@@ -791,6 +795,7 @@ class LapReader:
         if state != self._state:
             # A new event (or the first read): start the caches afresh.
             self._state, self._offsets, self._laps, self._gates = state, {}, {}, None
+            self._sector_lines = ()
             self._reckoning = DeadReckoning()
             self._pit_stops = PitStops()
             self._recorder_tick, self._recorder_moved = None, 0
@@ -838,6 +843,7 @@ class LapReader:
             checkpoints=tuple(checkpoints),
             position=position,
             gates=gates,
+            sector_lines=self._sector_lines,
             car=car,
         )
         players = self._players_with_positions(state_object, gates, clock)
@@ -1213,7 +1219,8 @@ class LapReader:
 
     def _read_gates(self, player):
         """The track's checkpoint lines, in a few batched reads (120 checkpoints, each
-        with its properties object)."""
+        with its properties object). Also keeps which checkpoints are sector lines
+        (`_sector_lines`): a track's maker can make any of them one."""
         il, memory = self.il, self.il.memory
         track = il.ref(self._ref('player', player, 'm_statsUpdater'), 'm_checkpoints')
         checkpoints = [c for c in il.list_items(il.ref(track, 'm_checkpoints')) if c]
@@ -1238,7 +1245,24 @@ class LapReader:
             x1, _, z1 = struct.unpack('<3f', first)
             x2, _, z2 = struct.unpack('<3f', second)
             gates.append(((x1, z1), (x2, z2)))
+        self._sector_lines = self._read_sector_lines(properties)
         return tuple(gates)
+
+    def _read_sector_lines(self, properties):
+        """The checkpoints whose `type` (TS.CheckpointType, one byte) is Sector; () where
+        the game has no such field or it cannot be read: the bars then split the lap evenly."""
+        memory = self.il.memory
+        try:
+            to_type = self._offset('properties', properties[0], 'type')
+        except NotFound:
+            return ()
+        lines = []
+        for number, data in enumerate(memory.read_many([p + to_type for p in properties], 1)):
+            if data is None:
+                return ()
+            if data[0] == CHECKPOINT_SECTOR:
+                lines.append(number)
+        return tuple(lines)
 
     def _position_and_gates(self, player):
         """The car's (x, z) and the track's checkpoint lines, for the live delta; (None,
@@ -1785,11 +1809,17 @@ def lap_flash(state):
     )
 
 
-def sector_starts(count):
+def sector_starts(count, lines=()):
     """The checkpoint each sector starts at, for a lap of `count` checkpoints (the start
-    line is checkpoint 0): a sector from each checkpoint to the next, as many as the
-    track has (TSU has no sectors of its own)."""
-    return tuple(range(max(count, 0)))
+    line is checkpoint 0): at the start line and at each of the track's sector `lines`
+    (checkpoints its maker made sector lines; TSU's own split times use them). A track
+    without any is split into SECTORS_WITHOUT_LINES even sectors, as on F1's screens."""
+    count = max(count, 0)
+    marked = sorted({line for line in lines if 0 < line < count})
+    if marked:
+        return (0, *marked)
+    parts = min(SECTORS_WITHOUT_LINES, count)
+    return tuple(sorted({count * part // parts for part in range(parts)}))
 
 
 def _sector_times(laps, index, starts):
@@ -1819,7 +1849,7 @@ def sector_colours(state):
     best; None while still to come."""
     laps = state.checkpoints
     count = len(state.gates) or max((len(lap) for lap in laps[: state.laps_completed]), default=0)
-    starts = sector_starts(count)
+    starts = sector_starts(count, state.sector_lines)
     if not starts or not laps:
         return None
     current = state.laps_completed

@@ -29,9 +29,12 @@ built app only hands it "move" and quits, so the smoke test passes without start
   about 20 on the tester's Mac and 75 to 88 in races with AI) and how many reads of the game they made;
   the median read time, about 20 to 30 ms before, should drop. Also whether TSU's FPS with nothing shown
   comes closer to the FPS with TurboHUD closed (the tester lost about 8).
-- The sector bars below the last and best lap (2026-11-09): one per checkpoint stretch, purple, green,
-  dark yellow or grey. To see: how they read on a track with many checkpoints (about 60 seen), and online
-  as a client, where the other drivers' checkpoint times come from the server a little late.
+- The sector bars below the last and best lap (2026-11-09, by the track's sectors since 2026-11-10): one per
+  sector, purple, green, dark yellow or grey. Seen by the user on 2026-11-10: 4 bars on a track with 3 sector
+  lines (at 24, 45 and 58% of the lap), which they found fine as it is. Still to see: 3 bars on a track
+  without sector lines, and online as a client, where the other drivers' checkpoint times come from the
+  server a little late. TSU's own checkpoint-to-sector lists (`TS.Checkpoints.m_checkpointToSectorInfo`)
+  held no sensible values in a race, so they are not read.
 - The track map's Tint tick box (2026-11-09): unticked, only the road and the dots over the game, also
   while locked on the one-window canvas; ticked, the dark square as before.
 - The last and best lap's colours (2026-11-09): purple for the race's fastest lap, green for a personal
