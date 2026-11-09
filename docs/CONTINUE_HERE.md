@@ -1,8 +1,24 @@
 # Continue here
 
-Where the work stopped on 2026-11-05, on the Mac. Everything below was merged into `main`
+Where the work stopped on 2026-11-09, on the Mac. Everything below was merged into `main`
 and nothing was pushed or tagged. Delete a point when it is settled, and this file when
 none is left.
+
+## Next session
+1. The user checks the one-window HUD (`sh run_turbohud.sh`; see "FPS on the user's Mac with the Metal
+   HUD" below for the Metal HUD): FPS with every section shown, expected near 115 to 120 (80 to 110
+   before); it looks as before (text, delta bar, map, radar, tint); move mode (drag, resize, a group,
+   Undo, then locking leaves nothing behind); while locked, a preset shortcut and "bigger"/"smaller" in
+   the settings. If anything is wrong: `TURBOHUD_ONE_WINDOW=0 sh run_turbohud.sh`, and read the log.
+2. Then a new build for the tester (`tools/build_app.py --version <date> --any-macos --smoke`, the
+   old builds in `releases/` deleted, as the user wants only the latest) and `TurboHUD-test-instructions.md`
+   updated: a shorter FPS test (closed, every section shown) and the quit check.
+3. At each quit of TSU the user notes whether it froze and whether TurboHUD ran ("Other points").
+4. When one comes up: a special event (map expected), King of the Hill or Sumo (no map).
+
+The user likes a plain, numbered to-do list at each step, and merges each branch by saying "merge".
+Run the tests only while TurboHUD is not running (`pgrep -fl launch_turbohud`), as one of them can
+switch a running TurboHUD to move mode.
 
 ## Not yet seen in a race
 - Joining a public session mid-race (2026-11-08): a spectator's search now stops at the first race to

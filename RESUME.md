@@ -16,7 +16,9 @@
   an online client (guest, or hosting with only AI). How it works and what it does to
   RAM and the game: `docs/HOW_IT_WORKS.md`. On macOS, with TSU in CrossOver, the same HUD
   reads the race through a reader in the bottle (`turbohud/tsu/bottle.py`), with no setup;
-  online AI races have run on it, while the race test list is still to do. On Windows it
+  the race tests (offline with 19 AI, Fullscreen, hosting online, spectating) were confirmed
+  by the user on 2026-11-08. While locked, on the Mac, all sections are drawn in one window
+  per screen (2026-11-09), for the frames; not yet seen over TSU. On Windows it
   still shows a session clock and the local time. Start from the source with
   `run_turbohud.sh` / `run_turbohud.cmd`.
 - Layout, in the move-mode panel: a text section's box fits closely round its text, three
@@ -51,9 +53,10 @@
 
 ## Next steps
 **Start with `docs/CONTINUE_HERE.md`**: what is left to test. Then `docs/IMPROVEMENT_BACKLOG.md`. In short:
-- First: the windows above the game cost the tester's Mac its frames (down to about 60 with all
-  sections). Measure it on the user's Mac with the Metal HUD, then windows against one window
-  (`docs/CONTINUE_HERE.md`, "Tester's Mac", TODO).
+- First (where the session of 2026-11-09 stopped): the user checks the one-window HUD on the Mac
+  (`docs/CONTINUE_HERE.md`, "Next session"): FPS with the Metal HUD and every section shown
+  (expected near 115 to 120, from 80 to 110), that it looks as before, move mode, and presets and
+  "bigger"/"smaller" while locked. Then a new build and instructions for the tester.
 0. Tests: keep them from reaching a running TurboHUD (until then run them with
    `XDG_RUNTIME_DIR` set to an empty private folder).
 1. Windows: the overlay over TSU (windowed, Fullscreen, Fullscreen Exclusive), then
