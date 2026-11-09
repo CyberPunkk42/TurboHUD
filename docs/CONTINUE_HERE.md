@@ -123,9 +123,10 @@ number of windows is what costs, not what they show. TSU has room to spare on th
 only with many windows; on the tester's it shows sooner. Not measured: every section hidden, and closed
 again at the end (TSU froze then, see below).
 
-Next: `experiments/` gets a probe with 17 small windows against one large window holding 17 boxes, to
-measure the same way before the overlay is rebuilt as one window. One large see-through window may
-cost by its area instead, which only a measurement tells.
+Next: `experiments/window_count_probe.py` (see `experiments/README.md`): 17 small windows against one
+large window holding the same 17 boxes, measured the same way, before the overlay is rebuilt as one
+window. One large see-through window (nearly the whole screen with the user's layout) may cost by its
+area instead, which only the measurement tells.
 
 ### Other points
 - Custom sessions show only the clock: no race is found in them. Not looked into: what such a session

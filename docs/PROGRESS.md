@@ -771,3 +771,7 @@ its "Recent changes".
   only the local time shown, 80 to 110 with every section. So the number of windows costs frames. TSU then
   froze around being quit, with TurboHUD quit first and its reader ended at once (TSU at 1% CPU, Steam at
   100%): the second time such a freeze was seen; no way for the reader to cause it is known yet.
+- 2026-11-09: A probe for the overlay's FPS cost, `experiments/window_count_probe.py`: 17 small windows
+  against one large window holding the same 17 boxes, in TurboHUD's own layout, phase by phase on its own.
+  It tells whether rebuilding the overlay as one window would help. Seen running with real windows on the
+  Mac; not yet measured over TSU.
