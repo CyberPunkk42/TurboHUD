@@ -23,6 +23,9 @@ switch a running TurboHUD to move mode.
 ## Not yet seen in a race
 - The track map's Tint tick box (2026-11-09): unticked, only the road and the dots over the game, also
   while locked on the one-window canvas; ticked, the dark square as before.
+- The last and best lap's colours (2026-11-09): purple for the race's fastest lap, green for a personal
+  best short of it, white for a slower last lap. Online as a client the other drivers' lap times come from
+  the server a little late, so a best lap may turn green a moment after their lap ends.
 - Joining a public session mid-race (2026-11-08): a spectator's search now stops at the first race to
   watch, seen at 2.9 to 4.7 s (it took 15 to 21 s). Still to see: `has not run: searching past it` (an old
   race picked first), the HUD switching to the car with no search when the player drives the next race,

@@ -1477,6 +1477,78 @@ class FuelFinishTests(unittest.TestCase):
         self.assertEqual(race.car_sections(car)['fuelfinish'][0].text, 'Finish -')
 
 
+class LapColourTests(unittest.TestCase):
+    """The last and best lap's colours, as on F1's timing screens."""
+
+    PURPLE = race.SESSION_BEST_COLOR
+
+    @staticmethod
+    def me(*laps, others=()):
+        """The local player's state after `laps` (seconds each); `others` are the other
+        drivers' lap times in seconds, each a list, all starting at 0."""
+        starts = [0]
+        for lap in laps:
+            starts.append(starts[-1] + round(lap * 10_000))
+        players = []
+        for times in others:
+            passes = [0]
+            for lap in times:
+                passes.append(passes[-1] + round(lap * 10_000))
+            players.append(race.PlayerState('other', 0, len(times), tuple((at, at + 1) for at in passes)))
+        players.append(race.PlayerState('me', 0, len(laps), tuple((at,) for at in starts), local=True))
+        return race.LapState(
+            clock=starts[-1] + 1,
+            time_limit=0,
+            laps_completed=len(laps),
+            laps_to_finish=20,
+            lap_starts=starts,
+            players=tuple(players),
+        )
+
+    def test_nothing_before_the_first_lap(self):
+        self.assertEqual(race.lap_colours(self.me()), (None, None))
+
+    def test_alone_every_best_lap_is_purple(self):
+        self.assertEqual(race.lap_colours(self.me(80.0)), (self.PURPLE, self.PURPLE))
+        self.assertEqual(race.lap_colours(self.me(80.0, 79.0)), (self.PURPLE, self.PURPLE))
+
+    def test_a_slower_lap_is_white_and_the_best_stays_purple(self):
+        self.assertEqual(race.lap_colours(self.me(79.0, 80.0, others=[[81.0]])), ('text', self.PURPLE))
+
+    def test_a_lap_as_fast_as_the_best_is_no_improvement(self):
+        self.assertEqual(race.lap_colours(self.me(79.0, 79.0)), ('text', self.PURPLE))
+
+    def test_someone_faster_turns_the_best_green(self):
+        self.assertEqual(race.lap_colours(self.me(80.0, others=[[79.0]])), ('ahead', 'ahead'))
+        self.assertEqual(race.lap_colours(self.me(80.0, 81.0, others=[[79.0]])), ('text', 'ahead'))
+
+    def test_a_personal_best_short_of_the_fastest_is_green(self):
+        self.assertEqual(race.lap_colours(self.me(82.0, 80.0, others=[[79.0, 79.5]])), ('ahead', 'ahead'))
+
+    def test_beating_the_fastest_makes_both_purple_again(self):
+        self.assertEqual(
+            race.lap_colours(self.me(80.0, 78.0, others=[[79.0, 79.5]])), (self.PURPLE, self.PURPLE)
+        )
+
+    def test_an_equal_time_belongs_to_whoever_set_it_first(self):
+        # Theirs on their first lap (done at 79 s), mine on my second (done at 160 s).
+        self.assertEqual(race.lap_colours(self.me(81.0, 79.0, others=[[79.0]])), ('ahead', 'ahead'))
+        # Mine first (79 s), theirs later (181 s).
+        self.assertEqual(race.lap_colours(self.me(79.0, others=[[102.0, 79.0]])), (self.PURPLE, self.PURPLE))
+
+    def test_others_without_a_lap_change_nothing(self):
+        self.assertEqual(race.lap_colours(self.me(80.0, others=[[]])), (self.PURPLE, self.PURPLE))
+
+    def test_the_row_has_each_time_in_its_colour(self):
+        row = race.times_row(self.me(80.0, 81.0, others=[[79.0]]))
+        self.assertEqual((row.text, row.color), ('Last 1:21.000   ', 'text'))
+        self.assertEqual((row.tail, row.tail_color), ('Best 1:20.000', 'ahead'))
+        before = race.times_row(self.me())
+        self.assertEqual(
+            (before.text + before.tail, before.color, before.tail_color), ('Last -   Best -', 'text', 'text')
+        )
+
+
 class RowsTests(unittest.TestCase):
     def test_format_tenths_cuts_off(self):
         self.assertEqual(race.format_tenths(365_459), '0:36.5')
@@ -1488,7 +1560,7 @@ class RowsTests(unittest.TestCase):
     def test_mid_race(self):
         rows = race.race_rows(racing(MID_RACE), now=100.0)
         self.assertEqual(
-            [row.text for row in rows],
+            [row.text + row.tail for row in rows],
             [
                 'Lap 3/13  -  17:41 left',
                 '0:21.4',

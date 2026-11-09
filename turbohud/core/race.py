@@ -47,6 +47,7 @@ MAX_EXTRAPOLATION = 1.0  # seconds
 EVEN = 5  # under half a millisecond: shown as 0.000, neither ahead nor behind
 DELTA_PLACES = 2  # the delta to the best lap in hundredths: a third digit changed at every read
 DELTA_EVEN = 50  # under half a hundredth: shown as 0.00, neither ahead nor behind
+SESSION_BEST_COLOR = '#c77dff'  # purple, as in F1: the fastest lap of anyone in the race
 NO_CHECKPOINT = 0xFFFF_FFFF  # how a missed checkpoint may be marked
 
 WAITING_FOR_GAME = 'waiting for game'
@@ -1617,7 +1618,14 @@ def race_sections(
         sections = {
             'lap': [Row(f'Finished - {state.laps_completed} laps', 'title')],
             'current': [Row(format_time(state.best_lap), 'big', 'accent')],
-            'times': [Row(f'Best lap   Last {format_time(state.last_lap)}', 'medium')],
+            'times': [
+                Row(
+                    'Best lap   ',
+                    'medium',
+                    tail=f'Last {format_time(state.last_lap)}',
+                    tail_color=_last_colour(state),
+                )
+            ],
         }
     else:
         sections = _racing_sections(snapshot, now)
@@ -1701,8 +1709,69 @@ def _racing_sections(snapshot, now):
         'lap': [Row(title, 'title')],
         'current': [Row(format_tenths(current_lap_now(snapshot, now)), 'big', 'accent')],
         'delta': [delta_row],
-        'times': [Row(f'Last {format_time(state.last_lap)}   Best {format_time(state.best_lap)}', 'medium')],
+        'times': [times_row(state)],
     }
+
+
+def _best_and_when(times, starts):
+    """The fastest of `times` and when it was set (the start of the lap after it), or
+    (None, None); the first of equal times counts, as it was set first."""
+    if not times:
+        return None, None
+    index = times.index(min(times))
+    return times[index], starts[index + 1] if index + 1 < len(starts) else None
+
+
+def _player_best_and_when(player):
+    """As _best_and_when, from a player's start-line passes (see player_lap_times)."""
+    starts = [lap[0] if lap else NO_CHECKPOINT for lap in player.checkpoints[: player.laps_completed + 1]]
+    best = None
+    for start, end in itertools.pairwise(starts):
+        if NO_CHECKPOINT not in (start, end) and end > start and (best is None or end - start < best[0]):
+            best = (end - start, end)
+    return best or (None, None)
+
+
+def lap_colours(state):
+    """(last lap's colour, best lap's colour) for the local player, as on F1's timing
+    screens: the best lap is purple while no one else in the race has gone faster (a time
+    as fast counts for whoever set it first), else green. The last lap is the best's
+    colour when it is the player's best lap, else white: no better than the best before.
+    (None, None) before the first lap is done."""
+    best, best_at = _best_and_when(state.lap_times, state.lap_starts)
+    if best is None:
+        return None, None
+    session = True
+    for player in state.players:
+        if player.local:
+            continue
+        theirs, theirs_at = _player_best_and_when(player)
+        if theirs is None:
+            continue
+        if theirs < best or (
+            theirs == best and theirs_at is not None and best_at is not None and theirs_at < best_at
+        ):
+            session = False
+            break
+    best_colour = SESSION_BEST_COLOR if session else 'ahead'
+    last_is_best = state.best_lap_index == len(state.lap_times) - 1
+    return (best_colour if last_is_best else 'text'), best_colour
+
+
+def _last_colour(state):
+    return lap_colours(state)[0] or 'text'
+
+
+def times_row(state):
+    """The last and best lap, each in its colour (see lap_colours)."""
+    last_colour, best_colour = lap_colours(state)
+    return Row(
+        f'Last {format_time(state.last_lap)}   ',
+        'medium',
+        last_colour or 'text',
+        tail=f'Best {format_time(state.best_lap)}',
+        tail_color=best_colour or 'text',
+    )
 
 
 def _laps_text(laps):

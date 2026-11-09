@@ -70,6 +70,12 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-09: The last and best lap have colours, asked for by the user, as on F1's timing screens. The best
+  lap is purple while nobody else in the race has gone faster (a time as fast belongs to whoever set it
+  first), else green; alone it is always purple. The last lap takes the best's colour when it is the
+  driver's best lap, else white (no better than the best before, also when as fast). At the finish the last
+  lap keeps its colour. The other drivers' best laps come from their start-line passes, as in the lap
+  times list (`race.lap_colours`). No more reads of the game. Not yet seen in a race.
 - 2026-11-09: The track map has a Tint tick box in the move-mode panel, asked for by the user, like the text
   sections: it turns the map's dark square on or off (off leaves the road and the dots). It is on by default
   and for maps saved before (`settings.json` goes to layout 4 once, `settings.before-layout-4.json` keeps the

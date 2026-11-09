@@ -785,3 +785,9 @@ its "Recent changes".
   and for maps saved before (`settings.json` goes to layout 4 once, `settings.before-layout-4.json` keeps the
   file as it was), kept with the section and in presets, with Undo, and "Light tint behind all sections"
   includes it. Move mode shows the choice too. Not yet seen over TSU.
+- 2026-11-09: The last and best lap have colours, asked for by the user, as on F1's timing screens. The best
+  lap is purple while nobody else in the race has gone faster (a time as fast belongs to whoever set it
+  first), else green; alone it is always purple. The last lap takes the best's colour when it is the
+  driver's best lap, else white (no better than the best before, also when as fast). At the finish the last
+  lap keeps its colour. The other drivers' best laps come from their start-line passes, as in the lap
+  times list (`race.lap_colours`). No more reads of the game. Not yet seen in a race.
