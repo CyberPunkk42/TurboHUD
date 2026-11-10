@@ -59,7 +59,9 @@ class Memory:
     a callable giving them as they are now: the game's memory grows between its menu and
     a race, and a class loaded later lies outside an old list."""
 
-    def __init__(self, read, regions, read_many=None, find_pointers=None, searcher=None):
+    def __init__(
+        self, read, regions, read_many=None, find_pointers=None, searcher=None, find_pointers_from=None
+    ):
         self.read = read
         self._regions = regions
         self._read_many = read_many
@@ -69,6 +71,10 @@ class Memory:
         # (regions, value) -> addresses holding it, for a reader that searches in its
         # own way (on Windows and in CrossOver: in paced pieces); None reads here.
         self._searcher = searcher
+        # (value, address) -> as find_pointers, searched from about `address` on and
+        # round to it, for a reader that hands out its hits one by one (Windows and
+        # CrossOver); None where a search gives all its hits at once (the probe).
+        self.find_pointers_from = find_pointers_from
 
     @property
     def regions(self):

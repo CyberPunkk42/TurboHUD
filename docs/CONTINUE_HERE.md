@@ -22,6 +22,12 @@ switch a running TurboHUD to move mode. The same goes for a build's `--smoke`: w
 built app only hands it "move" and quits, so the smoke test passes without starting the new app.
 
 ## Not yet seen in a race
+- Searches from where the last race was (2026-11-10, Mac): online, from the second race of a session on, the
+  log should say `searching for the online race, from where the last one was`, then `race found (+… MiB
+  from the last one), after … s`. Expected: found in under a second, with a distance near 0 or within some
+  MiB. A distance below -32 MiB, or a search no quicker than the session's first, means TSU puts the next
+  race elsewhere: then widen `SEARCH_BEFORE` in `turbohud/tsu/winmemory.py`, or drop the idea. Also as a
+  spectator (`watching the race at hit … (… MiB from the last one)`), and listen for stutter as before.
 - The track map's kept road (2026-11-09): the map should look as before (road, start line, tint, the purple
   or green road after a fast lap, the move-mode oval), and TurboHUD's CPU with only the map shown should
   drop from about 23% of a core (`top -pid $(pgrep -f launch_turbohud)` during a race).

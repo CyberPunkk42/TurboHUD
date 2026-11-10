@@ -232,6 +232,17 @@ class ServiceTests(unittest.TestCase):
         self.assertEqual(service.handle({'op': 'search_next'})[0]['hit'], 0x18000)
         self.assertIsNone(service.handle({'op': 'search_next'})[0]['hit'])
 
+    def test_search_can_begin_at_an_address(self):
+        value = 0x1122334455667788
+        data = bytearray(64 * 1024)
+        data[0x10:0x18] = struct.pack('<Q', value)
+        data[0x8000:0x8008] = struct.pack('<Q', value)
+        service = self.service(FakeProcess(data=bytes(data)))
+        service.handle({'op': 'search', 'regions': [[0x10000, 0x20000]], 'value': value, 'first': 0x14000})
+        self.assertEqual(service.handle({'op': 'search_next'})[0]['hit'], 0x18000)
+        self.assertEqual(service.handle({'op': 'search_next'})[0]['hit'], 0x10010)
+        self.assertIsNone(service.handle({'op': 'search_next'})[0]['hit'])
+
     def serve(self, service, *requests):
         source = io.BytesIO(b''.join(br.pack(request) for request in requests))
         sink = io.BytesIO()
@@ -404,6 +415,18 @@ class PipeTests(ReaderCase):
         self.assertEqual(next(hits), 0x10010)
         self.assertEqual(process.reads, 1)  # the first piece only
         self.assertEqual(list(hits), [0x18000])
+
+    def test_a_search_from_the_last_race_begins_below_it(self):
+        value = 0x1122334455667788
+        data = bytearray(64 * 1024)
+        data[0x10:0x18] = struct.pack('<Q', value)
+        data[0x8000:0x8008] = struct.pack('<Q', value)
+        process = FakeProcess(data=bytes(data))
+        pipe = self.reader(process)
+        pipe.receive()
+        with mock.patch.object(bt, 'search_start', lambda address: address - 0x1000):
+            hits = pipe.find_pointers_from(value, 0x18000)
+            self.assertEqual(list(hits), [0x18000, 0x10010])
 
     def test_a_reader_that_ended_is_a_connection_error(self):
         pipe = self.reader(FakeProcess(alive=False))

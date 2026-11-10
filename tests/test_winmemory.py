@@ -240,6 +240,41 @@ class SearchTests(unittest.TestCase):
         hits = list(wm.search(memory.read, [(0x0, 0x2000), (0x100000, 0x110000)], self.VALUE, chunk=4096))
         self.assertEqual(hits, [0x100040])
 
+    def test_a_search_from_an_address_goes_up_from_there_and_comes_round(self):
+        memory = self.memory_with(0x10, 0x800, 0x3008, 0x9000)
+        regions = [(0x100000, 0x110000)]
+        hits = list(wm.search(memory.read, regions, self.VALUE, chunk=4096, first=0x103008))
+        self.assertEqual(hits, [0x103008, 0x109000, 0x100010, 0x100800])
+
+    def test_a_search_from_an_address_reads_there_first(self):
+        memory = self.memory_with(0x10, 0x3008)
+        hits = wm.search(memory.read, [(0x100000, 0x110000)], self.VALUE, chunk=4096, first=0x103000)
+        self.assertEqual(next(hits), 0x103008)
+        self.assertEqual([address for address, _size in memory.calls], [0x103000])
+
+    def test_a_value_just_below_the_address_is_found_on_the_way_round(self):
+        memory = self.memory_with(0x2FF8)
+        hits = list(wm.search(memory.read, [(0x100000, 0x110000)], self.VALUE, chunk=4096, first=0x103000))
+        self.assertEqual(hits, [0x102FF8])
+
+    def test_starting_at_orders_the_regions_from_an_address(self):
+        regions = [(0x5000, 0x6000, 'x'), (0x1000, 0x2000, 'x'), (0x3000, 0x4000, 'x')]
+        self.assertEqual(
+            wm.starting_at(regions, 0x3000), [(0x3000, 0x4000), (0x5000, 0x6000), (0x1000, 0x2000)]
+        )
+        self.assertEqual(
+            wm.starting_at(regions, 0x3800),
+            [(0x3800, 0x4000), (0x5000, 0x6000), (0x1000, 0x2000), (0x3000, 0x3800)],
+        )
+        # Between two regions, below them all and above them all.
+        self.assertEqual(wm.starting_at(regions, 0x2800)[0], (0x3000, 0x4000))
+        self.assertEqual(wm.starting_at(regions, 0), [(0x1000, 0x2000), (0x3000, 0x4000), (0x5000, 0x6000)])
+        self.assertEqual(wm.starting_at(regions, 0x9000)[0], (0x1000, 0x2000))
+
+    def test_a_search_for_the_next_race_begins_a_little_below_the_last(self):
+        self.assertEqual(wm.search_start(0x40000000 + 0x123), 0x40000000 - wm.SEARCH_BEFORE)
+        self.assertEqual(wm.search_start(0x2000), 0)
+
     def test_pauses_so_reading_takes_its_share_of_the_time(self):
         memory = self.memory_with()
         ticks = iter([0.0, 0.002, 1.0, 1.002])  # each piece takes 2 ms to read

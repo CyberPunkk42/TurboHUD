@@ -490,6 +490,7 @@ class LapReader:
         self._client_class = None  # TS.ClientEventController, once looked up
         self._controller = None  # the online race's event controller, once found
         self._spectated = None  # a controller whose race the player only watches
+        self._found_at = None  # where the last race read or watched was: the next search begins there
         self._watched_clock, self._watched_at = None, 0.0  # its race clock, and since when
         self._watched_moved = False  # whether that clock has run since the race was picked
         self._searched_past = False  # a search past a picked race that never ran, done once
@@ -681,9 +682,17 @@ class LapReader:
             self._client_class = il.find_class('TS', 'ClientEventController')
         watchable = []  # (controller, event state, hit) of races without the player
         started, hits, result = self._clock(), 0, 'stopped by an error'
-        log.info('searching for the online race')
+        # The game tends to put a new race's objects where the last one's were, so the
+        # search begins there, where the reader can (a search from the lowest address had
+        # the race at 18% of the data, 6 s in).
+        last = self._found_at if memory.find_pointers_from is not None else None
+        log.info('searching for the online race%s', '' if last is None else ', from where the last one was')
         try:
-            for candidate in find(self._client_class):
+            for candidate in (
+                find(self._client_class)
+                if last is None
+                else memory.find_pointers_from(self._client_class, last)
+            ):
                 hits += 1
                 try:
                     state, driving = self._race_of(candidate)
@@ -692,7 +701,8 @@ class LapReader:
                 if driving:
                     self._controller, self._spectated = candidate, None
                     self._searched_past = False
-                    result = 'race found'
+                    result = 'race found' + self._from_the_last(candidate)
+                    self._found_at = candidate
                     return state
                 watchable.append((candidate, state, hits))
                 if candidate != self._spectated:
@@ -716,7 +726,7 @@ class LapReader:
                 self._search_wait = CLIENT_SEARCH_EVERY if quick else min(wait * 2, CLIENT_SEARCH_MOST)
             else:
                 self._empty_since = None
-                if result == 'race found':
+                if result.startswith('race found'):
                     self._search_wait = CLIENT_SEARCH_EVERY
             log.info('search: %s, after %.1f s and %d hits', result, ended - started, hits)
         if not watchable:
@@ -727,8 +737,22 @@ class LapReader:
         self._watched_clock, self._watched_moved = None, False
         # Where it was among the hits: a search stops at the first race to watch, past the one
         # whose clock stood or never ran.
-        log.info('search: watching the race at hit %d of %d, %d races to watch', hit, hits, len(watchable))
+        log.info(
+            'search: watching the race at hit %d of %d, %d races to watch%s',
+            hit,
+            hits,
+            len(watchable),
+            self._from_the_last(self._spectated),
+        )
+        self._found_at = self._spectated
         return state
+
+    def _from_the_last(self, controller):
+        """For the log: how far a race found is from the last one, which tells whether
+        beginning the search there helps."""
+        if self._found_at is None:
+            return ''
+        return f' ({(controller - self._found_at) / (1 << 20):+.1f} MiB from the last one)'
 
     def _watched_clock_runs(self, state):
         """Whether the watched race's clock moved within SPECTATE_STILL."""

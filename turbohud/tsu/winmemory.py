@@ -42,6 +42,7 @@ EXECUTE = {0x10, 0x20, 0x40, 0x80}
 MERGE_GAP = 16  # pages: wanted pages at most this far apart are read in one call
 SPAN_MOST = 64  # pages a merged read covers at most (256 KiB)
 WINE_SEARCH_SHARE = 0.5  # in Wine, the share of the time a search may read
+SEARCH_BEFORE = 32 << 20  # bytes below the last race's place where the search for the next begins
 
 
 def region(start, size, protect, kind, path=''):
@@ -166,16 +167,50 @@ class PageCache:
         return b''.join(parts)[start : start + size]
 
 
-def search(read, regions, value, align=8, chunk=CHUNK, share=1.0, sleep=time.sleep, clock=time.perf_counter):
+def search_start(address):
+    """Where a search for the next race begins when the last one was at `address`: a
+    little below it, as the game may put the new race's objects on either side."""
+    return max(address - SEARCH_BEFORE, 0) // PAGE * PAGE
+
+
+def starting_at(regions, address):
+    """`regions` as (start, end) in the order a search from `address` takes them: upwards
+    from there, then round from the lowest up to it. A region `address` lies in is cut
+    in two there."""
+    later, earlier = [], []
+    for start, end, *_ in sorted(regions):
+        if end <= address:
+            earlier.append((start, end))
+        elif start >= address:
+            later.append((start, end))
+        else:
+            later.append((address, end))
+            earlier.append((start, address))
+    return later + earlier
+
+
+def search(
+    read,
+    regions,
+    value,
+    align=8,
+    chunk=CHUNK,
+    share=1.0,
+    sleep=time.sleep,
+    clock=time.perf_counter,
+    first=None,
+):
     """Addresses (multiples of `align`) in `regions` that hold the 64-bit `value`,
     lowest first, reading `chunk` bytes at a time. A generator: it reads on only as far
     as its hits are taken, so a lookup that stops at the first good one reads little
     (in TSU the class records and the online race lie in the first fifth of its data).
     With `share` below 1, it pauses after each piece so that reading takes about that
-    share of the time (0.5: twice as long, the rest left to the game)."""
+    share of the time (0.5: twice as long, the rest left to the game). With `first` (a
+    multiple of `align`), it begins at that address and comes round to it, so what lies
+    just above is found at once."""
     pattern = struct.pack('<Q', value)
     overlap = len(pattern) - 1
-    for start, end, *_ in sorted(regions):
+    for start, end, *_ in sorted(regions) if first is None else starting_at(regions, first):
         address = start
         while address < end:
             size = min(chunk + overlap, end - address)
@@ -421,15 +456,19 @@ def connect(name='TSU.exe'):
             raise NotFound('the game metadata is not mapped yet')
         share = WINE_SEARCH_SHARE if under_wine() else 1.0
 
-        def paced(search_regions, value):
-            return search(process.read, search_regions, value, share=share)
+        def paced(search_regions, value, first=None):
+            return search(process.read, search_regions, value, share=share, first=first)
+
+        def data():
+            return [r for r in process.regions() if searchable(r)]
 
         cache = PageCache(process.read, fetch_many=lambda pages: read_pages(process.read, pages)[0])
         memory = Memory(
             cache.read,
             process.regions,  # listed anew for each search: the memory grows towards a race
-            find_pointers=lambda value: paced([r for r in process.regions() if searchable(r)], value),
+            find_pointers=lambda value: paced(data(), value),
             searcher=paced,
+            find_pointers_from=lambda value, address: paced(data(), value, search_start(address)),
         )
         il2cpp = Il2Cpp(memory, metadata, base)
         reader = LapReader(il2cpp, event_running=EventLog(tsu_data()).running)
