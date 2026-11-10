@@ -134,6 +134,15 @@ class SpansTests(unittest.TestCase):
     def test_nothing_wanted_nothing_read(self):
         self.assertEqual(wm.spans([]), [])
 
+    def test_pages_up_to_192_kib_apart_share_a_read(self):
+        self.assertEqual(wm.spans([100, 148, 197]), [(100, 148), (197, 197)])
+
+    def test_a_read_covers_at_most_2_mib(self):
+        self.assertEqual(wm.spans(range(0, 600, 40)), [(0, 480), (520, 560)])
+
+    def test_two_pages_with_a_break_between_them_do_not_share_a_read(self):
+        self.assertEqual(wm.spans([1, 2, 5, 6], gap=4, breaks={(2, 5)}), [(1, 2), (5, 6)])
+
 
 class ReadPagesTests(unittest.TestCase):
     def setUp(self):
@@ -146,11 +155,56 @@ class ReadPagesTests(unittest.TestCase):
         self.assertEqual(sorted(found), [16, 18])
         self.assertEqual(found[18], bytes(self.memory.data[2 * 4096 : 3 * 4096]))
 
-    def test_a_read_that_fails_reads_its_pages_one_by_one(self):
+    def test_a_read_that_fails_is_tried_again_in_halves(self):
         found, calls = wm.read_pages(self.memory.read, [22, 23, 24])  # 24 is not there
         self.assertEqual(sorted(found), [22, 23])
-        self.assertEqual(calls, 4)
+        self.assertEqual(calls, 5)  # all, 22, 23 and 24, 23, 24
         self.assertEqual(found[23], bytes(self.memory.data[7 * 4096 :]))
+
+    def two_islands(self):
+        """Pages 16 to 19 and 40 to 43, with nothing between them."""
+        low, high = FakeMemory(16 * 4096, bytes(4 * 4096)), FakeMemory(40 * 4096, b'\x01' * 4 * 4096)
+        calls = []
+
+        def read(address, size):
+            calls.append((address // 4096, size // 4096))
+            try:
+                return low.read(address, size)
+            except OSError:
+                return high.read(address, size)
+
+        return read, calls
+
+    def test_a_read_that_fails_is_cut_at_its_widest_gap(self):
+        read, calls = self.two_islands()
+        breaks = set()
+        found, made = wm.read_pages(read, [16, 19, 40, 43], breaks=breaks)
+        self.assertEqual(sorted(found), [16, 19, 40, 43])
+        self.assertEqual(calls, [(16, 28), (16, 4), (40, 4)])
+        self.assertEqual(made, 3)
+        self.assertEqual(found[40], b'\x01' * 4096)
+        self.assertEqual(breaks, {(19, 40)})
+
+    def test_the_next_read_does_not_try_across_a_gap_that_failed(self):
+        read, calls = self.two_islands()
+        breaks = set()
+        wm.read_pages(read, [16, 19, 40, 43], breaks=breaks)
+        calls.clear()
+        found, made = wm.read_pages(read, [16, 19, 40, 43], breaks=breaks)
+        self.assertEqual(calls, [(16, 4), (40, 4)])
+        self.assertEqual((sorted(found), made), ([16, 19, 40, 43], 2))
+
+    def test_a_page_that_is_gone_leaves_no_break(self):
+        breaks = set()
+        found, _calls = wm.read_pages(self.memory.read, [22, 23, 24], breaks=breaks)  # 24 is not there
+        self.assertEqual(sorted(found), [22, 23])
+        self.assertEqual(breaks, set())  # no gap to blame: the page itself cannot be read
+
+    def test_the_breaks_kept_are_limited(self):
+        read, _calls = self.two_islands()
+        breaks = {(n, n + 1) for n in range(1000, 1000 + wm.BREAKS_MOST)}
+        wm.read_pages(read, [16, 19, 40, 43], breaks=breaks)
+        self.assertEqual(breaks, {(19, 40)})
 
     def test_a_single_page_that_fails_is_left_out(self):
         self.assertEqual(wm.read_pages(self.memory.read, [100]), ({}, 1))

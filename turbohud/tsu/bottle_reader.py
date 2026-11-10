@@ -73,6 +73,7 @@ class Service:
         self.event_running = event_running
         self.share = share
         self._search = None
+        self._breaks = set()  # gaps a merged read failed across: see read_pages
 
     def handle(self, request):
         """(header, payload) for one request."""
@@ -93,7 +94,7 @@ class Service:
             if not 0 < len(pages) <= MAX_READ // PAGE or min(pages) < 0:
                 return {'ok': False, 'error': 'pages out of range'}, b''
             began = time.perf_counter()
-            found, calls = read_pages(self.process.read, pages)
+            found, calls = read_pages(self.process.read, pages, breaks=self._breaks)
             took = time.perf_counter() - began
             got = sorted(found)
             return {'ok': True, 'got': got, 'took': took, 'calls': calls}, b''.join(found[n] for n in got)
