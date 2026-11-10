@@ -53,11 +53,10 @@
 
 ## Next steps
 **Start with `docs/CONTINUE_HERE.md`**: what is left to test. Then `docs/IMPROVEMENT_BACKLOG.md`. In short:
-- First (where the session of 2026-11-10 stopped): the user checks the one-window HUD on the Mac
-  (`docs/CONTINUE_HERE.md`, "Next session"): FPS with the Metal HUD and every section shown
-  (expected near 115 to 120, from 80 to 110), that it looks as before, move mode, and presets and
-  "bigger"/"smaller" while locked. Then a new build and instructions for the tester. Offered next for
-  speed: merging pages further apart in a race read (48 to 71 reads of the game a read).
+- First (where the session of 2026-11-10 stopped): the one-window HUD works on the Mac but showed no gain
+  in FPS; compare it with a window each in the same race (`docs/CONTINUE_HERE.md`, "Next session"). Then
+  a new build and instructions for the tester. Next for speed: merging pages further apart in a race read
+  (84 to 88 reads of the game a read, 26 to 29 ms). Online: see the search from the last race.
 0. Tests: keep them from reaching a running TurboHUD (until then run them with
    `XDG_RUNTIME_DIR` set to an empty private folder).
 1. Windows: the overlay over TSU (windowed, Fullscreen, Fullscreen Exclusive), then
@@ -73,6 +72,13 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-10: The user's check of `main` on the Mac, in a race against AI with the Metal HUD
+  (`docs/CONTINUE_HERE.md`, "One-window HUD and reads on the user's Mac"). The one-window HUD looks and
+  works as before (move mode, presets, "bigger"/"smaller"), but no gain showed: about 85 FPS with every
+  section, in a race that ran 85 to 120 without TurboHUD, and one section cost as much as all (about 15 to
+  20 FPS); to be compared with a window each in the same race. The map's kept road: 8.2 to 8.8% of a core
+  with only the map shown (about 23%). Race reads: 1 trip a read, but still 26 to 29 ms, all of it in 84 to
+  88 reads of the game. TSU quit normally. No online race, so the search from the last race is not seen yet.
 - 2026-11-10: A search for the online race begins where the last race was, asked for by the user (Mac with
   CrossOver, and TurboHUD's own Windows reading): the search went through the game's data from the lowest
   address each time, with the race at 18% of it, 6 s in, in one search measured. It now begins 32 MiB below

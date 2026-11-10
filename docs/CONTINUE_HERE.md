@@ -5,19 +5,18 @@ and nothing was pushed or tagged. Delete a point when it is settled, and this fi
 none is left.
 
 ## Next session
-1. The user checks the one-window HUD (`sh run_turbohud.sh`; see "FPS on the user's Mac with the Metal
-   HUD" below for the Metal HUD): FPS with every section shown, expected near 115 to 120 (80 to 110
-   before); it looks as before (text, delta bar, map, radar, tint); move mode (drag, resize, a group,
-   Undo, then locking leaves nothing behind); while locked, a preset shortcut and "bigger"/"smaller" in
-   the settings. If anything is wrong: `TURBOHUD_ONE_WINDOW=0 sh run_turbohud.sh`, and read the log.
+1. The one-window HUD gave no gain that showed on 2026-11-10 ("One-window HUD and reads on the user's
+   Mac" below), though it looks and works as before. To tell whether it helps at all: in one race, with the
+   Metal HUD, a minute each of TurboHUD closed, every section shown, the same with
+   `TURBOHUD_ONE_WINDOW=0 sh run_turbohud.sh`, one section shown in each of the two, and closed again.
 2. Build 2026.11.09.2 went to the tester (2026-11-09) with the shorter `TurboHUD-test-instructions.md`. Put
    their results under "Tester's Mac": FPS without TurboHUD and with every section shown (63 before), the
    quick look, the log, whether a reader was left and whether TSU froze on quitting.
 3. At each quit of TSU the user notes whether it froze and whether TurboHUD ran ("Other points").
 4. When one comes up: a special event (map expected), King of the Hill or Sumo (no map), a track without
    sector lines (3 even sector bars expected), joining as a driver after spectating.
-5. In a race: TurboHUD's CPU with only the map shown (`top -pid $(pgrep -f launch_turbohud)`; about 23%
-   before the kept road), and FPS with every section unticked against TurboHUD closed.
+5. Online: two or more races in a session, for the search from the last race ("Not yet seen in a race");
+   not possible on 2026-11-10.
 6. Then a new build for the tester, with everything since 2026.11.09.2 (one-window HUD, batched reads,
    the kept map road, the sector bars by the track's sector lines).
 
@@ -39,13 +38,9 @@ built app only hands it "move" and quits, so the smoke test passes without start
   MiB. A distance below -32 MiB, or a search no quicker than the session's first, means TSU puts the next
   race elsewhere: then widen `SEARCH_BEFORE` in `turbohud/tsu/winmemory.py`, or drop the idea. Also as a
   spectator (`watching the race at hit … (… MiB from the last one)`), and listen for stutter as before.
-- The track map's kept road (2026-11-09): the map should look as before (road, start line, tint, the purple
-  or green road after a fast lap, the move-mode oval), and TurboHUD's CPU with only the map shown should
-  drop from about 23% of a core (`top -pid $(pgrep -f launch_turbohud)` during a race).
-- Race reads in one go (2026-11-09): the log's `race reads` line should say 1 to 3 trips a read (it said
-  about 20 on the tester's Mac and 75 to 88 in races with AI) and how many reads of the game they made;
-  the median read time, about 20 to 30 ms before, should drop. Also whether TSU's FPS with nothing shown
-  comes closer to the FPS with TurboHUD closed (the tester lost about 8).
+- Race reads in one go (2026-11-09): seen on 2026-11-10, 1 trip a read, but the read is no shorter, as its
+  84 to 88 reads of the game are the cost ("One-window HUD and reads on the user's Mac"). Still to see:
+  the same line on the tester's Mac.
 - The sector bars below the last and best lap (2026-11-09, by the track's sectors since 2026-11-10): one per
   sector, purple, green, dark yellow or grey. Seen by the user on 2026-11-10: 4 bars on a track with 3 sector
   lines (at 24, 45 and 58% of the lap), which they found fine as it is. Still to see: 3 bars on a track
@@ -188,6 +183,33 @@ mode as before (drag, resize, groups, Undo); while locked, a preset shortcut and
 the settings moving the sections with nothing left behind; the tint and the theme; the map and the
 radar. If anything is wrong, `TURBOHUD_ONE_WINDOW=0 sh run_turbohud.sh` goes back to a window each.
 
+### One-window HUD and reads on the user's Mac (2026-11-10)
+A race against AI with the Metal HUD, read by eye by the user; `main` with the one-window HUD:
+
+| TurboHUD | FPS |
+| --- | --- |
+| closed | 85 to 120 |
+| every section unticked | 100 and more, all the time |
+| one section shown, each in turn | about 80, from below 70 to 120 |
+| every section shown | about 85 (70 to 100) |
+
+- Closed was 120 all the time on 2026-11-09 and 85 to 120 now, so this race was heavier for TSU and the
+  numbers do not compare with that day's. Within this race: showing anything costs about 15 to 20 FPS, one
+  section as much as all, and nothing shown costs little or nothing. On 2026-11-09 one section cost
+  nothing. Not known: whether the canvas was on (the log's `canvas:` line was not copied), and whether a
+  canvas the size of the screen costs when one small part of it changes 20 times a second (the probe's one
+  large window lost 5 FPS). The comparison in "Next session", point 1, is to tell.
+- It looked as before, and move mode, the preset shortcuts and "bigger"/"smaller" worked.
+- The track map's kept road: TurboHUD's CPU with only the map shown was 8.2 to 8.8% of a core (about 23%
+  before).
+- The log (20:13 to 20:17): 1 trip a read, as meant, but a median read of 26.5 to 29.3 ms, 25 to 28 ms of
+  it on the game's memory in 84 to 88 reads of it, so about 0.3 ms each: the number of reads of the game is
+  the whole cost, and the reader spends about half of its time in them (a read every 54 ms). One to three
+  reads in 30 s took over 50 ms (95 to 141 ms). So merging pages further apart ("Offered next") is the
+  next step for the reads. HUD frames: content 2% and drawing 16 to 19% of the time.
+- TSU quit normally, with TurboHUD quit first and Steam started from Terminal with the Metal HUD.
+- No online race could be driven, so the search from the last race is not seen yet.
+
 ### Other points
 - Custom sessions show only the clock: no race is found in them. Not looked into: what such a session
   holds, and whether the HUD could read it.
@@ -199,6 +221,7 @@ radar. If anything is wrong, `TURBOHUD_ONE_WINDOW=0 sh run_turbohud.sh` goes bac
   | user, 2026-11-08, twice | quit first, and TSU first | normally | quit normally |
   | tester, 2026-11-08 | quit first | normally | quit cleanly, no reader left |
   | user, 2026-11-09, 01:10 | quit first (reader ended at once) | from Terminal, Metal HUD | froze, between the race and quitting |
+  | user, 2026-11-10 | quit first | from Terminal, Metal HUD | quit normally |
 
   When frozen: TSU at about 1% CPU (about 300% while running), steam.exe at about 100%, no reader left.
   The reader opens TSU only to read memory and ask for its layout (`PROCESS_VM_READ`,
