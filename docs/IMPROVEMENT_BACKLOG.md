@@ -44,10 +44,12 @@ hit). The Mac app now does this by itself (`turbohud/tsu/bottle.py`, reader in
   user's Mac (2026-11-09) has each window cost the same, whatever it shows: so not fewer redraws but fewer
   windows. The Metal HUD on the user's Mac (2026-11-09): 120 FPS closed and with one section, 80 to 110
   with all; the window count probe: 17 windows 85, one window 115. Built: locked, on the Mac, all sections
-  in one window per screen. Next: check it over TSU (`docs/CONTINUE_HERE.md`), then the tester's build.
+  in one window per screen. Seen over TSU on 2026-11-10: it works, but no gain showed (about 85 FPS with
+  every section, in a race that ran 85 to 120 without TurboHUD; one section cost as much as all). Next:
+  one window against a window each in the same race (`docs/CONTINUE_HERE.md`), then the tester's build.
   TSU froze once more on quitting, with TurboHUD quit first (`docs/CONTINUE_HERE.md`, "Other points").
-- Race reads in one go (2026-11-09, `docs/CONTINUE_HERE.md`, "Not yet seen in a race"): see the
-  log's `race reads` line in a race, before and after.
+- Race reads in one go: 1 trip a read (seen 2026-11-10), but still 26 to 29 ms a read in 84 to 88 reads
+  of the game, about 0.3 ms each. Next: merge pages further apart (`MERGE_GAP`, `SPAN_MOST`).
 - Races on the Mac: confirmed by the user on 2026-11-08, offline with 19 AI, in Fullscreen and
   hosting about 13 AI online (`docs/CONTINUE_HERE.md`, "Test list"). As a driver online the race
   showed 1.4 s after the start.

@@ -857,3 +857,10 @@ its "Recent changes".
   race, from where the last one was`, and at a race found how far it was from the last one (`+0.0 MiB from
   the last one`). That TSU puts a new race near the last one is expected, not measured: if it does not, a
   search takes as long as one of all the data up to that race. Not yet seen in a race.
+- 2026-11-10: The user's check of `main` on the Mac, in a race against AI with the Metal HUD
+  (`docs/CONTINUE_HERE.md`, "One-window HUD and reads on the user's Mac"). The one-window HUD looks and
+  works as before (move mode, presets, "bigger"/"smaller"), but no gain showed: about 85 FPS with every
+  section, in a race that ran 85 to 120 without TurboHUD, and one section cost as much as all (about 15 to
+  20 FPS); to be compared with a window each in the same race. The map's kept road: 8.2 to 8.8% of a core
+  with only the map shown (about 23%). Race reads: 1 trip a read, but still 26 to 29 ms, all of it in 84 to
+  88 reads of the game. TSU quit normally. No online race, so the search from the last race is not seen yet.
