@@ -53,10 +53,11 @@
 
 ## Next steps
 **Start with `docs/CONTINUE_HERE.md`**: what is left to test. Then `docs/IMPROVEMENT_BACKLOG.md`. In short:
-- First (where the session of 2026-11-09 stopped): the user checks the one-window HUD on the Mac
+- First (where the session of 2026-11-10 stopped): the user checks the one-window HUD on the Mac
   (`docs/CONTINUE_HERE.md`, "Next session"): FPS with the Metal HUD and every section shown
   (expected near 115 to 120, from 80 to 110), that it looks as before, move mode, and presets and
-  "bigger"/"smaller" while locked. Then a new build and instructions for the tester.
+  "bigger"/"smaller" while locked. Then a new build and instructions for the tester. Offered next for
+  speed: merging pages further apart in a race read (48 to 71 reads of the game a read).
 0. Tests: keep them from reaching a running TurboHUD (until then run them with
    `XDG_RUNTIME_DIR` set to an empty private folder).
 1. Windows: the overlay over TSU (windowed, Fullscreen, Fullscreen Exclusive), then

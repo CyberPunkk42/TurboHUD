@@ -1,6 +1,6 @@
 # Continue here
 
-Where the work stopped on 2026-11-09, on the Mac. Everything below was merged into `main`
+Where the work stopped on 2026-11-10, on the Mac. Everything below was merged into `main`
 and nothing was pushed or tagged. Delete a point when it is settled, and this file when
 none is left.
 
@@ -14,7 +14,18 @@ none is left.
    their results under "Tester's Mac": FPS without TurboHUD and with every section shown (63 before), the
    quick look, the log, whether a reader was left and whether TSU froze on quitting.
 3. At each quit of TSU the user notes whether it froze and whether TurboHUD ran ("Other points").
-4. When one comes up: a special event (map expected), King of the Hill or Sumo (no map).
+4. When one comes up: a special event (map expected), King of the Hill or Sumo (no map), a track without
+   sector lines (3 even sector bars expected), joining as a driver after spectating.
+5. In a race: TurboHUD's CPU with only the map shown (`top -pid $(pgrep -f launch_turbohud)`; about 23%
+   before the kept road), and FPS with every section unticked against TurboHUD closed.
+6. Then a new build for the tester, with everything since 2026.11.09.2 (one-window HUD, batched reads,
+   the kept map road, the sector bars by the track's sector lines).
+
+Offered next (2026-11-10), most value first: merge pages further apart in a race read (the log showed 1 trip
+but 48 to 71 reads of the game a read; `MERGE_GAP` and `SPAN_MOST` in `turbohud/tsu/winmemory.py`); the
+one-window canvas only as large as the sections; online searches that start where the race was last found;
+the one-window canvas on Linux and Windows; sector times as numbers. Windows and the CrossOver trial:
+`docs/WINDOWS_AND_CROSSOVER.md`.
 
 The user likes a plain, numbered to-do list at each step, and merges each branch by saying "merge".
 Run the tests only while TurboHUD is not running (`pgrep -fl launch_turbohud`), as one of them can
