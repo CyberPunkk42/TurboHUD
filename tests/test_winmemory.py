@@ -328,6 +328,7 @@ class SearchTests(unittest.TestCase):
     def test_a_search_for_the_next_race_begins_a_little_below_the_last(self):
         self.assertEqual(wm.search_start(0x40000000 + 0x123), 0x40000000 - wm.SEARCH_BEFORE)
         self.assertEqual(wm.search_start(0x2000), 0)
+        self.assertEqual(wm.SEARCH_BEFORE, 4 << 20)  # eight times the furthest seen, read in well under 0.1 s
 
     def test_pauses_so_reading_takes_its_share_of_the_time(self):
         memory = self.memory_with()
