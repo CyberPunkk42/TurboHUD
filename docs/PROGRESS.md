@@ -907,3 +907,9 @@ its "Recent changes".
   fallback. `TurboHUD-test-instructions.md` rewritten for it: five FPS measurements in one race against AI
   (closed; one window with every section, then only the local time; a window each with the same two), a
   quick look, the log, and the quit check. It replaces 2026.11.09.2 in `releases/`.
+- 2026-11-11: The delta bar, asked for by the user: round ends (a pill; the fill rounds only at its outer
+  end), and no white. White while steady showed more than the colours and hid the white delta on it. Now it
+  is green while gaining and red while losing, keeps its colour while steady, and turns only once the delta
+  has moved the other way by 0.05 s a second for 0.25 s, then fades over through yellow in about 0.4 s. A
+  lap starts green when ahead and red when behind. The fill is a little darker than the text colours, so the
+  delta reads on it. Checked off screen (a rendered preview); not yet seen in a race.
