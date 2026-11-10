@@ -309,25 +309,31 @@ def delta_bar_parts(width, height, fill):
     return (inset, inset, inner, height - 2 * inset), (left, inset, reach, height - 2 * inset), middle
 
 
-DELTA_STEADY_COLOR = '#ffffff'  # the delta bar while neither gaining nor losing
+DELTA_BAR_DARKER = 130  # the fill a little darker than the text colours, so the white delta reads on it
 
 
 def delta_bar_color(trend):
-    """'#rrggbb' for a delta bar's `trend` (-1 to 1): white when steady, going over to green
-    when gaining (below 0) or red when losing (above 0) as the trend grows."""
-    return blend(DELTA_STEADY_COLOR, AHEAD_COLOR if trend < 0 else BEHIND_COLOR, abs(trend))
+    """'#rrggbb' for a delta bar's `trend`: green at -1 (gaining), red at 1 (losing), and
+    in between, through yellow, only while it fades from one to the other."""
+    return blend(AHEAD_COLOR, BEHIND_COLOR, (trend + 1) / 2)
 
 
 def draw_delta_bar(painter, width, height, fill, trend, text, theme):
-    """The delta bar: a dark track, filled from the middle (right when ahead), white when
-    steady and green or red as time is gained or lost, with the delta over it."""
+    """The delta bar: a dark track with round ends, filled from the middle (right when
+    ahead), green while gaining and red while losing, with the delta over it."""
     track, filled, middle = delta_bar_parts(width, height, fill)
+    radius = track[3] / 2
+    outline = QPainterPath()
+    outline.addRoundedRect(QRectF(*track), radius, radius)
+    painter.save()
+    painter.setRenderHint(QPainter.Antialiasing)
     painter.setPen(Qt.NoPen)
     painter.setBrush(QColor(*DELTA_BAR_TRACK))
-    painter.drawRoundedRect(QRectF(*track), 4, 4)
-    painter.setBrush(QColor(delta_bar_color(trend)))
-    painter.drawRect(QRectF(*filled))
+    painter.drawPath(outline)
+    painter.setClipPath(outline)  # the fill's outer end follows the round end; the middle stays straight
+    painter.fillRect(QRectF(*filled), QColor(delta_bar_color(trend)).darker(DELTA_BAR_DARKER))
     painter.fillRect(QRectF(middle - 1, track[1], 2, track[3]), QColor(255, 255, 255, 170))
+    painter.restore()
     size = max(round(height * DELTA_BAR_TEXT), 8)
     x = (width - text_advance(steady_text(text), size)) / 2
     baseline = (height + cap_height(size)) / 2

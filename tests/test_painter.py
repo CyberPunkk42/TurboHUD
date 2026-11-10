@@ -203,20 +203,26 @@ class RedrawTests(unittest.TestCase):
         image = window.grab().toImage()
         red = image.pixelColor(120, 20)
         self.assertGreater(red.red(), red.green())  # behind and losing: on the left, red
-        window.show_content([], delta_view=DeltaBarView(-0.5, 0.0, ''))
-        white = window.grab().toImage().pixelColor(120, 20)
-        self.assertTrue(white.red() > 240 and white.green() > 240 and white.blue() > 240)  # steady
+        self.assertLess(
+            max(red.red(), red.green(), red.blue()), 230
+        )  # never near white: the text reads on it
+        window.show_content([], delta_view=DeltaBarView(-1.0, 1.0, ''))
+        image = window.grab().toImage()
+        self.assertEqual(image.pixelColor(3, 3).alpha(), 0)  # round ends, even filled to the end
+        self.assertGreater(image.pixelColor(20, 20).red(), 150)  # but filled inside them
         window.show_content([])
         self.assertEqual(window.grab().toImage().pixelColor(200, 20).alpha(), 0)  # no delta, no bar
 
-    def test_the_delta_bar_colour_goes_gradually_from_white(self):
-        from turbohud.hud.painter import AHEAD_COLOR, BEHIND_COLOR, DELTA_STEADY_COLOR, delta_bar_color
+    def test_the_delta_bar_colour_fades_from_green_to_red_through_yellow(self):
+        from PySide6.QtGui import QColor
 
-        self.assertEqual(delta_bar_color(0.0), DELTA_STEADY_COLOR)
+        from turbohud.hud.painter import AHEAD_COLOR, BEHIND_COLOR, delta_bar_color
+
         self.assertEqual(delta_bar_color(-1.0), AHEAD_COLOR)
         self.assertEqual(delta_bar_color(1.0), BEHIND_COLOR)
-        half = delta_bar_color(-0.5)
-        self.assertNotIn(half, (DELTA_STEADY_COLOR, AHEAD_COLOR))  # in between
+        half = QColor(delta_bar_color(0.0))
+        self.assertGreater(min(half.red(), half.green()), 150)  # yellowish on the way, never white
+        self.assertLess(half.blue(), 150)
 
     def test_the_radar_has_an_outline_only_in_move_mode(self):
         from turbohud.core.hud import RACE_SECTIONS

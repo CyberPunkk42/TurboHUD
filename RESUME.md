@@ -75,6 +75,12 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-11: The delta bar, asked for by the user: round ends (a pill; the fill rounds only at its outer
+  end), and no white. White while steady showed more than the colours and hid the white delta on it. Now it
+  is green while gaining and red while losing, keeps its colour while steady, and turns only once the delta
+  has moved the other way by 0.05 s a second for 0.25 s, then fades over through yellow in about 0.4 s. A
+  lap starts green when ahead and red when behind. The fill is a little darker than the text colours, so the
+  delta reads on it. Checked off screen (a rendered preview); not yet seen in a race.
 - 2026-11-10: Build 2026.11.10 for the tester (`releases/`, macOS 27, built with `--any-macos`, smoke test
   passed), with everything since 2026.11.09.2: the Rust reader (checked inside the built app: the same
   program, picked by the app, and started from there in the bottle), the merged race reads, the search from
