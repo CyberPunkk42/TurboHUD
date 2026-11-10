@@ -31,6 +31,7 @@ from turbohud.tsu.winmemory import PAGE, CachedReader, PageCache, search_start, 
 
 START_TIMEOUT = 30.0  # seconds for a reader to start: a sleeping bottle wakes up slowly
 TIMEOUT = 5.0  # seconds before a silent reader counts as stuck
+PAGES_LOG_EVERY = 600  # questions for many pages between two `race pages` log lines (30 s at 20 reads)
 SEARCH_TIMEOUT = 300.0  # a paced search of all the game's data takes under a minute
 RETRY_START = 10.0  # seconds before trying again after a reader failed to start: each try wakes Wine
 READER_LOG = 'bottle_reader.log'  # beside the settings: Python's errors from the bottle
@@ -131,6 +132,7 @@ class Pipe:
         self.metadata = None  # (base, bytes), kept while this reader lasts
         self.in_game = 0.0  # seconds its reads have spent on the game's memory, for the log
         self.game_reads = 0  # reads of the game's memory it asked for, for the log
+        self._page_reads = 0  # questions for many pages, for a log line now and then
         self._received = b''  # what has come but was not asked for yet
 
     def _take(self, size, timeout):
@@ -174,10 +176,21 @@ class Pipe:
 
     def read_pages(self, pages):
         """{page number: its 4 KiB} for those of `pages` the reader could read, in one question."""
-        header, payload = self.ask({'op': 'read_pages', 'pages': list(pages)})
+        pages = list(pages)
+        header, payload = self.ask({'op': 'read_pages', 'pages': pages})
         self.in_game += header.get('took', 0.0)
         self.game_reads += header.get('calls', 0)
         got = header['got']
+        self._page_reads += 1
+        if self._page_reads % PAGES_LOG_EVERY == 0:
+            # How the pages of a race read lie, for setting MERGE_GAP and SPAN_MOST.
+            log.info(
+                'race pages: %d pages across %.1f MiB, %d read, in %d reads of the game',
+                len(pages),
+                (max(pages) - min(pages) + 1) * PAGE / (1 << 20),
+                len(got),
+                header.get('calls', 0),
+            )
         if len(payload) != len(got) * PAGE:
             raise ReadError('the pages from the reader do not add up')
         return {number: payload[i * PAGE : (i + 1) * PAGE] for i, number in enumerate(got)}

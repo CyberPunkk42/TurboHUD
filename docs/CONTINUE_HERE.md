@@ -20,11 +20,10 @@ none is left.
 6. Then a new build for the tester, with everything since 2026.11.09.2 (one-window HUD, batched reads,
    the kept map road, the sector bars by the track's sector lines).
 
-Offered next (2026-11-10), most value first: merge pages further apart in a race read (the log showed 1 trip
-but 48 to 71 reads of the game a read; `MERGE_GAP` and `SPAN_MOST` in `turbohud/tsu/winmemory.py`); the
-one-window canvas only as large as the sections; the one-window canvas on Linux and Windows; sector times
-as numbers. Built from this list: online searches that begin where the last race was ("Not yet seen in a race"). Windows and the CrossOver trial:
-`docs/WINDOWS_AND_CROSSOVER.md`.
+Offered next (2026-11-10), most value first: the one-window canvas only as large as the sections; the
+one-window canvas on Linux and Windows; sector times as numbers. Built from this list: race reads that
+merge pages further apart, and online searches that begin where the last race was ("Not yet seen in a
+race"). Windows and the CrossOver trial: `docs/WINDOWS_AND_CROSSOVER.md`.
 
 The user likes a plain, numbered to-do list at each step, and merges each branch by saying "merge".
 Run the tests only while TurboHUD is not running (`pgrep -fl launch_turbohud`), as one of them can
@@ -32,6 +31,12 @@ switch a running TurboHUD to move mode. The same goes for a build's `--smoke`: w
 built app only hands it "move" and quits, so the smoke test passes without starting the new app.
 
 ## Not yet seen in a race
+- Race reads that merge pages further apart (2026-11-10): in a race against AI the log's `race reads` line
+  said 84 to 88 reads of the game a read and a median of 26 to 29 ms; both should drop. The new `race
+  pages` line, every 30 s, says how many pages a read wants, across how many MiB, and in how many reads:
+  if many reads are left, the pages lie far apart, and `MERGE_GAP` in `turbohud/tsu/winmemory.py` can be
+  tried larger; if the median read is no shorter with fewer reads, large reads cost more than worked out,
+  and it goes back down. Also FPS with every section unticked against TurboHUD closed.
 - Searches from where the last race was (2026-11-10, Mac): online, from the second race of a session on, the
   log should say `searching for the online race, from where the last one was`, then `race found (+… MiB
   from the last one), after … s`. Expected: found in under a second, with a distance near 0 or within some

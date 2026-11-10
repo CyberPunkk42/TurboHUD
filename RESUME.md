@@ -55,8 +55,9 @@
 **Start with `docs/CONTINUE_HERE.md`**: what is left to test. Then `docs/IMPROVEMENT_BACKLOG.md`. In short:
 - First (where the session of 2026-11-10 stopped): the one-window HUD works on the Mac but showed no gain
   in FPS; compare it with a window each in the same race (`docs/CONTINUE_HERE.md`, "Next session"). Then
-  a new build and instructions for the tester. Next for speed: merging pages further apart in a race read
-  (84 to 88 reads of the game a read, 26 to 29 ms). Online: see the search from the last race.
+  a new build and instructions for the tester. Race reads merge pages further apart since 2026-11-10 (it
+  was 84 to 88 reads of the game a read, 26 to 29 ms): see the log in a race. Online: see the search from
+  the last race.
 0. Tests: keep them from reaching a running TurboHUD (until then run them with
    `XDG_RUNTIME_DIR` set to an empty private folder).
 1. Windows: the overlay over TSU (windowed, Fullscreen, Fullscreen Exclusive), then
@@ -72,6 +73,16 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-10: Race reads merge pages further apart, asked for by the user after the log of that day (1 trip
+  a read, but 84 to 88 reads of the game in it, 26 to 29 ms): the reader now reads wanted pages up to 48
+  pages (192 KiB) apart in one call of up to 2 MiB, where it was 16 pages and 256 KiB (`MERGE_GAP`,
+  `SPAN_MOST` in `turbohud/tsu/winmemory.py`). By the costs measured before (about 250 µs a call, about
+  0.8 GiB/s), reading up to about 200 KiB of unwanted memory is cheaper than a second call. A call that
+  reaches memory that is not there fails as a whole: it is then cut in two at its widest gap, and so on,
+  and a gap whose two sides could be read is kept by the reader and not read across again, so such a
+  failure costs once, not at every read. Every 30 s the log has a `race pages` line (the pages of a read,
+  the MiB they lie across, the reads of the game), to set the two values by. How many reads are left is not
+  known: it depends on how TSU's objects lie. Not yet seen in a race.
 - 2026-11-10: The user's check of `main` on the Mac, in a race against AI with the Metal HUD
   (`docs/CONTINUE_HERE.md`, "One-window HUD and reads on the user's Mac"). The one-window HUD looks and
   works as before (move mode, presets, "bigger"/"smaller"), but no gain showed: about 85 FPS with every

@@ -10,7 +10,11 @@ the server also serves the game. Two things follow:
 - `read_pages`: the game keeps its objects where they are during a race, so a race read
   needs nearly the same pages as the one before. The cache asks for all of those at once,
   and pages close together are read in one call: a large read costs little more than a
-  small one (about 0.8 GiB/s, so 64 KiB in about 80 µs on top of the 250 µs).
+  small one (about 0.8 GiB/s, so 64 KiB in about 80 µs on top of the 250 µs). Reading
+  the memory between two wanted pages is cheaper than a second call up to about 200 KiB,
+  which is where `MERGE_GAP` comes from. A call that reaches memory that is not there
+  fails as a whole; the gaps where that happened are kept (`breaks`) and not read across
+  again.
 - `search` goes in pieces with pauses between them, so a search of the whole game
   (about 2 GiB) does not hold the server for seconds at a time (TSU stuttered then).
 
@@ -39,8 +43,9 @@ STILL_ACTIVE = 259
 READ = {0x02, 0x04, 0x08, 0x20, 0x40, 0x80}
 WRITE = {0x04, 0x08, 0x40, 0x80}
 EXECUTE = {0x10, 0x20, 0x40, 0x80}
-MERGE_GAP = 16  # pages: wanted pages at most this far apart are read in one call
-SPAN_MOST = 64  # pages a merged read covers at most (256 KiB)
+MERGE_GAP = 48  # pages: wanted pages at most this far apart (192 KiB) are read in one call
+SPAN_MOST = 512  # pages a merged read covers at most (2 MiB)
+BREAKS_MOST = 4096  # gaps kept as not readable across; forgotten all at once beyond this
 WINE_SEARCH_SHARE = 0.5  # in Wine, the share of the time a search may read
 SEARCH_BEFORE = 32 << 20  # bytes below the last race's place where the search for the next begins
 
@@ -69,46 +74,65 @@ def searchable(item):
     return perms.startswith('rw') and perms.endswith('p')
 
 
-def spans(pages, gap=MERGE_GAP, most=SPAN_MOST):
+def spans(pages, gap=MERGE_GAP, most=SPAN_MOST, breaks=()):
     """(first, last) page numbers of the reads that cover `pages`: pages at most `gap`
-    apart share a read, which covers at most `most` pages."""
+    apart share a read, which covers at most `most` pages. Two wanted pages whose pair
+    is in `breaks` never share one."""
     found = []
     for number in sorted(set(pages)):
-        if found and number - found[-1][1] <= gap and number - found[-1][0] < most:
+        if (
+            found
+            and number - found[-1][1] <= gap
+            and number - found[-1][0] < most
+            and (found[-1][1], number) not in breaks
+        ):
             found[-1][1] = number
         else:
             found.append([number, number])
     return [tuple(span) for span in found]
 
 
-def read_pages(read, pages, page=PAGE, gap=MERGE_GAP, most=SPAN_MOST):
+def read_pages(read, pages, page=PAGE, gap=MERGE_GAP, most=SPAN_MOST, breaks=None):
     """({page number: its bytes}, reads made) for the `pages` that can be read, with
     pages close together read in one call (`spans`). Where such a read fails (it reaches
-    memory that is not there), its wanted pages are read one by one, and pages that
-    cannot be read are left out."""
-    wanted = set(pages)
+    memory that is not there), it is tried again as two, cut at its widest gap, and so
+    on down to single pages; pages that cannot be read are left out. A gap whose two
+    sides could be read is added to `breaks` (a set the caller keeps), so the reads
+    after this one do not try across it again."""
+    wanted = sorted(set(pages))
     found, calls = {}, 0
-    for first, last in spans(wanted, gap, most):
+
+    def fetch(group):
+        """Whether all of `group` (wanted pages, ascending) could be read."""
+        nonlocal calls
+        first = group[0]
         calls += 1
         try:
-            data = read(first * page, (last - first + 1) * page)
+            data = read(first * page, (group[-1] - first + 1) * page)
         except OSError:
             data = None
         if data is not None:
-            for number in range(first, last + 1):
-                if number in wanted:
-                    offset = (number - first) * page
-                    found[number] = data[offset : offset + page]
-            continue
-        if first == last:
-            continue
-        for number in range(first, last + 1):
-            if number in wanted:
-                calls += 1
-                try:
-                    found[number] = read(number * page, page)
-                except OSError:
-                    pass
+            for number in group:
+                offset = (number - first) * page
+                found[number] = data[offset : offset + page]
+            return True
+        if len(group) == 1:
+            return False
+        cut = max(range(1, len(group)), key=lambda index: group[index] - group[index - 1])
+        below, above = fetch(group[:cut]), fetch(group[cut:])
+        if below and above and breaks is not None:
+            if len(breaks) >= BREAKS_MOST:
+                breaks.clear()
+            breaks.add((group[cut - 1], group[cut]))
+        return False
+
+    position = 0
+    for _first, last in spans(wanted, gap, most, breaks or ()):
+        end = position
+        while end < len(wanted) and wanted[end] <= last:
+            end += 1
+        fetch(wanted[position:end])
+        position = end
     return found, calls
 
 
@@ -462,7 +486,10 @@ def connect(name='TSU.exe'):
         def data():
             return [r for r in process.regions() if searchable(r)]
 
-        cache = PageCache(process.read, fetch_many=lambda pages: read_pages(process.read, pages)[0])
+        breaks = set()  # gaps a merged read failed across: see read_pages
+        cache = PageCache(
+            process.read, fetch_many=lambda pages: read_pages(process.read, pages, breaks=breaks)[0]
+        )
         memory = Memory(
             cache.read,
             process.regions,  # listed anew for each search: the memory grows towards a race

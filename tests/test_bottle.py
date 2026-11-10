@@ -189,6 +189,19 @@ class ServiceTests(unittest.TestCase):
         self.assertEqual(header['calls'], 2)  # pages 16 and 19 in one read, page 99 alone
         self.assertEqual(payload, process.data[:4096] + process.data[3 * 4096 :])
 
+    def test_read_pages_remembers_a_gap_it_could_not_read_across(self):
+        class Holed(FakeProcess):
+            def read(self, address, size):
+                if address <= 18 * 4096 < address + size:
+                    raise OSError('page 18 is not there')
+                return super().read(address, size)
+
+        service = self.service(Holed(data=bytes(5 * 4096)))  # pages 16 to 20
+        first, _ = service.handle({'op': 'read_pages', 'pages': [16, 17, 19, 20]})
+        self.assertEqual((first['got'], first['calls']), ([16, 17, 19, 20], 3))
+        second, _ = service.handle({'op': 'read_pages', 'pages': [16, 17, 19, 20]})
+        self.assertEqual((second['got'], second['calls']), ([16, 17, 19, 20], 2))
+
     def test_read_pages_is_limited(self):
         for pages in ([], [-1], list(range(br.MAX_READ // 4096 + 1))):
             with self.subTest(count=len(pages)):
@@ -402,6 +415,15 @@ class PipeTests(ReaderCase):
         pipe = self.reader(FakeProcess(data=data))
         pipe.receive()
         self.assertEqual(pipe.read(0x10000, len(data)), data)
+
+    def test_the_log_says_now_and_then_how_the_pages_of_a_read_lie(self):
+        pipe = self.reader(FakeProcess(base=0x10000, data=bytes(4 * 4096)))  # pages 16 to 19
+        pipe.receive()
+        with mock.patch.object(bt, 'PAGES_LOG_EVERY', 2):
+            pipe.read_pages([16, 19])
+            with self.assertLogs('turbohud.tsu.bottle', 'INFO') as logs:
+                pipe.read_pages([16, 19, 99])
+        self.assertIn('race pages: 3 pages across 0.3 MiB, 2 read, in 2 reads of the game', logs.output[0])
 
     def test_search_asks_for_one_hit_at_a_time(self):
         value = 0x1122334455667788
