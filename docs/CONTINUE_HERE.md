@@ -15,8 +15,8 @@ none is left.
 3. At each quit of TSU the user notes whether it froze and whether TurboHUD ran ("Other points").
 4. When one comes up: a special event (map expected), King of the Hill or Sumo (no map), a track without
    sector lines (3 even sector bars expected), joining as a driver after spectating.
-5. Online: two or more races in a session, for the search from the last race ("Not yet seen in a race");
-   not possible on 2026-11-10.
+5. Online, the search from the last race worked in one session on 2026-11-10 ("Not yet seen in a race");
+   when one comes up: another session, and spectating.
 6. Then a new build for the tester, with everything since 2026.11.09.2 (one-window HUD, batched reads,
    the kept map road, the sector bars by the track's sector lines).
 
@@ -39,12 +39,13 @@ built app only hands it "move" and quits, so the smoke test passes without start
   `MERGE_GAP` would gain little: what is left is the price of a call, about 0.3 ms each. Fewer calls would
   need fewer pages (reading what seldom changes less often). Still to see: FPS with every section unticked
   against TurboHUD closed, which says whether the reads cost frames at all.
-- Searches from where the last race was (2026-11-10, Mac): online, from the second race of a session on, the
-  log should say `searching for the online race, from where the last one was`, then `race found (+… MiB
-  from the last one), after … s`. Expected: found in under a second, with a distance near 0 or within some
-  MiB. A distance below -32 MiB, or a search no quicker than the session's first, means TSU puts the next
-  race elsewhere: then widen `SEARCH_BEFORE` in `turbohud/tsu/winmemory.py`, or drop the idea. Also as a
-  spectator (`watching the race at hit … (… MiB from the last one)`), and listen for stutter as before.
+- Searches from where the last race was (2026-11-10, Mac), seen the same day as a driver in one public
+  session (the log, 21:14 to 21:23): three races in a row each found after 0.4 s at the first hit, -0.0,
+  -0.5 and +0.0 MiB from the last one (1.4 s on 2026-11-08, and 6 s in the search measured). The 0.4 s is
+  the 32 MiB read below the last race before reaching it: with races this close, a smaller `SEARCH_BEFORE`
+  (`turbohud/tsu/winmemory.py`) would find them sooner still. Still to see: another session, a spectator,
+  and whether TSU stutters in those first seconds (not noted). Online as a client a read wants 31 to 49
+  pages in 27 to 38 reads of the game, with a median of 11 to 15.5 ms.
 - Race reads in one go (2026-11-09): seen on 2026-11-10, 1 trip a read, but the read is no shorter, as its
   84 to 88 reads of the game are the cost ("One-window HUD and reads on the user's Mac"). Still to see:
   the same line on the tester's Mac.

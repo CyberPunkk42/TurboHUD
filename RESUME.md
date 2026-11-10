@@ -56,8 +56,8 @@
 - First (where the session of 2026-11-10 stopped): the one-window HUD works on the Mac but showed no gain
   in FPS; compare it with a window each in the same race (`docs/CONTINUE_HERE.md`, "Next session"). Then
   a new build and instructions for the tester. Race reads merge pages further apart since 2026-11-10 (31
-  to 49 reads of the game a read and 16 to 22 ms, from 84 to 88 and 26 to 29 ms). Online: see the search from
-  the last race.
+  to 49 reads of the game a read and 16 to 22 ms, from 84 to 88 and 26 to 29 ms). Online, the search from the last race found
+  three races in a row in 0.4 s (2026-11-10).
 0. Tests: keep them from reaching a running TurboHUD (until then run them with
    `XDG_RUNTIME_DIR` set to an empty private folder).
 1. Windows: the overlay over TSU (windowed, Fullscreen, Fullscreen Exclusive), then
@@ -73,6 +73,10 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-10: The search from the last race seen online by the user, as a driver in a public session (the
+  log): three races in a row found after 0.4 s at the first hit, within 0.5 MiB of the last one (1.4 s
+  before). A regular online race is `TS.RaceEventMode` (level type 0), as expected for the map. Online a
+  read took a median of 11 to 15.5 ms in 27 to 38 reads of the game.
 - 2026-11-10: The merged race reads seen in a race against AI by the user (the log): 69 to 89 pages a read,
   across 305 to 406 MiB, in 31 to 49 reads of the game (84 to 88 before), a median read of 16 to 22 ms (26
   to 29 before). The pages lie in groups far apart, so a larger gap would gain little
