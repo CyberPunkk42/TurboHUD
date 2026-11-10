@@ -882,3 +882,7 @@ its "Recent changes".
   log): three races in a row found after 0.4 s at the first hit, within 0.5 MiB of the last one (1.4 s
   before). A regular online race is `TS.RaceEventMode` (level type 0), as expected for the map. Online a
   read took a median of 11 to 15.5 ms in 27 to 38 reads of the game.
+- 2026-11-10: The search for the next race begins 4 MiB below the last one, where it was 32 MiB, agreed
+  with the user after the log of that day: three races in a row lay within 0.5 MiB of the one before, and
+  the 0.4 s each search took was the 32 MiB read on the way (`SEARCH_BEFORE` in
+  `turbohud/tsu/winmemory.py`). Expected: about 0.05 s. Not yet seen in a race.

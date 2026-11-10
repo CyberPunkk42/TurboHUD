@@ -47,7 +47,9 @@ MERGE_GAP = 48  # pages: wanted pages at most this far apart (192 KiB) are read 
 SPAN_MOST = 512  # pages a merged read covers at most (2 MiB)
 BREAKS_MOST = 4096  # gaps kept as not readable across; forgotten all at once beyond this
 WINE_SEARCH_SHARE = 0.5  # in Wine, the share of the time a search may read
-SEARCH_BEFORE = 32 << 20  # bytes below the last race's place where the search for the next begins
+# Bytes below the last race's place where the search for the next begins. Three races in a row lay
+# within 0.5 MiB of the one before (2026-11-10); a race further below is found on the way round.
+SEARCH_BEFORE = 4 << 20
 
 
 def region(start, size, protect, kind, path=''):
