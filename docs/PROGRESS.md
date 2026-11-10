@@ -896,3 +896,7 @@ its "Recent changes".
   where it is not or with `TURBOHUD_PY_READER=1`; the log names which (`(the Rust reader)`). The Mac app
   ships both for now. Checked: 34 Rust tests and the Python ones, and both readers started in the bottle
   without TSU (the same answer, 1.1 to 1.2 s each, nearly all of it Wine's). Not yet run with TSU.
+- 2026-11-10: The Rust reader seen in a race against AI by the user (the log): a median race read of 8.7
+  to 10.5 ms, where the Python reader took 16 to 22 ms, with as many reads of the game (48 to 56 a read).
+  The time on the game's memory fell to 6.3 to 7 ms from 15 to 21 ms, so the Python reader, not Wine, made
+  most of that cost.

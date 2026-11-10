@@ -75,6 +75,10 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-10: The Rust reader seen in a race against AI by the user (the log): a median race read of 8.7
+  to 10.5 ms, where the Python reader took 16 to 22 ms, with as many reads of the game (48 to 56 a read).
+  The time on the game's memory fell to 6.3 to 7 ms from 15 to 21 ms, so the Python reader, not Wine, made
+  most of that cost.
 - 2026-11-10: The reader in the CrossOver bottle in Rust, asked for by the user: `reader/`, a Windows
   program with no dependencies (its own small JSON, the Windows calls declared by hand), answering the
   same questions as `turbohud/tsu/bottle_reader.py` in the same way: the memory list, reads, pages read in
