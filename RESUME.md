@@ -73,6 +73,16 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-10: A search for the online race begins where the last race was, asked for by the user (Mac with
+  CrossOver, and TurboHUD's own Windows reading): the search went through the game's data from the lowest
+  address each time, with the race at 18% of it, 6 s in, in one search measured. It now begins 32 MiB below
+  the place of the last race read or watched (`SEARCH_BEFORE` in `turbohud/tsu/winmemory.py`), goes up from
+  there and comes round to it, so nothing is left out (`winmemory.search`'s `first`, `starting_at`; the
+  reader's `search` takes `first`). The first search after TurboHUD or TSU starts is as before, and so is
+  Linux, where the probe answers a whole search in about 1.5 s. The log says `searching for the online
+  race, from where the last one was`, and at a race found how far it was from the last one (`+0.0 MiB from
+  the last one`). That TSU puts a new race near the last one is expected, not measured: if it does not, a
+  search takes as long as one of all the data up to that race. Not yet seen in a race.
 - 2026-11-10: The sector bars show the track's sectors, reported by the user: they showed a bar for every
   checkpoint (68 on the track driven, up to about 120), where TSU tracks can have sector lines set by their
   maker. TSU keeps each checkpoint's kind in `TS.CheckpointProperties.type` (TS.CheckpointType, one byte:

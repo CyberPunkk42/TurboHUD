@@ -969,6 +969,63 @@ class CarTests(unittest.TestCase):
         self.assertEqual(g.searches, searches + 1)
         self.assertTrue(any('race found' in line for line in logs.output))
 
+    def search_from(self, reader):
+        """Give the fake a reader that can begin a search at an address; the list says
+        where each search began (None: at the lowest address)."""
+        memory, begun = reader.il.memory, []
+        find = memory.find_pointers
+
+        def from_the_lowest(value):
+            begun.append(None)
+            return find(value)
+
+        def from_there(value, address):
+            begun.append(address)
+            hits = find(value)
+            return [h for h in hits if h >= address] + [h for h in hits if h < address]
+
+        memory.find_pointers, memory.find_pointers_from = from_the_lowest, from_there
+        return begun
+
+    def test_the_next_race_is_searched_for_from_where_the_last_one_was(self):
+        reader = build(
+            [10_000, 944_595], laps_completed=1, clock=1_000_000, limit=0, name='Host', online=True
+        )
+        begun = self.search_from(reader)
+        with self.assertLogs('turbohud.core.race', 'INFO') as logs:
+            reader.read()
+        self.assertEqual(logs.output[0], 'INFO:turbohud.core.race:searching for the online race')
+        g = reader.game
+        state = g.read(g.client_controller + 0x48, 8)
+        g.q(g.client_controller + 0x48, 0)  # the race is over
+        with self.assertRaises(race.NotFound):
+            reader.read()
+        reader._next_search = 0.0
+        g.put(g.client_controller + 0x48, state)  # the next race, at the same place
+        with self.assertLogs('turbohud.core.race', 'INFO') as logs:
+            self.assertEqual(reader.read().laps_completed, 1)
+        # The first search and the one that found no race had no place to begin at.
+        self.assertEqual(begun, [None, g.client_controller, g.client_controller])
+        self.assertIn('from where the last one was', logs.output[0])
+        self.assertIn('race found (+0.0 MiB from the last one), after', logs.output[1])
+        self.assertEqual(reader._search_wait, race.CLIENT_SEARCH_EVERY)
+
+    def test_a_reader_that_cannot_begin_a_search_anywhere_searches_as_before(self):
+        reader = build(
+            [10_000, 944_595], laps_completed=1, clock=1_000_000, limit=0, name='Host', online=True
+        )
+        reader.read()
+        g = reader.game
+        state = g.read(g.client_controller + 0x48, 8)
+        g.q(g.client_controller + 0x48, 0)
+        with self.assertRaises(race.NotFound):
+            reader.read()
+        reader._next_search = 0.0
+        g.put(g.client_controller + 0x48, state)
+        with self.assertLogs('turbohud.core.race', 'INFO') as logs:
+            self.assertEqual(reader.read().laps_completed, 1)
+        self.assertEqual(logs.output[0], 'INFO:turbohud.core.race:searching for the online race')
+
     def test_no_search_between_events_after_a_race(self):
         running = [True]
         reader = build(
@@ -1190,6 +1247,20 @@ class CarTests(unittest.TestCase):
         self.assertTrue(reader.read().spectating)
         self.assertEqual(reader._spectated, reader.game.client_controller)
         self.assertNotIn(reader.other, handed)  # the rest of the data stayed unread
+
+    def test_a_spectators_next_search_begins_at_the_race_watched(self):
+        now = [100.0]
+        reader = self.two_to_watch(now)
+        begun = self.search_from(reader)
+        reader.read()
+        watched = reader._spectated
+        reader.read()
+        now[0] += race.SPECTATE_STILL + 1  # its clock stands: searched for again
+        with self.assertLogs('turbohud.core.race', 'INFO') as logs:
+            reader.read()
+        self.assertEqual(begun[-1], watched)
+        self.assertEqual(reader._spectated, reader.other)  # past the one whose clock stood
+        self.assertTrue(any('MiB from the last one)' in line for line in logs.output))
 
     def watch_a_race_that_never_runs(self, reader, now):
         reader.read()

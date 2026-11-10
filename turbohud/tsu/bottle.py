@@ -27,7 +27,7 @@ from turbohud.core.il2cpp import Il2Cpp, Memory, NotFound, ReadError
 from turbohud.core.race import LapReader
 from turbohud.core.settings import settings_dir
 from turbohud.tsu.bottle_reader import HEADER, READY, pack
-from turbohud.tsu.winmemory import PAGE, CachedReader, PageCache, searchable
+from turbohud.tsu.winmemory import PAGE, CachedReader, PageCache, search_start, searchable
 
 START_TIMEOUT = 30.0  # seconds for a reader to start: a sleeping bottle wakes up slowly
 TIMEOUT = 5.0  # seconds before a silent reader counts as stuck
@@ -189,10 +189,14 @@ class Pipe:
     def event_running(self):
         return self.ask({'op': 'event_running'})[0]['running']
 
-    def search(self, regions, value):
-        """Addresses holding the 64-bit `value`, lowest first. Asks for one hit at a time,
-        so a lookup that stops at its first good hit leaves the rest of the game unread."""
-        self.ask({'op': 'search', 'regions': [list(r[:2]) for r in regions], 'value': value})
+    def search(self, regions, value, first=None):
+        """Addresses holding the 64-bit `value`, lowest first, or with `first` from that
+        address on and round to it. Asks for one hit at a time, so a lookup that stops at
+        its first good hit leaves the rest of the game unread."""
+        request = {'op': 'search', 'regions': [list(r[:2]) for r in regions], 'value': value}
+        if first is not None:
+            request['first'] = first
+        self.ask(request)
         while True:
             hit = self.ask({'op': 'search_next'}, SEARCH_TIMEOUT)[0]['hit']
             if hit is None:
@@ -201,6 +205,10 @@ class Pipe:
 
     def find_pointers(self, value):
         return self.search([r for r in self.maps() if searchable(r)], value)
+
+    def find_pointers_from(self, value, address):
+        """The same, beginning a little below `address`: where the last race was."""
+        return self.search([r for r in self.maps() if searchable(r)], value, search_start(address))
 
     def game_metadata(self):
         """(where it is mapped, its bytes)."""
@@ -343,6 +351,7 @@ class Bottle:
                 pipe.maps,  # listed anew for each search: see Pipe.maps
                 find_pointers=pipe.find_pointers,
                 searcher=pipe.search,
+                find_pointers_from=pipe.find_pointers_from,
             )
             reader = LapReader(Il2Cpp(memory, metadata, base), event_running=pipe.event_running)
             return CachedReader(reader, cache, lambda: pipe.in_game, lambda: pipe.game_reads), self

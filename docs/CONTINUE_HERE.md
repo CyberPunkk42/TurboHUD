@@ -23,8 +23,8 @@ none is left.
 
 Offered next (2026-11-10), most value first: merge pages further apart in a race read (the log showed 1 trip
 but 48 to 71 reads of the game a read; `MERGE_GAP` and `SPAN_MOST` in `turbohud/tsu/winmemory.py`); the
-one-window canvas only as large as the sections; online searches that start where the race was last found;
-the one-window canvas on Linux and Windows; sector times as numbers. Windows and the CrossOver trial:
+one-window canvas only as large as the sections; the one-window canvas on Linux and Windows; sector times
+as numbers. Built from this list: online searches that begin where the last race was ("Not yet seen in a race"). Windows and the CrossOver trial:
 `docs/WINDOWS_AND_CROSSOVER.md`.
 
 The user likes a plain, numbered to-do list at each step, and merges each branch by saying "merge".
@@ -33,6 +33,12 @@ switch a running TurboHUD to move mode. The same goes for a build's `--smoke`: w
 built app only hands it "move" and quits, so the smoke test passes without starting the new app.
 
 ## Not yet seen in a race
+- Searches from where the last race was (2026-11-10, Mac): online, from the second race of a session on, the
+  log should say `searching for the online race, from where the last one was`, then `race found (+… MiB
+  from the last one), after … s`. Expected: found in under a second, with a distance near 0 or within some
+  MiB. A distance below -32 MiB, or a search no quicker than the session's first, means TSU puts the next
+  race elsewhere: then widen `SEARCH_BEFORE` in `turbohud/tsu/winmemory.py`, or drop the idea. Also as a
+  spectator (`watching the race at hit … (… MiB from the last one)`), and listen for stutter as before.
 - The track map's kept road (2026-11-09): the map should look as before (road, start line, tint, the purple
   or green road after a fast lap, the move-mode oval), and TurboHUD's CPU with only the map shown should
   drop from about 23% of a core (`top -pid $(pgrep -f launch_turbohud)` during a race).

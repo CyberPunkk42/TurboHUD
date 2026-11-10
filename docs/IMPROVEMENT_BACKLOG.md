@@ -51,6 +51,8 @@ hit). The Mac app now does this by itself (`turbohud/tsu/bottle.py`, reader in
 - Races on the Mac: confirmed by the user on 2026-11-08, offline with 19 AI, in Fullscreen and
   hosting about 13 AI online (`docs/CONTINUE_HERE.md`, "Test list"). As a driver online the race
   showed 1.4 s after the start.
+- Searches that begin where the last race was (2026-11-10, `docs/CONTINUE_HERE.md`, "Not yet seen in a
+  race"): see in the log how far each race found is from the last one, and how long its search took.
 - Listen for stutter while the reader searches (in an online event, the first seconds; a
   search of all the data at once made TSU stutter). It now reads half of the time, up from a
   quarter (2026-11-05), to show the HUD sooner.

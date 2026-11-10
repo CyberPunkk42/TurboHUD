@@ -109,7 +109,14 @@ class Service:
             # Starts a search and replaces any earlier one, which may have been left
             # after its first good hit; nothing is read until the first search_next.
             regions = [(int(start), int(end)) for start, end in request['regions']]
-            self._search = search(self.process.read, regions, int(request['value']), share=self.share)
+            first = request.get('first')  # where to begin, coming round to it; None: at the lowest
+            self._search = search(
+                self.process.read,
+                regions,
+                int(request['value']),
+                share=self.share,
+                first=None if first is None else int(first),
+            )
             return {'ok': True}, b''
         if op == 'search_next':
             hit = next(self._search, None) if self._search is not None else None
