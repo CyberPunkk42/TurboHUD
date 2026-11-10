@@ -82,6 +82,32 @@ class PartsTests(unittest.TestCase):
         self.assertEqual(python, Path('/b/win-python/python.exe'))
         self.assertEqual(reader, Path('/b/turbohud/tsu/bottle_reader.py'))
 
+    def test_the_rust_reader_is_started_where_it_is_there(self):
+        with tempfile.TemporaryDirectory() as folder:
+            (Path(folder) / 'reader').mkdir()
+            (Path(folder) / 'reader' / bt.RUST_READER).write_bytes(b'MZ')
+            (Path(folder) / 'win-python').mkdir()
+            (Path(folder) / 'win-python' / 'python.exe').write_bytes(b'MZ')
+            kind, command = bt.reader_command({}, bundle=folder)
+            self.assertEqual((kind, command), ('Rust', [str(Path(folder) / 'reader' / bt.RUST_READER)]))
+            kind, command = bt.reader_command({'TURBOHUD_PY_READER': '1'}, bundle=folder)
+            self.assertEqual(kind, 'Python')
+            self.assertEqual(command[0], str(Path(folder) / 'win-python' / 'python.exe'))
+            self.assertEqual(command[1:3], ['-I', '-B'])
+            self.assertTrue(command[3].endswith('\\turbohud\\tsu\\bottle_reader.py'))
+            (Path(folder) / 'reader' / bt.RUST_READER).unlink()
+            self.assertEqual(bt.reader_command({}, bundle=folder)[0], 'Python')
+
+    def test_without_either_reader_the_start_fails(self):
+        with (
+            tempfile.TemporaryDirectory() as folder,
+            self.assertRaisesRegex(OSError, 'Windows Python is missing'),
+        ):
+            bt.reader_command({}, bundle=folder)
+
+    def test_the_rust_reader_in_the_source_folder(self):
+        self.assertEqual(bt.rust_reader(bundle=''), ROOT / '.buildtools' / 'reader' / bt.RUST_READER)
+
     def test_a_tool_that_hangs_counts_as_an_os_error(self):
         with (
             mock.patch.object(bt.subprocess, 'run', side_effect=subprocess.TimeoutExpired('lsof', 5)),
@@ -556,6 +582,7 @@ class BottleTests(ReaderCase):
             bottle.close()
             bottle.close()  # nothing left to close: no second line
         self.assertIn('bottle Steam, started in 1.5 s', logs.output[0])
+        self.assertNotIn('reader)', logs.output[0])  # a stand-in start: no reader named
         self.assertEqual(len(logs.output), 2)
         self.assertIn('closing the reader', logs.output[1])
 
@@ -626,7 +653,10 @@ class ReaderFilesTests(unittest.TestCase):
         self.assertIn(f'{build_app.WIN_PYTHON}:win-python', mac)
         self.assertIn(f'{ROOT / "turbohud/tsu/bottle_reader.py"}:turbohud/tsu', mac)
         self.assertIn(f'{ROOT / "turbohud/__init__.py"}:turbohud', mac)
+        self.assertIn(f'{build_app.RUST_READER}:reader', mac)
+        self.assertEqual(bt.rust_reader(bundle='/b'), Path('/b/reader') / build_app.RUST_READER.name)
         self.assertFalse([arg for arg in build_app.pyinstaller_args('linux') if 'win-python' in arg])
+        self.assertFalse([arg for arg in build_app.pyinstaller_args('linux') if ':reader' in arg])
 
     def test_the_bundle_paths_match_where_the_app_looks(self):
         python, reader = bt.app_files(bundle='/b')

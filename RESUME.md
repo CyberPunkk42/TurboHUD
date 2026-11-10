@@ -15,7 +15,8 @@
   proximity radar, track map and local time. It works offline, in hotlaps, hosting online and as
   an online client (guest, or hosting with only AI). How it works and what it does to
   RAM and the game: `docs/HOW_IT_WORKS.md`. On macOS, with TSU in CrossOver, the same HUD
-  reads the race through a reader in the bottle (`turbohud/tsu/bottle.py`), with no setup;
+  reads the race through a reader in the bottle (`turbohud/tsu/bottle.py`), with no setup; since
+  2026-11-10 that reader is a Windows program in Rust (`reader/`), the Python one kept as a fallback;
   the race tests (offline with 19 AI, Fullscreen, hosting online, spectating) were confirmed
   by the user on 2026-11-08. While locked, on the Mac, all sections are drawn in one window
   per screen (2026-11-09), for the frames; seen over TSU on 2026-11-10, with no gain showing yet. On Windows it
@@ -47,7 +48,8 @@
   lack. Position and size are remembered. Move mode ends by itself when the game becomes
   active again.
 - Tests: `/opt/homebrew/bin/python3.13 -B -m unittest discover -s tests` (Windows:
-  `py -3 -B -m unittest discover -s tests`).
+  `py -3 -B -m unittest discover -s tests`). The Rust reader's: `eval "$(sh tools/get_rust.sh --env)"`,
+  then `cargo test --offline` in `reader/`; `sh tools/get_rust.sh` builds it.
 - Lint and format: `.buildtools/ruff-venv/bin/ruff check .` and `ruff format --check .`
   (Linux; a separate tools environment, never part of the app). Both pass.
 
@@ -73,6 +75,16 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-10: The reader in the CrossOver bottle in Rust, asked for by the user: `reader/`, a Windows
+  program with no dependencies (its own small JSON, the Windows calls declared by hand), answering the
+  same questions as `turbohud/tsu/bottle_reader.py` in the same way: the memory list, reads, pages read in
+  few calls with the gaps that failed kept, the metadata, TSU's log, and the paced search from an address.
+  `tools/get_rust.sh` puts pinned Rust 1.99.1 and llvm-mingw 20261020 into `.buildtools` (nothing in the
+  shell profile, Homebrew or the system) and builds `turbohud-reader.exe`, 418 KB with only Windows' own
+  DLLs, against 22 MB for the Windows Python. The Mac side starts it where it is there, the Python reader
+  where it is not or with `TURBOHUD_PY_READER=1`; the log names which (`(the Rust reader)`). The Mac app
+  ships both for now. Checked: 34 Rust tests and the Python ones, and both readers started in the bottle
+  without TSU (the same answer, 1.1 to 1.2 s each, nearly all of it Wine's). Not yet run with TSU.
 - 2026-11-10: The search for the next race begins 4 MiB below the last one, where it was 32 MiB, agreed
   with the user after the log of that day: three races in a row lay within 0.5 MiB of the one before, and
   the 0.4 s each search took was the 32 MiB read on the way (`SEARCH_BEFORE` in

@@ -120,7 +120,8 @@ turbohud/
     controller.py       Linux: the gamepad's triggers
     winmemory.py        Windows and CrossOver: reading TSU as a Windows program
     bottle.py           macOS: finds TSU's bottle, starts the reader, asks it over a pipe
-    bottle_reader.py    macOS: the reader inside the bottle (runs with a Windows Python)
+    bottle_reader.py    macOS: the reader inside the bottle in Python (with a Windows Python):
+                        the fallback, TURBOHUD_PY_READER=1
   hud/painter.py        Qt drawing of text, bars and flags
   overlay/
     window.py           the section windows (drawings: blue flag, radar, track map) and
@@ -134,6 +135,9 @@ experiments/            the probes that settled the design; tsu_memory_probe.py 
                         the Steam launch option runs
 tools/build_app.py      PyInstaller build, archive and smoke test for this system
 tools/get_windows_python.sh  the pinned Windows Python for the reader in the bottle
+tools/get_rust.sh   Rust and llvm-mingw into .buildtools (pinned), then builds the Rust reader
+reader/             macOS: the reader inside the bottle in Rust (a Windows program, no
+                    dependencies); answers as bottle_reader.py does, and is started first
 tools/privacy_check.py  the pre-push hook that keeps personal data out of commits
 tests/                  unit tests on any system
 ```

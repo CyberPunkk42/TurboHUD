@@ -31,6 +31,12 @@ switch a running TurboHUD to move mode. The same goes for a build's `--smoke`: w
 built app only hands it "move" and quits, so the smoke test passes without starting the new app.
 
 ## Not yet seen in a race
+- The Rust reader (2026-11-10): started from the source, the log should say `(the Rust reader)` in its
+  `reading TSU through a reader` line, and the HUD read as before: the race found, the map, lap times, the
+  `race reads` line (16 to 22 ms against AI, 11 to 15.5 ms online with the Python one), the search from
+  the last race online, and TSU quitting normally. If anything is wrong: `TURBOHUD_PY_READER=1 sh
+  run_turbohud.sh` goes back to the Python one. Once it has run well in races, the Mac app can stop
+  shipping the Windows Python (22 MB).
 - Race reads that merge pages further apart (2026-11-10), seen the same day in a race against AI (the log,
   20:38 to 20:41; the canvas was on): a read wants 69 to 89 pages lying across 305 to 406 MiB, and makes 31
   to 49 reads of the game for them (84 to 88 before, in a race that may have had more cars), with a median

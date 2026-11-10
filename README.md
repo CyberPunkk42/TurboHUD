@@ -99,8 +99,9 @@ Clear the launch option to start TSU without the probe. The probe writes what it
 
 ### Live race data on macOS
 TSU runs in a CrossOver bottle, and macOS lets no Mac program read its memory. A Windows
-program in the same bottle may, so TurboHUD runs a small read-only reader there, with its
-own Windows Python; nothing is installed into the bottle, and there is no launch option.
+program in the same bottle may, so TurboHUD runs a small read-only reader there (a Windows
+program written in Rust, or the older one in Python with its own Windows Python); nothing is
+installed into the bottle, and there is no launch option.
 1. Start TSU in CrossOver and start TurboHUD, in either order.
 2. The race sections appear when the cars stand on the grid. Online, finding the race
    takes about 5 s after the event starts. Hover over the TurboHUD icon in the menu bar

@@ -55,6 +55,8 @@ hit). The Mac app now does this by itself (`turbohud/tsu/bottle.py`, reader in
 - Races on the Mac: confirmed by the user on 2026-11-08, offline with 19 AI, in Fullscreen and
   hosting about 13 AI online (`docs/CONTINUE_HERE.md`, "Test list"). As a driver online the race
   showed 1.4 s after the start.
+- The reader in Rust (2026-11-10, `reader/`): built, not yet run with TSU (`docs/CONTINUE_HERE.md`,
+  "Not yet seen in a race"). Then drop the Windows Python from the Mac app.
 - Searches that begin where the last race was (2026-11-10): seen the same day, three races in a row
   found after 0.4 s at the first hit, within 0.5 MiB of the last one. Still to see: another session and a
   spectator (`docs/CONTINUE_HERE.md`, "Not yet seen in a race").
