@@ -206,6 +206,10 @@ A race against AI with the Metal HUD, read by eye by the user; `main` with the o
   nothing. Not known: whether the canvas was on (the log's `canvas:` line was not copied), and whether a
   canvas the size of the screen costs when one small part of it changes 20 times a second (the probe's one
   large window lost 5 FPS). The comparison in "Next session", point 1, is to tell.
+- A second race the same evening, the canvas on by the log: only the local time shown gave about 85 FPS
+  (70 to 120), as much as every section. The local time changes once a minute, so the canvas costs by
+  being there, not by what is drawn in it; with a window each, on 2026-11-09, the local time alone cost
+  nothing (in a race with more room to spare). Closed was not noted in this race.
 - It looked as before, and move mode, the preset shortcuts and "bigger"/"smaller" worked.
 - The track map's kept road: TurboHUD's CPU with only the map shown was 8.2 to 8.8% of a core (about 23%
   before).
