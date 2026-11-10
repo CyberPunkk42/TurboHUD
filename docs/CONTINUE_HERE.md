@@ -14,7 +14,7 @@ none is left.
    against AI: closed; one window with every section, then only the local time; a window each
    (`TURBOHUD_ONE_WINDOW=0`) with every section, then only the local time. Put their results under
    "Tester's Mac", with the quick look, the log (`(the Rust reader)`, the `race reads` median), whether a
-   reader was left and whether TSU froze. Results of 2026.11.09.2 never came back.
+   reader was left and whether TSU froze. Results of 2026.11.09.2, if they come, go there too.
 3. At each quit of TSU the user notes whether it froze and whether TurboHUD ran ("Other points").
 4. When one comes up: a special event (map expected), King of the Hill or Sumo (no map), a track without
    sector lines (3 even sector bars expected), joining as a driver after spectating.
