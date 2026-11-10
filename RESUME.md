@@ -18,7 +18,7 @@
   reads the race through a reader in the bottle (`turbohud/tsu/bottle.py`), with no setup;
   the race tests (offline with 19 AI, Fullscreen, hosting online, spectating) were confirmed
   by the user on 2026-11-08. While locked, on the Mac, all sections are drawn in one window
-  per screen (2026-11-09), for the frames; not yet seen over TSU. On Windows it
+  per screen (2026-11-09), for the frames; seen over TSU on 2026-11-10, with no gain showing yet. On Windows it
   still shows a session clock and the local time. Start from the source with
   `run_turbohud.sh` / `run_turbohud.cmd`.
 - Layout, in the move-mode panel: a text section's box fits closely round its text, three
