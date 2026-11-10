@@ -9,16 +9,19 @@ none is left.
    Mac" below), though it looks and works as before. To tell whether it helps at all: in one race, with the
    Metal HUD, a minute each of TurboHUD closed, every section shown, the same with
    `TURBOHUD_ONE_WINDOW=0 sh run_turbohud.sh`, one section shown in each of the two, and closed again.
-2. Build 2026.11.09.2 went to the tester (2026-11-09) with the shorter `TurboHUD-test-instructions.md`. Put
-   their results under "Tester's Mac": FPS without TurboHUD and with every section shown (63 before), the
-   quick look, the log, whether a reader was left and whether TSU froze on quitting.
+2. Build 2026.11.10 for the tester (`releases/`), with `TurboHUD-test-instructions.md` for it: the Rust
+   reader (the Python one as fallback, `TURBOHUD_PY_READER=1`), and five FPS measurements in one race
+   against AI: closed; one window with every section, then only the local time; a window each
+   (`TURBOHUD_ONE_WINDOW=0`) with every section, then only the local time. Put their results under
+   "Tester's Mac", with the quick look, the log (`(the Rust reader)`, the `race reads` median), whether a
+   reader was left and whether TSU froze. Results of 2026.11.09.2 never came back.
 3. At each quit of TSU the user notes whether it froze and whether TurboHUD ran ("Other points").
 4. When one comes up: a special event (map expected), King of the Hill or Sumo (no map), a track without
    sector lines (3 even sector bars expected), joining as a driver after spectating.
 5. Online, the search from the last race worked in one session on 2026-11-10 ("Not yet seen in a race");
    when one comes up: another session, and spectating.
-6. Then a new build for the tester, with everything since 2026.11.09.2 (one-window HUD, batched reads,
-   the kept map road, the sector bars by the track's sector lines).
+6. With point 1 and the tester's numbers: keep the one window, make it only as large as its sections, or
+   go back to a window each. Once the Rust reader has run online: the Mac app without the Windows Python.
 
 Offered next (2026-11-10), most value first: the one-window canvas only as large as the sections; the
 one-window canvas on Linux and Windows; sector times as numbers. Built from this list: race reads that
@@ -280,7 +283,7 @@ Ask the user to say when done before restarting TurboHUD: the log is replaced at
   they found the result "much better" afterwards, but may not have widened it.
 - Offers not taken up yet: a leader-only blue flag; the settings window remembering where it
   was dragged; slots for other numbers (fuel and tires move by a digit at 100 to 99%).
-- `releases/` holds only the latest build, 2026.11.09.2 (needs macOS 27): see backlog item 5 for what it
+- `releases/` holds only the latest build, 2026.11.10 (needs macOS 27): see backlog item 5 for what it
   needs before it runs on an older macOS.
 
 ## How the slow reads were found

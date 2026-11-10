@@ -900,3 +900,10 @@ its "Recent changes".
   to 10.5 ms, where the Python reader took 16 to 22 ms, with as many reads of the game (48 to 56 a read).
   The time on the game's memory fell to 6.3 to 7 ms from 15 to 21 ms, so the Python reader, not Wine, made
   most of that cost.
+- 2026-11-10: Build 2026.11.10 for the tester (`releases/`, macOS 27, built with `--any-macos`, smoke test
+  passed), with everything since 2026.11.09.2: the Rust reader (checked inside the built app: the same
+  program, picked by the app, and started from there in the bottle), the merged race reads, the search from
+  the last race, the kept map road and the sector bars by the track's sector lines; the Windows Python as
+  fallback. `TurboHUD-test-instructions.md` rewritten for it: five FPS measurements in one race against AI
+  (closed; one window with every section, then only the local time; a window each with the same two), a
+  quick look, the log, and the quit check. It replaces 2026.11.09.2 in `releases/`.

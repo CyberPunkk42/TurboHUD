@@ -56,8 +56,8 @@
 ## Next steps
 **Start with `docs/CONTINUE_HERE.md`**: what is left to test. Then `docs/IMPROVEMENT_BACKLOG.md`. In short:
 - First (where the session of 2026-11-10 stopped): the one-window HUD works on the Mac but showed no gain
-  in FPS; compare it with a window each in the same race (`docs/CONTINUE_HERE.md`, "Next session"). Then
-  a new build and instructions for the tester. Race reads merge pages further apart since 2026-11-10 (31
+  in FPS; compare it with a window each in the same race (`docs/CONTINUE_HERE.md`, "Next session"). Build
+  2026.11.10 went to the tester with new instructions (the same comparison, and the Rust reader). Race reads merge pages further apart since 2026-11-10 (31
   to 49 reads of the game a read and 16 to 22 ms, from 84 to 88 and 26 to 29 ms). Online, the search from the last race found
   three races in a row in 0.4 s (2026-11-10).
 0. Tests: keep them from reaching a running TurboHUD (until then run them with
@@ -75,6 +75,13 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-10: Build 2026.11.10 for the tester (`releases/`, macOS 27, built with `--any-macos`, smoke test
+  passed), with everything since 2026.11.09.2: the Rust reader (checked inside the built app: the same
+  program, picked by the app, and started from there in the bottle), the merged race reads, the search from
+  the last race, the kept map road and the sector bars by the track's sector lines; the Windows Python as
+  fallback. `TurboHUD-test-instructions.md` rewritten for it: five FPS measurements in one race against AI
+  (closed; one window with every section, then only the local time; a window each with the same two), a
+  quick look, the log, and the quit check. It replaces 2026.11.09.2 in `releases/`.
 - 2026-11-10: The Rust reader seen in a race against AI by the user (the log): a median race read of 8.7
   to 10.5 ms, where the Python reader took 16 to 22 ms, with as many reads of the game (48 to 56 a read).
   The time on the game's memory fell to 6.3 to 7 ms from 15 to 21 ms, so the Python reader, not Wine, made
