@@ -878,3 +878,7 @@ its "Recent changes".
   across 305 to 406 MiB, in 31 to 49 reads of the game (84 to 88 before), a median read of 16 to 22 ms (26
   to 29 before). The pages lie in groups far apart, so a larger gap would gain little
   (`docs/CONTINUE_HERE.md`, "Not yet seen in a race"). The one-window canvas was on (`canvas:` in the log).
+- 2026-11-10: The search from the last race seen online by the user, as a driver in a public session (the
+  log): three races in a row found after 0.4 s at the first hit, within 0.5 MiB of the last one (1.4 s
+  before). A regular online race is `TS.RaceEventMode` (level type 0), as expected for the map. Online a
+  read took a median of 11 to 15.5 ms in 27 to 38 reads of the game.

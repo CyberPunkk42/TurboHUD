@@ -55,8 +55,9 @@ hit). The Mac app now does this by itself (`turbohud/tsu/bottle.py`, reader in
 - Races on the Mac: confirmed by the user on 2026-11-08, offline with 19 AI, in Fullscreen and
   hosting about 13 AI online (`docs/CONTINUE_HERE.md`, "Test list"). As a driver online the race
   showed 1.4 s after the start.
-- Searches that begin where the last race was (2026-11-10, `docs/CONTINUE_HERE.md`, "Not yet seen in a
-  race"): see in the log how far each race found is from the last one, and how long its search took.
+- Searches that begin where the last race was (2026-11-10): seen the same day, three races in a row
+  found after 0.4 s at the first hit, within 0.5 MiB of the last one. Still to see: another session and a
+  spectator (`docs/CONTINUE_HERE.md`, "Not yet seen in a race").
 - Listen for stutter while the reader searches (in an online event, the first seconds; a
   search of all the data at once made TSU stutter). It now reads half of the time, up from a
   quarter (2026-11-05), to show the HUD sooner.
@@ -94,7 +95,8 @@ GNOME) would need a library outside PySide6.
 Asked for by the user (2026-11-08), built the same day: the map shows, and a track is learnt, only in
 TS.RaceEventMode (regular races; special events from A to B are expected to be the same mode). The arena
 modes (Battle, Collector, Hill, Soccer, Sumo, Tag) have none. Seen: a capture event is
-`TS.BattleEventMode`, level type 6. Still to see in the log's `event type:` line: a regular race and a
+`TS.BattleEventMode`, level type 6. A regular online race gave `TS.RaceEventMode`, level type 0, logic TS.RaceLogic
+(2026-11-10). Still to see in the log's `event type:` line: a
 special event giving `TS.RaceEventMode` (if a special event is another mode, add it to `TRACK_MODES` in
 `turbohud/core/race.py`), and one of King of the Hill or Sumo.
 
