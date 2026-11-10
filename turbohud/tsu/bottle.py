@@ -2,8 +2,9 @@
 
 macOS refuses a Mac program access to TSU's memory (CrossOver's Wine loader is signed
 with the hardened runtime), so TurboHUD looks for TSU among the running programs, finds
-CrossOver and the bottle, and starts `turbohud/tsu/bottle_reader.py` there with a
-portable Windows Python. `Bottle.connect` then gives `LiveRace` a race reader, as the
+CrossOver and the bottle, and starts a reader there: the Rust one (`reader/`, built by
+`tools/get_rust.sh`) where it is, else `turbohud/tsu/bottle_reader.py` with a portable
+Windows Python; both answer the same questions in the same way. `Bottle.connect` then gives `LiveRace` a race reader, as the
 Linux probe's `connect` does. The page cache is on this side: a question through the pipe
 costs about 15 µs, a read of the game about 250 µs. Each race read starts with one
 question for all the pages the read before used (`Pipe.read_pages`), which the reader
@@ -34,7 +35,9 @@ TIMEOUT = 5.0  # seconds before a silent reader counts as stuck
 PAGES_LOG_EVERY = 600  # questions for many pages between two `race pages` log lines (30 s at 20 reads)
 SEARCH_TIMEOUT = 300.0  # a paced search of all the game's data takes under a minute
 RETRY_START = 10.0  # seconds before trying again after a reader failed to start: each try wakes Wine
-READER_LOG = 'bottle_reader.log'  # beside the settings: Python's errors from the bottle
+READER_LOG = 'bottle_reader.log'  # beside the settings: the reader's errors from the bottle
+RUST_READER = 'turbohud-reader.exe'
+PYTHON_READER_SWITCH = 'TURBOHUD_PY_READER'  # set to 1: the Python reader, even with the Rust one there
 WINE = 'Contents/SharedSupport/CrossOver/bin/wine'
 BOTTLES = Path('Library') / 'Application Support' / 'CrossOver' / 'Bottles'
 TSU_PROCESS = re.compile(r'^\s*(\d+)\s+[A-Za-z]:\\.*\\TSU\.exe(\s|$)', re.IGNORECASE | re.MULTILINE)
@@ -116,6 +119,27 @@ def app_files(bundle=None):
         ) / 'turbohud' / 'tsu' / 'bottle_reader.py'
     root = Path(__file__).resolve().parents[2]
     return root / '.buildtools' / 'win-python' / 'python.exe', root / 'turbohud' / 'tsu' / 'bottle_reader.py'
+
+
+def rust_reader(bundle=None):
+    """The Rust reader: inside the bundled app, or for a start from the source in
+    `.buildtools/reader` (built by `tools/get_rust.sh`)."""
+    bundle = getattr(sys, '_MEIPASS', None) if bundle is None else bundle
+    if bundle:
+        return Path(bundle) / 'reader' / RUST_READER
+    return Path(__file__).resolve().parents[2] / '.buildtools' / 'reader' / RUST_READER
+
+
+def reader_command(environ, bundle=None):
+    """(which reader, what to run in the bottle): the Rust reader where it is there, unless
+    TURBOHUD_PY_READER=1 asks for the Python one; else the Python reader."""
+    rust = rust_reader(bundle)
+    if environ.get(PYTHON_READER_SWITCH) != '1' and rust.exists():
+        return 'Rust', [str(rust)]
+    python, reader = app_files(bundle)
+    if not python.exists():
+        raise OSError(f'the Windows Python is missing: {python}')
+    return 'Python', [str(python), '-I', '-B', windows_path(reader)]
 
 
 READ_AHEAD = 64 * 1024  # bytes asked for at a time from the reader in the bottle
@@ -249,6 +273,7 @@ class Bottle:
         self.pipe = None
         self.failed = None  # (when to try again, why the last start failed)
         self.warning = None  # what to tell the player about the bottle, for the tray icon
+        self.reader_kind = None  # 'Rust' or 'Python', once a reader was started
 
     def _check_graphics(self, bottle):
         """Note what the bottle's settings say. A file that cannot be read says nothing."""
@@ -282,10 +307,8 @@ class Bottle:
         wine = find_crossover(self.home)
         if wine is None:
             raise OSError('CrossOver was not found')
-        python, reader = app_files()
-        if not python.exists():
-            raise OSError(f'the Windows Python is missing: {python}')
-        command = [str(wine), '--bottle', bottle, str(python), '-I', '-B', windows_path(reader)]
+        self.reader_kind, reader = reader_command(self.environ)
+        command = [str(wine), '--bottle', bottle, *reader]
         try:
             folder = settings_dir()
             folder.mkdir(parents=True, exist_ok=True)
@@ -343,9 +366,10 @@ class Bottle:
             self.failed = self.clock() + RETRY_START, str(error)
             raise
         log.info(
-            'reading TSU through a reader in the CrossOver bottle %s, started in %.1f s',
+            'reading TSU through a reader in the CrossOver bottle %s, started in %.1f s%s',
             bottle,
             self.clock() - started,
+            f' (the {self.reader_kind} reader)' if self.reader_kind else '',
         )
         self.failed = None
         self.pipe = pipe

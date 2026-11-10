@@ -886,3 +886,17 @@ its "Recent changes".
   with the user after the log of that day: three races in a row lay within 0.5 MiB of the one before, and
   the 0.4 s each search took was the 32 MiB read on the way (`SEARCH_BEFORE` in
   `turbohud/tsu/winmemory.py`). Expected: about 0.05 s. Not yet seen in a race.
+- 2026-11-10: The reader in the CrossOver bottle in Rust, asked for by the user: `reader/`, a Windows
+  program with no dependencies (its own small JSON, the Windows calls declared by hand), answering the
+  same questions as `turbohud/tsu/bottle_reader.py` in the same way: the memory list, reads, pages read in
+  few calls with the gaps that failed kept, the metadata, TSU's log, and the paced search from an address.
+  `tools/get_rust.sh` puts pinned Rust 1.99.1 and llvm-mingw 20261020 into `.buildtools` (nothing in the
+  shell profile, Homebrew or the system) and builds `turbohud-reader.exe`, 418 KB with only Windows' own
+  DLLs, against 22 MB for the Windows Python. The Mac side starts it where it is there, the Python reader
+  where it is not or with `TURBOHUD_PY_READER=1`; the log names which (`(the Rust reader)`). The Mac app
+  ships both for now. Checked: 34 Rust tests and the Python ones, and both readers started in the bottle
+  without TSU (the same answer, 1.1 to 1.2 s each, nearly all of it Wine's). Not yet run with TSU.
+- 2026-11-10: The Rust reader seen in a race against AI by the user (the log): a median race read of 8.7
+  to 10.5 ms, where the Python reader took 16 to 22 ms, with as many reads of the game (48 to 56 a read).
+  The time on the game's memory fell to 6.3 to 7 ms from 15 to 21 ms, so the Python reader, not Wine, made
+  most of that cost.

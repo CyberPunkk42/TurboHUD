@@ -53,6 +53,9 @@ _VERSION = re.compile(r'dev|\d{4}\.\d{2}\.\d{2}(\.\d+)?')  # a second build of a
 # ships as plain files beside the app: these, and that Python (see turbohud/tsu/bottle.py).
 WIN_PYTHON = ROOT / '.buildtools' / 'win-python'
 GET_WIN_PYTHON = ROOT / 'tools' / 'get_windows_python.sh'
+# The Rust reader, which the Mac app starts in place of the Python one (turbohud/tsu/bottle.py).
+RUST_READER = ROOT / '.buildtools' / 'reader' / 'turbohud-reader.exe'
+GET_RUST = ROOT / 'tools' / 'get_rust.sh'
 READER_FILES = (
     'turbohud/__init__.py',
     'turbohud/tsu/__init__.py',
@@ -115,6 +118,7 @@ def pyinstaller_args(system=sys.platform):
     if system == 'darwin':
         args += ['--osx-bundle-identifier', BUNDLE_ID]
         args += ['--add-data', f'{WIN_PYTHON}:win-python']
+        args += ['--add-data', f'{RUST_READER}:reader']
         for name in READER_FILES:
             args += ['--add-data', f'{ROOT / name}:{Path(name).parent.as_posix()}']
     return args
@@ -235,6 +239,7 @@ def main(argv=None):
 
     if sys.platform == 'darwin':
         subprocess.run(['sh', str(GET_WIN_PYTHON)], check=True)
+        subprocess.run(['sh', str(GET_RUST)], check=True)  # sets up Rust if needed, builds the reader
     VERSION_FILE.write_text(f'VERSION = {args.version!r}\n', encoding='utf-8')
     try:
         PyInstaller.__main__.run(pyinstaller_args())

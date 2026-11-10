@@ -20,8 +20,11 @@ releases/*.tar.gz
 releases/*.tar.gz.sha256
 turbohud/_build.py
 
-# Development tools environment (Ruff formatter); never shipped
+# Development tools environment (Ruff formatter, Rust, llvm-mingw); never shipped
 .buildtools/
+
+# The Rust reader's build output, if cargo is run without tools/get_rust.sh's settings
+reader/target/
 
 # Folder view settings the macOS Finder writes into every folder it shows
 .DS_Store

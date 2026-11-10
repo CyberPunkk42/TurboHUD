@@ -31,6 +31,15 @@ switch a running TurboHUD to move mode. The same goes for a build's `--smoke`: w
 built app only hands it "move" and quits, so the smoke test passes without starting the new app.
 
 ## Not yet seen in a race
+- The Rust reader (2026-11-10), seen the same evening in a race against AI (the log, 22:09 to 22:11): it
+  started in 1.1 s, as the Python one, and a race read took a median of 8.7 to 10.5 ms, where the Python
+  reader took 16 to 22 ms in the same kind of race, with as many reads of the game (48 to 56 a read, 84
+  to 90 pages). The time on the game's memory fell from 15 to 21 ms to 6.3 to 7 ms: about 0.13 ms a read
+  of the game, against 0.45 ms. So most of that cost was the Python reader itself, not Wine. The HUD looked
+  as before with everything there, and TSU quit normally (the user). Still to see: online (the search from
+  the last race).
+  If anything is wrong: `TURBOHUD_PY_READER=1 sh run_turbohud.sh`. Then the Mac app can stop shipping the
+  Windows Python (22 MB).
 - Race reads that merge pages further apart (2026-11-10), seen the same day in a race against AI (the log,
   20:38 to 20:41; the canvas was on): a read wants 69 to 89 pages lying across 305 to 406 MiB, and makes 31
   to 49 reads of the game for them (84 to 88 before, in a race that may have had more cars), with a median
@@ -236,6 +245,7 @@ A race against AI with the Metal HUD, read by eye by the user; `main` with the o
   | tester, 2026-11-08 | quit first | normally | quit cleanly, no reader left |
   | user, 2026-11-09, 01:10 | quit first (reader ended at once) | from Terminal, Metal HUD | froze, between the race and quitting |
   | user, 2026-11-10 | quit first | from Terminal, Metal HUD | quit normally |
+  | user, 2026-11-10, 22:11, Rust reader | quit first | normally | quit normally |
 
   When frozen: TSU at about 1% CPU (about 300% while running), steam.exe at about 100%, no reader left.
   The reader opens TSU only to read memory and ask for its layout (`PROCESS_VM_READ`,

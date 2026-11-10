@@ -1,0 +1,16 @@
+[package]
+name = "turbohud-reader"
+version = "0.1.0"
+edition = "2021"
+description = "TurboHUD's reader inside TSU's CrossOver bottle: read-only answers over a pipe"
+publish = false
+
+# No dependencies: the standard library and a few Windows calls (src/win32.rs).
+[dependencies]
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true
