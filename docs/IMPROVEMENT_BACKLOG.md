@@ -50,7 +50,8 @@ hit). The Mac app now does this by itself (`turbohud/tsu/bottle.py`, reader in
   TSU froze once more on quitting, with TurboHUD quit first (`docs/CONTINUE_HERE.md`, "Other points").
 - Race reads in one go: 1 trip a read (seen 2026-11-10), but still 26 to 29 ms a read in 84 to 88 reads
   of the game, about 0.3 ms each. Built 2026-11-10: pages up to 192 KiB apart in one read of up to
-  2 MiB (`MERGE_GAP`, `SPAN_MOST`). Next: see the log's `race reads` and `race pages` lines in a race.
+  2 MiB (`MERGE_GAP`, `SPAN_MOST`). Seen the same day: 31 to 49 reads of the game, 16 to 22 ms a read.
+  The pages lie far apart, so what is left is the price of a call; fewer pages would be the next step.
 - Races on the Mac: confirmed by the user on 2026-11-08, offline with 19 AI, in Fullscreen and
   hosting about 13 AI online (`docs/CONTINUE_HERE.md`, "Test list"). As a driver online the race
   showed 1.4 s after the start.

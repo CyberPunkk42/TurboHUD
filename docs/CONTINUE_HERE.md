@@ -31,12 +31,14 @@ switch a running TurboHUD to move mode. The same goes for a build's `--smoke`: w
 built app only hands it "move" and quits, so the smoke test passes without starting the new app.
 
 ## Not yet seen in a race
-- Race reads that merge pages further apart (2026-11-10): in a race against AI the log's `race reads` line
-  said 84 to 88 reads of the game a read and a median of 26 to 29 ms; both should drop. The new `race
-  pages` line, every 30 s, says how many pages a read wants, across how many MiB, and in how many reads:
-  if many reads are left, the pages lie far apart, and `MERGE_GAP` in `turbohud/tsu/winmemory.py` can be
-  tried larger; if the median read is no shorter with fewer reads, large reads cost more than worked out,
-  and it goes back down. Also FPS with every section unticked against TurboHUD closed.
+- Race reads that merge pages further apart (2026-11-10), seen the same day in a race against AI (the log,
+  20:38 to 20:41; the canvas was on): a read wants 69 to 89 pages lying across 305 to 406 MiB, and makes 31
+  to 49 reads of the game for them (84 to 88 before, in a race that may have had more cars), with a median
+  of 16 to 22 ms (26 to 29 before) and at most 2 reads in 30 s over 50 ms. A read of the game now costs
+  about 0.45 ms (0.3 before), as it carries more. The pages lie in 30 to 50 groups far apart, so a larger
+  `MERGE_GAP` would gain little: what is left is the price of a call, about 0.3 ms each. Fewer calls would
+  need fewer pages (reading what seldom changes less often). Still to see: FPS with every section unticked
+  against TurboHUD closed, which says whether the reads cost frames at all.
 - Searches from where the last race was (2026-11-10, Mac): online, from the second race of a session on, the
   log should say `searching for the online race, from where the last one was`, then `race found (+… MiB
   from the last one), after … s`. Expected: found in under a second, with a distance near 0 or within some

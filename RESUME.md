@@ -55,8 +55,8 @@
 **Start with `docs/CONTINUE_HERE.md`**: what is left to test. Then `docs/IMPROVEMENT_BACKLOG.md`. In short:
 - First (where the session of 2026-11-10 stopped): the one-window HUD works on the Mac but showed no gain
   in FPS; compare it with a window each in the same race (`docs/CONTINUE_HERE.md`, "Next session"). Then
-  a new build and instructions for the tester. Race reads merge pages further apart since 2026-11-10 (it
-  was 84 to 88 reads of the game a read, 26 to 29 ms): see the log in a race. Online: see the search from
+  a new build and instructions for the tester. Race reads merge pages further apart since 2026-11-10 (31
+  to 49 reads of the game a read and 16 to 22 ms, from 84 to 88 and 26 to 29 ms). Online: see the search from
   the last race.
 0. Tests: keep them from reaching a running TurboHUD (until then run them with
    `XDG_RUNTIME_DIR` set to an empty private folder).
@@ -73,6 +73,10 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-10: The merged race reads seen in a race against AI by the user (the log): 69 to 89 pages a read,
+  across 305 to 406 MiB, in 31 to 49 reads of the game (84 to 88 before), a median read of 16 to 22 ms (26
+  to 29 before). The pages lie in groups far apart, so a larger gap would gain little
+  (`docs/CONTINUE_HERE.md`, "Not yet seen in a race"). The one-window canvas was on (`canvas:` in the log).
 - 2026-11-10: Race reads merge pages further apart, asked for by the user after the log of that day (1 trip
   a read, but 84 to 88 reads of the game in it, 26 to 29 ms): the reader now reads wanted pages up to 48
   pages (192 KiB) apart in one call of up to 2 MiB, where it was 16 pages and 256 KiB (`MERGE_GAP`,

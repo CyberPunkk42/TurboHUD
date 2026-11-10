@@ -874,3 +874,7 @@ its "Recent changes".
   failure costs once, not at every read. Every 30 s the log has a `race pages` line (the pages of a read,
   the MiB they lie across, the reads of the game), to set the two values by. How many reads are left is not
   known: it depends on how TSU's objects lie. Not yet seen in a race.
+- 2026-11-10: The merged race reads seen in a race against AI by the user (the log): 69 to 89 pages a read,
+  across 305 to 406 MiB, in 31 to 49 reads of the game (84 to 88 before), a median read of 16 to 22 ms (26
+  to 29 before). The pages lie in groups far apart, so a larger gap would gain little
+  (`docs/CONTINUE_HERE.md`, "Not yet seen in a race"). The one-window canvas was on (`canvas:` in the log).
