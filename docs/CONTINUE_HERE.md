@@ -23,8 +23,8 @@ none is left.
 
 Offered next (2026-11-10), most value first: merge pages further apart in a race read (the log showed 1 trip
 but 48 to 71 reads of the game a read; `MERGE_GAP` and `SPAN_MOST` in `turbohud/tsu/winmemory.py`); the
-one-window canvas only as large as the sections; online searches that start where the race was last found;
-the one-window canvas on Linux and Windows; sector times as numbers. Windows and the CrossOver trial:
+one-window canvas only as large as the sections; the one-window canvas on Linux and Windows; sector times
+as numbers. Built from this list: online searches that begin where the last race was ("Not yet seen in a race"). Windows and the CrossOver trial:
 `docs/WINDOWS_AND_CROSSOVER.md`.
 
 The user likes a plain, numbered to-do list at each step, and merges each branch by saying "merge".
