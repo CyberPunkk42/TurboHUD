@@ -21,6 +21,10 @@ Then live data: built 2026-11-11 with the Rust reader started beside TSU (`Local
 same reader and questions as on the Mac, so no probe or launch option; Python in TurboHUD itself
 where the reader is missing. To try on a Windows PC: a race offline, hosting and as an online
 client, and the log's `reading TSU through the Rust reader` and `race reads` lines.
+First run on the user's PC (2026-11-11): the reader started, Ctrl+Shift+L worked once AMD
+Adrenalin let go of it, and an online race was found once a hang in the search was fixed. Still to
+see: the HUD through a whole race, offline and hosting, and the overlay over Fullscreen Exclusive.
+Also: a spare shortcut when another app holds Ctrl+Shift+L, and the 9 tests that fail on Windows.
 What is built and what is left on Windows: `docs/WINDOWS_AND_CROSSOVER.md`.
 
 ## 2b. CrossOver: all of TurboHUD inside the bottle (a trial)

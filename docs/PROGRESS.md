@@ -1222,3 +1222,13 @@ its "Recent changes".
   checked commit by commit; a backup of the old history outside the project). This clone's `user.name` is now set,
   the hook's local terms list the real name, the email and the Mac's computer names, and AGENTS.md says what may be
   pushed where.
+- 2026-11-11: The online race search never ended on Windows, found on the user's first Windows run (TSU's own build
+  on Windows, the Rust reader beside it): with a race running, the search stopped at a stale pointer to the
+  controller's class, and its event state led to memory whose "parents" went round in a circle, so reading its fields
+  never ended. TurboHUD hung in that search (4 minutes and on) and showed only the clock. A class's fields and parents
+  are now bounded (`FIELDS_MOST`, `PARENTS_MOST` in `turbohud/core/il2cpp.py`): memory past them is not a class, and
+  the search goes on to the next hit. Checked against the user's race: the search then found the race (9 players,
+  the user driving) after about 24 s. Without a race, the 6 hits were such stale pointers too ("no race"). Tests (they
+  hang without the fix). Also seen: Ctrl+Shift+L was taken by AMD Adrenalin (error 1409) until the user unbound it
+  there; TSU's Windows log names sessions, not events, so TurboHUD searches without it. 9 tests fail on Windows on
+  `main` already (Unix sockets, symlinks, fonts), none touched here.

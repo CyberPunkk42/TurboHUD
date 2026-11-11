@@ -23,6 +23,12 @@ FIELD_BLOCK = 32  # FieldInfo records read at once
 NAME_LIMIT = 96  # bytes read for a field's name
 TYPE_ATTRS = 8  # in Il2CppType, after its data pointer
 TYPE_CODE = 10  # in Il2CppType: the type's kind (Il2CppTypeEnum), after the attributes
+# A pointer the search for an object hits may be stale, and lead to memory that only looks like
+# a class: its parents going round in a circle, or field records without end. Seen on Windows
+# (2026-11-11), where such a hit kept the online race search going for good. No class of TSU's
+# comes near these.
+FIELDS_MOST = 4096  # field records of one class
+PARENTS_MOST = 64  # classes from one up to System.Object
 # Il2CppTypeEnum values of the simple types, with their struct format.
 SIMPLE_TYPES = {
     0x02: ('bool', '<?'),
@@ -181,6 +187,8 @@ class Il2Cpp:
         entry = self.memory.u64(klass + CLASS_FIELDS)
         records = []
         while entry:
+            if len(records) >= FIELDS_MOST:
+                raise NotFound(f'not a class at {klass:#x}: its fields go on without end')
             block = self.memory.read(entry, FIELD_INFO_SIZE * FIELD_BLOCK)
             more = False
             for index in range(FIELD_BLOCK):
@@ -206,11 +214,13 @@ class Il2Cpp:
 
     def field_list(self, klass):
         """[(name, offset, is_static, type_code)] of `klass` and its parents."""
-        found = []
-        while klass:
+        found, start = [], klass
+        for _depth in range(PARENTS_MOST):
+            if not klass:
+                return found
             found.extend(self.own_fields(klass))
             klass = self.memory.u64(klass + CLASS_PARENT)
-        return found
+        raise NotFound(f'not a class at {start:#x}: its parents go round')
 
     def fields(self, klass):
         """{name: (offset, is_static)} of `klass` and its parents; a field of the class
@@ -230,14 +240,15 @@ class Il2Cpp:
     def _set_up(self, klass):
         """Whether `klass` and its parents have their fields filled in. A class without
         fields of its own looks the same as one not set up, and is simply read again; the
-        root class (System.Object) has none."""
-        while True:
+        root class (System.Object) has none. False for parents that go round."""
+        for _depth in range(PARENTS_MOST):
             parent = self.memory.u64(klass + CLASS_PARENT)
             if not parent:
                 return True
             if not self.memory.u64(klass + CLASS_FIELDS):
                 return False
             klass = parent
+        return False
 
     def class_name(self, obj):
         klass = self.memory.u64(obj)
