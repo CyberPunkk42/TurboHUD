@@ -499,7 +499,7 @@ def run(args, folder):
                     'Yellow flags',
                     settings.yellow_flags,
                     (
-                        'When another car is off the track, slow, stopped or spun in your sector or the next:'
+                        'When another car is off the track, slow, stopped, spun or going the wrong way in your sector or the next:'
                         ' the Yellow flag section and a yellow ring on the track map'
                     ),
                 )

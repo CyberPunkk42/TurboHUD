@@ -42,6 +42,7 @@ LAPPING_SHARE = 0.5  # a car more than half a lap behind in the race and ahead o
 TRACKS_FOLDER = 'tracks'
 CLEAN_GRIP = 0.9  # all four wheels on less grip than this: off the tarmac (as race.YELLOW_OFF_GRIP)
 CLEAN_SPEED = 1.0  # slower than this along the car (or backwards): not driving the track
+HEADING_SEARCH = 20  # points of the learnt line searched each way from a car's last one (of about 600)
 
 log = logging.getLogger(__name__)
 
@@ -353,6 +354,32 @@ class TrackMap:
             log.info('track map: track learnt and saved (%s)', path.name)
         except OSError as error:
             log.warning('track map: could not save the learnt track: %s', error)
+
+    def heading(self, position, hint=None):
+        """(the way the race goes at `position`, a unit (x, z), and the learnt line's point
+        nearest it) or None while no whole lap is learnt. The learnt line runs in the
+        driving direction. `hint`: the point found last time for this car; only the
+        points near it are searched then, unless it lies at the edge of that stretch."""
+        if self.learned is None or not self.learned.closed or position is None:
+            return None
+        points = self.learned.points
+        count = len(points)
+        if count < 3:
+            return None
+
+        def nearest(indices):
+            return min(indices, key=lambda i: math.dist(points[i], position))
+
+        if hint is not None and 0 <= hint < count:
+            span = range(hint - HEADING_SEARCH, hint + HEADING_SEARCH + 1)
+            index = nearest(i % count for i in span)
+            if (index - hint) % count in (HEADING_SEARCH, count - HEADING_SEARCH):
+                index = nearest(range(count))  # at the edge: it moved far, look everywhere
+        else:
+            index = nearest(range(count))
+        (x0, z0), (x1, z1) = points[index - 1], points[(index + 1) % count]
+        direction = _unit(x1 - x0, z1 - z0)
+        return (direction, index) if direction is not None else None
 
     @property
     def has_track(self):

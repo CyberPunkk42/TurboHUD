@@ -2076,6 +2076,52 @@ class YellowFlagTests(unittest.TestCase):
         self.drive(flags, 10.0, self.car(speed=-5.0))
         self.assertEqual(self.kinds(self.drive(flags, 10.4, self.car(speed=-5.0))), [('Other', 'spun')])
 
+    def test_moving_against_the_race_for_a_second_and_a_half_is_driving_the_wrong_way(self):
+        # Asked for by the user on 2026-11-11 (a "ghost driver"): the race goes along +x here.
+        def heading(position, hint):
+            return (1.0, 0.0), (hint or 0) + 1
+
+        flags = race.YellowFlags()
+        against = {'position': (0.0, 0.0), 'velocity': (-30.0, 5.0)}
+        found = self.drive(flags, 10.0, self.car(**against))
+        for seconds in (12.0, 13.0):
+            found = self.drive(flags, seconds, self.car(**against))
+        self.assertEqual(found, ())  # without a heading (no learnt track) it is not known
+        flags = race.YellowFlags()
+        for seconds in (10.0, 11.4):
+            found = flags.update(self.state(seconds, self.car(**against)), heading)
+        self.assertEqual(found, ())  # not yet a second and a half
+        self.assertEqual(flags._cars['Other']['hint'], 2)  # the hint goes on from one look to the next
+        found = flags.update(self.state(11.6, self.car(**against)), heading)
+        self.assertEqual(self.kinds(found), [('Other', 'wrong way')])
+        rows = race.yellow_rows(found, self.state(11.6, self.car(**against), me_passed=4))
+        self.assertTrue(rows[-1].text.endswith('Other  wrong way'))
+
+    def test_wrong_way_beats_a_spin_but_not_sliding_on_or_crawling_back(self):
+        def heading(position, hint):
+            return (1.0, 0.0), 0
+
+        flags = race.YellowFlags()
+        reversing = {'position': (0.0, 0.0), 'velocity': (-30.0, 0.0), 'speed': -30.0}
+        flags.update(self.state(10.0, self.car(**reversing)), heading)
+        spun = flags.update(self.state(10.4, self.car(**reversing)), heading)
+        self.assertEqual(self.kinds(spun), [('Other', 'spun')])  # at first a spin
+        wrong = flags.update(self.state(11.6, self.car(**reversing)), heading)
+        self.assertEqual(self.kinds(wrong), [('Other', 'wrong way')])  # it goes on: the wrong way
+        for car, why in (
+            ({'position': (0.0, 0.0), 'velocity': (30.0, 0.0), 'speed': -30.0}, 'faces back, slides on'),
+            ({'position': (0.0, 0.0), 'velocity': (-5.0, 0.0)}, 'slower than YELLOW_SLOW'),
+            ({'position': (0.0, 0.0), 'velocity': (-10.0, 30.0)}, 'across the track, not against it'),
+        ):
+            flags = race.YellowFlags()
+            for seconds in (10.0, 11.0, 12.0):
+                found = flags.update(self.state(seconds, self.car(**car)), heading)
+            self.assertNotIn('wrong way', [incident.kind for incident in found], why)
+        flags = race.YellowFlags()
+        for seconds in (10.0, 12.0):
+            found = flags.update(self.state(seconds, self.car(**reversing)), lambda position, hint: None)
+        self.assertEqual(self.kinds(found), [('Other', 'spun')])  # no learnt track: not known
+
     def test_a_respawn_counts_for_three_seconds(self):
         flags = race.YellowFlags()
         self.drive(flags, 10.0, self.car(spawns=0))

@@ -75,6 +75,13 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-11: The yellow flag says **wrong way** for a car driving against the race, asked for by the user (a
+  "ghost driver"): moving faster than 8 units a second with at least half its speed against the way the race
+  goes there, for 1.5 s (`YELLOW_WRONG_WAY`, `_FOR`). Its velocity counts, not where it points, so a car that
+  faces back but slides on is not; a short spin still shows as spun first. The way the race goes is the
+  learnt track map's line, which runs in the driving direction (`TrackMap.heading`, searching near the car's
+  last point): the checkpoint lines would be wrong in hairpins. So it needs the track learnt; until then no
+  car is shown going the wrong way. Ranked after stopped, before spun. Tests. Not yet seen in a race.
 - 2026-11-11: A track map learnt wrong can be relearnt, asked for by the user: **Relearn this track's map** in
   the TurboHUD icon's menu and **Relearn map** in the move-mode panel (beside Undo; both only with a track map,
   and enabled only while a track is known) forget the current track's map and its saved file

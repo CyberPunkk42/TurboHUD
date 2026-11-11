@@ -1024,3 +1024,10 @@ its "Recent changes".
   (`TrackMap.relearn`); the map then grows again and the next whole clean lap any car drives is learnt and
   saved. Other tracks' maps stay. The panel is 47 px wider for the button (490 x 792 px off screen), no taller.
   Tests. Not yet seen in the app or a race.
+- 2026-11-11: The yellow flag says **wrong way** for a car driving against the race, asked for by the user (a
+  "ghost driver"): moving faster than 8 units a second with at least half its speed against the way the race
+  goes there, for 1.5 s (`YELLOW_WRONG_WAY`, `_FOR`). Its velocity counts, not where it points, so a car that
+  faces back but slides on is not; a short spin still shows as spun first. The way the race goes is the
+  learnt track map's line, which runs in the driving direction (`TrackMap.heading`, searching near the car's
+  last point): the checkpoint lines would be wrong in hairpins. So it needs the track learnt; until then no
+  car is shown going the wrong way. Ranked after stopped, before spun. Tests. Not yet seen in a race.
