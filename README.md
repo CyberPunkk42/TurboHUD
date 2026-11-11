@@ -174,7 +174,9 @@ starting TurboHUD again.
   few seconds (the track's setting; 3 s on the one tried). While it slows you, an orange box says
   **SHORTCUT** with the seconds left; in the lap times any driver it slows shows an orange **CUT** with the
   seconds left, in place of the lap time. Cuts TSU does not penalise (over the grass elsewhere) are not
-  shown here: the yellow flags show those as off track.
+  shown here: the yellow flags show those as off track. The same box says **JUMP START** for 5 seconds
+  when TSU gives you a false-start penalty (and the lap times show an orange **JUMP** for that driver);
+  in move mode it is **Penalties**.
 - **Settings…** (TurboHUD icon's menu, or the move-mode panel) picks the text,
   highlight and outline colours, makes all sections bigger or smaller at once, and holds
   the options for the whole HUD: mph, the tint behind all sections, the radar's
