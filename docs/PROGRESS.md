@@ -1191,3 +1191,9 @@ its "Recent changes".
   is on the learnt road (`TrackMap.gate_at`, from the point the wrong-way check already follows each car to, read by
   read, so a track that crosses itself keeps it on its own stretch); before that, as before. Tests; TurboHUD started
   from source for 6 s, no error. Not yet seen in a race.
+- 2026-11-11: The proximity radar no longer zooms out to fit a far car, reported by the user (players found the
+  cars too small): it zoomed out with speed and the warning time (at 3 s, about 190 units each way, cars a few pixels).
+  It now shows at most `RADAR_VIEW_MAX` (24 units, six car lengths; 38 before at racing speed with the default 0.5 s),
+  so on a 200 px radar a car is about 8 by 23 px, a third larger. A car that counts beyond that is an arrow at the top
+  or bottom edge in its usual colour, fainter the further off it is (`radar_reach` for what counts). Tests; drawn off
+  screen. Not yet seen in a race.

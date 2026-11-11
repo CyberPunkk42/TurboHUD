@@ -664,10 +664,17 @@ class WarningTimeTests(unittest.TestCase):
         self.assertIsNone(race.radar_opacity(0.3, 0.2))
         self.assertEqual(race.radar_opacity(0.05, 0.2), 1.0)
 
-    def test_a_car_at_the_warning_time_is_inside_the_radar(self):
+    def test_a_car_at_the_warning_time_counts_but_the_radar_never_zooms_out_too_far(self):
+        # Asked for by the user on 2026-11-11: players found the cars too small.
         speed = 80.0
+        me = ((0.0, 0.0), (0.0, 1.0))
         for within in (0.2, 0.5, 1.5, 3.0):
-            self.assertGreaterEqual(race.radar_view(speed, within), speed * within)
+            self.assertLessEqual(race.radar_view(speed, within), race.RADAR_VIEW_MAX)
+            self.assertGreaterEqual(race.radar_reach(speed, within), speed * within)
+            behind = (0.0, -(speed * within + race.CAR_LENGTH) + 1.0)  # just within the warning time
+            (blip,) = race.radar_blips(me, speed, [(behind, (0.0, 1.0))], within=within)
+            self.assertLessEqual(blip.seconds, within)
+        self.assertEqual(race.radar_view(10.0, 0.5), race.RADAR_VIEW)  # slow: as before
 
     def test_a_radar_tells_its_view_when_a_car_counts(self):
         def me(t):

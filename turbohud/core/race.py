@@ -3026,6 +3026,10 @@ RADAR_CAR_SCALE = 1.4  # cars are drawn this much larger than their real size on
 RADAR_CAR_LEAST = 0.03  # and at least this wide, as a share of the radar
 RADAR_SIDE = 8.0  # sideways reach: a car farther to the side (another part of the track) does not count
 RADAR_VIEW = 20.0  # the radar shows at least this far behind; more at speed (radar_view)
+# ... but never more than this (6 car lengths), so cars stay large enough to see (players found
+# them too small, zoomed out for a long warning time; the user, 2026-11-11). A car that counts beyond it
+# shows as an arrow at the radar's edge.
+RADAR_VIEW_MAX = 24.0
 RADAR_MIN_SPEED = 3.0  # slower (standing on the grid): no radar, the direction is unknown
 HEADING_SPAN = 0.3  # seconds of movement a car's direction and speed are taken from (no game values)
 MAX_CARRY = 0.25  # seconds a car's position is carried on along its velocity since its last update
@@ -3056,10 +3060,16 @@ class RadarView:
     within: float = RADAR_FROM  # seconds: a car this close counts
 
 
-def radar_view(speed, within=RADAR_FROM):
-    """How far behind (and ahead) the radar reaches at `speed`: a car `within` seconds away
-    still shows, with room to spare."""
+def radar_reach(speed, within=RADAR_FROM):
+    """How far behind (and ahead) a car can count at `speed`: `within` seconds away, with
+    room to spare."""
     return max(RADAR_VIEW, speed * within + 2 * CAR_LENGTH)
+
+
+def radar_view(speed, within=RADAR_FROM):
+    """How far behind (and ahead) the radar shows at `speed`: as far as a car counts
+    (radar_reach), but at most RADAR_VIEW_MAX; a car beyond is an arrow at the edge."""
+    return min(radar_reach(speed, within), RADAR_VIEW_MAX)
 
 
 def radar_car_size(per_unit, box):
@@ -3183,7 +3193,7 @@ def radar_blips(me, speed, others, draft=None, within=RADAR_FROM):
         ahead = dx * fx + dz * fz
         side = dx * fz - dz * fx  # right of the direction of travel (x right, z forward)
         view = radar_view(speed, within)
-        if abs(ahead) > view * 1.5 or abs(side) > view:
+        if abs(ahead) > radar_reach(speed, within) * 1.5 or abs(side) > view:
             continue
         angle = 0.0
         if direction is not None:
