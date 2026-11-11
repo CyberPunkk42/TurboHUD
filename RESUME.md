@@ -28,8 +28,9 @@
   Centre text, and Undo. Checked by hand on the Mac.
 - Builds: `tools/build_app.py` (PyInstaller) makes a Windows ZIP and a Mac disk image (each with the
   Rust reader; the Mac one 32.5 MB, no Windows Python since 2026-11-11) and a Linux `.tar.gz`, run locally on each system.
-  Nothing goes to GitHub any more; the old `.github/workflows/build.yml` is kept for
-  reference only.
+  The repository is kept in step with a private GitHub repository (remote `github`, since
+  2026-11-11), so the Windows PC can pull it; `.github/workflows/build.yml` runs only for a
+  release tag, a pull request or by hand.
 - The overlay probe (`experiments/overlay_probe.py`, see `experiments/README.md`) answered
   whether a see-through, click-through, always-on-top window can sit over TSU:
   - macOS (CrossOver): yes when TSU runs windowed or with Fullscreen off; never with TSU's
@@ -75,6 +76,14 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-11: A private GitHub repository for the Mac and the Windows PC, asked for by the user (remote `github`,
+  `https://github.com/CyberPunkk42/TurboHUD.git`). Before the first push every file, path and commit of the history was
+  checked for personal data: the files had only placeholders, but 299 commits had the user's real name as author
+  (Git took it from the Mac account, as no Git name was set) and 115 a personal email. The history was rewritten so
+  every author and committer is CyberPunkk42 with the GitHub noreply email (files, messages and dates the same,
+  checked commit by commit; a backup of the old history outside the project). This clone's `user.name` is now set,
+  the hook's local terms list the real name, the email and the Mac's computer names, and AGENTS.md says what may be
+  pushed where.
 - 2026-11-11: Build 2026.11.11.8 for the tester (`releases/`, macOS 27, `--any-macos`, smoke test passed with
   TurboHUD closed; 32.4 MB), as 2026.11.11.7 with the own yellow flag and ring, the smaller own dot, the yellow sector
   following a car backwards, the radar's zoom cap with edge arrows, classes on the radar and clan tags in the lap

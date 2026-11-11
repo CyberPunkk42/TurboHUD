@@ -4,8 +4,8 @@ TurboHUD is a new tool for Turbo Sliders Unlimited (TSU): a HUD overlay on top o
 running game (fuel estimate, minimap, lap times). Stack: Python with Qt (PySide6),
 shipped as a bundled app for Windows, macOS and Linux (`docs/STACK.md`). The app is in
 `turbohud/` (start: `launch_turbohud.py`, or `run_turbohud.sh` / `run_turbohud.cmd`);
-builds come from `tools/build_app.py` (`.github/workflows/build.yml` is kept but no
-longer runs: nothing goes to GitHub). Findings and
+builds come from `tools/build_app.py` (`.github/workflows/build.yml` runs only for a
+release tag, a pull request or by hand, none of which is used). Findings and
 suggested features are in `docs/SUGGESTIONS.md` (local only).
 Sister project: LiveryStudio (`../LiveryStudio`), an offline livery editor (Python 3.12+
 with Tk, standard library only). Reuse its findings about TSU's files where they apply,
@@ -20,11 +20,18 @@ but never import from or write into that folder.
 3. Read `docs/IMPROVEMENT_BACKLOG.md` (once it exists): open items ordered by value.
 
 ## Where things are
-- This folder is a **local-only** Git repository (branch `main`) next to
-  `../LiveryStudio`. Nothing is pushed to GitHub: the old `origin` remote's push URL is
-  disabled on purpose; never re-enable it, never push, never use `gh`. The user will
-  later share the folder over the local network for Windows and the Mac. Commits use
-  `203462244+CyberPunkk42@users.noreply.github.com` as the email.
+- This folder is a Git repository (branch `main`) next to `../LiveryStudio`. Since
+  2026-11-11 it is kept in step with a **private** GitHub repository, the remote `github`
+  (`https://github.com/CyberPunkk42/TurboHUD.git`), so the Mac and the Windows PC can both
+  pull and push. Push only to `github`, only `main` after the user merged into it and
+  branches the user asks for; never force-push, never make the repository public (the
+  user decides that), never use `gh`. `origin` is an old local bundle
+  (`../TurboHUD.bundle`): never push to it.
+- Every commit's author and committer is `CyberPunkk42`
+  `<203462244+CyberPunkk42@users.noreply.github.com>` (set in this clone's `user.name` and
+  `user.email`; set them the same in every clone). Never the user's real name or a personal
+  email: before the first push the whole history was rewritten for that (a backup of the
+  old history is in `../TurboHUD-backup-2026-11-11-before-author-rewrite.git`, local only).
 - The user plays on Linux (Omarchy, Hyprland on Wayland) with TSU's native Linux build.
   Its data is in `~/.config/unity3d/Turbo Sliders/Unlimited/<SteamID>/` (logs in `Logs/`,
   stats in `Scripts/`, recordings in `Recordings/`).
@@ -38,19 +45,24 @@ but never import from or write into that folder.
   only; never write to the game's folders. Test on copies.
 
 ## Personal data: never in commits
-The user's Steam ID and Windows username must not appear in any commit, even for
-people the user trusts.
+The user's Steam ID, Windows username, computer names, real name and personal email must
+not appear in any commit (files, messages, author or committer), even for people the user
+trusts: the repository is on GitHub, and will be public later.
 - TSU writes the player's Steam ID into every exported paint job as `exportId`, so
   never commit real liveries or other game data. `samples/` stays local (gitignored).
 - In fixtures, use the placeholder ID `76561197960265728`. In docs and logs, write
   `<SteamID>` and `<user>`, also in file paths. Code reads the real ID at runtime.
-- A Git pre-push hook (kept as a safety net) blocks any push containing the Steam ID, the user name or the
-  computer name, including inside `.zip` and `.z` files and in commit messages. Its
+- A Git pre-push hook blocks any push containing the Steam ID, the user name or the
+  computer name, including inside `.zip` and `.z` files, in commit messages and in the
+  author and committer. It must be installed before any push. Its
   terms are worked out on the machine, never stored in the repository. Install it in
   every clone with `py -3 -B tools/privacy_check.py --install` (macOS/Linux:
   `python3`), and never bypass it (`--no-verify`). On a PC without TSU, the user lists
   the Steam ID and Windows user name in the clone's untracked `.git/privacy_terms.txt`;
-  never ask for them or write them anywhere else. Paths in docs use `%USERPROFILE%`.
+  never ask for them or write them anywhere else. That file on the Mac also lists the real
+  name, the personal email and the Mac's computer names, with `allow: CyberPunkk42` (the
+  public account name, which contains the Mac's user name); give a new clone the same.
+  Paths in docs use `%USERPROFILE%`.
 
 ## Branches and approval
 The user approves every change by merging it locally. There are no pull requests.
