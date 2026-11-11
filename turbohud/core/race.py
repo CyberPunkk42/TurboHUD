@@ -1621,6 +1621,9 @@ DELTA_TREND_LEAST = 0.2  # seconds of this lap's delta before that counts
 DELTA_SWITCH = 0.05  # seconds gained or lost a second, the other way, that can turn the colour
 DELTA_SWITCH_HOLD = 0.25  # seconds the rate has to stay past DELTA_SWITCH before it does
 DELTA_COLOUR_EASE = 0.15  # the fade between green and red: most of the way in about 0.4 s
+# The fill glides towards the delta instead of jumping at each read (asked for by the user on
+# 2026-11-11): most of the way in about 0.2 s, trailing a steady change by under 0.1 s.
+DELTA_FILL_EASE = 0.08
 
 
 @dataclass(frozen=True)
@@ -1647,6 +1650,7 @@ class DeltaBar:
         self._side = None  # -1 green, 1 red: the colour the bar goes towards
         self._against = None  # the race clock since when the rate has pointed the other way
         self._trend = 0.0  # the colour shown, easing towards the side
+        self._fill = None  # the fill shown, gliding towards the delta
 
     def update(self, state):
         """The view for the race `state`; at most once a read does it work anything out."""
@@ -1655,7 +1659,7 @@ class DeltaBar:
         delta = state.delta_to_best
         if state.laps_completed != self._lap or delta is None:
             self._history.clear()
-            self._side = self._against = None
+            self._side = self._against = self._fill = None
         last_clock = self._clock if self._history else None
         self._lap, self._clock, self._view = state.laps_completed, state.clock, None
         if delta is None:
@@ -1677,12 +1681,16 @@ class DeltaBar:
         else:
             self._against = None
         seconds = delta / UNITS_PER_SECOND
-        if last_clock is not None and state.clock > last_clock:
-            # Eased, so that a turn fades over rather than jumps.
+        target = min(max(-seconds / DELTA_BAR_FULL, -1.0), 1.0)  # ahead (improving) to the right
+        if last_clock is not None and state.clock > last_clock and self._fill is not None:
+            # Eased, so that a turn fades over and the fill glides rather than jumps.
             elapsed = (state.clock - last_clock) / UNITS_PER_SECOND
             self._trend += (self._side - self._trend) * (1 - math.exp(-elapsed / DELTA_COLOUR_EASE))
+            self._fill += (target - self._fill) * (1 - math.exp(-elapsed / DELTA_FILL_EASE))
+        else:
+            self._fill = target  # a lap's start: where the delta is, at once
         self._view = DeltaBarView(
-            min(max(-seconds / DELTA_BAR_FULL, -1.0), 1.0),  # ahead (improving) to the right
+            self._fill,
             self._trend,
             format_delta(delta, DELTA_PLACES).replace('-', '\u2212'),
         )

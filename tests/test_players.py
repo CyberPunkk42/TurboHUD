@@ -351,6 +351,28 @@ class DeltaBarTests(unittest.TestCase):
         view, _bar = self.run_bar((10.0, 0.5))
         self.assertEqual((view.fill, view.text), (-0.5, '+0.50'))
 
+    def test_the_fill_glides_while_the_number_is_exact(self):
+        # Asked for by the user on 2026-11-11: a smooth bar rather than one that jumps.
+        bar = race.DeltaBar()
+        feed(bar, 10, 1, lambda t: 0.0)
+        view = bar.update(Lapping(round(11.05 * SEC), round(-0.5 * SEC)))  # half a second ahead at once
+        self.assertEqual(view.text, '\u22120.50')  # the number at once
+        self.assertGreater(view.fill, 0.0)
+        self.assertLess(view.fill, 0.5)  # the bar on its way
+        view = feed(bar, 11.1, 0.2, lambda t: -0.5)
+        self.assertGreater(view.fill, 0.45)  # nearly there 0.25 s on
+
+    def test_a_steady_change_is_followed_closely(self):
+        bar = race.DeltaBar()
+        view = feed(bar, 10, 3, lambda t: -0.1 * t)  # gaining 0.1 s a second, read 20 times a second
+        self.assertAlmostEqual(view.fill, 0.3, delta=0.01)  # under 0.1 s behind: 0.008 s of delta
+
+    def test_a_new_lap_puts_the_fill_where_the_delta_is(self):
+        bar = race.DeltaBar()
+        feed(bar, 10, 1, lambda t: 0.5)
+        view = bar.update(Lapping(11 * SEC, round(-0.2 * SEC), laps=3))
+        self.assertEqual(view.fill, 0.2)
+
     def test_the_fill_stops_at_the_end(self):
         self.assertEqual(self.run_bar((10.0, 5.0))[0].fill, -1.0)
         self.assertEqual(self.run_bar((10.0, -5.0))[0].fill, 1.0)

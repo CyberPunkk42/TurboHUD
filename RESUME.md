@@ -75,6 +75,10 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-11: The delta bar's fill glides, asked for by the user: it eases towards the delta in about 0.2 s
+  instead of jumping to each read's value (`DELTA_FILL_EASE`, 0.08 s); the number stays exact, and a steady
+  change is followed under 0.1 s behind. A new lap puts the fill where the delta is at once. It still moves
+  20 times a second, as the HUD is drawn: smoother would take more redraws, which cost frames. Tests.
 - 2026-11-11: Yellow flags, asked for by the user (as in F1, DTM or GT racing): a new section, Yellow flag,
   and a yellow ring on the track map. For every other car TurboHUD now reads its speed along the car
   (`m_forwardSpeed`), the grip of the surface under each wheel (`TS.WheelUpdater.m_surfaceMaterial*`, each
