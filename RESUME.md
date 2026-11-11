@@ -75,6 +75,12 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-11: A track map learnt wrong can be relearnt, asked for by the user: **Relearn this track's map** in
+  the TurboHUD icon's menu and **Relearn map** in the move-mode panel (beside Undo; both only with a track map,
+  and enabled only while a track is known) forget the current track's map and its saved file
+  (`TrackMap.relearn`); the map then grows again and the next whole clean lap any car drives is learnt and
+  saved. Other tracks' maps stay. The panel is 47 px wider for the button (490 x 792 px off screen), no taller.
+  Tests. Not yet seen in the app or a race.
 - 2026-11-11: Build 2026.11.11.4 for the tester (`releases/`, macOS 27, `--any-macos`, smoke test passed: the
   Rust reader read the user's race), as 2026.11.11.3 with the yellow flag as a yellow box with dark text. The
   test sheet names the build and describes the yellow box. It replaces 2026.11.11.3 in `releases/`.
