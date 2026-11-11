@@ -75,6 +75,12 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-11: TurboHUD failed at every frame with the shortcut penalty merged, reported by the user (an
+  AttributeError, hundreds of times in the terminal): the app called its ShortcutPenalties `shortcuts`, a name
+  the same function gives later to whether the hotkeys are registered (True), which replaced it. Renamed
+  `shortcut_penalties`. Checked by starting TurboHUD from the source with a race running: no error, and it
+  quit at `--seconds` as it should (it could not before, as every frame failed). The tests had not caught it:
+  none goes through the app's own call of race_sections.
 - 2026-11-11: Shortcut penalties, asked for by the user: TSU slows a car that takes a shortcut its track
   defines ("Shortcut detected!"). Found in a race recorded with cuts (only reading): a car is slowed while
   `CarStateUpdater.m_shortuctMaxSpeedWithoutLimitedGas` (TSU's spelling) is a speed cap (about 28) instead

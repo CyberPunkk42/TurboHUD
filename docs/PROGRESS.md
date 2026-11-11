@@ -1144,3 +1144,9 @@ its "Recent changes".
   under 800 px with the new row (788 off screen). Also seen: `VehicleState.startPenaltyOn` for a false start.
   Tests; read from the user's race (3.0 s, a slowed AI car seen). Not yet seen in the HUD; online as a client
   not yet checked.
+- 2026-11-11: TurboHUD failed at every frame with the shortcut penalty merged, reported by the user (an
+  AttributeError, hundreds of times in the terminal): the app called its ShortcutPenalties `shortcuts`, a name
+  the same function gives later to whether the hotkeys are registered (True), which replaced it. Renamed
+  `shortcut_penalties`. Checked by starting TurboHUD from the source with a race running: no error, and it
+  quit at `--seconds` as it should (it could not before, as every frame failed). The tests had not caught it:
+  none goes through the app's own call of race_sections.
