@@ -306,6 +306,7 @@ def run(args, folder):
                 delta_bar,
                 settings.sector_bars,
                 yellow_flags if settings.yellow_flags else None,
+                settings.class_tags if settings.classes else (),
             )
             if not settings.yellow_flags:
                 yellow_flags.reset()  # turned on again, it starts afresh
@@ -504,6 +505,18 @@ def run(args, folder):
                     ),
                 )
             )
+        if any(section.name == 'laptimes' for section in layout):
+            listed.append(
+                (
+                    'classes',
+                    'Classes in the lap times',
+                    settings.classes,
+                    (
+                        'In a race with two or more classes, named by the drivers\' clan tags ([GT3], [LMP], ...):'
+                        ' the lap times by class, each below a line with its name'
+                    ),
+                )
+            )
         return listed
 
     def set_radar_cone(cone):
@@ -537,6 +550,14 @@ def run(args, folder):
         show_option('yellow_flags', shown)
         save()
         log.info('yellow flags %s', 'on' if shown else 'off')
+
+    def set_classes(shown):
+        nonlocal settings
+        settings = replace(settings, classes=shown)
+        classes_action.setChecked(shown)
+        show_option('classes', shown)
+        save()
+        log.info('classes in the lap times %s', 'on' if shown else 'off')
 
     def set_map_others(others):
         nonlocal settings
@@ -714,6 +735,7 @@ def run(args, folder):
                 'map_others': set_map_others,
                 'sector_bars': set_sector_bars,
                 'yellow_flags': set_yellow_flags,
+                'classes': set_classes,
             }
             settings_window.option_changed.connect(lambda key, on: setters[key](on))
             settings_window.reads_changed.connect(set_reads)
@@ -871,6 +893,11 @@ def run(args, folder):
     yellow_flags_action.triggered.connect(lambda checked: set_yellow_flags(checked))
     if any(section.name == 'yellowflag' for section in layout):
         menu.addAction(yellow_flags_action)
+    classes_action = QAction('Classes in the lap times', menu, checkable=True)
+    classes_action.setChecked(settings.classes)
+    classes_action.triggered.connect(lambda checked: set_classes(checked))
+    if any(section.name == 'laptimes' for section in layout):
+        menu.addAction(classes_action)
     map_others_action = QAction('Other cars on the track map', menu, checkable=True)
     map_others_action.setChecked(settings.map_others)
     map_others_action.triggered.connect(lambda checked: set_map_others(checked))

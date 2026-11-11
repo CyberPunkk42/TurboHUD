@@ -138,6 +138,13 @@ starting TurboHUD again.
   the lap section says "Spectating" with the leader's lap, the player list shows the gaps
   to the leader, the lap times list every driver, and the track map shows every car with
   the leader in gold.
+- **Multi-class races**: drivers name their class with their clan tag in TSU (`[GT3]`, `[LMP]`,
+  `[LMP2]` ...). With two or more classes in the race, the lap times list comes by class, each below a
+  thin line labelled with its name, numbered within its class and with the class's fastest lap in purple.
+  Drivers whose tag is no class (a team's, such as `[FTR]`) come last under **Other**. **Classes in the
+  lap times** (TurboHUD icon's menu or Settings) turns it off. The tags that count are listed in the
+  settings file as `class_tags` (LMP, LMP1 to LMP3, LMH, LMDH, HYPER, GTP, DPI, GT1 to GT4, GTE, GTLM, GTD,
+  GTC, GTS, TCR, CUP, F1 to F4, PRO, AM, PROAM, SILV by default).
 - **Settings…** sets how soon the blue flag and the radar show, and how many times a second
   the race is read (20, 10 or 5). Fewer reads ask less of the game, but the delta and the
   track map move less smoothly, and a track first learnt at 5 gets a coarser line.

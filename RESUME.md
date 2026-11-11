@@ -75,6 +75,16 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-11: Multi-class lap times, asked for by the user (as in real multi-class racing): each driver's
+  clan tag is read (`TS.PlayerProfile.teamTag`, found in a race the same day: 'FTR' for [FTR]; read once per
+  profile, so a race read asks no more of the game). With two or more classes among the tags in
+  `class_tags` (settings; a default list of LMP, GT3, GT4 ...), the lap times come by class (`car_classes`,
+  `by_class`): the class whose leader is furthest ahead first, untagged drivers last as Other, numbered and
+  with the fastest lap purple within each class, and each class below a thin line labelled with its name,
+  drawn in the gap above its first row (`Row.rule`, `draw_rule`), so the box keeps its size and all 20
+  drivers. **Classes in the lap times** in the menu and Settings (on by default). The Settings window takes
+  no typing (an overlay without focus), so other tags go in the settings file. Tests; drawn off screen. Not
+  yet seen in a race with class tags.
 - 2026-11-11: A track is learnt from three clean laps, asked for by the user: a shortcut on the tarmac or kerbs
   is a clean lap, so a first lap through one was learnt. The first clean lap still shows at once; once
   `LEARN_LAPS` (3) are in, laps under `SHORT_LAP` (98.5 %) of the longest are left out (a shortcut saves

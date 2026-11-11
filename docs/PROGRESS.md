@@ -1038,3 +1038,13 @@ its "Recent changes".
   about 100 points a lap) and saved with `laps`. One lap a car while there are three or more cars, so one
   driver who cuts every lap is outvoted; alone or with one other car, more laps of the same car count. A track
   saved from a single lap still shows and is learnt again this way. Tests. Not yet seen in a race.
+- 2026-11-11: Multi-class lap times, asked for by the user (as in real multi-class racing): each driver's
+  clan tag is read (`TS.PlayerProfile.teamTag`, found in a race the same day: 'FTR' for [FTR]; read once per
+  profile, so a race read asks no more of the game). With two or more classes among the tags in
+  `class_tags` (settings; a default list of LMP, GT3, GT4 ...), the lap times come by class (`car_classes`,
+  `by_class`): the class whose leader is furthest ahead first, untagged drivers last as Other, numbered and
+  with the fastest lap purple within each class, and each class below a thin line labelled with its name,
+  drawn in the gap above its first row (`Row.rule`, `draw_rule`), so the box keeps its size and all 20
+  drivers. **Classes in the lap times** in the menu and Settings (on by default). The Settings window takes
+  no typing (an overlay without focus), so other tags go in the settings file. Tests; drawn off screen. Not
+  yet seen in a race with class tags.

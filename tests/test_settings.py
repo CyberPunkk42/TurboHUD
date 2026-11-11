@@ -151,6 +151,16 @@ class SpeedUnitSettingTests(unittest.TestCase):
             self.assertTrue(s.load_settings(path).yellow_flags)  # on, as when they came
             s.save_settings(path, s.Settings(yellow_flags=False))
             self.assertFalse(s.load_settings(path).yellow_flags)
+            path.write_text(json.dumps({}))
+            self.assertTrue(s.load_settings(path).classes)
+            self.assertEqual(s.load_settings(path).class_tags, s.CLASS_TAGS)
+            s.save_settings(path, s.Settings(classes=False, class_tags=('GT3', 'LMP')))
+            self.assertFalse(s.load_settings(path).classes)
+            self.assertEqual(s.load_settings(path).class_tags, ('GT3', 'LMP'))
+            path.write_text(json.dumps({'class_tags': [' [gt3] ', 'lmp', 'GT3', 'MUCHTOOLONG', 7]}))
+            self.assertEqual(s.load_settings(path).class_tags, ('GT3', 'LMP'))
+            path.write_text(json.dumps({'class_tags': []}))
+            self.assertEqual(s.load_settings(path).class_tags, s.CLASS_TAGS)
 
 
 class FitOnScreensTests(unittest.TestCase):

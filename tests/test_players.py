@@ -1169,3 +1169,57 @@ class LapTimesTests(unittest.TestCase):
         self.assertEqual(len(rows), 1 + race.MAX_LAP_TIME_ROWS)
         self.assertEqual(rows[1].text, '1. P0')
         self.assertIn('19. P18', [r.text for r in rows])
+
+
+class ClassTests(unittest.TestCase):
+    """A multi-class race (asked for by the user on 2026-11-11): classes from the clan tags."""
+
+    TAGS = ('LMP', 'GT3', 'GT4')
+
+    def driver(self, name, tag, best, start=0, local=False):
+        """Two laps done: the first `best` long, the second a second slower."""
+        laps = [lap(start), lap(start + best, step=best // 4), lap(start + 2 * best + 1000, count=1)]
+        return dataclasses.replace(player(name, laps, laps=2, local=local), tag=tag)
+
+    def test_two_classes_are_needed_and_other_tags_are_no_class(self):
+        one = [self.driver('A', 'LMP', 60_000), self.driver('B', 'FTR', 61_000)]
+        self.assertEqual(race.car_classes(one, self.TAGS), {})
+        two = [*one, self.driver('C', '[gt3]', 70_000)]
+        classes = race.car_classes(two, self.TAGS)
+        self.assertEqual(sorted(classes.values()), ['GT3', 'LMP', race.OTHER_CLASS])
+        self.assertEqual(race.car_classes(two, ()), {})  # turned off
+
+    def test_by_class_with_places_in_each_its_fastest_lap_purple(self):
+        drivers = [
+            self.driver('Proto', 'LMP', 600_000),
+            self.driver('Gt fast', 'GT3', 700_000, start=10),
+            self.driver('Me', 'FTR', 650_000, start=20, local=True),
+            self.driver('Proto 2', 'LMP', 610_000, start=30),
+            self.driver('Gt slow', 'GT3', 720_000, start=40),
+        ]
+        rows = race.lap_times_rows(drivers, clock=2_000_000, class_tags=self.TAGS)
+        self.assertEqual(
+            [(row.text, row.rule) for row in rows[1:]],
+            [
+                ('1. Proto', 'LMP'),
+                ('2. Proto 2', ''),
+                ('1. Gt fast', 'GT3'),
+                ('2. Gt slow', ''),
+                ('1. Me', race.OTHER_CLASS),  # no class tag: last
+            ],
+        )
+        purple = [row.text for row in rows[1:] if row.middle_color == race.SESSION_BEST_COLOR]
+        self.assertEqual(purple, ['1. Proto', '1. Gt fast', '1. Me'])
+        plain = race.lap_times_rows(drivers, clock=2_000_000)
+        self.assertEqual([row.rule for row in plain], [''] * len(plain))  # no classes: as before
+        self.assertEqual([row.text for row in plain[1:4]], ['1. Proto', '2. Proto 2', '3. Me'])  # overall
+
+    def test_the_rule_is_kept_on_the_laid_out_line(self):
+        from turbohud.core.hud import hud_lines
+
+        rows = race.lap_times_rows(
+            [self.driver('Proto', 'LMP', 600_000), self.driver('Gt', 'GT3', 700_000, start=10)],
+            clock=2_000_000,
+            class_tags=self.TAGS,
+        )
+        self.assertEqual([line.rule for line in hud_lines(rows)], ['', 'LMP', 'GT3'])

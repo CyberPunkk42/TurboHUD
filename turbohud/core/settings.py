@@ -58,6 +58,30 @@ class SectionPlace:
     tint: bool = False  # a light tint behind its text while locked; for the track map, its dark square
 
 
+# Clan tags that name a car class, for a multi-class race (asked for by the user on 2026-11-11:
+# drivers enter [GT3] or [LMP] as their clan tag). TSU allows 5 characters. Other tags, such as
+# a team's, are no class. The list can be changed in the settings file (`class_tags`).
+CLASS_TAGS = (
+    'LMP', 'LMP1', 'LMP2', 'LMP3', 'LMH', 'LMDH', 'HYPER', 'GTP', 'DPI',
+    'GT1', 'GT2', 'GT3', 'GT4', 'GTE', 'GTLM', 'GTD', 'GTC', 'GTS', 'TCR', 'CUP',
+    'F1', 'F2', 'F3', 'F4', 'PRO', 'AM', 'PROAM', 'SILV',
+)  # fmt: skip
+MAX_CLASS_TAG = 8  # characters; longer is no tag TSU allows
+
+
+def class_tag(text):
+    """A clan tag as a class name is compared: without brackets or spaces, in capitals."""
+    return text.strip().strip('[]()').strip().upper() if isinstance(text, str) else ''
+
+
+def _class_tags(value):
+    """The class tags from the settings file, or CLASS_TAGS where there are none."""
+    if not isinstance(value, list):
+        return CLASS_TAGS
+    tags = tuple(dict.fromkeys(class_tag(tag) for tag in value if 0 < len(class_tag(tag)) <= MAX_CLASS_TAG))
+    return tags or CLASS_TAGS
+
+
 @dataclass(frozen=True)
 class Settings:
     placement: tuple = DEFAULT_PLACEMENT  # the whole HUD before it had sections; new sections start here
@@ -69,6 +93,8 @@ class Settings:
     radar_cone: bool = True  # the proximity radar shows the slipstream behind cars ahead
     sector_bars: bool = True  # the sector bars below the last and best lap
     yellow_flags: bool = True  # the yellow flag section and the yellow rings on the track map
+    classes: bool = True  # the lap times grouped by class, from the drivers' clan tags (see class_tags)
+    class_tags: tuple = CLASS_TAGS  # the clan tags that name a class (upper case, without brackets)
     layout_version: int = 1  # how to read the section sizes: LAYOUT_VERSION is the latest
     presets: dict = field(default_factory=dict)  # number (one of PRESETS) -> a kept `sections`
     blue_seconds: float = 2.0  # how far behind a car about to lap the player shows the blue flag
@@ -229,6 +255,8 @@ def load_settings(path):
         radar_cone=data.get('radar_cone') is not False,
         sector_bars=data.get('sector_bars') is not False,
         yellow_flags=data.get('yellow_flags') is not False,
+        classes=data.get('classes') is not False,
+        class_tags=_class_tags(data.get('class_tags')),
         layout_version=_layout_version(data.get('layout_version')),
         presets=_presets(data.get('presets'), data.get('backdrop') is True),
         blue_seconds=_seconds(data.get('blue_seconds'), Settings.blue_seconds, BLUE_SECONDS),
@@ -260,6 +288,8 @@ def save_settings(path, settings):
         'radar_cone': settings.radar_cone,
         'sector_bars': settings.sector_bars,
         'yellow_flags': settings.yellow_flags,
+        'classes': settings.classes,
+        'class_tags': list(settings.class_tags),
         'layout_version': settings.layout_version,
         'blue_seconds': settings.blue_seconds,
         'radar_seconds': settings.radar_seconds,

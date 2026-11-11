@@ -23,6 +23,7 @@ class Line:
     middle_color: str = 'text'
     slot: str = ''  # the text is at the right of a slot this wide, with the tail after it
     before: str = ''  # a column lined up on the right just before `middle`, in the text's colour
+    rule: str = ''  # a line above it, labelled with this (a class in the lap times)
 
 
 @dataclass(frozen=True)
@@ -41,6 +42,7 @@ class Row:
     middle_color: str = 'text'
     slot: str = ''  # the text is at the right of a slot this wide, with the tail after it
     before: str = ''  # a column lined up on the right just before `middle`, in the text's colour
+    rule: str = ''  # a line in the gap above it, labelled with this (a class in the lap times)
 
 
 FLAG_WIDTH = 1.5  # a flag's room before the text, in font sizes
@@ -133,6 +135,7 @@ def _content(rows, sizes):
                 row.middle_color,
                 row.slot,
                 row.before,
+                row.rule,
             )
         )
     return lines, baseline

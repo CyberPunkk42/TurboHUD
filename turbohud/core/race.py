@@ -35,6 +35,7 @@ from dataclasses import dataclass
 from turbohud.core.flags import flag_code, flag_text
 from turbohud.core.hud import Row, Sectors, blend, clock, local_time_rows
 from turbohud.core.il2cpp import ARRAY_DATA, ARRAY_LENGTH, LIST_ITEMS, SIMPLE_TYPES, NotFound, ReadError
+from turbohud.core.settings import class_tag
 
 log = logging.getLogger(__name__)
 
@@ -464,6 +465,9 @@ class PlayerState:
     forward_speed: float | None = None  # game units a second along the car; below 0 backwards
     wheel_grips: tuple | None = None  # the grip of the surface under each of its four wheels (0: in the air)
     spawns: int | None = None  # how often it was put back on the track (a respawn)
+    tag: str = (
+        ''  # the driver's clan tag (TS.PlayerProfile.teamTag, 'FTR' for [FTR]); a class may be named by it
+    )
 
     @functools.cached_property
     def passed(self):
@@ -518,6 +522,7 @@ class LapReader:
         self._offsets = {}  # (role, field) -> offset
         self._player = None
         self._laps = {}  # finished lap object -> its checkpoint times
+        self._tags = {}  # profile object -> its clan tag: read once, it seldom changes
         self._gates = None  # checkpoint lines, ((x1, z1), (x2, z2)) each
         self._sector_lines = ()  # the checkpoints of type Sector (TS.CheckpointType), read with the lines
         self._fuel_history = {}  # lap index -> fuel used when it started
@@ -1206,14 +1211,29 @@ class LapReader:
                 )
         return found
 
+    def _team_tag(self, profile):
+        """The profile's clan tag (TS.PlayerProfile.teamTag, found in a race on 2026-11-11:
+        'FTR' for [FTR]), read once per profile so a race read asks no more of the game."""
+        tag = self._tags.get(profile)
+        if tag is None:
+            try:
+                tag = self._string(self.il.memory.u64(profile + self._offset('profile', profile, 'teamTag')))
+            except (NotFound, OSError, UnicodeDecodeError):
+                tag = ''
+            if len(self._tags) > 512:
+                self._tags.clear()
+            self._tags[profile] = tag
+        return tag
+
     def _player_state(self, player):
         il, memory = self.il, self.il.memory
         local = memory.i32(player + self._offset('player', player, 'm_localHumanIndex')) >= 0
-        name, flag = '', 0
+        name, flag, tag = '', 0, ''
         try:
             profile = il.ref(self._ref('player', player, 'm_playerInfo'), 'm_profile')
             name = self._string(memory.u64(profile + self._offset('profile', profile, 'm_name')))
             flag = memory.i32(profile + self._offset('profile', profile, 'flag'))
+            tag = self._team_tag(profile)
         except NotFound:
             pass
         stats = self._ref('player', player, 'm_stats')
@@ -1284,6 +1304,7 @@ class LapReader:
             forward_speed=forward_speed,
             wheel_grips=wheel_grips,
             spawns=spawns,
+            tag=tag,
         )
 
     def _wheels(self, updater):
@@ -1780,6 +1801,7 @@ def race_sections(
     delta_bar=None,
     sector_bars=True,
     yellow_flags=None,
+    class_tags=(),
 ):
     """{section name: rows} for a live-reader snapshot (see core.hud.RACE_SECTIONS); a
     section with nothing to show has no rows. Nothing before the grid: in the menus, the
@@ -1790,12 +1812,13 @@ def race_sections(
     `blue_within` is how many seconds behind a car shows the blue flag; `delta_bar` (a
     DeltaBar) gives the delta bar, under 'deltaview'; `sector_bars` False leaves the sector
     bars out (an option); `yellow_flags` (a YellowFlags) gives the yellow flag section and
-    the cars ringed on the track map."""
+    the cars ringed on the track map; `class_tags`: the clan tags that name a class, for the
+    lap times of a multi-class race (none: no classes)."""
     if not on_grid(snapshot, now):
         return {}
     state = snapshot.state
     if state.spectating:
-        return _watching_sections(snapshot, now, standings, track_map)
+        return _watching_sections(snapshot, now, standings, track_map, class_tags)
     if state.finished or state.laps_to_finish and state.laps_completed >= state.laps_to_finish:
         # Finished: the lap sections say so, and the rest stays (the player list above
         # all) while the others race on, until the race is over and the clock stops.
@@ -1825,7 +1848,7 @@ def race_sections(
     if state.players:
         order = standings.order(state.players, now) if standings is not None else None
         sections['players'] = players_rows(state.players, order, state.clock, state.gates)
-        sections['laptimes'] = lap_times_rows(state.players, order, clock_now(snapshot, now))
+        sections['laptimes'] = lap_times_rows(state.players, order, clock_now(snapshot, now), class_tags)
         opacity = blue_flag_opacity(
             blue_flag(state.players, clock_now(snapshot, now), blue_within), blue_within
         )
@@ -1851,7 +1874,7 @@ def race_sections(
     return sections
 
 
-def _watching_sections(snapshot, now, standings, track_map):
+def _watching_sections(snapshot, now, standings, track_map, class_tags=()):
     """What a spectator sees: the race, with the leader's lap, the player list with the
     gaps to the leader, the lap times and the map; nothing about a car of their own."""
     state = snapshot.state
@@ -1859,7 +1882,7 @@ def _watching_sections(snapshot, now, standings, track_map):
     if state.players:
         order = standings.order(state.players, now) if standings is not None else ranked(state.players)
         sections['players'] = players_rows(state.players, order, state.clock, state.gates, watching=True)
-        sections['laptimes'] = lap_times_rows(state.players, order, clock_now(snapshot, now))
+        sections['laptimes'] = lap_times_rows(state.players, order, clock_now(snapshot, now), class_tags)
         if track_map is not None and state.on_a_track:
             shown = track_map.update(state, order)
             if shown is not None:
@@ -2406,13 +2429,59 @@ def player_current_lap(player, clock):
     return clock - start
 
 
-def lap_times_rows(players, order=None, clock=0):
+OTHER_CLASS = 'Other'  # in a multi-class race, the drivers whose clan tag names no class
+
+
+def car_classes(players, class_tags):
+    """{id(player): class} for a multi-class race: the class a driver's clan tag names
+    (one of `class_tags`; OTHER_CLASS for the rest), or {} unless at least two classes
+    are in the race (asked for by the user on 2026-11-11, as in WEC or IMSA)."""
+    if not class_tags:
+        return {}
+    named = {id(player): class_tag(player.tag) for player in players}
+    named = {key: tag if tag in class_tags else OTHER_CLASS for key, tag in named.items()}
+    if len(set(named.values()) - {OTHER_CLASS}) < 2:
+        return {}
+    return named
+
+
+def by_class(order, classes):
+    """`order` (race order) grouped by class: the class whose leader is furthest ahead
+    first, each in race order, OTHER_CLASS last; and each player's place in its class."""
+    groups = {}
+    for player in order:
+        groups.setdefault(classes[id(player)], []).append(player)
+    if OTHER_CLASS in groups:
+        groups[OTHER_CLASS] = groups.pop(OTHER_CLASS)  # last
+    grouped, places = [], {}
+    for members in groups.values():
+        for place, player in enumerate(members, start=1):
+            grouped.append(player)
+            places[id(player)] = place
+    return grouped, places
+
+
+def lap_times_rows(players, order=None, clock=0, class_tags=()):
     """The lap times list: a heading, then each driver in race order with flag and name,
     their best lap and the running time of their current lap ('Fin' once finished) at
-    race `clock`. The race's fastest lap is purple, as in F1. Up to MAX_LAP_TIME_ROWS drivers."""
+    race `clock`. The race's fastest lap is purple, as in F1. Up to MAX_LAP_TIME_ROWS drivers.
+
+    In a multi-class race (car_classes, from the clan tags in `class_tags`) the drivers
+    come by class, each class below a line labelled with its name, numbered and with its
+    fastest lap purple within the class."""
+    order = list(ranked(players) if order is None else order)
+    classes = car_classes(order, class_tags)
+    places = None
+    if classes:
+        order, places = by_class(order, classes)
     shown = shown_players(players, MAX_LAP_TIME_ROWS, order)
-    bests = {id(player): min(player_lap_times(player), default=None) for _pos, player in shown}
-    fastest = min((best for best in bests.values() if best is not None), default=None)
+    bests = {id(player): min(player_lap_times(player), default=None) for player in order}
+    fastest = {}
+    for player in order:
+        group = classes.get(id(player))
+        best = bests[id(player)]
+        if best is not None and (group not in fastest or best < fastest[group]):
+            fastest[group] = best
     rows = [
         Row(
             'Driver',
@@ -2424,10 +2493,16 @@ def lap_times_rows(players, order=None, clock=0):
             right_color='accent',
         )
     ]
+    last_class = None
     for position, player in shown:
         name = player.name or '?'
         if len(name) > MAX_NAME_SHOWN:
             name = name[: MAX_NAME_SHOWN - 1] + '…'
+        group = classes.get(id(player))
+        if places is not None:
+            position = places[id(player)]
+        rule = group if group is not None and group != last_class else ''
+        last_class = group
         best = bests[id(player)]
         running = player_current_lap(player, clock)
         timed = player.pit_seconds is not None and not player.finished
@@ -2446,11 +2521,12 @@ def lap_times_rows(players, order=None, clock=0):
                     'lift'
                     if timed
                     else SESSION_BEST_COLOR
-                    if best is not None and best == fastest
+                    if best is not None and best == fastest.get(group)
                     else 'text'
                 ),
                 right='PIT' if plain_pit else bracket or time_now,
                 right_color='lift' if plain_pit or bracket else 'text',
+                rule=rule,
             )
         )
     return rows

@@ -260,11 +260,18 @@ def build(
     if name is not None:
         info = g.alloc_obj(g.klass('TS', 'EventPlayerInfo', [('m_profile', 0x10, False)]))
         profile = g.alloc_obj(
-            g.klass('TS', 'PlayerProfile', [('m_name', 0x10, False), ('flag', 0x40, False)])
+            g.klass(
+                'TS',
+                'PlayerProfile',
+                [('m_name', 0x10, False), ('flag', 0x40, False), ('teamTag', 0x48, False)],
+            )
         )
         text = g.alloc_obj(0, 0x14 + 2 * len(name) + 2)
         g.put(text + 0x10, struct.pack('<i', len(name)) + name.encode('utf-16-le'))
         g.q(profile + 0x10, text)
+        tag = g.alloc_obj(0, 0x14 + 2 * 3 + 2)
+        g.put(tag + 0x10, struct.pack('<i', 3) + 'GT3'.encode('utf-16-le'))
+        g.q(profile + 0x48, tag)
         g.put(profile + 0x40, struct.pack('<i', 75))  # Germany
         g.q(info + 0x10, profile)
         g.q(local + 0x40, info)
@@ -938,6 +945,9 @@ class CarTests(unittest.TestCase):
         players = reader.read().players
         me = next(p for p in players if p.local)
         self.assertEqual((me.name, me.flag, me.laps_completed), ('Fahrer Ö', 75, 1))
+        self.assertEqual(me.tag, 'GT3')  # the clan tag, read once per profile
+        self.assertEqual(len(reader._tags), 1)
+        self.assertEqual(next(p for p in reader.read().players if p.local).tag, 'GT3')
         self.assertEqual(me.checkpoints[0][0], 10_000)
         self.assertEqual(len(players), 1)  # the other one has no statistics: left out
 
