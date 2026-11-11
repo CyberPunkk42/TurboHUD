@@ -24,7 +24,6 @@ from PySide6.QtWidgets import (
     QLabel,
     QPushButton,
     QSizeGrip,
-    QStyle,
     QVBoxLayout,
     QWidget,
 )
@@ -42,6 +41,7 @@ from turbohud.core.hud import (
     hud_lines,
     level_bar,
     level_space,
+    panel_categories,
     pedal_bars,
     pedal_space,
     sector_bars,
@@ -83,7 +83,10 @@ LEVEL_SAMPLE = (0.7, 'ahead')  # a level bar in move mode, to place the section
 SECTORS_SAMPLE = Sectors(('#c77dff', '#5ee07a', None))  # the sector bars in move mode
 PANEL_COMBO_WIDTH = 56  # the move-mode panel's group lists: wide enough for '-' and A to D
 PANEL_SMALL_BUTTON = 32  # its one-character buttons (centre, match a group, delete a preset)
-PANEL_PRESET_BUTTON = 54  # its Save and Load buttons
+PANEL_PRESET_BUTTON = 54  # its Save, Load and Delete buttons
+PANEL_ALL_BUTTON = 44  # its All and None buttons above the Show column
+PANEL_HEADING = '#9fb8d8'  # the panel's small headings: the columns and the kinds of section
+PANEL_EMPTY = '#5d7799'  # the dot where a section has no such option
 RADAR_CAR_AT = 0.5  # the local car's height in the radar, from the top: the middle
 CONE_STEPS = 8  # points along a slipstream cone's far edge
 CONE_OUT, CONE_IN = 30, 80  # a slipstream cone's opacity (0-255): elsewhere, local car in it
@@ -729,6 +732,7 @@ class MovePanel(QWidget):
     quit_requested = Signal()
     settings_requested = Signal()
     wanted_changed = Signal(str, bool)  # section name, shown
+    all_wanted = Signal(bool)  # every section shown (Select all) or hidden (Deselect all)
     group_changed = Signal(str, str)  # section name, group ('' for none)
     align_requested = Signal(str, bool, bool)  # section name, centre across, centre down
     preset_save_requested = Signal(int)  # the preset's number
@@ -761,72 +765,122 @@ class MovePanel(QWidget):
         grid = QGridLayout()
         grid.setHorizontalSpacing(6)
         grid.setVerticalSpacing(0)
-        for column_, (text, tip) in enumerate(
-            (
-                ('Show', 'Tick to show the section'),
-                ('Group', 'Sections in the same group move together'),
-                ('Centre', 'Centre the section across (↔) or down (↕) the screen'),
-                ('', ''),
-                ('Mid text', 'Put the text in the middle of the box, not at its left'),
-                ('Tint', 'A light tint behind the text while locked; on the track map, its dark square'),
-            )
+        show = QHBoxLayout()
+        show.setSpacing(4)
+        show.addWidget(self._heading('Show', 'Tick to show the section'))
+        for text, wanted, tip in (
+            ('All', True, 'Show every section (one step for Undo)'),
+            ('None', False, 'Hide every section (one step for Undo)'),
         ):
-            if text:
-                heading = QLabel(f'<small>{text}</small>')
-                heading.setToolTip(tip)
-                grid.addWidget(heading, 0, column_, 1, 2 if text == 'Centre' else 1, Qt.AlignLeft)
-        for row, section in enumerate(sections, start=1):
-            box = QCheckBox(section.label)
-            box.setToolTip(f'Show {section.label.lower()}')
-            box.toggled.connect(lambda checked, name=section.name: self.wanted_changed.emit(name, checked))
-            grid.addWidget(box, row, 0)
-            self.boxes[section.name] = box
-            group = QComboBox()
-            group.addItems(['-', *GROUPS])
-            group.setToolTip('Sections in the same group move together')
-            group.setFixedWidth(PANEL_COMBO_WIDTH)
-            group.currentTextChanged.connect(
-                lambda text, name=section.name: self.group_changed.emit(name, '' if text == '-' else text)
-            )
-            group.currentTextChanged.connect(lambda _text: self._update_matches())
-            grid.addWidget(group, row, 1)
-            self.groups[section.name] = group
-            for column_, (text, tip, across, down) in enumerate(
-                (
-                    ('↔', 'Centre across the screen', True, False),
-                    ('↕', 'Centre down the screen', False, True),
-                ),
-                start=2,
-            ):
-                button = QPushButton(text)
-                button.setToolTip(tip)
-                button.setFixedWidth(PANEL_SMALL_BUTTON)
-                button.clicked.connect(
-                    lambda _checked=False, name=section.name, a=across, d=down: self.align_requested.emit(
-                        name, a, d
-                    )
-                )
-                grid.addWidget(button, row, column_)
-            if text_can_centre(section):
-                centre = QCheckBox()
-                centre.setToolTip('Put the text in the middle of the box, not at its left')
-                centre.toggled.connect(
-                    lambda checked, name=section.name: self.text_centred_changed.emit(name, checked)
-                )
-                grid.addWidget(centre, row, 4, Qt.AlignHCenter)
-                self.centres[section.name] = centre
-            if has_tint(section):
-                tint = QCheckBox()
-                tint.setToolTip(
-                    'The dark square behind the track map'
-                    if section.drawing
-                    else 'A light tint behind the text of this section while locked'
-                )
-                tint.toggled.connect(lambda checked, name=section.name: self.tint_changed.emit(name, checked))
-                grid.addWidget(tint, row, 5, Qt.AlignHCenter)
-                self.tints[section.name] = tint
+            button = QPushButton(text)
+            button.setFixedWidth(PANEL_ALL_BUTTON)
+            button.setToolTip(tip)
+            button.clicked.connect(lambda _checked=False, w=wanted: self._set_all(w))
+            show.addWidget(button)
+        show.addStretch()
+        grid.addLayout(show, 0, 0)
+        for column_, span, text, tip in (
+            (1, 1, 'Group', 'Sections in the same group move together'),
+            (2, 2, 'Centre', 'Centre the section across (↔) or down (↕) the screen'),
+            (4, 1, 'Mid text', 'Put the text in the middle of the box, not at its left'),
+            (5, 1, 'Tint', 'A light tint behind the text while locked; on the track map, its dark square'),
+        ):
+            grid.addWidget(self._heading(text, tip), 0, column_, 1, span, Qt.AlignHCenter | Qt.AlignBottom)
+        row = 0
+        for heading, listed in panel_categories(sections):
+            if heading:
+                row += 1
+                label = self._heading(heading.upper(), '')
+                label.setContentsMargins(0, 3, 0, 0)
+                grid.addWidget(label, row, 0, 1, 6)
+            for section in listed:
+                row += 1
+                self._section_row(grid, row, section)
         grid.setColumnStretch(6, 1)
         column.addLayout(grid)
+        self._finish(column, sections, shortcuts, saved_presets)
+
+    @staticmethod
+    def _heading(text, tip):
+        label = QLabel(f'<small><b>{text}</b></small>')
+        label.setStyleSheet(f'color: {PANEL_HEADING};')
+        if tip:
+            label.setToolTip(tip)
+        return label
+
+    @staticmethod
+    def _empty():
+        """A faint dot where a section has no such option."""
+        dot = QLabel('·')
+        dot.setStyleSheet(f'color: {PANEL_EMPTY};')
+        dot.setToolTip('Not for this section')
+        return dot
+
+    def _set_all(self, wanted):
+        """Select all / Deselect all: every tick box, and one request for the lot."""
+        for box in self.boxes.values():
+            box.blockSignals(True)
+            box.setChecked(wanted)
+            box.blockSignals(False)
+        self.all_wanted.emit(wanted)
+
+    def _section_row(self, grid, row, section):
+        box = QCheckBox(section.label)
+        box.setToolTip(f'Show {section.label.lower()}')
+        box.toggled.connect(lambda checked, name=section.name: self.wanted_changed.emit(name, checked))
+        grid.addWidget(box, row, 0)
+        self.boxes[section.name] = box
+        group = QComboBox()
+        group.addItems(['-', *GROUPS])
+        group.setToolTip('Sections in the same group move together')
+        group.setFixedWidth(PANEL_COMBO_WIDTH)
+        group.currentTextChanged.connect(
+            lambda text, name=section.name: self.group_changed.emit(name, '' if text == '-' else text)
+        )
+        group.currentTextChanged.connect(lambda _text: self._update_matches())
+        grid.addWidget(group, row, 1)
+        self.groups[section.name] = group
+        for column_, (text, tip, across, down) in enumerate(
+            (
+                ('↔', 'Centre across the screen', True, False),
+                ('↕', 'Centre down the screen', False, True),
+            ),
+            start=2,
+        ):
+            button = QPushButton(text)
+            button.setToolTip(tip)
+            button.setFixedWidth(PANEL_SMALL_BUTTON)
+            button.clicked.connect(
+                lambda _checked=False, name=section.name, a=across, d=down: self.align_requested.emit(
+                    name, a, d
+                )
+            )
+            grid.addWidget(button, row, column_)
+        if text_can_centre(section):
+            centre = QCheckBox()
+            centre.setToolTip('Put the text in the middle of the box, not at its left')
+            centre.toggled.connect(
+                lambda checked, name=section.name: self.text_centred_changed.emit(name, checked)
+            )
+            grid.addWidget(centre, row, 4, Qt.AlignHCenter)
+            self.centres[section.name] = centre
+        else:
+            grid.addWidget(self._empty(), row, 4, Qt.AlignHCenter)
+        if has_tint(section):
+            tint = QCheckBox()
+            tint.setToolTip(
+                'The dark square behind the track map'
+                if section.drawing
+                else 'A light tint behind the text of this section while locked'
+            )
+            tint.toggled.connect(lambda checked, name=section.name: self.tint_changed.emit(name, checked))
+            grid.addWidget(tint, row, 5, Qt.AlignHCenter)
+            self.tints[section.name] = tint
+        else:
+            grid.addWidget(self._empty(), row, 5, Qt.AlignHCenter)
+
+    def _finish(self, column, sections, shortcuts, saved_presets):
+        """Below the sections: matching a group, the presets, and the buttons."""
         self.text_sections = [section.name for section in sections if not section.drawing]
         self.matches = {}
         matches = QHBoxLayout()
@@ -844,19 +898,19 @@ class MovePanel(QWidget):
         matches.addStretch()
         column.addLayout(matches)
         self._update_matches()
-        presets = QHBoxLayout()
-        presets.setSpacing(2)
-        presets.addWidget(QLabel('Presets:'))
+        presets = QGridLayout()
+        presets.setHorizontalSpacing(4)
+        presets.setVerticalSpacing(0)
+        presets.addWidget(QLabel('Presets:'), 0, 0, Qt.AlignTop)
         self.preset_loads = {}
         self.preset_deletes = {}
-        for number in PRESETS:
-            presets.addSpacing(8)
-            presets.addWidget(QLabel(f'<b>{number}</b>'))
+        for line, number in enumerate(PRESETS):
+            presets.addWidget(QLabel(f'<b>{number}</b>'), line, 1, Qt.AlignRight)
             save = QPushButton('Save')
             save.setFixedWidth(PANEL_PRESET_BUTTON)
             save.setToolTip(f'Keep the layout as it is now in preset {number}, replacing what was there')
             save.clicked.connect(lambda _checked=False, n=number: self.preset_save_requested.emit(n))
-            presets.addWidget(save)
+            presets.addWidget(save, line, 2)
             load = QPushButton('Load')
             load.setFixedWidth(PANEL_PRESET_BUTTON)
             load.setToolTip(
@@ -866,18 +920,17 @@ class MovePanel(QWidget):
             )
             load.setEnabled(number in saved_presets)
             load.clicked.connect(lambda _checked=False, n=number: self.preset_load_requested.emit(n))
-            presets.addWidget(load)
+            presets.addWidget(load, line, 3)
             self.preset_loads[number] = load
-            delete = QPushButton()
-            delete.setIcon(self.style().standardIcon(QStyle.SP_TrashIcon))
-            delete.setFixedWidth(PANEL_SMALL_BUTTON)
+            delete = QPushButton('Delete')
+            delete.setFixedWidth(PANEL_PRESET_BUTTON)
             delete.setAccessibleName(f'Delete preset {number}')
             delete.setToolTip(f'Delete preset {number}; Undo brings it back')
             delete.setEnabled(number in saved_presets)
             delete.clicked.connect(lambda _checked=False, n=number: self.preset_delete_requested.emit(n))
-            presets.addWidget(delete)
+            presets.addWidget(delete, line, 4)
             self.preset_deletes[number] = delete
-        presets.addStretch()
+        presets.setColumnStretch(5, 1)
         column.addLayout(presets)
         row = QHBoxLayout()
         self.undo = QPushButton('Undo')

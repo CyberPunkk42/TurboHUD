@@ -75,6 +75,12 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-11: The move-mode panel tidied, asked for by the user: **All** and **None** beside the Show heading
+  show or hide every section at once, one step for Undo (`MovePanel.all_wanted`, the app's `set_all_wanted`);
+  the sections come under Timing, Car, Race and Other (`hud.panel_categories`); the column headings sit over
+  their boxes, and a faint dot marks an option a section does not have; the presets are a small table with
+  Save, Load and Delete (a word, where a bin icon was). 393 x 786 px, from 568 x 667 (still under the 800 px
+  the panel is held to). Tests; the panel rendered off screen, not yet seen on the Mac's screen.
 - 2026-11-11: The track map is learnt only from a clean lap, reported by the user: a first lap with a trip
   over the grass was learnt as the track and saved, so the map kept the detour in every later race there. A
   car's path now starts afresh while it has all four wheels off the tarmac (grip under 0.9; kerbs and a wheel

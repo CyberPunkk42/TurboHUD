@@ -368,6 +368,34 @@ RACE_SECTIONS = (
     Section('radar', 'Proximity radar', (), bar=(160, 160), drawing='radar'),
     Section('trackmap', 'Track map', (), bar=(240, 240), drawing='map'),
 )
+# The move-mode panel lists the sections under these headings (asked for by the user on
+# 2026-11-11); a section not named here comes under the last.
+PANEL_CATEGORIES = (
+    ('Timing', ('lap', 'current', 'delta', 'deltabar', 'times', 'laptimes')),
+    ('Car', ('fuel', 'fuelfinish', 'tires', 'health', 'draft', 'speed')),
+    ('Race', ('players', 'trackmap', 'radar', 'blueflag', 'yellowflag')),
+    ('Other', ('localtime', 'clock')),
+)
+
+
+def panel_categories(sections):
+    """[(heading, [sections])] for the move-mode panel, in PANEL_CATEGORIES' order, empty
+    headings left out; one heading alone is no heading ('', [all])."""
+    named = {name: index for index, (_heading, names) in enumerate(PANEL_CATEGORIES) for name in names}
+    found = [(heading, []) for heading, _names in PANEL_CATEGORIES]
+    for section in sections:
+        found[named.get(section.name, len(found) - 1)][1].append(section)
+    order = {name: place for _heading, names in PANEL_CATEGORIES for place, name in enumerate(names)}
+    kept = [
+        (heading, sorted(listed, key=lambda s: order.get(s.name, len(order))))
+        for heading, listed in found
+        if listed
+    ]
+    if len(kept) == 1:
+        return [('', kept[0][1])]
+    return kept
+
+
 CLOCK_SECTIONS = (
     Section('clock', 'Session time', ((Row('TurboHUD - session time', 'title'), Row('00:00', 'big')),)),
     Section('localtime', 'Local time', ((Row('00:00', 'medium'),),)),

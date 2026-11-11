@@ -985,3 +985,9 @@ its "Recent changes".
   in the air still count), nearly stands or goes backwards (`trackmap.driving_clean`), as after a respawn. A
   learnt track is saved with `clean`; one saved before still shows, and is learnt again and replaced from the
   next clean lap, so the tracks already saved mend themselves. Tests.
+- 2026-11-11: The move-mode panel tidied, asked for by the user: **All** and **None** beside the Show heading
+  show or hide every section at once, one step for Undo (`MovePanel.all_wanted`, the app's `set_all_wanted`);
+  the sections come under Timing, Car, Race and Other (`hud.panel_categories`); the column headings sit over
+  their boxes, and a faint dot marks an option a section does not have; the presets are a small table with
+  Save, Load and Delete (a word, where a bin icon was). 393 x 786 px, from 568 x 667 (still under the 800 px
+  the panel is held to). Tests; the panel rendered off screen, not yet seen on the Mac's screen.
