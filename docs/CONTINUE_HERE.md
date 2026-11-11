@@ -9,8 +9,9 @@ none is left.
    Mac" below), though it looks and works as before. To tell whether it helps at all: in one race, with the
    Metal HUD, a minute each of TurboHUD closed, every section shown, the same with
    `TURBOHUD_ONE_WINDOW=0 sh run_turbohud.sh`, one section shown in each of the two, and closed again.
-2. Build 2026.11.11.3 for the tester (`releases/`; it replaces 2026.11.11.2, with yellow flags, the gliding
-   delta bar, clean-lap track maps and the tidier panel added; Part 4 and 6 of the sheet look at them), with
+2. Build 2026.11.11.4 for the tester (`releases/`; it replaces 2026.11.11.3, which replaced 2026.11.11.2, with yellow flags, the gliding
+   delta bar, clean-lap track maps and the tidier panel added, and the yellow flag as a yellow box; Part 4
+   and 6 of the sheet look at them), with
    `TurboHUD-test-instructions.md` for it: a race joined online (point 2b), the new delta bar, the Rust
    reader (the Python one as fallback, `TURBOHUD_PY_READER=1`), and five FPS measurements in one race
    against AI: closed; one window with every section, then only the local time; a window each
