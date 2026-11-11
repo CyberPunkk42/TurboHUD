@@ -748,6 +748,7 @@ class MovePanel(QWidget):
     preset_delete_requested = Signal(int)
     match_requested = Signal(str)  # the group
     undo_requested = Signal()
+    relearn_requested = Signal()  # forget the current track's map and learn it again
     tint_changed = Signal(str, bool)  # section name, a tint behind its text
     text_centred_changed = Signal(str, bool)  # section name, its text in the middle of its box
 
@@ -946,6 +947,16 @@ class MovePanel(QWidget):
         self.undo.setEnabled(False)
         self.undo.clicked.connect(self.undo_requested)
         row.addWidget(self.undo)
+        self.relearn = None  # only with a track map
+        if any(section.drawing == 'map' for section in sections):
+            self.relearn = QPushButton('Relearn map')
+            self.relearn.setToolTip(
+                'Forget the map of the track being raced (also the saved one);\n'
+                'the next clean lap any car drives draws it again'
+            )
+            self.relearn.setEnabled(False)
+            self.relearn.clicked.connect(self.relearn_requested)
+            row.addWidget(self.relearn)
         lock = QPushButton('Lock')
         settings = QPushButton('Settings…')
         settings.setToolTip('Colours, sizes, warning times and the options for the whole HUD')
@@ -1003,6 +1014,11 @@ class MovePanel(QWidget):
 
     def set_undo_available(self, available):
         self.undo.setEnabled(available)
+
+    def set_relearn_available(self, available):
+        """Relearn map works only while a track is known (in a race)."""
+        if self.relearn is not None:
+            self.relearn.setEnabled(available)
 
     def mousePressEvent(self, event):
         # Dragged by its background, out of the way of a section if need be.

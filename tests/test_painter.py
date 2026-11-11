@@ -952,11 +952,41 @@ class MovePanelPresetTests(unittest.TestCase):
 
         panel = self.panel(saved_presets=(1,))
         panel.show()
-        words = ('All', 'None', 'Save', 'Load', 'Delete', 'Undo', 'Lock', 'Settings…', 'Quit TurboHUD')
+        words = (
+            'All',
+            'None',
+            'Save',
+            'Load',
+            'Delete',
+            'Undo',
+            'Relearn map',
+            'Lock',
+            'Settings…',
+            'Quit TurboHUD',
+        )
         buttons = [b for b in panel.findChildren(QPushButton) if b.text() in words]
         self.assertEqual({b.text() for b in buttons}, set(words))
         for button in buttons:
             self.assertGreaterEqual(button.width(), button.sizeHint().width(), button.text())
+
+    def test_relearn_map_works_only_while_a_track_is_known(self):
+        from turbohud.core.hud import CLOCK_SECTIONS
+        from turbohud.overlay.window import MovePanel
+
+        panel = self.panel()
+        self.assertFalse(panel.relearn.isEnabled())
+        asked = []
+        panel.relearn_requested.connect(lambda: asked.append(True))
+        panel.set_relearn_available(True)
+        self.assertTrue(panel.relearn.isEnabled())
+        panel.relearn.click()
+        self.assertEqual(asked, [True])
+        clock = MovePanel(
+            type('Native', (), {'raise_window': lambda self, w: 'test'})(), CLOCK_SECTIONS, True
+        )
+        self.addCleanup(clock.close)
+        self.assertIsNone(clock.relearn)  # no track map, no button
+        clock.set_relearn_available(True)
 
     def test_the_panel_stays_compact(self):
         # It was 675 x 978 px with the options and a row per preset: most of a laptop's screen.

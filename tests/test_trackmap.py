@@ -221,6 +221,34 @@ class LearntTrackTests(unittest.TestCase):
             files[0].write_text('{broken')
             self.assertIsNone(trackmap.TrackMap(folder=folder).update(state([me]), [me]))
 
+    def test_relearn_forgets_the_track_saved_too_and_learns_it_from_the_next_clean_lap(self):
+        # Asked for by the user on 2026-11-11, for a map learnt wrong.
+        with tempfile.TemporaryDirectory() as folder:
+            tracks = Path(folder) / trackmap.TRACKS_FOLDER
+            other = trackmap.TrackMap(folder=folder)
+            drive(other, LINES + 1.5, OFF_GATES)  # another track's map stays
+            track_map = trackmap.TrackMap(folder=folder)
+            self.assertFalse(track_map.has_track)
+            self.assertFalse(track_map.relearn())  # no track known yet
+            drive(track_map, LINES + 1.5)
+            file = tracks / f'{trackmap.track_key(GATES)}.json'
+            self.assertTrue(file.exists())
+            self.assertTrue(track_map.has_track)
+            self.assertTrue(track_map.relearn())
+            self.assertFalse(file.exists())
+            self.assertTrue((tracks / f'{trackmap.track_key(OFF_GATES)}.json').exists())
+            self.assertIsNone(track_map.learned)
+            me = driver('Me', 0.5, local=True)
+            self.assertIsNone(trackmap.TrackMap(folder=folder).update(state([me]), [me]))  # nothing saved
+            view = drive(track_map, LINES + 4, since=LINES + 1.55)
+            self.assertFalse(view.outline.closed)  # the stretch driven since, not the old map
+            drive(track_map, 2 * LINES + 3, since=LINES + 4.05)
+            self.assertIsNotNone(track_map.learned)  # the next whole clean lap
+            self.assertTrue(file.exists())
+            self.assertTrue(track_map.relearn())  # a second time, and with no file left, too
+            file.unlink(missing_ok=True)
+            self.assertTrue(track_map.relearn())
+
     def test_one_read_is_no_map(self):
         me = car('Me', 3, local=True)
         self.assertIsNone(trackmap.TrackMap().update(state([me]), [me]))

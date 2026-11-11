@@ -263,6 +263,7 @@ def run(args, folder):
 
     live = start_live_race()
     pad = None
+    track_map = None  # the live race's TrackMap, for Relearn
     if live is not None:
         from turbohud.core.race import (
             RACING,
@@ -418,6 +419,7 @@ def run(args, folder):
             native.take_focus()
             history.resume(layout_state())
             panel.set_undo_available(history.can_undo(history.current))
+            relearn_available()
             panel.show_at(*panel_spot())
             log.info('move mode')
 
@@ -543,6 +545,16 @@ def run(args, folder):
         show_option('map_others', others)
         save()
         log.info('other cars on the track map %s', 'on' if others else 'off')
+
+    def relearn_track():
+        """Forget the current track's map; the next clean lap learns it again."""
+        if track_map is None or not track_map.relearn():
+            log.info('relearn the track map: no track known yet')
+
+    def relearn_available():
+        available = track_map is not None and track_map.has_track
+        relearn_action.setEnabled(available)
+        panel.set_relearn_available(available)
 
     mover = GroupMover()
     group_moving = False  # a group followed a drag at the last look
@@ -864,6 +876,11 @@ def run(args, folder):
     map_others_action.triggered.connect(lambda checked: set_map_others(checked))
     if any(section.drawing == 'map' for section in layout):
         menu.addAction(map_others_action)
+    relearn_action = QAction('Relearn this track\'s map', menu)
+    relearn_action.setToolTip('Forget the map of the track being raced; the next clean lap draws it again')
+    relearn_action.triggered.connect(lambda: relearn_track())
+    if any(section.drawing == 'map' for section in layout):
+        menu.addAction(relearn_action)
     settings_action = QAction('Settings…', menu)
     settings_action.triggered.connect(lambda: open_settings())
     menu.addAction(settings_action)
@@ -926,6 +943,8 @@ def run(args, folder):
     panel.preset_delete_requested.connect(delete_preset)
     panel.match_requested.connect(match_group)
     panel.undo_requested.connect(undo)
+    panel.relearn_requested.connect(relearn_track)
+    menu.aboutToShow.connect(relearn_available)
     panel.text_centred_changed.connect(set_text_centred)
     panel.tint_changed.connect(set_tint)
     panel.settings_requested.connect(open_settings)
@@ -987,6 +1006,8 @@ def run(args, folder):
                 return
         began = time.perf_counter()
         current = contents()
+        if not locked:
+            relearn_available()  # a race may start or end while the panel is open
         if live is not None:
             text = tray_text(status_text(live.snapshot()), live.warning())
             if text != shown_status:

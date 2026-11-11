@@ -171,6 +171,9 @@ starting TurboHUD again.
   the first lap and is complete once any car has driven a whole clean lap (not through the
   grass with all four wheels, nor standing or going backwards); after that it is saved and
   shows at once. A map saved by an older TurboHUD is learnt again from the next clean lap.
+  If a map was learnt wrong, **Relearn this track's map** (TurboHUD icon's menu) or
+  **Relearn map** (move-mode panel), during a race on that track, forgets it, the saved
+  one too: the map then grows again and is learnt from the next whole clean lap.
 - The move-mode panel lists the sections under Timing, Car, Race and Other. **All** and
   **None** next to **Show** show or hide every section at once (one step for **Undo**).
 - Every section has **↔** and **↕** buttons under **Centre** in the move-mode panel: they

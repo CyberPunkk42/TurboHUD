@@ -354,6 +354,28 @@ class TrackMap:
         except OSError as error:
             log.warning('track map: could not save the learnt track: %s', error)
 
+    @property
+    def has_track(self):
+        """Whether a track is known now (its checkpoint lines read), so it can be relearnt."""
+        return bool(self._gates)
+
+    def relearn(self):
+        """Forget the current track's map, the saved one too, so the next clean lap any
+        car drives learns it again (asked for by the user on 2026-11-11, for a map learnt
+        wrong). False when no track is known."""
+        if not self._gates:
+            return False
+        path = self._file(self._gates)
+        if path is not None:
+            try:
+                path.unlink(missing_ok=True)
+            except OSError as error:
+                log.warning('track map: could not delete the learnt track: %s', error)
+        self.learned, self.clean = None, False
+        self.paths, self._partial = TrackPaths(), None
+        log.info('track map: forgotten, learnt again from the next clean lap')
+        return True
+
     def outline(self, players, gates, laps):
         """The outline to draw: the learnt lap, or the longest stretch driven so far."""
         if gates != self._gates:
