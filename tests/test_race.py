@@ -2059,7 +2059,7 @@ class RowsTests(unittest.TestCase):
 
 
 class YellowFlagTests(unittest.TestCase):
-    """Yellow flags from every other car's speed, wheel surfaces and respawns (asked for by
+    """Yellow flags from every car's speed, wheel surfaces and respawns (asked for by
     the user on 2026-11-11; what TSU keeps of other cars online: experiments/README.md)."""
 
     TARMAC, KERB, GRASS = (1.0,) * 4, (0.93,) * 4, (0.5,) * 4
@@ -2266,11 +2266,32 @@ class YellowFlagTests(unittest.TestCase):
             self.assertEqual(self.drive(flags, 13.0, car), ())
         flags = race.YellowFlags()
         me = race.LapState(clock=0, time_limit=0, laps_completed=1, laps_to_finish=20, lap_starts=[0, 0])
-        stopped_me = dataclasses.replace(
-            me, players=(self.car('Me', speed=0.0, local=True),), gates=self.GATES
+        pitted = dataclasses.replace(  # my own car counts too, but not in the pits
+            me, players=(self.car('Me', speed=0.0, local=True, in_pit=True),), gates=self.GATES
         )
-        flags.update(stopped_me)
-        self.assertEqual(flags.update(dataclasses.replace(stopped_me, clock=3 * race.UNITS_PER_SECOND)), ())
+        flags.update(pitted)
+        self.assertEqual(flags.update(dataclasses.replace(pitted, clock=3 * race.UNITS_PER_SECOND)), ())
+
+    def test_my_own_incident_flags_me_too(self):
+        # Asked for by the user on 2026-11-11: the driver who caused the flag sees it as well.
+        flags = race.YellowFlags()
+        me = race.LapState(
+            clock=0, time_limit=0, laps_completed=1, laps_to_finish=20, lap_starts=[0, 0], gates=self.GATES
+        )
+        on_grass = (self.car('Me', grips=self.GRASS, local=True),)
+        flags.update(dataclasses.replace(me, players=on_grass))
+        later = dataclasses.replace(me, players=on_grass, clock=round(0.6 * race.UNITS_PER_SECOND))
+        found = flags.update(later)
+        self.assertEqual(self.kinds(found), [('Me', 'off track')])
+        rows = race.yellow_rows(found, later)
+        self.assertEqual(rows[0].text, 'YELLOW  -  Sector 2')
+        self.assertTrue(rows[1].text.endswith('Me  off track'))
+
+    def test_my_own_stopped_car_is_no_hazard_ahead(self):
+        flags = race.YellowFlags()
+        state = self.hazard_state(10.0, me_speed=0.0)
+        mine = race.Incident('Me', 'stopped', 1)
+        self.assertIsNone(flags.hazard(state, (mine,), self.along_x))
 
     def test_turned_off_and_on_again_it_starts_afresh(self):
         flags = race.YellowFlags()

@@ -10,7 +10,7 @@ Open from 2026-11-11 (the user stopped there; all merged):
   against a window each, on the power adapter), Part 4 (panel buttons, None then Undo, the delta bar, a
   yellow flag against AI), Part 6 (at least three online races: seconds to show, `quick look: race found`
   from race 2, yellow flags online), the Part 7 log.
-- The user's own race from source: yellow flags (too eager, too late, wrong sectors? thresholds are first
+- The user's own race from source: yellow flags (your own car's too, since 2026-11-11; too eager, too late, wrong sectors? thresholds are first
   guesses: `YELLOW_*` in `turbohud/core/race.py`), the gliding delta bar (smooth enough?), a broken track map
   mending after a clean lap, a purple sector turning green, the Yellow flags tick box in the menu and
   Settings (not seen in the app: an off-screen start of the app crashes on the Mac).
