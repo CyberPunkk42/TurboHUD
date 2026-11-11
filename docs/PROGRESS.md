@@ -913,3 +913,13 @@ its "Recent changes".
   has moved the other way by 0.05 s a second for 0.25 s, then fades over through yellow in about 0.4 s. A
   lap starts green when ahead and red when behind. The fill is a little darker than the text colours, so the
   delta reads on it. Checked off screen (a rendered preview); not yet seen in a race.
+- 2026-11-11: Online races on Macs whose TSU writes no race log, found with the tester in a session the user
+  hosted: the tester saw only the clock in every race joined as a client (the user's sessions and the event
+  server), in every build since 2026.11.09, and the log showed `TSU: waiting for race (m_activeServer is null)`
+  with no search. His TSU had stopped writing its log on 8 Nov: the newest log held only "Log started." and
+  "Log ended.", so TurboHUD took it that no event ran and never searched. Now a TSU log says something only
+  when it was written since TSU started (the reader asks Windows for TSU's start, `GetProcessTimes`, with the
+  read-only access it has) and names an event; else it is not known and the search goes ahead, in the Rust
+  reader and the Python one. TurboHUD's log says what TSU's log says when that changes (`TSU's log: ...`).
+  Checked in the bottle on the user's Mac: TSU's start matches macOS's to the second, the live log still
+  counts, a log older than TSU's start does not. Not yet seen on the tester's Mac (needs a new build).

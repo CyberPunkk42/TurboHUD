@@ -477,6 +477,7 @@ class LapReader:
         online race while there is one (turbohud.tsu.gamelog)."""
         self.il = il2cpp
         self._event_running = event_running
+        self._log_said = 'unasked'  # what TSU's log said last, logged when it changes
         self.services_class = il2cpp.find_class('TS', 'Services')
         self._clock = clock
         self._reckoning = DeadReckoning()  # positions where the game keeps none (online client)
@@ -668,11 +669,11 @@ class LapReader:
         if self._clock() < self._next_search:
             # A long wait ends with the event, so that the next race is found soon.
             long_wait = self._search_wait > CLIENT_SEARCH_EVERY and self._event_running is not None
-            if long_wait and self._event_running() is False:
+            if long_wait and self._log_says() is False:
                 self._search_wait, self._empty_since = CLIENT_SEARCH_EVERY, None
                 self._next_search = self._clock() + CLIENT_LOG_EVERY
             raise error
-        if self._event_running is not None and self._event_running() is False:
+        if self._event_running is not None and self._log_says() is False:
             # Menus and lobbies: no event, nothing to search for (a search reads all
             # of the game's data and keeps a CPU core busy for over a second).
             self._search_wait, self._empty_since = CLIENT_SEARCH_EVERY, None
@@ -746,6 +747,16 @@ class LapReader:
         )
         self._found_at = self._spectated
         return state
+
+    def _log_says(self):
+        """Whether TSU's log says an event runs (True, False, None for not known), logged
+        when that changes: a log that keeps saying no event stops every search."""
+        said = self._event_running()
+        if said != self._log_said:
+            self._log_said = said
+            text = {True: 'an event runs', False: 'no event runs'}.get(said, 'not known (searching anyway)')
+            log.info("TSU's log: %s", text)
+        return said
 
     def _from_the_last(self, controller):
         """For the log: how far a race found is from the last one, which tells whether

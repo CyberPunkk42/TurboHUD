@@ -31,7 +31,25 @@ class EventLogTests(unittest.TestCase):
     def test_running_between_started_and_ended(self):
         self.assertTrue(gamelog.running_in(b'2026-11-01 23:33:21: Event started.\n[x] A disconnected.\n'))
         self.assertFalse(gamelog.running_in(b'Event started.\nEvent ended.\nSession ended.\n'))
-        self.assertFalse(gamelog.running_in(b'Event 1 / 5 is about to start in X.\n'))
+        self.assertFalse(gamelog.running_in(b'Event ended.\n'))
+
+    def test_a_log_without_an_event_says_nothing(self):
+        # A tester's Mac (2026-11-11): TSU's newest log held only these two lines.
+        self.assertIsNone(gamelog.running_in(b'2026-11-08 21:54:56: Log started.\n21:54:57: Log ended.\n'))
+        self.assertIsNone(gamelog.running_in(b'Event 1 / 5 is about to start in X.\n'))
+        self.write('log.20261108.215456.txt', 'Log started.\nLog ended.\n')
+        self.assertIsNone(self.log().running())  # so the search goes ahead
+
+    def test_a_log_from_before_tsu_started_says_nothing(self):
+        self.write('log.20261108.214000.txt', 'Event started.\nEvent ended.\n', age=3 * 86400)
+        started = time.time() - 600
+        self.assertIsNone(gamelog.EventLog(self.folder, since=started).running())
+
+    def test_a_log_written_since_tsu_started_counts(self):
+        self.write('log.20261111.002007.txt', 'Event started.\n', age=60)
+        started = time.time() - 600
+        self.assertTrue(gamelog.EventLog(self.folder, since=started).running())
+        self.assertTrue(gamelog.EventLog(self.folder, since=None).running())  # start not known
 
     def test_the_newest_log_counts(self):
         self.write('log.20261101.210000.txt', 'Event started.\n', age=3600)

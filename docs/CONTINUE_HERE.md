@@ -15,6 +15,11 @@ none is left.
    (`TURBOHUD_ONE_WINDOW=0`) with every section, then only the local time. Put their results under
    "Tester's Mac", with the quick look, the log (`(the Rust reader)`, the `race reads` median), whether a
    reader was left and whether TSU froze. Results of 2026.11.09.2, if they come, go there too.
+2b. The tester's TSU writes no race log (2026-11-11), so TurboHUD never searched for races he joined online
+   and showed only the clock; fixed the same day (`RESUME.md`). Next tester build: check a race joined as a
+   client (a session the user hosts, and the event server) shows the HUD, and that the log has
+   `TSU's log: not known (searching anyway)` then `search: race found`. He ran TurboHUD from the disk image
+   that time: install it into Applications first.
 3. At each quit of TSU the user notes whether it froze and whether TurboHUD ran ("Other points").
 4. When one comes up: a special event (map expected), King of the Hill or Sumo (no map), a track without
    sector lines (3 even sector bars expected), joining as a driver after spectating.

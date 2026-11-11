@@ -156,7 +156,7 @@ def main():
         service = Service(
             process,
             lambda: metadata_path(process.image_path()),
-            EventLog(tsu_data()).running,
+            EventLog(tsu_data(), since=process.started()).running,
             WINE_SEARCH_SHARE if under_wine() else 1.0,
         )
         service.serve(source, sink)
