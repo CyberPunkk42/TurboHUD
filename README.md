@@ -188,7 +188,9 @@ starting TurboHUD again.
   map's **Tint** turns its dark square on (the default) or off.
 - The **proximity radar** shows your car and the cars around you when one is within
   half a second behind or ahead (faint) up to alongside (fully visible): red beside you, yellow
-  closing in.
+  closing in. It shows at most about six car lengths ahead and behind, so the cars stay large; a car
+  further off that already counts (with a longer warning time in **Settings…**) is an arrow at the
+  top or bottom edge, fainter the further away it is.
 - The **track map** shows the track from above with you (a white ring), the race leader
   (gold), the next car ahead (red) and the next car behind (green); when you pass a
   car, the next one ahead takes the red dot. Smaller bluish dots are backmarkers (cars

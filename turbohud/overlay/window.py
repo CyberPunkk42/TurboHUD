@@ -90,6 +90,9 @@ PANEL_SMALL_BUTTON = 32  # its one-character buttons (centre, match a group, del
 PANEL_WORD_BUTTON = 54
 PANEL_HEADING = '#9fb8d8'  # the panel's small headings: the columns and the kinds of section
 PANEL_EMPTY = '#5d7799'  # the dot where a section has no such option
+RADAR_ARROW = 1.2  # a car past the radar's edge: an arrow this many times a car's width each side
+RADAR_ARROW_LEAST = 7.0  # ... and at least this many pixels
+RADAR_ARROW_FADE = 0.6  # its opacity falls by this much from beside the edge to the warning time
 RADAR_CAR_AT = 0.5  # the local car's height in the radar, from the top: the middle
 CONE_STEPS = 8  # points along a slipstream cone's far edge
 CONE_OUT, CONE_IN = 30, 80  # a slipstream cone's opacity (0-255): elsewhere, local car in it
@@ -499,14 +502,38 @@ class SectionWindow(QWidget):
             for blip in view.blips:
                 if blip.in_cone is not None:
                     cone(blip)
-        for blip in view.blips:
+
+        def blip_color(blip):
             if blip.seconds is not None and blip.seconds <= RADAR_FULL:
-                color = BEHIND_COLOR
-            elif blip.seconds is not None and blip.seconds <= view.within:
-                color = LIFT_COLOR
-            else:
-                color = RADAR_OTHER
-            car(blip.ahead, blip.side, blip.angle, color)
+                return BEHIND_COLOR
+            if blip.seconds is not None and blip.seconds <= view.within:
+                return LIFT_COLOR
+            return RADAR_OTHER
+
+        def edge(blip, color):
+            """A car past the top (ahead) or bottom (behind) edge: an arrow pointing its way,
+            fainter the further off it is."""
+            up = blip.ahead > 0
+            size = max(w * RADAR_ARROW, RADAR_ARROW_LEAST)
+            x = min(max(centre.x() + blip.side * per_unit, box.left() + size), box.right() - size)
+            tip = box.top() + 3 if up else box.bottom() - 3
+            base = tip + size if up else tip - size
+            fade = 1.0 - RADAR_ARROW_FADE * min(
+                (blip.seconds if blip.seconds is not None else view.within) / max(view.within, 0.01), 1.0
+            )
+            painter.save()
+            painter.setOpacity(painter.opacity() * fade)
+            painter.setPen(QPen(QColor(0, 0, 0, 160), 1))
+            painter.setBrush(QColor(color))
+            painter.drawPolygon(
+                QPolygonF([QPointF(x, tip), QPointF(x - size, base), QPointF(x + size, base)])
+            )
+            painter.restore()
+
+        for blip in view.blips:
+            if abs(blip.ahead) > view.view:
+                continue  # an arrow at the edge, drawn last (edge)
+            car(blip.ahead, blip.side, blip.angle, blip_color(blip))
             if blip.in_cone:  # the car being drafted: a cyan outline
                 painter.save()
                 painter.translate(centre.x() + blip.side * per_unit, centre.y() - blip.ahead * per_unit)
@@ -517,6 +544,9 @@ class SectionWindow(QWidget):
                 painter.restore()
         car(0.0, 0.0, 0.0, RADAR_ME)
         painter.setClipping(False)
+        for blip in view.blips:  # beyond the radar's reach (RADAR_VIEW_MAX): an arrow at its edge
+            if abs(blip.ahead) > view.view:
+                edge(blip, blip_color(blip))
         painter.setOpacity(1.0)
         if not self.locked:
             painter.setPen(QPen(QColor(*BORDER), 2))

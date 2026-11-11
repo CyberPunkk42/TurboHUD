@@ -1181,3 +1181,9 @@ its "Recent changes".
   incidents (off track, slow, stopped, spun, wrong way, respawned) count like everyone else's, so its own HUD shows
   the box with its name, the map rings it and turns its sector yellow. Not in the pits, as for every car. The
   hazard warning (CAR STOPPED AHEAD, WRONG WAY AHEAD) leaves the local car out. Tests. Not yet seen in a race.
+- 2026-11-11: The proximity radar no longer zooms out to fit a far car, reported by the user (players found the
+  cars too small): it zoomed out with speed and the warning time (at 3 s, about 190 units each way, cars a few pixels).
+  It now shows at most `RADAR_VIEW_MAX` (24 units, six car lengths; 38 before at racing speed with the default 0.5 s),
+  so on a 200 px radar a car is about 8 by 23 px, a third larger. A car that counts beyond that is an arrow at the top
+  or bottom edge in its usual colour, fainter the further off it is (`radar_reach` for what counts). Tests; drawn off
+  screen. Not yet seen in a race.

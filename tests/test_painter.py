@@ -159,6 +159,30 @@ class RedrawTests(unittest.TestCase):
         self.assertEqual(image.pixelColor(40, 40).alpha(), 0)  # away from the lines and the cars
         self.assertGreater(image.pixelColor(100, 100).alpha(), 0)  # the local car, in the middle
 
+    def test_a_car_past_the_radars_edge_is_an_arrow_there(self):
+        # Asked for by the user on 2026-11-11: the radar no longer zooms out to fit a far car.
+        from turbohud.core.hud import RACE_SECTIONS
+        from turbohud.core.race import RADAR_VIEW_MAX, Blip, RadarView
+        from turbohud.core.settings import Theme
+        from turbohud.overlay.window import SectionWindow
+
+        class Native:
+            def raise_window(self, window):
+                return 'test'
+
+        window = SectionWindow(Native(), Theme(), next(s for s in RACE_SECTIONS if s.name == 'radar'))
+        self.addCleanup(window.close)
+        window.resize(200, 200)
+
+        def shown(ahead):
+            view = RadarView(1.0, (Blip(ahead, 0.0, 0.0, 0.2),), RADAR_VIEW_MAX, within=1.0)
+            window.show_content([], radar=view)
+            image = window.grab().toImage()
+            return sum(image.pixelColor(x, y).alpha() > 0 for x in range(85, 116) for y in range(3, 14))
+
+        far_ahead, far_behind = shown(RADAR_VIEW_MAX * 2), shown(-RADAR_VIEW_MAX * 2)
+        self.assertGreater(far_ahead, far_behind + 20)  # an arrow at the top edge only for a car far ahead
+
     def test_the_move_mode_sample_follows_the_cone_option(self):
         from turbohud.core.hud import RACE_SECTIONS
         from turbohud.core.settings import Theme
