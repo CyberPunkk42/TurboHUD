@@ -1,10 +1,26 @@
 # Continue here
 
-Where the work stopped on 2026-11-10, on the Mac. Everything below was merged into `main`
+Where the work stopped on 2026-11-11, on the Mac. Everything below was merged into `main`
 and nothing was pushed or tagged. Delete a point when it is settled, and this file when
 none is left.
 
 ## Next session
+Open from 2026-11-11 (the user stopped there; all merged):
+- The tester's results with build 2026.11.11.4 (`TurboHUD-test-instructions.md`): Part 3 FPS (one window
+  against a window each, on the power adapter), Part 4 (panel buttons, None then Undo, the delta bar, a
+  yellow flag against AI), Part 6 (at least three online races: seconds to show, `quick look: race found`
+  from race 2, yellow flags online), the Part 7 log.
+- The user's own race from source: yellow flags (too eager, too late, wrong sectors? thresholds are first
+  guesses: `YELLOW_*` in `turbohud/core/race.py`), the gliding delta bar (smooth enough?), a broken track map
+  mending after a clean lap, a purple sector turning green, the Yellow flags tick box in the menu and
+  Settings (not seen in the app: an off-screen start of the app crashes on the Mac).
+- The delta against TSU's ghost: the tester's bar seemed late against his ghost, as it compares with his
+  best lap of the race, not the ghost. To follow the ghost: a recording of a race against a ghost with
+  `experiments/tsu_race_recorder.py`, then `EventPlayer.m_comparedTimes` /
+  `m_ghostRecordingPlayerToCompareWith`.
+- The move-mode panel is 400 x 914 points with the macOS buttons: if too tall on a 14" MacBook, presets on
+  one line.
+
 1. The one-window HUD gave no gain that showed on 2026-11-10 ("One-window HUD and reads on the user's
    Mac" below), though it looks and works as before. To tell whether it helps at all: in one race, with the
    Metal HUD, a minute each of TurboHUD closed, every section shown, the same with
