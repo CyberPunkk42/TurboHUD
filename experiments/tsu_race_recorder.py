@@ -1,4 +1,4 @@
-"""Record every car of a race, to work out yellow flags (Mac, through the reader in the bottle).
+r"""Record every car of a race, and each event's mode, to work out yellow flags and the arena modes.
 
 What TurboHUD would need for a yellow flag is the state of the other cars: off the track, slow or
 stopped, spun, wrecked. This records, while the user drives:
@@ -8,28 +8,40 @@ stopped, spun, wrecked. This records, while the user drives:
 - the track's checkpoint lines (whether they reach the track's edges is one of the questions);
 - twice a second, every simple field of each car's TS.EventPlayer, TS.Vehicle, its state and its
   state updater, and of the objects they point to whose names sound useful (wreck, stuck, respawn,
-  wrong way, surface, wheels, shortcut): only the fields that changed, so the file stays small.
+  wrong way, surface, wheels, shortcut): only the fields that changed, so the file stays small;
+- for every event, its type (`kind: event`: mode, level type, the classes of its objects), and twice
+  a second every simple field of the event's state, controller, logic and settings, and of the
+  objects they point to whose names sound like a mode's (score, team, flag, hill, zone, ball, goal,
+  round): only the fields that changed, as `player: -1`. Also while the race itself cannot be read,
+  as may be so in an arena mode (Sumo, King of the Hill, Capture the flag, Battle, Soccer, Tag).
 
 Afterwards the file tells which of TSU's fields change for which cars (the local one, AI, other
-players online) when a car leaves the track, stops, spins or is wrecked.
+players online) when a car leaves the track, stops, spins or is wrecked, and what each event mode
+keeps (scores, the hill, the flags).
 
-Close TurboHUD, start TSU, then in Terminal from the repository:
+Start TSU (TurboHUD may run too: both only read), then from the repository:
 
-    .buildtools/venv/bin/python -B experiments/tsu_race_recorder.py            # until Ctrl+C
-    .buildtools/venv/bin/python -B experiments/tsu_race_recorder.py --minutes 15
+    .buildtools/venv/bin/python -B experiments/tsu_race_recorder.py              # Mac, until Ctrl+C
+    .buildtools\venv\Scripts\python.exe -B experiments\tsu_race_recorder.py     # Windows
+    ... --minutes 15                                                             # stop after 15 min
 
-It waits for a race, records until Ctrl+C (or the minutes are up), and writes to
-~/Library/Application Support/TurboHUD/recordings/race-<date>-<time>.jsonl.gz. That file holds
-player names: it stays on this Mac and never goes into the repository. Only reads TSU's memory.
+On the Mac it reads through the reader in the bottle, on Windows TSU straight. It waits for a race,
+records until Ctrl+C (or the minutes are up), and writes `race-<date>-<time>.jsonl.gz` to
+~/Library/Application Support/TurboHUD/recordings (Mac) or %APPDATA%\TurboHUD\recordings
+(Windows). That file holds player names: it stays on this computer and never goes into the
+repository. Only reads TSU's memory.
 """
 
 import argparse
 import gzip
 import json
+import logging
+import os
 import re
 import struct
 import sys
 import time
+import zlib
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -38,6 +50,7 @@ from turbohud.core.il2cpp import SIMPLE_TYPES, TYPE_VALUETYPE, NotFound, ReadErr
 
 RACE_EVERY = 0.1  # seconds between race reads
 FIELDS_EVERY = 0.5  # seconds between looks at the raw fields
+SAVE_EVERY = 5.0  # seconds between bringing the file up to date: at most this much is lost on a kill
 REFERENCE_TYPES = (0x12, 0x15, 0x1C)  # class, generic instance, object
 TYPE_STRING = 0x0E
 DEPTH = 2  # steps from a car's own objects that are followed, by interesting names
@@ -45,7 +58,21 @@ DEPTH = 2  # steps from a car's own objects that are followed, by interesting na
 INTERESTING = re.compile(
     r'wreck|stuck|respawn|wrongway|surface|wheel|shortcut|damage|health|ground|recorder', re.IGNORECASE
 )
-FOLDER = Path.home() / 'Library' / 'Application Support' / 'TurboHUD' / 'recordings'
+# Objects one step from the event's own that are worth a look, by the name of the field leading there.
+EVENT_INTERESTING = re.compile(
+    r'mode|score|team|flag|hill|zone|ball|goal|round|point|tag|sumo|arena|battle|collect|capture|king',
+    re.IGNORECASE,
+)
+EVENT_PLAYER = -1  # the `player` of the event's own records
+
+
+def folder(platform=sys.platform, environ=None, home=None):
+    """Where recordings go: beside TurboHUD's settings, never in the repository."""
+    environ = os.environ if environ is None else environ
+    home = Path(home or Path.home())
+    if platform == 'win32':
+        return Path(environ.get('APPDATA') or home) / 'TurboHUD' / 'recordings'
+    return home / 'Library' / 'Application Support' / 'TurboHUD' / 'recordings'
 
 
 def rounded(value):
@@ -95,7 +122,9 @@ class FieldReader:
 
 
 class Recorder:
-    def __init__(self, live, out):
+    def __init__(self, live, out, clock=time.monotonic):
+        self.clock = clock
+        self.saved = clock()  # when the file was last brought up to date on disk
         self.live = live  # the race reader (winmemory.CachedReader around a LapReader)
         self.reader = live.reader
         self.il = self.reader.il
@@ -104,9 +133,15 @@ class Recorder:
         self.gates = None
         self.seen = {}  # (player index, role) -> last values written
         self.classes = set()
+        self.event = None  # the event state whose event was written last
 
     def write(self, **record):
         self.out.write(json.dumps(record, separators=(',', ':')) + '\n')
+        if self.clock() - self.saved >= SAVE_EVERY:
+            # The compressor keeps what it has until the file is closed: a recorder that is
+            # stopped from outside (seen 2026-11-11, on Windows) would leave an empty file.
+            self.out.flush()
+            self.saved = self.clock()
 
     def race(self, now):
         state = self.live.read()
@@ -178,6 +213,63 @@ class Recorder:
                     self.emit(now, clock, index, name, role, obj, values)
                 level = following
 
+    def event_roots(self):
+        """{role: object} of the event: its state, controller, logic and settings."""
+        il, reader = self.il, self.reader
+        found = {}
+        if reader._state:
+            found['event.state'] = reader._state
+        if reader._listener:
+            found['event.controller'] = reader._listener
+            try:
+                found['event.logic'] = il.ref(reader._listener, 'm_eventLogic')
+                found['event.settings'] = il.ref(found['event.logic'], 'm_eventSettings')
+            except (NotFound, ReadError, OSError):
+                pass
+        return found
+
+    def event_fields(self, now, clock):
+        """The event's type once per event, then its objects' changed fields (see the top)."""
+        if self.reader._state is None:
+            return
+        roots = self.event_roots()
+        if self.reader._state != self.event:
+            self.event = self.reader._state
+            # Nothing kept from the event before: the same roles hold other objects now.
+            self.seen = {key: value for key, value in self.seen.items() if key[0] != EVENT_PLAYER}
+            classes = {}
+            for role, obj in roots.items():
+                try:
+                    classes[role] = self.il.class_name(obj)
+                except (NotFound, ReadError, OSError, UnicodeDecodeError):
+                    pass
+            event_type = self.reader.event_type
+            self.write(
+                kind='event',
+                t=now,
+                clock=clock,
+                mode=event_type and event_type[0],
+                level_type=event_type and event_type[1],
+                classes=classes,
+            )
+            print(f'event: {event_type or "type not found"}, logic {classes.get("event.logic")}', flush=True)
+        level, done = list(roots.items()), set()
+        for _step in range(DEPTH + 1):
+            following = []
+            for role, obj in level:
+                if obj in done:
+                    continue
+                done.add(obj)
+                try:
+                    values = self.fields.values(obj)
+                except (NotFound, ReadError, OSError, UnicodeDecodeError):
+                    continue
+                for field, (_value, address) in values.items():
+                    if address and EVENT_INTERESTING.search(field):
+                        following.append((f'{role}.{field}', address))
+                self.emit(now, clock, EVENT_PLAYER, None, role, obj, values)
+            level = following
+
     def emit(self, now, clock, index, name, role, obj, values):
         class_name, fields, _size = self.fields.layout(obj)
         if (class_name, role) not in self.classes:
@@ -200,18 +292,43 @@ class Recorder:
             )
 
 
-def connect():
-    from turbohud.tsu.bottle import Bottle
+def read_records(path):
+    """The records of a recording, also of one cut off by a kill (no gzip ending): as far as
+    it was brought up to date."""
+    data = zlib.decompressobj(16 + zlib.MAX_WBITS).decompress(Path(path).read_bytes())
+    lines = data.decode('utf-8', 'replace').split('\n')
+    found = []
+    for line in lines:
+        try:
+            found.append(json.loads(line))
+        except ValueError:
+            continue  # the last line, cut off mid-way
+    return found
 
-    bottle = Bottle()
+
+def connect(platform=sys.platform):
+    """(race reader, something with close() for the end): on Windows TSU read straight,
+    else through the reader in the CrossOver bottle."""
+    if platform == 'win32':
+        from turbohud.tsu import winmemory
+
+        attempt, where = winmemory.connect, 'TSU'
+    else:
+        from turbohud.tsu.bottle import Bottle
+
+        bottle = Bottle()
+
+        def attempt():
+            return bottle.connect()[0], bottle
+
+        where = 'TSU in CrossOver'
     while True:
         try:
-            live, _same = bottle.connect()
-            return live, bottle
+            return attempt()
         except (NotFound, ReadError) as error:
             print(f'TSU is loading ({error}) ...', flush=True)
         except OSError as error:
-            print(f'waiting for TSU in CrossOver ({error}) ...', flush=True)
+            print(f'waiting for {where} ({error}) ...', flush=True)
         time.sleep(2)
 
 
@@ -219,8 +336,11 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument('--minutes', type=float, default=None, help='stop after this long (default: Ctrl+C)')
     args = parser.parse_args(argv)
-    FOLDER.mkdir(parents=True, exist_ok=True)
-    path = FOLDER / time.strftime('race-%Y%m%d-%H%M%S.jsonl.gz')
+    # The reader's own lines (the search, the event type) on the console, as in TurboHUD's log.
+    logging.basicConfig(level=logging.INFO, format='[%(asctime)s] %(message)s', datefmt='%H:%M:%S')
+    out_folder = folder()
+    out_folder.mkdir(parents=True, exist_ok=True)
+    path = out_folder / time.strftime('race-%Y%m%d-%H%M%S.jsonl.gz')
     live, bottle = connect()
     print(f'Recording to {path}', flush=True)
     print('Start a race. Ctrl+C ends the recording.', flush=True)
@@ -241,6 +361,7 @@ def main(argv=None):
                     if began >= next_fields:
                         next_fields = began + FIELDS_EVERY
                         recorder.raw_fields(now, state.clock)
+                        recorder.event_fields(now, state.clock)
                     if waiting_said is not None:
                         print('race found: recording', flush=True)
                         waiting_said = None
@@ -248,7 +369,17 @@ def main(argv=None):
                     if waiting_said != str(error):
                         print(f'no race to read yet ({error})', flush=True)
                         waiting_said = str(error)
-                    time.sleep(1.0)
+                    if recorder.reader._state is None:
+                        time.sleep(1.0)
+                        continue
+                    # The event is there, but not a race to read (an arena mode?): the event itself.
+                    if began >= next_fields:
+                        next_fields = began + FIELDS_EVERY
+                        try:
+                            recorder.event_fields(now, None)
+                        except (NotFound, ReadError, OSError):
+                            pass
+                    time.sleep(FIELDS_EVERY)
                     continue
                 records += 1
                 if records % 600 == 0:

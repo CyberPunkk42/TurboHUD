@@ -434,7 +434,7 @@ and change 20 times a second. With the user's layout the one window is nearly th
 (2055 x 1290). Checked 2026-11-09 with real windows on the Mac (all four phases, quits by itself); not
 yet measured over TSU.
 
-## Every car of a race, for yellow flags (`tsu_race_recorder.py`, macOS)
+## Every car of a race, for yellow flags (`tsu_race_recorder.py`, macOS and Windows)
 
 Asked for by the user (2026-11-11): yellow flags as in F1, DTM or GT racing need the state of the
 other cars (off the track, slow or stopped, spun, wrecked). TSU has no flags of its own (its only
@@ -447,6 +447,29 @@ writes `~/Library/Application Support/TurboHUD/recordings/race-<date>-<time>.jso
 never in the repository). Close TurboHUD first; Ctrl+C ends it.
 
     .buildtools/venv/bin/python -B experiments/tsu_race_recorder.py [--minutes 15]
+
+On Windows (2026-11-11) it reads TSU straight, as TurboHUD's Python reader does, and writes to
+`%APPDATA%\TurboHUD\recordings`:
+
+    .buildtools\venv\Scripts\python.exe -B experiments\tsu_race_recorder.py [--minutes 15]
+
+It also records each event's mode, for the arena modes (Sumo, King of the Hill, Capture the flag,
+Battle, Soccer, Tag): a `kind: event` line with the mode, the level type and the classes of the event's
+state, controller, logic and settings, then twice a second the fields of those objects (and of the
+ones they point to with a mode's name: score, team, flag, hill, zone, ball, goal, round) that changed,
+as `player: -1`. While the race cannot be read (an arena mode may have no laps), the event is still
+recorded.
+The file is brought up to date every 5 s (`SAVE_EVERY`), so a recorder stopped from outside keeps all
+but its last seconds (on 2026-11-11 a killed one left an empty file); `read_records` reads such a file.
+
+### First look at an arena event (2026-11-11, Windows, online, 1.4 min)
+- A Battle event: `TS.BattleEventMode`, level type 6, logic `TS.BattleLogic` (as seen on the Mac for a
+  capture event). The race reads worked in it (617).
+- `TS.EventSettings` holds every mode's settings side by side: `battle`, `sumo`, `tag`, `collector`,
+  `hill`, `teams`. The logic keeps `m_battleStats` (`m_captureTime`, `m_capturePlayerIndex`,
+  `m_captureTeamId`, `m_lastRoundWonTime`, `m_startedRoundsCount`, `m_ranking` with `m_aliveCount`),
+  `m_collectorStats` (ranking, team ranking), `m_baseTeams` and `m_tagObjectProperties`.
+- Still to record: Sumo, King of the Hill, Soccer, Tag and a special event.
 
 ### First look (2026-11-11, a race on the user's Mac with one other car, 6 s)
 - Each car's wheels: `TS.CarStateUpdater.wheels` is a `TS.WheelUpdater` with

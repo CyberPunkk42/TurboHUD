@@ -107,6 +107,9 @@ modes (Battle, Collector, Hill, Soccer, Sumo, Tag) have none. Seen: a capture ev
 (2026-11-10). Still to see in the log's `event type:` line: a
 special event giving `TS.RaceEventMode` (if a special event is another mode, add it to `TRACK_MODES` in
 `turbohud/core/race.py`), and one of King of the Hill or Sumo.
+Since 2026-11-11 `experiments/tsu_race_recorder.py` records each event's mode and its mode objects (also on
+Windows): record Sumo, King of the Hill, Soccer, Tag and a special event, for the event type and what an
+arena HUD could show (Battle's capture and rounds: `experiments/README.md`).
 
 ## 7b. Track map: check in races
 The user saw it work in a race (2026-11-03), and the track is now learnt from the cars
