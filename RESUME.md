@@ -75,6 +75,10 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-11: Build 2026.11.11.6 for the tester (`releases/`, macOS 27, `--any-macos`, smoke test passed with
+  TurboHUD closed: the Rust reader read the user's race, no error; 32.4 MB), as 2026.11.11.5 with JUMP START. The
+  test sheet names it, the box is Penalties in move mode, and Part 4 asks for a false start. The 2026.11.11.4
+  and .5 images are still in `releases/`, to be removed by hand.
 - 2026-11-11: JUMP START, asked for by the user: TSU's false-start penalty (`VehicleState.startPenaltyOn`, seen
   for half a second on the user's car at a start in a recording) shows in the orange penalty box, renamed
   Penalties, for 5 s from when it was last seen (`JUMP_START_SHOWN`), and as an orange JUMP in the lap times
