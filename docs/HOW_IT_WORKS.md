@@ -111,8 +111,11 @@ with `ReadProcessMemory`. So:
 ```
 
 TurboHUD looks for `TSU.exe` among the running programs, finds CrossOver and the bottle,
-and starts `turbohud/tsu/bottle_reader.py` with a portable Windows Python (in the app, or
-for a start from the source in `.buildtools/win-python`). Nothing is installed into the
+and starts the reader there: `turbohud-reader.exe`, a Windows program in Rust (`reader/`; in
+the app, or for a start from the source in `.buildtools/reader`, built by `tools/get_rust.sh`).
+The older reader in Python (`turbohud/tsu/bottle_reader.py`, with a Windows Python set up by
+hand) is only for a start from the source with `TURBOHUD_PY_READER=1`; the app has shipped
+without it since 2026-11-11. Nothing is installed into the
 bottle. Only TurboHUD holds the pipe, so there is no port, no socket and no secret. The
 reader ends when the pipe closes or TSU quits.
 

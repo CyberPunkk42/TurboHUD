@@ -37,8 +37,8 @@ inside the bottle can read TSU with `ReadProcessMemory`, and TurboHUD's lookup b
 works there unchanged, race reads too: alone 17 ms a read; online as a client (13 AI)
 the race is found after about 15 s and read in about 20 ms
 (`turbohud/tsu/winmemory.py`: page cache, paced search that stops at the first good
-hit). The Mac app now does this by itself (`turbohud/tsu/bottle.py`, reader in
-`bottle_reader.py`, Windows Python inside the app). Still to do:
+hit). The Mac app now does this by itself (`turbohud/tsu/bottle.py`, the Rust reader in
+`reader/` inside the app; no Windows Python since 2026-11-11). Still to do:
 - The tester's FPS (`docs/CONTINUE_HERE.md`, "Tester's Mac"): unticked sections leaving the screen
   gave back most of the loss with nothing shown (2026-11-08: 107 of 115 FPS, from 78). Shown sections still
   cost frames, to about 60 with all: the windows above the game, not the reads. A CPU recording on the
@@ -57,8 +57,8 @@ hit). The Mac app now does this by itself (`turbohud/tsu/bottle.py`, reader in
   hosting about 13 AI online (`docs/CONTINUE_HERE.md`, "Test list"). As a driver online the race
   showed 1.4 s after the start.
 - The reader in Rust (2026-11-10, `reader/`): a race read in 8.7 to 10.5 ms, from 16 to 22 ms with the
-  Python reader. Still to see online (`docs/CONTINUE_HERE.md`, "Not yet seen in a race"). Then drop the
-  Windows Python from the Mac app.
+  Python reader. It ran online as a client on the tester's Mac (2026-11-11, builds from 2026.11.11 use it
+  only), and the Mac app ships without the Windows Python since then.
 - Searches that begin where the last race was (2026-11-10): seen the same day, three races in a row
   found after 0.4 s at the first hit, within 0.5 MiB of the last one. Still to see: another session and a
   spectator (`docs/CONTINUE_HERE.md`, "Not yet seen in a race").

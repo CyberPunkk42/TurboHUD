@@ -54,7 +54,7 @@ Open from 2026-11-11 (the user stopped there; all merged):
 5. Online, the search from the last race worked in one session on 2026-11-10 ("Not yet seen in a race");
    when one comes up: another session, and spectating.
 6. With point 1 and the tester's numbers: keep the one window, make it only as large as its sections, or
-   go back to a window each. Once the Rust reader has run online: the Mac app without the Windows Python.
+   go back to a window each. The Mac app ships without the Windows Python since 2026-11-11.
 
 Offered next (2026-11-10), most value first: the one-window canvas only as large as the sections; the
 one-window canvas on Linux and Windows; sector times as numbers. Built from this list: race reads that

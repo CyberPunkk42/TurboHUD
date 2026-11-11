@@ -49,20 +49,11 @@ _VERSION_MIN = re.compile(r'LC_VERSION_MIN_MACOSX\s*\n(?:\s*cmdsize.*\n)?\s*vers
 SMOKE_SECONDS = 3
 SMOKE_TIMEOUT = 120
 _VERSION = re.compile(r'dev|\d{4}\.\d{2}\.\d{2}(\.\d+)?')  # a second build of a day: .2
-# The Mac app's reader runs in TSU's CrossOver bottle with its own Windows Python, so it
-# ships as plain files beside the app: these, and that Python (see turbohud/tsu/bottle.py).
-WIN_PYTHON = ROOT / '.buildtools' / 'win-python'
-GET_WIN_PYTHON = ROOT / 'tools' / 'get_windows_python.sh'
-# The Rust reader, which the Mac app starts in place of the Python one (turbohud/tsu/bottle.py).
+# The Rust reader: the Mac app starts it in TSU's CrossOver bottle, the Windows app beside TSU
+# (turbohud/tsu/bottle.py). Since 2026-11-11 the Mac app ships no Windows Python for the older
+# Python reader: the Rust one ran in online races on the tester's Mac.
 RUST_READER = ROOT / '.buildtools' / 'reader' / 'turbohud-reader.exe'
 GET_RUST = ROOT / 'tools' / 'get_rust.sh'
-READER_FILES = (
-    'turbohud/__init__.py',
-    'turbohud/tsu/__init__.py',
-    'turbohud/tsu/bottle_reader.py',
-    'turbohud/tsu/gamelog.py',
-    'turbohud/tsu/winmemory.py',
-)
 
 
 def parse_args(argv):
@@ -122,10 +113,7 @@ def pyinstaller_args(system=sys.platform):
             print(f'warning: no Rust reader at {RUST_READER}: the app reads TSU in Python (slower)')
     if system == 'darwin':
         args += ['--osx-bundle-identifier', BUNDLE_ID]
-        args += ['--add-data', f'{WIN_PYTHON}:win-python']
         args += ['--add-data', f'{RUST_READER}:reader']
-        for name in READER_FILES:
-            args += ['--add-data', f'{ROOT / name}:{Path(name).parent.as_posix()}']
     return args
 
 
@@ -238,12 +226,33 @@ def smoke(program):
     print('smoke test passed')
 
 
+def missing_requirements(requirements=ROOT / 'requirements.txt'):
+    """The packages in `requirements` this Python cannot import: a build would leave them out
+    without a word (seen 2026-11-11: an app without texture2ddecoder, so without the game's flags)."""
+    import importlib.util
+
+    missing = []
+    for line in requirements.read_text(encoding='utf-8').splitlines():
+        name = line.split('#')[0].split('==')[0].strip()
+        if not name or name.startswith('-'):
+            continue
+        module = IMPORT_NAMES.get(name, name.replace('-', '_'))
+        if importlib.util.find_spec(module) is None:
+            missing.append(name)
+    return missing
+
+
+IMPORT_NAMES = {'PySide6-Essentials': 'PySide6'}  # a package whose module has another name
+
+
 def main(argv=None):
     args = parse_args(sys.argv[1:] if argv is None else argv)
+    missing = missing_requirements()
+    if missing:
+        sys.exit(f'not installed: {", ".join(missing)} (pip install -r requirements-build.txt)')
     import PyInstaller.__main__
 
     if sys.platform == 'darwin':
-        subprocess.run(['sh', str(GET_WIN_PYTHON)], check=True)
         subprocess.run(['sh', str(GET_RUST)], check=True)  # sets up Rust if needed, builds the reader
     VERSION_FILE.write_text(f'VERSION = {args.version!r}\n', encoding='utf-8')
     try:

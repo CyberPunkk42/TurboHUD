@@ -165,7 +165,10 @@ def to_bgra(texture):
     them), or None for a format not known here."""
     width, height, data = texture.width, texture.height, texture.data
     if texture.format in (FORMAT_DXT1_CRUNCHED, FORMAT_DXT5_CRUNCHED, FORMAT_DXT1, FORMAT_DXT5):
-        import texture2ddecoder
+        try:
+            import texture2ddecoder
+        except ImportError:
+            return None  # not installed: that flag stays an emoji
 
         if texture.format in (FORMAT_DXT1_CRUNCHED, FORMAT_DXT5_CRUNCHED):
             data = texture2ddecoder.unpack_unity_crunch(data)

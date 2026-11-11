@@ -96,14 +96,15 @@ class PartsTests(unittest.TestCase):
             self.assertEqual(command[1:3], ['-I', '-B'])
             self.assertTrue(command[3].endswith('\\turbohud\\tsu\\bottle_reader.py'))
             (Path(folder) / 'reader' / bt.RUST_READER).unlink()
-            self.assertEqual(bt.reader_command({}, bundle=folder)[0], 'Python')
+            with self.assertRaisesRegex(OSError, 'the reader is missing'):
+                bt.reader_command({}, bundle=folder)  # no Python in its place: the app ships none
 
-    def test_without_either_reader_the_start_fails(self):
+    def test_the_python_reader_only_when_asked_for_and_set_up(self):
         with (
             tempfile.TemporaryDirectory() as folder,
             self.assertRaisesRegex(OSError, 'Windows Python is missing'),
         ):
-            bt.reader_command({}, bundle=folder)
+            bt.reader_command({'TURBOHUD_PY_READER': '1'}, bundle=folder)
 
     def test_the_rust_reader_in_the_source_folder(self):
         self.assertEqual(bt.rust_reader(bundle=''), ROOT / '.buildtools' / 'reader' / bt.RUST_READER)
@@ -638,12 +639,22 @@ class BottleTests(ReaderCase):
         self.assertIsNone(bottle.failed)
 
 
+# What the Python reader needs, for TURBOHUD_PY_READER=1 with a bare Windows Python.
+PYTHON_READER_FILES = (
+    'turbohud/__init__.py',
+    'turbohud/tsu/__init__.py',
+    'turbohud/tsu/bottle_reader.py',
+    'turbohud/tsu/gamelog.py',
+    'turbohud/tsu/winmemory.py',
+)
+
+
 class ReaderFilesTests(unittest.TestCase):
-    def test_the_bundled_files_are_all_the_reader_needs(self):
-        """The Mac app ships the reader as plain files beside a bare Windows Python: it must
-        run with those alone, with no Qt and none of the race logic."""
+    def test_the_python_reader_runs_with_its_own_files_alone(self):
+        """A bare Windows Python runs the Python reader from the source: it must run with
+        these files alone, with no Qt and none of the race logic."""
         with tempfile.TemporaryDirectory() as folder:
-            for name in build_app.READER_FILES:
+            for name in PYTHON_READER_FILES:
                 target = Path(folder) / name
                 target.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy(ROOT / name, target)
@@ -667,21 +678,19 @@ class ReaderFilesTests(unittest.TestCase):
         with mock.patch.object(build_app, 'RUST_READER', Path('/nonexistent/reader.exe')):
             self.assertFalse([arg for arg in build_app.pyinstaller_args('win32') if ':reader' in arg])
 
-    def test_only_the_mac_app_ships_them(self):
-        mac = build_app.pyinstaller_args('darwin')
-        self.assertIn(f'{build_app.WIN_PYTHON}:win-python', mac)
-        self.assertIn(f'{ROOT / "turbohud/tsu/bottle_reader.py"}:turbohud/tsu', mac)
-        self.assertIn(f'{ROOT / "turbohud/__init__.py"}:turbohud', mac)
-        self.assertIn(f'{build_app.RUST_READER}:reader', mac)
-        self.assertEqual(bt.rust_reader(bundle='/b'), Path('/b/reader') / build_app.RUST_READER.name)
-        self.assertFalse([arg for arg in build_app.pyinstaller_args('linux') if 'win-python' in arg])
-        self.assertFalse([arg for arg in build_app.pyinstaller_args('linux') if ':reader' in arg])
+    def test_a_build_stops_when_a_requirement_is_not_installed(self):
+        with tempfile.TemporaryDirectory() as folder:
+            requirements = Path(folder) / 'requirements.txt'
+            requirements.write_text('# a note\nPySide6-Essentials==6.11.2\nno-such-package==1.0  # why\n')
+            self.assertEqual(build_app.missing_requirements(requirements), ['no-such-package'])
+        self.assertEqual(build_app.missing_requirements(), [])  # this Python has them all
 
-    def test_the_bundle_paths_match_where_the_app_looks(self):
-        python, reader = bt.app_files(bundle='/b')
-        self.assertEqual(python.parent.name, 'win-python')
-        self.assertIn('turbohud/tsu/bottle_reader.py', build_app.READER_FILES)
-        self.assertEqual(reader, Path('/b/turbohud/tsu/bottle_reader.py'))
+    def test_the_mac_app_ships_the_rust_reader_only(self):
+        mac = build_app.pyinstaller_args('darwin')
+        self.assertIn(f'{build_app.RUST_READER}:reader', mac)
+        self.assertFalse([arg for arg in mac if 'win-python' in arg or 'bottle_reader' in arg])
+        self.assertEqual(bt.rust_reader(bundle='/b'), Path('/b/reader') / build_app.RUST_READER.name)
+        self.assertFalse([arg for arg in build_app.pyinstaller_args('linux') if ':reader' in arg])
 
 
 class ThreadedPipeTests(unittest.TestCase):
@@ -706,7 +715,7 @@ class ThreadedPipeTests(unittest.TestCase):
             self.assertEqual(pipe.receive(1.0), ({'n': 2}, b'b'))
 
     def test_silent_and_ended_readers(self):
-        pipe, writer = self.pipe()
+        pipe, _writer = self.pipe()
         with self.assertRaises(TimeoutError):
             pipe.receive(0.05)
         source, end = os.pipe()
