@@ -348,6 +348,15 @@ class LearntTrackTests(unittest.TestCase):
         self.assertTrue(all(x > -2 and z < 2 for x, z in last))
         self.assertEqual(len(track_map.yellow_stretches(GATES, {(0, 4), (6, 0)})), 2)
 
+    def test_the_line_a_point_of_the_road_is_past_whatever_the_car_crossed(self):
+        # Reported by the user on 2026-11-11: a car driving backwards kept the sector it turned round in.
+        track_map = learnt_map()
+        self.assertIsNone(trackmap.TrackMap().gate_at(0, GATES))  # nothing learnt yet
+        for u in (0.5, 2.3, 4.7, 7.6):
+            turn = 2 * math.pi * u / LINES
+            _direction, index = track_map.heading((RADIUS * math.cos(turn), RADIUS * math.sin(turn)))
+            self.assertEqual(track_map.gate_at(index, GATES), math.floor(u), u)
+
     def test_how_far_a_car_is_ahead_on_the_road(self):
         track_map = learnt_map()
         quarter = 2 * math.pi * RADIUS / 4
