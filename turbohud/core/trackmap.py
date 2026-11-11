@@ -47,8 +47,28 @@ ROAD_SHARE = 0.03  # the road's width on the map, as a share of the map
 LEAST_ROAD = 2.5  # pixels
 LAPPING_SHARE = 0.5  # a car more than half a lap behind in the race and ahead on the road is a backmarker
 TRACKS_FOLDER = 'tracks'
-CLEAN_GRIP = 0.9  # all four wheels on less grip than this: off the tarmac (as race.YELLOW_OFF_GRIP)
+CLEAN_GRIP = 0.9  # where a surface's layer is not known: all four wheels on less grip than this are off
 CLEAN_SPEED = 1.0  # slower than this along the car (or backwards): not driving the track
+# The Unity layers of TSU's surfaces (TS.TSMaterialProperties.m_layer; names from the game's
+# globalgamemanagers, read 2026-11-11): 4 Water, 7 Ice, 13 Asphalt, 14 AsphaltSlippery, 15 Dirt, 16 Pit,
+# 17 Curb, 18 Terrain, 19 Rock, 20 Rubber, 21 Wood, 22 Concrete, 23 Brick, 24 Plastic, 25 Metal.
+# Only Terrain is off the track (asked for by the user on 2026-11-11: a yellow flag for all four
+# wheels on the terrain, nothing else): on a circuit the user drove over every surface with
+# TurboHUD reading, the grass beside it was Terrain (grip 0.5), while its wide plastic kerbs (grip
+# 0.9, just under CLEAN_GRIP) and concrete run-off are driven on as track, and concrete may be a
+# track's own surface. Dirt counts as track too, as a rallycross track is made of it.
+OFF_TRACK_LAYERS = frozenset({18})
+
+
+def off_the_track(grips, layers=None):
+    """Whether all four wheels are off the track: by the surfaces' layers where known
+    (OFF_TRACK_LAYERS), else by their grip (under CLEAN_GRIP). A wheel in the air (grip 0)
+    is not off, so a car over a kerb's crest is not either."""
+    if grips is None:
+        return False
+    if layers is not None:
+        return all(grip > 0.0 and layer in OFF_TRACK_LAYERS for grip, layer in zip(grips, layers))
+    return all(0.0 < grip < CLEAN_GRIP for grip in grips)
 LEARN_LAPS = 3  # clean laps compared before a track is saved
 SHORT_LAP = 0.985  # a lap shorter than this share of the longest is left out: a shortcut
 COMPARE_POINTS = 100  # laps are compared at about this many points each
@@ -298,11 +318,10 @@ def backmarkers(order, me, ahead, gates, laps):
 
 
 def driving_clean(player):
-    """Whether the car drives the track: False with all four wheels off the tarmac (kerbs
-    and a wheel in the air do not count), nearly standing or going backwards; True where
-    that is not known."""
-    grips = player.wheel_grips
-    if grips is not None and all(0.0 < grip < CLEAN_GRIP for grip in grips):
+    """Whether the car drives the track: False with all four wheels off the track (see
+    off_the_track: kerbs, plastic and a wheel in the air do not count), nearly standing or
+    going backwards; True where that is not known."""
+    if off_the_track(player.wheel_grips, getattr(player, 'wheel_layers', None)):
         return False
     return player.forward_speed is None or player.forward_speed >= CLEAN_SPEED
 

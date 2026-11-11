@@ -190,6 +190,27 @@ class LearntTrackTests(unittest.TestCase):
             drive(track_map, LINES + 1.5, wheel_grips=grips, forward_speed=30.0)
             self.assertIsNotNone(track_map.learned, grips)
 
+    def test_a_lap_over_the_plastic_kerbs_is_clean_and_one_over_the_terrain_is_not(self):
+        # Read on the user's circuit (2026-11-11): plastic kerbs have grip 0.9 (just under
+        # CLEAN_GRIP), Unity layer 24; the grass is Terrain, layer 18.
+        track_map = trackmap.TrackMap()
+        drive(track_map, LINES + 1.5, wheel_grips=(0.8999,) * 4, wheel_layers=(24,) * 4, forward_speed=30.0)
+        self.assertIsNotNone(track_map.learned)
+        grass = trackmap.TrackMap()
+        drive(grass, 4.0)
+        drive(grass, 4.3, since=4.05, wheel_grips=(0.5,) * 4, wheel_layers=(18,) * 4)
+        drive(grass, LINES + 1.5, since=4.35)
+        self.assertIsNone(grass.learned)
+
+    def test_off_the_track_by_layer_where_known_else_by_grip(self):
+        self.assertFalse(trackmap.off_the_track((0.8999,) * 4, (24,) * 4))  # plastic
+        self.assertTrue(trackmap.off_the_track((0.5,) * 4, (18,) * 4))  # terrain
+        self.assertFalse(trackmap.off_the_track((1.0,) * 4, (22,) * 4))  # concrete: may be a track's own
+        self.assertFalse(trackmap.off_the_track((0.75,) * 4, (15,) * 4))  # dirt: a rallycross track
+        self.assertFalse(trackmap.off_the_track((0.0, 0.5, 0.5, 0.5), (None, 18, 18, 18)))  # a wheel in the air
+        self.assertTrue(trackmap.off_the_track((0.8999,) * 4))  # no layers: by grip, as before
+        self.assertFalse(trackmap.off_the_track(None))
+
     def test_a_track_saved_before_clean_laps_shows_until_a_clean_lap_replaces_it(self):
         with tempfile.TemporaryDirectory() as folder:
             drive(trackmap.TrackMap(folder=folder), SAVED)

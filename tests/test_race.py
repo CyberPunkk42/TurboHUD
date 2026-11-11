@@ -128,6 +128,7 @@ def build(
     tire_ticks=0,
     event_type=None,
     gate_types=None,
+    surfaces=None,
 ):
     """A fake race; `car` is the car's (x, z) and `gates` the checkpoint lines, both
     optional like in a game without them."""
@@ -333,9 +334,26 @@ def build(
                     ('m_hitPointsToRelativeHealthMultiplierForAcceleration', 0x78, False, 0x0C),
                     ('m_draftingViscosityFactor', 0x7C, False, 0x0C),
                     ('m_draftingDownforceFactor', 0x80, False, 0x0C),
+                    ('wheels', 0x88, False),
                 ],
             )
         )
+        g.q(updater + 0x88, 0)  # no wheels object unless surfaces are given
+        if surfaces is not None:  # (grip, layer) under each of the four wheels; None: in the air
+            wheels = g.alloc_obj(
+                g.klass('TS', 'WheelUpdater', [(name, 0x10 + 8 * i, False) for i, name in enumerate(race.WHEEL_SURFACES)])
+            )
+            material_class = g.klass(
+                'TS', 'TSMaterialProperties', [('m_layer', 0x10, False, 0x08), ('grip', 0x1C, False, 0x0C)]
+            )
+            for i, surface in enumerate(surfaces):
+                material = 0
+                if surface is not None:
+                    material = g.alloc_obj(material_class)
+                    g.put(material + 0x10, struct.pack('<i', surface[1]))
+                    g.put(material + 0x1C, struct.pack('<f', surface[0]))
+                g.q(wheels + 0x10 + 8 * i, material)
+            g.q(updater + 0x88, wheels)
         g.put(updater + 0x7C, struct.pack('<2f', 0.927, 0.416))
         g.put(updater + 0x70, bytes([health is not None]))
         g.put(updater + 0x74, struct.pack('<2f', 1 / 450, 1 / 375))
@@ -2132,6 +2150,61 @@ class YellowFlagTests(unittest.TestCase):
             flags = race.YellowFlags()
             self.drive(flags, 10.0, self.car(grips=grips))
             self.assertEqual(self.drive(flags, 12.0, self.car(grips=grips)), (), grips)
+
+    # As read on the user's circuit (2026-11-11): grip and Unity layer of each surface.
+    PLASTIC = {'grips': (0.8999,) * 4, 'wheel_layers': (24,) * 4}  # the wide plastic kerbs
+    TERRAIN = {'grips': (0.5,) * 4, 'wheel_layers': (18,) * 4}  # the grass beside the track
+    CONCRETE = {'grips': (1.0,) * 4, 'wheel_layers': (22,) * 4}  # the run-off, used as track
+    CURB = {'grips': (0.8,) * 4, 'wheel_layers': (17,) * 4}
+
+    def test_plastic_kerbs_curbs_and_concrete_are_track_by_their_layer(self):
+        # Reported by the user: the wide plastic kerbs (grip 0.9, just under the old limit) raised
+        # yellow flags. By the surface's layer they are track, as the user drives them.
+        for surface in (self.PLASTIC, self.CONCRETE, self.CURB):
+            flags = race.YellowFlags()
+            self.drive(flags, 10.0, self.car(**surface))
+            self.assertEqual(self.drive(flags, 12.0, self.car(**surface)), (), surface)
+
+    def test_terrain_is_off_the_track_by_its_layer(self):
+        flags = race.YellowFlags()
+        self.drive(flags, 10.0, self.car(**self.TERRAIN))
+        self.assertEqual(self.kinds(self.drive(flags, 10.6, self.car(**self.TERRAIN))), [('Other', 'off track')])
+
+    def test_a_wheel_on_plastic_or_in_the_air_keeps_a_car_on_the_terrain_on_the_track(self):
+        for grips, layers in (((0.8999, 0.5, 0.5, 0.5), (24, 18, 18, 18)), ((0.0, 0.5, 0.5, 0.5), (None, 18, 18, 18))):
+            flags = race.YellowFlags()
+            self.drive(flags, 10.0, self.car(grips=grips, wheel_layers=layers))
+            self.assertEqual(self.drive(flags, 12.0, self.car(grips=grips, wheel_layers=layers)), ())
+
+    def test_a_car_stopped_on_plastic_stands_on_the_road(self):
+        self.assertTrue(race.on_tarmac(self.car(speed=0.0, **self.PLASTIC)))
+        self.assertFalse(race.on_tarmac(self.car(speed=0.0, **self.TERRAIN)))
+        self.assertTrue(race.on_tarmac(self.car(speed=0.0, grips=self.TARMAC)))  # no layers: by grip
+        self.assertFalse(race.on_tarmac(self.car(speed=0.0, grips=self.GRASS)))
+
+    def test_the_reader_gives_each_wheels_grip_and_layer(self):
+        plastic, terrain = (0.8999, 24), (0.5, 18)
+        reader = build(
+            [10_000], laps_completed=0, clock=20_000, limit=0, car=(5.0, 7.0), surfaces=(plastic, plastic, terrain, None)
+        )
+        me = next(p for p in reader.read().players if p.local)
+        self.assertEqual([round(g, 4) for g in me.wheel_grips], [0.8999, 0.8999, 0.5, 0.0])
+        self.assertEqual(me.wheel_layers, (24, 24, 18, None))
+
+    def test_a_wrecked_car_counts_at_once_and_first(self):
+        # Asked for by the user on 2026-11-11: a car that lost all its hit points (damage on).
+        flags = race.YellowFlags()
+        found = self.drive(flags, 10.0, self.car(speed=0.0, wrecked=True))
+        self.assertEqual(self.kinds(found), [('Other', 'wrecked')])
+
+    def test_the_reader_sees_a_car_with_no_hit_points_left_as_wrecked(self):
+        def local(health):
+            reader = build([10_000], laps_completed=0, clock=20_000, limit=0, car=(5.0, 7.0), health=health)
+            return next(p for p in reader.read().players if p.local)
+
+        self.assertTrue(local(0).wrecked)
+        self.assertFalse(local(120).wrecked)
+        self.assertFalse(local(None).wrecked)  # no damage: the hit points stay at the most
 
     def test_slow_after_a_second_stopped_after_two(self):
         flags = race.YellowFlags()

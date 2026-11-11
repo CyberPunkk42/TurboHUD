@@ -1240,3 +1240,15 @@ its "Recent changes".
   player and team, players alive and rounds are there (`experiments/README.md`). The file is saved every 5 s, as a
   recorder stopped from outside left an empty file (a race event, 22:34 to 22:35). Tests. Built on
   `fix/windows-race-search`, which it needs on Windows.
+- 2026-11-11: Off the track by the surface's layer, reported by the user: the wide plastic kerbs of a circuit raised
+  yellow flags. Their grip is 0.9 (stored as 0.8999), just under the 0.9 limit, and TurboHUD took all four wheels
+  under it as off the track. Read with the user driving over every surface (TSU's Unity layers from its
+  globalgamemanagers: 13 Asphalt, 15 Dirt, 16 Pit, 17 Curb, 18 Terrain, 22 Concrete, 24 Plastic ...): the grass was
+  Terrain (0.5), the plastic kerbs and concrete run-off are driven as track. Each surface's layer is now read with its
+  grip (`PlayerState.wheel_layers`), and only Terrain counts as off (`OFF_TRACK_LAYERS`, asked for by the user:
+  concrete may be a track's own surface;
+  `trackmap.off_the_track`), for the yellow flags, the hazard warning (a car stopped on plastic stands on the road)
+  and the track map's clean laps; Dirt counts as track (rallycross). Where a layer is not read, the grip rule as
+  before. Also a new incident, asked for by the user: wrecked, a car that lost all its hit points (damage on;
+  `PlayerState.wrecked`), at once and first. Slow, spun, stopped (on or off the track), wrong way and respawned
+  stay as they were. Tests. Not yet seen in a race.

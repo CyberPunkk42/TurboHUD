@@ -36,6 +36,7 @@ from turbohud.core.flags import flag_code, flag_text
 from turbohud.core.hud import Row, Sectors, blend, clock, local_time_rows
 from turbohud.core.il2cpp import ARRAY_DATA, ARRAY_LENGTH, LIST_ITEMS, SIMPLE_TYPES, NotFound, ReadError
 from turbohud.core.settings import class_tag
+from turbohud.core.trackmap import OFF_TRACK_LAYERS, off_the_track
 
 log = logging.getLogger(__name__)
 
@@ -467,9 +468,11 @@ class PlayerState:
     pit_stopped: float = 0.0  # of those, seconds standing still (refuelling, tires, repairs)
     forward_speed: float | None = None  # game units a second along the car; below 0 backwards
     wheel_grips: tuple | None = None  # the grip of the surface under each of its four wheels (0: in the air)
+    wheel_layers: tuple | None = None  # those surfaces' Unity layers (trackmap.OFF_TRACK_LAYERS); None: not known
     spawns: int | None = None  # how often it was put back on the track (a respawn)
     shortcut: bool = False  # TSU slows it now for a shortcut (its updater's speed cap is set)
     jump_start: bool = False  # TSU's false-start penalty is on for it (VehicleState.startPenaltyOn)
+    wrecked: bool = False  # it has lost all its hit points (only where damage is on)
     tag: str = ''  # the clan tag (TS.PlayerProfile.teamTag: 'FTR' for [FTR]); it may name a class
     car: str = ''  # the car's name (TS.VehicleProperties.name): the class of a driver without a tag
 
@@ -538,7 +541,7 @@ class LapReader:
         self._wear_history = {}  # lap index -> tire wear when it started
         self._fuel_marks = {}  # lap index -> {checkpoint: fuel used when passed}
         self._types = {}  # (role, field) -> (offset, type code)
-        self._grips = {}  # a surface (TS.TSMaterialProperties) -> its grip, read once an event
+        self._grips = {}  # a surface (TS.TSMaterialProperties) -> (its grip, its layer), read once an event
 
     def event_state(self):
         """The race's TS.EventState. A race the game runs itself (offline, hotlap) is
@@ -1301,9 +1304,9 @@ class LapReader:
             if passed:
                 checkpoints.append(passed)
         in_pit, position, velocity, forward, draft_drag = False, None, None, None, None
-        forward_speed = wheel_grips = spawns = None
+        forward_speed = wheel_grips = wheel_layers = spawns = None
         car = ''
-        shortcut = jump_start = False
+        shortcut = jump_start = wrecked = False
         try:
             vehicle = self._ref('player', player, 'm_vehicle')
         except NotFound:
@@ -1320,6 +1323,12 @@ class LapReader:
                 # The whole pit area, from its entrance to its exit, not only the pit box.
                 state = self._ref('vehicle', vehicle, 'm_state')
                 in_pit = in_pit or bool(memory.u8(state + self._offset('vstate', state, 'inPitArea')))
+                try:
+                    # Without damage the hit points stay at the most: never wrecked.
+                    most = self._number('vstate', state, 'maxHitPoints')
+                    wrecked = most > 0 and self._number('vstate', state, 'hitPoints') <= 0
+                except (NotFound, ReadError):
+                    pass
                 spawns = self._number('vstate', state, 'spawnCount')
                 # Seen 2026-11-11 for half a second on the player's car at a start.
                 jump_start = bool(memory.u8(state + self._offset('vstate', state, 'startPenaltyOn')))
@@ -1334,7 +1343,7 @@ class LapReader:
                     draft_drag = self._number('updater', updater, 'm_draftingViscosityFactor')
                 except (NotFound, ReadError):
                     pass
-                forward_speed, wheel_grips = self._wheels(updater)
+                forward_speed, wheel_grips, wheel_layers = self._wheels(updater)
                 try:
                     # Found 2026-11-11 (a race recorded with shortcuts taken): no limit (the
                     # largest float) normally, a speed of about 28 while TSU slows the car.
@@ -1362,20 +1371,23 @@ class LapReader:
             draft_drag=draft_drag,
             forward_speed=forward_speed,
             wheel_grips=wheel_grips,
+            wheel_layers=wheel_layers,
             spawns=spawns,
             tag=tag,
             car=car,
             shortcut=shortcut,
             jump_start=jump_start,
+            wrecked=wrecked,
         )
 
     def _wheels(self, updater):
-        """(speed along the car, the grip under each of its four wheels) from a car's
-        TS.CarStateUpdater, for the yellow flags; None for what is missing. Each wheel's
-        surface is a TS.TSMaterialProperties shared by every car on it, so its grip is read
-        once (seen 2026-11-11: 1.0 on tarmac, 0.93 on kerbs, 0.5 on grass, 0 for a wheel in
-        the air), and also comes through for other cars online."""
-        speed = grips = None
+        """(speed along the car, the grip under each of its four wheels, those surfaces'
+        layers) from a car's TS.CarStateUpdater, for the yellow flags; None for what is
+        missing. Each wheel's surface is a TS.TSMaterialProperties shared by every car on it,
+        so its grip and layer are read once (seen 2026-11-11: 1.0 on tarmac, 0.93 or 0.8 on
+        kerbs, 0.9 on plastic, 0.5 on grass, 0 for a wheel in the air), and also come through
+        for other cars online. The layers are None where one could not be read."""
+        speed = grips = layers = None
         try:
             speed = self._number('updater', updater, 'm_forwardSpeed')
         except (NotFound, ReadError):
@@ -1386,16 +1398,23 @@ class LapReader:
             for name in WHEEL_SURFACES:
                 material = self.il.memory.u64(wheels + self._offset('wheels', wheels, name))
                 if not material:
-                    found.append(0.0)  # nothing under it
+                    found.append((0.0, None))  # nothing under it
                     continue
-                grip = self._grips.get(material)
-                if grip is None:
-                    grip = self._grips[material] = float(self._number('material', material, 'grip'))
-                found.append(grip)
-            grips = tuple(found)
+                surface = self._grips.get(material)
+                if surface is None:
+                    grip = float(self._number('material', material, 'grip'))
+                    try:
+                        layer = int(self._number('material', material, 'm_layer'))
+                    except (NotFound, ReadError):
+                        layer = None
+                    surface = self._grips[material] = (grip, layer)
+                found.append(surface)
+            grips = tuple(grip for grip, _layer in found)
+            if all(layer is not None or grip == 0.0 for grip, layer in found):
+                layers = tuple(layer for _grip, layer in found)
         except (NotFound, ReadError):
             pass
-        return speed, grips
+        return speed, grips, layers
 
     def _flat(self, obj, name):
         """A Vector3 field of a CarStateUpdater as (x, z), or None where it is missing."""
@@ -2779,14 +2798,15 @@ def blue_flag_opacity(seconds, within=BLUE_FROM):
 # Yellow flags (asked for by the user on 2026-11-11, as in F1, DTM or GT racing), from what a
 # recording showed TSU keeps of every car, online too: the surface under each wheel, the speed
 # along the car, and how often it was put back on the track. TSU has no flags of its own.
-YELLOW_OFF_GRIP = 0.9  # all four wheels on less grip than this: off the track (grass 0.5; kerbs 0.93)
+YELLOW_OFF_GRIP = 0.9  # where the surfaces' layers are not known: all four wheels on less grip are off
 YELLOW_OFF_FOR = 0.5  # seconds off the track before it counts
 YELLOW_SLOW = 8.0  # game units a second along the car (about 29 km/h; racing: 20 to 60): slow
 YELLOW_SLOW_FOR = 1.0
-YELLOW_STOPPED = 1.0  # this slow either way: stopped
+YELLOW_STOPPED = 1.0  # this slow either way (on the track or off it): stopped
 YELLOW_STOPPED_FOR = 2.0
 YELLOW_BACKWARDS = -1.0  # this fast backwards: spun, or facing the wrong way
 YELLOW_BACKWARDS_FOR = 0.3
+YELLOW_WRECKED_FOR = 0.0  # a car that lost all its hit points (damage on) counts at once
 YELLOW_WRONG_WAY = 0.5  # moving this share of its speed or more against the race (60 degrees off or more) ...
 YELLOW_WRONG_WAY_FOR = 1.5  # ... faster than YELLOW_SLOW, this many seconds: driving the wrong way
 YELLOW_RESPAWN_FOR = 3.0  # seconds a car put back on the track counts as an incident
@@ -2805,7 +2825,7 @@ YELLOW_ROWS = 3  # incidents listed at most
 YELLOW_COLOR = '#ffd400'  # the flag: the section's background (hud's Section.background) and the map's ring
 YELLOW_TEXT = '#111111'  # its text, dark on the yellow (asked for by the user on 2026-11-11)
 # What happened, most serious first: the one shown when several hold.
-YELLOW_KINDS = ('stopped', 'wrong way', 'spun', 'respawned', 'off track', 'slow')  # most serious first
+YELLOW_KINDS = ('wrecked', 'stopped', 'wrong way', 'spun', 'respawned', 'off track', 'slow')  # most serious first
 
 
 @dataclass(frozen=True)
@@ -2838,15 +2858,16 @@ def car_sector(player, starts, passed=None):
 
 class YellowFlags:
     """Follows every car through the race (the local one too, asked for by the user on
-    2026-11-11: the driver who caused a flag sees it) to give its incidents: stopped, driving the
-    wrong way (against the race, asked for by the user on 2026-11-11; only once the track map
-    knows the track, see update), spun (going backwards along the car), put back on the
-    track, all four wheels off it, or slow, each once it has held
-    a moment; an incident ends YELLOW_CLEAR_AFTER seconds after the car is back on the track
-    and up to speed. Not for a car in the pits, one that finished, or before it has passed
+    2026-11-11: the driver who caused a flag sees it) to give its incidents: wrecked (all hit
+    points lost, asked for by the user on 2026-11-11), stopped, driving the wrong way (against
+    the race, asked for by the user on 2026-11-11; only once the track map knows the track, see
+    update), spun (going backwards along the car), put back on the track, all four wheels on
+    the grass (trackmap.off_the_track), or slow, each once it has held a moment; an incident ends YELLOW_CLEAR_AFTER seconds after the car is
+    back on the track and up to speed. Not for a car in the pits, one that finished, or before it has passed
     its first checkpoint (the grid). Times go by the race clock."""
 
     HOLD: typing.ClassVar[dict] = {
+        'wrecked': YELLOW_WRECKED_FOR,
         'stopped': YELLOW_STOPPED_FOR,
         'wrong way': YELLOW_WRONG_WAY_FOR,
         'spun': YELLOW_BACKWARDS_FOR,
@@ -2944,10 +2965,11 @@ class YellowFlags:
             return None
         speed, grips = player.forward_speed, player.wheel_grips
         holds = {
+            'wrecked': player.wrecked,
             'stopped': speed is not None and abs(speed) < YELLOW_STOPPED,
             'wrong way': self._wrong_way(player, look),
             'spun': speed is not None and speed < YELLOW_BACKWARDS,
-            'off track': grips is not None and all(0.0 < grip < YELLOW_OFF_GRIP for grip in grips),
+            'off track': off_the_track(grips, player.wheel_layers),
             'slow': speed is not None and speed < YELLOW_SLOW,
         }
         since = car['since']
@@ -2999,10 +3021,15 @@ def yellow_sector_spans(incidents, state):
 
 
 def on_tarmac(player):
-    """Whether a car stands on the road: a wheel on grip as good as tarmac's or kerbs'
-    (YELLOW_OFF_GRIP); not known counts as on it."""
-    grips = player.wheel_grips
-    return grips is None or any(grip >= YELLOW_OFF_GRIP for grip in grips)
+    """Whether a car stands on the road: a wheel on a surface of the track (by its layer,
+    trackmap.OFF_TRACK_LAYERS; where not known, grip as good as tarmac's: YELLOW_OFF_GRIP);
+    not known counts as on it."""
+    grips, layers = player.wheel_grips, player.wheel_layers
+    if grips is None:
+        return True
+    if layers is not None:
+        return any(grip > 0.0 and layer not in OFF_TRACK_LAYERS for grip, layer in zip(grips, layers))
+    return any(grip >= YELLOW_OFF_GRIP for grip in grips)
 
 
 def yellow_rows(incidents, state, hazard=None):
