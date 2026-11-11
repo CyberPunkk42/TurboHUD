@@ -15,6 +15,13 @@ the grass was learnt, and kept, as the track): a car's path starts afresh while 
 four wheels off the tarmac, nearly stands or goes backwards, as when it is put back on the
 track. A track saved before that is still shown, and learnt again from the next clean lap.
 
+Several clean laps are compared before one is saved (asked for by the user on 2026-11-11:
+a shortcut on tarmac or kerbs is clean, so a first lap through it was learnt). The first
+shows at once; once LEARN_LAPS are in, laps clearly shorter than the longest are left out
+(a shortcut saves distance) and of the rest the one nearest the others is kept and saved
+(see choose_lap). One lap a car while there are enough cars, so one driver who cuts every
+lap is outvoted. A track saved from a single lap is still shown, and learnt again this way.
+
 A spectator sees every car, with the leader marked. On the map otherwise: the local player, the race leader, the next car ahead and the next car
 behind in the race order (the player list's, held steady while cars pass), and smaller
 dots for backmarkers (cars the local player is about to lap) on the road between the
@@ -42,6 +49,9 @@ LAPPING_SHARE = 0.5  # a car more than half a lap behind in the race and ahead o
 TRACKS_FOLDER = 'tracks'
 CLEAN_GRIP = 0.9  # all four wheels on less grip than this: off the tarmac (as race.YELLOW_OFF_GRIP)
 CLEAN_SPEED = 1.0  # slower than this along the car (or backwards): not driving the track
+LEARN_LAPS = 3  # clean laps compared before a track is saved
+SHORT_LAP = 0.985  # a lap shorter than this share of the longest is left out: a shortcut
+COMPARE_POINTS = 100  # laps are compared at about this many points each
 HEADING_SEARCH = 20  # points of the learnt line searched each way from a car's last one (of about 600)
 
 log = logging.getLogger(__name__)
@@ -164,6 +174,37 @@ def outline_from_path(path, closed, start=None):
     return TrackOutline(points, closed, start, (min(xs), min(zs), max(xs), max(zs)))
 
 
+def path_length(points, closed=True):
+    total = sum(math.dist(a, b) for a, b in itertools.pairwise(points))
+    return total + (math.dist(points[-1], points[0]) if closed and len(points) > 1 else 0.0)
+
+
+def lap_gap(first, second):
+    """How far apart two laps' lines run: the mean distance from each point of one to the
+    nearest point of the other, both ways. A shortcut gives a large gap where the others
+    go round and it does not."""
+
+    def one_way(points, other):
+        return sum(min(math.dist(p, q) for q in other) for p in points) / len(points)
+
+    return (one_way(first, second) + one_way(second, first)) / 2
+
+
+def choose_lap(laps):
+    """The index of the lap (each a list of (x, z)) to keep as the track: of the laps at
+    least SHORT_LAP as long as the longest, the one whose lines run nearest the others."""
+    lengths = [path_length(lap) for lap in laps]
+    longest = max(lengths)
+    kept = [i for i, length in enumerate(lengths) if length >= SHORT_LAP * longest]
+    if len(kept) < 3:
+        return max(kept, key=lambda i: lengths[i])  # no majority to go by: the longest
+    sparse = {}
+    for i in kept:
+        spacing = max(lengths[i] / COMPARE_POINTS, LEAST_SPACING)
+        sparse[i] = evened(laps[i], spacing)
+    return min(kept, key=lambda i: sum(lap_gap(sparse[i], sparse[j]) for j in kept if j != i))
+
+
 def track_key(gates):
     """A name for the track from its checkpoint lines, for its saved file."""
     text = ';'.join(f'{x:.1f},{z:.1f}' for gate in gates for x, z in gate)
@@ -248,6 +289,10 @@ class TrackPaths:
     count goes back (a new race). Only the last lap is
     kept. `lap()` gives the first whole lap any car has driven."""
 
+    def forget(self, name):
+        """Start the car's path afresh (its lap was taken: the next one is a new lap)."""
+        self.paths.pop(name, None)
+
     def __init__(self):
         self.paths = {}
 
@@ -271,13 +316,13 @@ class TrackPaths:
                 path.pop(0)  # still more than a lap without the first point: not needed
 
     def lap(self, laps):
-        """(points, start index) of a whole lap driven by one car, or None. A car's
+        """(the car's name, points, start index) of a whole lap driven by one car, or None. A car's
         path is a whole lap once it has passed one more line than a lap from where it
         begins (so it has surely come round past its first point); the lap ends at its
         point nearest the first, a lap on."""
         if laps < 2:
             return None
-        for path in self.paths.values():
+        for name, path in self.paths.items():
             first_count, first = path[0]
             if len(path) < 3 or path[-1][0] - first_count <= laps:
                 continue
@@ -290,7 +335,7 @@ class TrackPaths:
                 (i for i in range(1, end) if path[i][0] != path[i - 1][0] and (path[i][0] - 1) % laps == 0),
                 None,
             )
-            return points, start
+            return name, points, start
         return None
 
     def longest(self):
@@ -309,15 +354,16 @@ class TrackMap:
         self.folder = Path(folder) if folder is not None else None
         self._gates = None
         self.learned = None  # the whole lap's TrackOutline, once known
-        self.clean = False  # whether `learned` came from a clean lap (an older file may not have)
+        self.settled = False  # `learned` was chosen from LEARN_LAPS clean laps (an older file's may not be)
         self.paths = TrackPaths()
         self._partial = None  # (path length, TrackOutline) while no lap is known
+        self._laps = []  # the clean laps so far: (car's name, points, start mark)
 
     def _file(self, gates):
         return self.folder / TRACKS_FOLDER / f'{track_key(gates)}.json' if self.folder else None
 
     def _load(self, gates):
-        """(the saved outline or None, whether it was learnt from a clean lap)."""
+        """(the saved outline or None, whether it was chosen from LEARN_LAPS clean laps)."""
         path = self._file(gates)
         if path is None:
             return None, False
@@ -327,15 +373,18 @@ class TrackMap:
             mark = data.get('start')
             start = ((float(mark[0]), float(mark[1])), (float(mark[2]), float(mark[3]))) if mark else None
             outline = outline_from_path(points, data.get('closed') is True, start)
-            clean = data.get('clean') is True
+            laps = data.get('laps', 1 if data.get('clean') is True else 0)
+            settled = data.get('clean') is True and isinstance(laps, int) and laps >= LEARN_LAPS
         except (OSError, ValueError, KeyError, TypeError):
             return None, False
         if outline is not None:
-            later = '' if clean else ', from before clean laps: learnt again from the next one'
+            later = (
+                '' if settled else f', from under {LEARN_LAPS} clean laps: learnt again from the next ones'
+            )
             log.info('track map: learnt track loaded (%s)%s', path.name, later)
-        return outline, clean
+        return outline, settled
 
-    def _save(self, gates, points, start):
+    def _save(self, gates, points, start, laps):
         path = self._file(gates)
         if path is None:
             return
@@ -345,13 +394,14 @@ class TrackMap:
             'closed': True,
             'start': mark,
             'clean': True,
+            'laps': laps,  # clean laps it was chosen from
         }
         try:
             path.parent.mkdir(parents=True, exist_ok=True)
             temporary = path.with_name(path.name + '.tmp')
             temporary.write_text(json.dumps(data) + '\n', encoding='utf-8')
             os.replace(temporary, path)
-            log.info('track map: track learnt and saved (%s)', path.name)
+            log.info('track map: track learnt from %d clean laps and saved (%s)', laps, path.name)
         except OSError as error:
             log.warning('track map: could not save the learnt track: %s', error)
 
@@ -398,34 +448,48 @@ class TrackMap:
                 path.unlink(missing_ok=True)
             except OSError as error:
                 log.warning('track map: could not delete the learnt track: %s', error)
-        self.learned, self.clean = None, False
-        self.paths, self._partial = TrackPaths(), None
+        self.learned, self.settled = None, False
+        self.paths, self._partial, self._laps = TrackPaths(), None, []
         log.info('track map: forgotten, learnt again from the next clean lap')
         return True
 
     def outline(self, players, gates, laps):
         """The outline to draw: the learnt lap, or the longest stretch driven so far."""
         if gates != self._gates:
-            self._gates, self.paths, self._partial = gates, TrackPaths(), None
-            self.learned, self.clean = self._load(gates) if gates else (None, False)
-        if self.learned is not None and self.clean:
+            self._gates, self.paths, self._partial, self._laps = gates, TrackPaths(), None, []
+            self.learned, self.settled = self._load(gates) if gates else (None, False)
+        if self.learned is not None and self.settled:
             return self.learned
         self.paths.add(players, laps)
         lap = self.paths.lap(laps)
         if lap is not None:
-            points, index = lap
-            start = start_mark(points, gates[0], index)
-            learned = outline_from_path(points, True, start)
-            if learned is not None:
-                self.learned, self.clean = learned, True
-                self._save(gates, points, start)
-                return self.learned
+            self._take(lap, gates)
         if self.learned is not None:
-            return self.learned  # an older one, until a clean lap takes its place
+            return self.learned  # the best lap so far, or an older saved one until a lap is in
         longest = self.paths.longest()
         if self._partial is None or len(longest) != self._partial[0]:
             self._partial = (len(longest), outline_from_path(longest, False))
         return self._partial[1]
+
+    def _take(self, lap, gates):
+        """A clean lap is in: keep it (one a car, unless there are too few cars), show the
+        best so far, and once there are LEARN_LAPS, keep the chosen one and save it."""
+        name, points, index = lap
+        self.paths.forget(name)  # its next lap is a lap of its own
+        drivers = {driver for driver, _points, _start in self._laps}
+        if name in drivers and len(drivers | set(self.paths.paths)) >= LEARN_LAPS:
+            return  # enough other cars to give the other laps
+        self._laps.append((name, points, start_mark(points, gates[0], index)))
+        chosen = choose_lap([lap_points for _name, lap_points, _start in self._laps])
+        _name, best, start = self._laps[chosen]
+        outline = outline_from_path(best, True, start)
+        if outline is None:
+            return
+        self.learned = outline
+        if len(self._laps) >= LEARN_LAPS:
+            self.settled = True
+            self._save(gates, best, start, len(self._laps))
+            self._laps = []
 
     def update(self, state, order, yellow=frozenset()):
         """The view for the race `state` (LapState) with its players in race `order`,

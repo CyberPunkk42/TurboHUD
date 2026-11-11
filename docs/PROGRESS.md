@@ -1031,3 +1031,10 @@ its "Recent changes".
   learnt track map's line, which runs in the driving direction (`TrackMap.heading`, searching near the car's
   last point): the checkpoint lines would be wrong in hairpins. So it needs the track learnt; until then no
   car is shown going the wrong way. Ranked after stopped, before spun. Tests. Not yet seen in a race.
+- 2026-11-11: A track is learnt from three clean laps, asked for by the user: a shortcut on the tarmac or kerbs
+  is a clean lap, so a first lap through one was learnt. The first clean lap still shows at once; once
+  `LEARN_LAPS` (3) are in, laps under `SHORT_LAP` (98.5 %) of the longest are left out (a shortcut saves
+  distance), and of the rest the one whose line runs nearest the others is kept (`choose_lap`, `lap_gap`, at
+  about 100 points a lap) and saved with `laps`. One lap a car while there are three or more cars, so one
+  driver who cuts every lap is outvoted; alone or with one other car, more laps of the same car count. A track
+  saved from a single lap still shows and is learnt again this way. Tests. Not yet seen in a race.

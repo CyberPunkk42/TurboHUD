@@ -32,6 +32,7 @@ def circle_gates(lines=LINES, radius=RADIUS, half_width=5.0):
 
 
 GATES = circle_gates()
+SAVED = (trackmap.LEARN_LAPS + 1) * (LINES + 1)  # checkpoints one car drives until the track is saved
 
 
 def on_track(checkpoints):
@@ -191,9 +192,10 @@ class LearntTrackTests(unittest.TestCase):
 
     def test_a_track_saved_before_clean_laps_shows_until_a_clean_lap_replaces_it(self):
         with tempfile.TemporaryDirectory() as folder:
-            drive(trackmap.TrackMap(folder=folder), LINES + 1.5)
+            drive(trackmap.TrackMap(folder=folder), SAVED)
             file = Path(folder) / trackmap.TRACKS_FOLDER / f'{trackmap.track_key(GATES)}.json'
             data = json.loads(file.read_text())
+            self.assertEqual(data.pop('laps'), trackmap.LEARN_LAPS)
             self.assertIs(data.pop('clean'), True)
             data['points'] = [[x * 1.5, z * 1.5] for x, z in data['points']]  # an older, wrong one
             file.write_text(json.dumps(data))
@@ -203,12 +205,33 @@ class LearntTrackTests(unittest.TestCase):
             self.assertGreater(max(math.hypot(x, z) for x, z in older.points), RADIUS * 1.4)  # shown
             view = drive(again, LINES + 1.5, since=0.55)
             self.assertLess(max(math.hypot(x, z) for x, z in view.outline.points), RADIUS + 1)  # replaced
+            self.assertNotIn('clean', json.loads(file.read_text()))  # saved only after LEARN_LAPS laps
+            drive(again, SAVED, since=LINES + 1.55)
             self.assertIs(json.loads(file.read_text())['clean'], True)
+            self.assertEqual(json.loads(file.read_text())['laps'], trackmap.LEARN_LAPS)
+
+    def test_a_track_saved_from_one_lap_shows_and_is_learnt_again_from_several(self):
+        with tempfile.TemporaryDirectory() as folder:
+            drive(trackmap.TrackMap(folder=folder), SAVED)
+            file = Path(folder) / trackmap.TRACKS_FOLDER / f'{trackmap.track_key(GATES)}.json'
+            data = json.loads(file.read_text())
+            del data['laps']  # as TurboHUD saved it before 2026-11-11's second build
+            file.write_text(json.dumps(data))
+            again = trackmap.TrackMap(folder=folder)
+            me = driver('Me', 0.5, local=True)
+            self.assertTrue(again.update(state([me]), [me]).outline.closed)  # shown at once
+            self.assertFalse(again.settled)  # but learnt again
+            drive(again, SAVED, since=0.55)
+            self.assertTrue(again.settled)
+            self.assertEqual(json.loads(file.read_text())['laps'], trackmap.LEARN_LAPS)
 
     def test_a_learnt_track_is_saved_and_known_at_once_next_time(self):
         with tempfile.TemporaryDirectory() as folder:
             first = trackmap.TrackMap(folder=folder)
             drive(first, LINES + 1.5)
+            self.assertIsNotNone(first.learned)  # shown after one lap ...
+            self.assertFalse((Path(folder) / trackmap.TRACKS_FOLDER).exists())  # ... saved after LEARN_LAPS
+            drive(first, SAVED, since=LINES + 1.55)
             files = list((Path(folder) / trackmap.TRACKS_FOLDER).iterdir())
             self.assertEqual([f.name for f in files], [f'{trackmap.track_key(GATES)}.json'])
             again = trackmap.TrackMap(folder=folder)
@@ -226,11 +249,11 @@ class LearntTrackTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as folder:
             tracks = Path(folder) / trackmap.TRACKS_FOLDER
             other = trackmap.TrackMap(folder=folder)
-            drive(other, LINES + 1.5, OFF_GATES)  # another track's map stays
+            drive(other, SAVED, OFF_GATES)  # another track's map stays
             track_map = trackmap.TrackMap(folder=folder)
             self.assertFalse(track_map.has_track)
             self.assertFalse(track_map.relearn())  # no track known yet
-            drive(track_map, LINES + 1.5)
+            drive(track_map, SAVED)
             file = tracks / f'{trackmap.track_key(GATES)}.json'
             self.assertTrue(file.exists())
             self.assertTrue(track_map.has_track)
@@ -240,11 +263,13 @@ class LearntTrackTests(unittest.TestCase):
             self.assertIsNone(track_map.learned)
             me = driver('Me', 0.5, local=True)
             self.assertIsNone(trackmap.TrackMap(folder=folder).update(state([me]), [me]))  # nothing saved
-            view = drive(track_map, LINES + 4, since=LINES + 1.55)
+            view = drive(track_map, SAVED + 4, since=SAVED + 0.05)
             self.assertFalse(view.outline.closed)  # the stretch driven since, not the old map
-            drive(track_map, 2 * LINES + 3, since=LINES + 4.05)
-            self.assertIsNotNone(track_map.learned)  # the next whole clean lap
-            self.assertTrue(file.exists())
+            drive(track_map, SAVED + LINES + 6, since=SAVED + 4.05)
+            self.assertIsNotNone(track_map.learned)  # the next whole clean lap shows ...
+            self.assertFalse(file.exists())
+            drive(track_map, 2 * SAVED + 6, since=SAVED + LINES + 6.05)
+            self.assertTrue(file.exists())  # ... and LEARN_LAPS of them are saved
             self.assertTrue(track_map.relearn())  # a second time, and with no file left, too
             file.unlink(missing_ok=True)
             self.assertTrue(track_map.relearn())
@@ -262,6 +287,52 @@ class LearntTrackTests(unittest.TestCase):
         _way, near = track_map.heading((0.0, RADIUS + 3), later)
         self.assertEqual(near, later)
         self.assertIsNone(track_map.heading(None))
+
+    def test_of_several_laps_a_shortcut_is_not_kept(self):
+        # Asked for by the user on 2026-11-11: a shortcut on tarmac is a clean lap.
+        def lap(cut=False, radius=RADIUS):
+            points = []
+            for step in range(240):
+                turn = 2 * math.pi * step / 240
+                if cut and math.pi / 2 < turn < math.pi:
+                    continue  # straight across from (0, r) to (-r, 0): a quarter cut off
+                points.append((radius * math.cos(turn), radius * math.sin(turn)))
+            return points
+
+        self.assertNotEqual(trackmap.choose_lap([lap(True), lap(), lap(radius=RADIUS + 1)]), 0)
+        self.assertEqual(trackmap.choose_lap([lap(True), lap(True), lap()]), 2)  # shorter: left out
+        self.assertEqual(trackmap.choose_lap([lap(True), lap()]), 1)  # two: the longer
+        self.assertEqual(trackmap.choose_lap([lap()]), 0)
+        self.assertGreater(
+            trackmap.lap_gap(lap(True), lap()), trackmap.lap_gap(lap(radius=RADIUS + 1), lap())
+        )
+
+    def test_one_lap_a_car_while_there_are_enough_cars(self):
+        track_map = trackmap.TrackMap()
+        names = ('A', 'B', 'C')
+        u = 0.0
+        while not track_map.settled and u < 4 * LINES:
+            cars = [driver(name, u + 0.1 * i, local=name == 'A') for i, name in enumerate(names)]
+            track_map.update(state(cars), cars)
+            u += 0.05
+        self.assertTrue(track_map.settled)
+        self.assertLess(u, 2 * LINES)  # each car's first lap: no car had to give a second one
+        lap = [(RADIUS * math.cos(t / 40), RADIUS * math.sin(t / 40)) for t in range(251)]
+        racing = trackmap.TrackMap()
+        racing._gates = GATES
+        racing.paths.paths = {'B': [(1, (0.0, 0.0))], 'C': [(1, (0.0, 0.0))]}  # two more cars driving
+        racing._take(('A', lap, 1), GATES)
+        racing._take(('A', lap, 1), GATES)  # A again: B and C are to give the others
+        self.assertEqual([name for name, _points, _start in racing._laps], ['A'])
+        two = trackmap.TrackMap()
+        two._gates = GATES
+        two.paths.paths = {'B': [(1, (0.0, 0.0))]}  # only two cars: laps again from the same car
+        two._take(('A', lap, 1), GATES)
+        two._take(('A', lap, 1), GATES)
+        self.assertEqual([name for name, _points, _start in two._laps], ['A', 'A'])
+        alone = trackmap.TrackMap()
+        drive(alone, SAVED)
+        self.assertTrue(alone.settled)  # one car alone gives every lap
 
     def test_one_read_is_no_map(self):
         me = car('Me', 3, local=True)
