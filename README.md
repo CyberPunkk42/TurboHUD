@@ -229,8 +229,10 @@ starting TurboHUD again.
   icon's menu; Linux: `run_turbohud.sh --screenshot`), of the screen the HUD is on, saved as a PNG in
   `Pictures/TurboHUD` (**Open the screenshots folder** in the menu; `screenshot_folder` in the settings
   file names another). Steam's F12 needs Steam's overlay, which TSU in CrossOver with D3DMetal does not
-  show. On the Mac it uses macOS's own screenshot tool, with its camera sound, and macOS asks once
-  whether TurboHUD may record the screen. TSU has nothing on Ctrl+Shift+S (its editor saves with Ctrl+S).
+  show. On the Mac it uses macOS's own screenshot tool, with its camera sound. It needs Screen Recording:
+  the first time TurboHUD asks macOS for it; allow TurboHUD (started from the source: your terminal app)
+  in System Settings > Privacy & Security > Screen Recording, then start TurboHUD again. The log says
+  whether each screenshot was saved, or why not. TSU has nothing on Ctrl+Shift+S (its editor saves with Ctrl+S).
 
 Where each section sits, its size, whether it shows, and the look are saved in
 `settings.json`, with a log of the last run in

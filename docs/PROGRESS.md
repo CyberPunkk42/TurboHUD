@@ -1096,3 +1096,9 @@ its "Recent changes".
   (`screenshot_folder` in the settings), named by the time: macOS's `screencapture -D`, with its camera sound
   (Screen Recording asked for once); Linux `grim`, else Qt; Windows Qt. Also in the icon's menu (Take a
   screenshot, Open the screenshots folder) and `run_turbohud.sh --screenshot`. Tests. Not yet tried by hand.
+- 2026-11-11: Screenshots that were not saved, reported by the user: Ctrl+Shift+S started macOS's
+  `screencapture` twice, but no file came, and the tool's errors were thrown away. Most likely the Screen
+  Recording permission: now TurboHUD asks macOS first (`CGPreflightScreenCaptureAccess`; when not allowed,
+  `CGRequestScreenCaptureAccess` and a tray message saying where to allow it), and waits for the tool aside,
+  logging `screenshot saved: <path>` or `screenshot not saved (<the tool's words>)`. Started from the source,
+  the permission belongs to the terminal app. Tests.

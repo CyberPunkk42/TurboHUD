@@ -70,9 +70,11 @@ class CaptureTests(unittest.TestCase):
         with (
             tempfile.TemporaryDirectory() as folder,
             mock.patch.object(screenshot.subprocess, 'Popen') as popen,
+            mock.patch.object(screenshot.threading, 'Thread') as thread,
         ):
             path = screenshot.take_screenshot(self.screen(), 0, Path(folder) / 'new', 'darwin')
             self.assertEqual(path.parent, Path(folder) / 'new')  # made where it was missing
+        thread.return_value.start.assert_called_once()  # its result is checked aside
         command = popen.call_args[0][0]
         self.assertEqual(command[:3], ['/usr/sbin/screencapture', '-D', '1'])
         self.assertEqual(command[-1], str(path))
@@ -84,6 +86,43 @@ class CaptureTests(unittest.TestCase):
         screen.grabWindow.return_value.save.assert_called_once_with(str(path), 'PNG')
         with tempfile.TemporaryDirectory() as folder, self.assertRaises(OSError):
             screenshot.take_screenshot(self.screen(saved=False), 0, folder, 'win32')
+
+
+class CheckTests(unittest.TestCase):
+    """Seen 2026-11-11: macOS's tool saved nothing, and said nothing, without the permission."""
+
+    def process(self, errors=b'', code=0):
+        process = mock.Mock(returncode=code)
+        process.communicate.return_value = (b'', errors)
+        return process
+
+    def test_the_log_says_whether_it_was_saved_and_why_not(self):
+        with tempfile.TemporaryDirectory() as folder:
+            saved = Path(folder) / 'a.png'
+            saved.write_bytes(b'png')
+            with self.assertLogs('turbohud.screenshot', 'INFO') as logs:
+                screenshot._check(self.process(), saved)
+                screenshot._check(
+                    self.process(b'could not create image from display\n', 1), Path(folder) / 'b.png'
+                )
+                screenshot._check(self.process(code=1), Path(folder) / 'c.png')
+        text = '\n'.join(logs.output)
+        self.assertIn('screenshot saved', text)
+        self.assertIn('not saved (could not create image from display)', text)
+        self.assertIn('ended with 1', text)
+
+    def test_a_tool_that_hangs_is_ended(self):
+        process = self.process()
+        process.communicate.side_effect = [screenshot.subprocess.TimeoutExpired('x', 1), (b'', b'')]
+        with self.assertLogs('turbohud.screenshot', 'WARNING'):
+            screenshot._check(process, Path('/nonexistent.png'), timeout=1)
+        process.kill.assert_called_once()
+
+    def test_the_permission_is_asked_about_on_the_mac_only(self):
+        self.assertIsNone(screenshot.screen_recording_allowed('win32'))
+        self.assertIsNone(screenshot.ask_for_screen_recording('linux'))
+        if sys.platform == 'darwin':
+            self.assertIn(screenshot.screen_recording_allowed(), (True, False))
 
 
 class WiringTests(unittest.TestCase):

@@ -611,7 +611,18 @@ def run(args, folder):
         """A screenshot of the screen most of the shown sections are on (turbohud.screenshot)."""
         from collections import Counter
 
-        from turbohud.screenshot import screenshot_folder, take_screenshot
+        from turbohud.screenshot import (
+            PERMISSION_HELP,
+            ask_for_screen_recording,
+            screen_recording_allowed,
+            screenshot_folder,
+            take_screenshot,
+        )
+
+        if screen_recording_allowed() is False:
+            log.warning('screenshot: no Screen Recording permission (asked macOS for it)')
+            ask_for_screen_recording()
+            tray.showMessage('TurboHUD', PERMISSION_HELP, QSystemTrayIcon.Information, 10_000)
 
         shown = [w for w in windows.values() if w.wanted] or list(windows.values())
         found = Counter(QGuiApplication.screenAt(w.geometry().center()) for w in shown)

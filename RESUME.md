@@ -75,6 +75,12 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-11: Screenshots that were not saved, reported by the user: Ctrl+Shift+S started macOS's
+  `screencapture` twice, but no file came, and the tool's errors were thrown away. Most likely the Screen
+  Recording permission: now TurboHUD asks macOS first (`CGPreflightScreenCaptureAccess`; when not allowed,
+  `CGRequestScreenCaptureAccess` and a tray message saying where to allow it), and waits for the tool aside,
+  logging `screenshot saved: <path>` or `screenshot not saved (<the tool's words>)`. Started from the source,
+  the permission belongs to the terminal app. Tests.
 - 2026-11-11: A screenshot shortcut, Ctrl+Shift+S, asked for by the user: Steam's F12 did nothing, as Steam's
   overlay never shows in TSU's bottle with D3DMetal (its log: no frame from Steam's UI; screenshots last
   worked on 20 October). Ctrl+Shift+S is free: TSU's bindings know only Ctrl as a modifier (its editor saves

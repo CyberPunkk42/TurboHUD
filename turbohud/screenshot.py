@@ -18,12 +18,18 @@ import os
 import shutil
 import subprocess
 import sys
+import threading
 import time
 from pathlib import Path
 
 log = logging.getLogger(__name__)
 
 FOLDER_NAME = 'TurboHUD'
+CAPTURE_TIMEOUT = 30  # seconds for the capture tool to save the picture
+PERMISSION_HELP = (
+    'Screenshots need Screen Recording: System Settings > Privacy & Security > Screen Recording,\n'
+    'allow TurboHUD (started from the source: the terminal app), then start TurboHUD again.'
+)
 
 
 def screenshot_folder(chosen=None, platform=sys.platform, home=None, environ=None):
@@ -74,10 +80,61 @@ def take_screenshot(screen, screen_index, folder, platform=sys.platform):
     rect = screen.geometry()
     command = capture_command(path, screen_index, (rect.x(), rect.y(), rect.width(), rect.height()), platform)
     if command is not None:
-        subprocess.Popen(
-            command, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+        process = subprocess.Popen(
+            command, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE
         )
-    elif not screen.grabWindow(0).save(str(path), 'PNG'):
+        threading.Thread(target=_check, args=(process, path), name='screenshot', daemon=True).start()
+        return path
+    if not screen.grabWindow(0).save(str(path), 'PNG'):
         raise OSError(f'could not save {path}')
-    log.info('screenshot: %s', path.name)
+    log.info('screenshot saved: %s', path)
     return path
+
+
+def _check(process, path, timeout=CAPTURE_TIMEOUT):
+    """Wait for the capture tool, then say in the log whether the file is there, or why
+    not (seen 2026-11-11: macOS's tool saved nothing, and said nothing, without the Screen
+    Recording permission)."""
+    try:
+        _out, errors = process.communicate(timeout=timeout)
+    except subprocess.TimeoutExpired:
+        process.kill()
+        process.communicate()
+        log.warning('screenshot: the capture tool did not finish in %d s', timeout)
+        return
+    if Path(path).exists():
+        log.info('screenshot saved: %s', path)
+        return
+    said = (errors or b'').decode('utf-8', 'replace').strip()
+    log.warning('screenshot not saved (%s)', said or f'the capture tool ended with {process.returncode}')
+
+
+def screen_recording_allowed(platform=sys.platform):
+    """On macOS whether TurboHUD may record the screen (CGPreflightScreenCaptureAccess);
+    None elsewhere, or where it cannot be asked."""
+    if platform != 'darwin':
+        return None
+    try:
+        import ctypes
+
+        graphics = ctypes.CDLL('/System/Library/Frameworks/CoreGraphics.framework/CoreGraphics')
+        graphics.CGPreflightScreenCaptureAccess.restype = ctypes.c_bool
+        return bool(graphics.CGPreflightScreenCaptureAccess())
+    except (OSError, AttributeError):
+        return None
+
+
+def ask_for_screen_recording(platform=sys.platform):
+    """On macOS ask for the Screen Recording permission (CGRequestScreenCaptureAccess):
+    macOS asks the player once, and lists TurboHUD in its settings. A change counts only
+    after TurboHUD is started again."""
+    if platform != 'darwin':
+        return
+    try:
+        import ctypes
+
+        graphics = ctypes.CDLL('/System/Library/Frameworks/CoreGraphics.framework/CoreGraphics')
+        graphics.CGRequestScreenCaptureAccess.restype = ctypes.c_bool
+        graphics.CGRequestScreenCaptureAccess()
+    except (OSError, AttributeError):
+        pass
