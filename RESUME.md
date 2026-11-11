@@ -75,6 +75,8 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-11: The yellow flag is always a plain YELLOW, asked for by the user: no DOUBLE YELLOW for a stopped
+  car (its line still says "stopped"). Tests.
 - 2026-11-11: The move-mode panel tidied, asked for by the user: **All** and **None** beside the Show heading
   show or hide every section at once, one step for Undo (`MovePanel.all_wanted`, the app's `set_all_wanted`);
   the sections come under Timing, Car, Race and Other (`hud.panel_categories`); the column headings sit over
