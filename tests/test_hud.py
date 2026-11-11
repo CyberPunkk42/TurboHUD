@@ -177,6 +177,24 @@ class TintTests(unittest.TestCase):
         self.assertTrue(hud.default_tint(sections['fuel'], backdrop=True))
 
 
+class PanelCategoryTests(unittest.TestCase):
+    def test_every_race_section_comes_under_one_heading_in_order(self):
+        found = hud.panel_categories(hud.RACE_SECTIONS)
+        self.assertEqual([heading for heading, _sections in found], ['Timing', 'Car', 'Race', 'Other'])
+        names = [section.name for _heading, sections in found for section in sections]
+        self.assertEqual(sorted(names), sorted(section.name for section in hud.RACE_SECTIONS))
+        self.assertEqual(
+            [s.name for s in found[0][1]], ['lap', 'current', 'delta', 'deltabar', 'times', 'laptimes']
+        )
+
+    def test_one_heading_alone_is_no_heading(self):
+        self.assertEqual([heading for heading, _s in hud.panel_categories(hud.CLOCK_SECTIONS)], [''])
+
+    def test_a_section_not_named_comes_last(self):
+        new = hud.Section('newthing', 'New thing', ())
+        self.assertEqual(hud.panel_categories([*hud.RACE_SECTIONS, new])[-1][1][-1], new)
+
+
 class TextCanCentreTests(unittest.TestCase):
     def test_sections_with_plain_text_can(self):
         can = {section.name for section in hud.RACE_SECTIONS if hud.text_can_centre(section)}

@@ -171,6 +171,8 @@ starting TurboHUD again.
   the first lap and is complete once any car has driven a whole clean lap (not through the
   grass with all four wheels, nor standing or going backwards); after that it is saved and
   shows at once. A map saved by an older TurboHUD is learnt again from the next clean lap.
+- The move-mode panel lists the sections under Timing, Car, Race and Other. **All** and
+  **None** next to **Show** show or hide every section at once (one step for **Undo**).
 - Every section has **↔** and **↕** buttons under **Centre** in the move-mode panel: they
   centre its box across or down the screen it is on. **Mid text** puts a section's text
   in the middle of its box instead of at the left, so with both the text is in the middle
@@ -195,7 +197,7 @@ starting TurboHUD again.
   afresh when TurboHUD starts.
 - **Layout presets**: the panel can keep three layouts: where each section sits, its size,
   whether it shows, and its group. **Save** keeps the layout as it is now in that preset,
-  replacing what was there; **Load** puts the sections back as it has them; the bin deletes
+  replacing what was there; **Load** puts the sections back as it has them; **Delete** deletes
   it, and **Undo** brings it back. **Ctrl+Shift+1**,
   **2** and **3** load one at any time, also during a race (Linux: `run_turbohud.sh --preset
   1`, which a key can run). Colours and the other options stay as they are.

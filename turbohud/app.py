@@ -724,6 +724,13 @@ def run(args, folder):
         log.info('section %s %s', name, 'shown' if wanted else 'hidden')
 
     @undoable
+    def set_all_wanted(wanted):
+        """Select all or Deselect all in the panel: every section, one step for Undo."""
+        for window in windows.values():
+            window.set_wanted(wanted)
+        log.info('every section %s', 'shown' if wanted else 'hidden')
+
+    @undoable
     def match_group(group):
         """The group's text sections get the same text size and width (the panel's Match).
         The settings take these places, not what the desktop says yet (see load_preset)."""
@@ -927,6 +934,7 @@ def run(args, folder):
     panel.lock_requested.connect(lambda: set_locked(True))
     panel.quit_requested.connect(app.quit)
     panel.wanted_changed.connect(set_wanted)
+    panel.all_wanted.connect(set_all_wanted)
     panel.group_changed.connect(set_group)
     panel.align_requested.connect(align)
     for name, window in windows.items():

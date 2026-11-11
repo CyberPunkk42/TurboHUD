@@ -811,7 +811,7 @@ class MovePanelPresetTests(unittest.TestCase):
         self.assertEqual(got, [2])
         panel.set_presets_saved(())
         self.assertFalse(panel.preset_deletes[2].isEnabled())
-        self.assertFalse(panel.preset_deletes[2].icon().isNull())
+        self.assertEqual(panel.preset_deletes[2].text(), 'Delete')  # a word, as Save and Load
 
     def test_a_preset_can_go_back_to_empty(self):
         panel = self.panel(saved_presets=(1, 2))
@@ -861,6 +861,32 @@ class MovePanelPresetTests(unittest.TestCase):
         self.assertEqual(got, [('fuel', True)])
         self.assertFalse(panel.tints['fuel'].isChecked())
         panel.set_tint('radar', True)  # none: nothing happens
+
+    def test_select_all_and_deselect_all_tick_every_box_in_one_request(self):
+        from PySide6.QtWidgets import QPushButton
+
+        panel = self.panel()
+        one_by_one, at_once = [], []
+        panel.wanted_changed.connect(lambda *change: one_by_one.append(change))
+        panel.all_wanted.connect(at_once.append)
+        buttons = {b.text(): b for b in panel.findChildren(QPushButton) if b.text() in ('All', 'None')}
+        buttons['All'].click()
+        self.assertTrue(all(box.isChecked() for box in panel.boxes.values()))
+        buttons['None'].click()
+        self.assertFalse(any(box.isChecked() for box in panel.boxes.values()))
+        self.assertEqual(at_once, [True, False])  # one request each: one step for Undo
+        self.assertEqual(one_by_one, [])
+
+    def test_the_sections_are_listed_under_headings(self):
+        from PySide6.QtWidgets import QLabel
+
+        from turbohud.core.hud import RACE_SECTIONS
+
+        panel = self.panel()
+        texts = [label.text() for label in panel.findChildren(QLabel)]
+        for heading in ('TIMING', 'CAR', 'RACE', 'OTHER'):
+            self.assertTrue(any(heading in text for text in texts), heading)
+        self.assertEqual(len(panel.boxes), len(RACE_SECTIONS))  # every section still there
 
     def test_the_panel_stays_compact(self):
         # It was 675 x 978 px with the options and a row per preset: most of a laptop's screen.
