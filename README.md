@@ -147,8 +147,8 @@ starting TurboHUD again.
   the next one, as marshals show it: all four wheels off the tarmac, slow, stopped (a double
   yellow), spun (going backwards) or put back on the track. It names the sector and the
   drivers, and the track map rings those cars in yellow. It goes 3 seconds after the car is
-  back on the track and up to speed; not for cars in the pits. Untick **Yellow flag** in
-  move mode to hide it.
+  back on the track and up to speed; not for cars in the pits. **Yellow flags** in the
+  TurboHUD icon's menu or under **Settings…** turns them off (the section and the rings).
 - **Settings…** (TurboHUD icon's menu, or the move-mode panel) picks the text,
   highlight and outline colours, makes all sections bigger or smaller at once, and holds
   the options for the whole HUD: mph, the tint behind all sections, the radar's

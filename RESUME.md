@@ -75,6 +75,11 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-11: Yellow flags can be turned off, asked for by the user: **Yellow flags** in the TurboHUD icon's
+  menu and under Settings… (on by default, kept in the settings as `yellow_flags`). Off, there is no Yellow
+  flag section and no yellow ring on the track map, and the cars are not followed (turned on again, it starts
+  afresh). Tests for the setting and the fresh start. Not seen in the app yet: an off-screen start of the
+  app crashes on the Mac with or without the change (its native window code), so a check by hand is left.
 - 2026-11-11: The track map is learnt only from a clean lap, reported by the user: a first lap with a trip
   over the grass was learnt as the track and saved, so the map kept the detour in every later race there. A
   car's path now starts afresh while it has all four wheels off the tarmac (grip under 0.9; kerbs and a wheel

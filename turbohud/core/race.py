@@ -2581,6 +2581,10 @@ class YellowFlags:
     def __init__(self):
         self._cars = {}  # name -> {'since': {condition: since}, 'kind', 'until', 'spawns', 'respawn_until'}
 
+    def reset(self):
+        """Forget every car: while turned off, nothing was followed."""
+        self._cars = {}
+
     def update(self, state):
         """The incidents now, most serious first (a tuple of Incident)."""
         now = state.clock / UNITS_PER_SECOND
