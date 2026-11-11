@@ -923,3 +923,9 @@ its "Recent changes".
   reader and the Python one. TurboHUD's log says what TSU's log says when that changes (`TSU's log: ...`).
   Checked in the bottle on the user's Mac: TSU's start matches macOS's to the second, the live log still
   counts, a log older than TSU's start does not. Not yet seen on the tester's Mac (needs a new build).
+- 2026-11-11: Build 2026.11.11 for the tester (`releases/`, macOS 27, built with `--any-macos`, smoke test
+  passed: the Rust reader read the user's race), with the fix for online races where TSU writes no race log
+  and the new delta bar. `TurboHUD-test-instructions.md` for it: install into Applications (he ran the last
+  build from the disk image), the same five FPS measurements, a quick look with the delta bar, a race joined
+  online (the fix), the log (now with `TSU's log` and where TurboHUD runs from), and the quit check. It
+  replaces 2026.11.10 in `releases/`.
