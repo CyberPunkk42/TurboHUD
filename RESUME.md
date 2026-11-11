@@ -79,6 +79,11 @@
   incidents (off track, slow, stopped, spun, wrong way, respawned) count like everyone else's, so its own HUD shows
   the box with its name, the map rings it and turns its sector yellow. Not in the pits, as for every car. The
   hazard warning (CAR STOPPED AHEAD, WRONG WAY AHEAD) leaves the local car out. Tests. Not yet seen in a race.
+- 2026-11-11: The blue and yellow flags in one spot are combined, not stacked, reported by the user: stacked,
+  they covered twice as much of the track. While both are out and their boxes overlap, the yellow box, where
+  and as large as it is, gets a blue frame (the blue flag's colour and fade; wide at the sides, in the margin, thin at the
+  top and bottom so it never covers the text; `_paint_blue_frame`) and the blue bar is not drawn (`flagstack.combined`). Nothing is moved any more: the
+  stacking (`FlagStack`) is gone. Placed apart, each shows in its own spot. Tests; drawn off screen.
 - 2026-11-11: Build 2026.11.11.7 for the tester (`releases/`, macOS 27, `--any-macos`, 32.4 MB), as 2026.11.11.6
   with JUMP START shown while TSU flags it, then 1.5 s. Built without `--smoke`, as the user's TurboHUD was running
   (the smoke test would only have switched that one to move mode): to start once with TurboHUD closed. The test

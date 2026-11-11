@@ -222,11 +222,11 @@ def listen_for_commands(app, on_command):
 
 def run(args, folder):
     import PySide6
-    from PySide6.QtCore import QObject, QPoint, Qt, QTimer, Signal
+    from PySide6.QtCore import QObject, Qt, QTimer, Signal
     from PySide6.QtGui import QAction, QGuiApplication, QIcon
     from PySide6.QtWidgets import QApplication, QMenu, QSystemTrayIcon
 
-    from turbohud.core.flagstack import FLAG_SECTIONS, FlagStack
+    from turbohud.core.flagstack import combined
     from turbohud.core.hud import (
         CLOCK_SECTIONS,
         RACE_SECTIONS,
@@ -416,7 +416,7 @@ def run(args, folder):
         nonlocal settings
         places = {}
         for name, window in windows.items():
-            x, y, width, height = flags_away.get(name) or window.placement()
+            x, y, width, height = window.placement()
             places[name] = SectionPlace(
                 x, y, width, height, window.wanted, window.group, window.text_centred, window.backdrop
             )
@@ -457,7 +457,6 @@ def run(args, folder):
             save()
             log.info('locked')
         else:
-            flags_home()
             mover.known.clear()  # compare from where the sections are now
             mover.pending.clear()
             native.take_focus()
@@ -663,47 +662,18 @@ def run(args, folder):
             return {name: found[id(w)] for name, w in windows.items() if id(w) in found}
         return {name: w.placement() for name, w in windows.items()}
 
-    flag_stack = FlagStack()
-    flags_away = {}  # flag section -> its own place, while the stack has it elsewhere
-
-    def arrange_flags(current):
-        """Locked: the blue and yellow flags stacked where both are out and would overlap
-        (turbohud.core.flagstack). A flag is moved only as it comes, or back once it has gone."""
-        names = [name for name in FLAG_SECTIONS if name in windows]
-        if len(names) < 2:
-            return
-        homes = {}
-        for name in names:
-            saved = settings.sections.get(name)
-            homes[name] = flags_away.get(name) or (
-                (saved.x, saved.y, saved.width, saved.height) if saved else windows[name].placement()
-            )
-        out = set()
-        if windows.get('yellowflag') and windows['yellowflag'].wanted and current.get('yellowflag'):
-            out.add('yellowflag')
-        if windows.get('blueflag') and windows['blueflag'].wanted and current.get('blue') is not None:
-            out.add('blueflag')
-        first = homes[names[0]]
-        screen = QGuiApplication.screenAt(QPoint(first[0] + first[2] // 2, first[1] + first[3] // 2))
-        bounds = screen.geometry().getRect() if screen is not None else None
-        wanted = flag_stack.places(homes, out, bounds)
-        for name in names:
-            place = wanted.get(name, homes[name])  # gone: back at its own place, while unseen
-            if place != homes[name]:
-                if flags_away.get(name) is None:
-                    flags_away[name] = homes[name]
-                    move_window(windows[name], place, settle=True)
-                    log.info('flags: %s stacked next to the other one', name)
-            elif name in flags_away:
-                del flags_away[name]
-                move_window(windows[name], place, settle=True)
-
-    def flags_home():
-        """Every flag back at its own place: move mode shows and saves where they belong."""
-        flag_stack.reset()
-        for name, place in list(flags_away.items()):
-            move_window(windows[name], place, settle=True)
-            del flags_away[name]
+    def flags_combined(current):
+        """Locked, both flags out and placed to overlap: the blue flag as a frame on the
+        yellow box instead of a bar of its own (turbohud.core.flagstack)."""
+        yellow, blue = windows.get('yellowflag'), windows.get('blueflag')
+        if not locked or yellow is None or blue is None:
+            return False
+        return combined(
+            yellow.placement(),
+            blue.placement(),
+            yellow.wanted and bool(current.get('yellowflag')),
+            blue.wanted and current.get('blue') is not None,
+        )
 
     def move_window(window, place, settle):
         native_move = getattr(native, 'move_window', None)
@@ -1126,18 +1096,22 @@ def run(args, folder):
         current = contents()
         if not locked:
             relearn_available()  # a race may start or end while the panel is open
-        else:
-            arrange_flags(current)
+        together = flags_combined(current)
         if live is not None:
             text = tray_text(status_text(live.snapshot()), live.warning())
             if text != shown_status:
                 tray.setToolTip(text)
                 shown_status = text
         for name, window in windows.items():
+            blue = current.get('blue')
+            if name == 'blueflag' and together:
+                blue = None  # shown as the yellow box's frame instead
+            elif name == 'yellowflag' and not together:
+                blue = None  # no frame
             if window.show_content(
                 current.get(name, []),
                 current.get('pedals'),
-                current.get('blue'),
+                blue,
                 current.get('radar'),
                 current.get('trackmap'),
                 current.get('levels', {}).get(name),

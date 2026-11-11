@@ -76,6 +76,7 @@ MIN_HEIGHT = 10  # a text section's box: any shorter and there is nothing left t
 BLUE_FLAG = (0, 0, 128)  # navy
 BLUE_FLAG_EDGE = (0, 0, 64)  # its outline, a darker blue
 BLUE_FLAG_EDGE_WIDTH = 2
+BLUE_FRAME_EDGE = 3  # the blue frame's top and bottom on the yellow box, in pixels at scale 1
 PEDAL_INSET = 4  # pedal_bars' default inset
 BACKDROP = (0, 0, 0, 40)  # the light tint behind a section's text (option), RGBA
 BLUE_SAMPLE = 0.6  # the bar's opacity in move mode, to place it
@@ -342,6 +343,8 @@ class SectionWindow(QWidget):
         down = content_shift(self.section, self.height(), scale, text_ink)
         if self.section.background and rows:  # its own colour, also in move mode, to see it
             self._paint_backdrop(painter, rows, scale, bars, down, self.section.background)
+            if self.opacity is not None:  # the blue flag too (turbohud.core.flagstack): a blue frame
+                self._paint_blue_frame(painter, scale)
         elif self.locked and self.backdrop and rows:
             self._paint_backdrop(painter, rows, scale, bars, down)
         if self.section.pedals and rows:  # no bars without a speed (menu, no game)
@@ -411,6 +414,28 @@ class SectionWindow(QWidget):
         painter.setPen(Qt.NoPen)
         painter.setBrush(QColor(color) if color else QColor(*BACKDROP))
         painter.drawRoundedRect(rect, 6, 6)
+
+    def _paint_blue_frame(self, painter, scale):
+        """The blue flag as a frame round this section's box, at the flag's fade: wide at the
+        sides, in the margin before the text, and thin at the top and bottom, where the text
+        reaches nearly to the edge of a tight box (a frame as wide all round hid the heading)."""
+        alpha = round(255 * min(max(self.opacity, 0.0), 1.0))
+        colour = QColor(*BLUE_FLAG)
+        colour.setAlpha(alpha)
+        side = max(4, round(MARGIN * scale) - 3)
+        edge = max(3, round(BLUE_FRAME_EDGE * scale))
+        width, height = self.width(), self.height()
+        painter.save()
+        painter.setPen(Qt.NoPen)
+        painter.setBrush(colour)
+        for rect in (
+            QRectF(0, 0, side, height),
+            QRectF(width - side, 0, side, height),
+            QRectF(side, 0, width - 2 * side, edge),
+            QRectF(side, height - edge, width - 2 * side, edge),
+        ):
+            painter.drawRect(rect)
+        painter.restore()
 
     def _paint_radar(self, painter):
         """The proximity radar: the local car in the middle heading up, the others

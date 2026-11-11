@@ -1,83 +1,69 @@
+import os
 import sys
 import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from turbohud.core.flagstack import GAP, FlagStack, overlap
+from turbohud.core.flagstack import combined, overlap
 
 YELLOW = (800, 100, 320, 110)
 BLUE = (820, 120, 480, 24)  # put in the same spot by the player
-SCREEN = (0, 0, 1920, 1080)
-BLUE_BELOW = (820, 100 + 110 + GAP, 480, 24)
-YELLOW_ABOVE = (800, 120 - GAP - 110, 320, 110)
+APART = (800, 900, 480, 24)
 
 
-class FlagStackTests(unittest.TestCase):
-    """Asked for by the user on 2026-11-11: both flags in one spot stay visible, stacked,
-    and a flag on the screen never moves."""
+class CombinedTests(unittest.TestCase):
+    """Reported by the user on 2026-11-11: stacked, the two flags covered twice the track.
+    Both out in one spot: the yellow box with a blue frame; apart: each in its place."""
 
-    def homes(self, blue=BLUE):
-        return {'yellowflag': YELLOW, 'blueflag': blue}
+    def test_both_out_in_one_spot_are_combined(self):
+        self.assertTrue(combined(YELLOW, BLUE, True, True))
 
-    def test_one_flag_stays_at_its_own_place(self):
-        stack = FlagStack()
-        self.assertEqual(stack.places(self.homes(), {'blueflag'}, SCREEN), {'blueflag': BLUE})
-        self.assertEqual(stack.places(self.homes(), set(), SCREEN), {})
+    def test_one_out_or_apart_are_not(self):
+        self.assertFalse(combined(YELLOW, BLUE, True, False))
+        self.assertFalse(combined(YELLOW, BLUE, False, True))
+        self.assertFalse(combined(YELLOW, APART, True, True))
+        self.assertFalse(overlap(YELLOW, (1120, 100, 50, 50)))  # touching edges is not overlapping
 
-    def test_the_blue_flag_that_comes_second_goes_below_the_yellow_box(self):
-        stack = FlagStack()
-        stack.places(self.homes(), {'yellowflag'}, SCREEN)
-        places = stack.places(self.homes(), {'yellowflag', 'blueflag'}, SCREEN)
-        self.assertEqual(places, {'yellowflag': YELLOW, 'blueflag': BLUE_BELOW})
-        self.assertFalse(overlap(places['yellowflag'], places['blueflag']))
 
-    def test_the_yellow_box_that_comes_second_goes_above_the_blue_flag(self):
-        stack = FlagStack()
-        stack.places(self.homes(), {'blueflag'}, SCREEN)
-        places = stack.places(self.homes(), {'yellowflag', 'blueflag'}, SCREEN)
-        self.assertEqual(places, {'blueflag': BLUE, 'yellowflag': YELLOW_ABOVE})
+class BlueFrameTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
+        from PySide6.QtWidgets import QApplication
 
-    def test_a_flag_on_the_screen_never_moves(self):
-        stack = FlagStack()
-        stack.places(self.homes(), {'yellowflag'}, SCREEN)
-        stack.places(self.homes(), {'yellowflag', 'blueflag'}, SCREEN)
-        # The yellow flag goes: the blue one stays below, where it is, until it goes too.
-        self.assertEqual(stack.places(self.homes(), {'blueflag'}, SCREEN), {'blueflag': BLUE_BELOW})
-        # A new yellow flag while that blue one is out: above the blue flag where it now is.
-        places = stack.places(self.homes(), {'yellowflag', 'blueflag'}, SCREEN)
-        self.assertEqual(places['blueflag'], BLUE_BELOW)
-        self.assertEqual(places['yellowflag'], (800, BLUE_BELOW[1] - GAP - 110, 320, 110))
-        # Both gone: each comes back at its own place next time.
-        stack.places(self.homes(), set(), SCREEN)
-        self.assertEqual(stack.places(self.homes(), {'blueflag'}, SCREEN), {'blueflag': BLUE})
+        cls.app = QApplication.instance() or QApplication([])
 
-    def test_both_at_once_the_yellow_box_stays_and_the_blue_flag_goes_below(self):
-        places = FlagStack().places(self.homes(), {'yellowflag', 'blueflag'}, SCREEN)
-        self.assertEqual(places, {'yellowflag': YELLOW, 'blueflag': BLUE_BELOW})
+    def test_the_yellow_box_gets_a_blue_frame_and_keeps_its_size(self):
+        from turbohud.core import race
+        from turbohud.core.hud import RACE_SECTIONS
+        from turbohud.core.settings import Theme
+        from turbohud.overlay.window import SectionWindow
 
-    def test_flags_apart_stay_where_they_are(self):
-        apart = (800, 900, 480, 24)
-        places = FlagStack().places(self.homes(apart), {'yellowflag', 'blueflag'}, SCREEN)
-        self.assertEqual(places, {'yellowflag': YELLOW, 'blueflag': apart})
+        class Native:
+            def raise_window(self, window):
+                return 'test'
 
-    def test_the_other_side_where_one_would_leave_the_screen(self):
-        low_yellow = (800, 1000, 320, 70)
-        homes = {'yellowflag': low_yellow, 'blueflag': (820, 1010, 480, 24)}
-        places = FlagStack().places(homes, {'yellowflag', 'blueflag'}, SCREEN)
-        self.assertEqual(places['blueflag'], (820, 1000 - GAP - 24, 480, 24))  # above it
-        top_blue = (820, 0, 480, 24)
-        stack = FlagStack()
-        stack.places({'yellowflag': YELLOW, 'blueflag': top_blue}, {'blueflag'}, SCREEN)
-        homes = {'yellowflag': (800, 5, 320, 110), 'blueflag': top_blue}
-        places = stack.places(homes, {'yellowflag', 'blueflag'}, SCREEN)
-        self.assertEqual(places['yellowflag'], (800, 24 + GAP, 320, 110))  # below it
+        section = next(s for s in RACE_SECTIONS if s.name == 'yellowflag')
+        window = SectionWindow(Native(), Theme(), section)
+        self.addCleanup(window.close)
+        window.resize(*window.base)
+        window.set_locked(True)
+        me = race.PlayerState('Me', 0, 1, ((0,), (0, 1000)), local=True)
+        state = race.LapState(0, 0, 1, 5, [0, 0], players=(me,), gates=(((0, 0), (1, 1)),) * 9)
+        rows = race.yellow_rows((race.Incident('Someone', 'stopped', 0),), state)
 
-    def test_reset_brings_them_home(self):
-        stack = FlagStack()
-        stack.places(self.homes(), {'yellowflag', 'blueflag'}, SCREEN)
-        stack.reset()
-        self.assertEqual(stack.places(self.homes(), {'blueflag'}, SCREEN), {'blueflag': BLUE})
+        def edge(opacity):
+            window.show_content(rows, None, opacity)
+            image = window.grab().toImage()
+            return image.pixelColor(3, image.height() // 2), image.size()
+
+        plain, size = edge(None)
+        framed, framed_size = edge(1.0)
+        self.assertGreater(plain.red(), 200)  # yellow at the edge
+        self.assertLess(framed.red(), 60)  # navy at the edge
+        self.assertGreater(framed.blue(), framed.red())
+        self.assertEqual(size, framed_size)  # no larger
 
 
 if __name__ == '__main__':

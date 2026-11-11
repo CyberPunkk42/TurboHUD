@@ -1172,6 +1172,11 @@ its "Recent changes".
   with JUMP START shown while TSU flags it, then 1.5 s. Built without `--smoke`, as the user's TurboHUD was running
   (the smoke test would only have switched that one to move mode): to start once with TurboHUD closed. The test
   sheet names it. The 2026.11.11.4 to .6 images are still in `releases/`, to be removed by hand.
+- 2026-11-11: The blue and yellow flags in one spot are combined, not stacked, reported by the user: stacked,
+  they covered twice as much of the track. While both are out and their boxes overlap, the yellow box, where
+  and as large as it is, gets a blue frame (the blue flag's colour and fade; wide at the sides, in the margin, thin at the
+  top and bottom so it never covers the text; `_paint_blue_frame`) and the blue bar is not drawn (`flagstack.combined`). Nothing is moved any more: the
+  stacking (`FlagStack`) is gone. Placed apart, each shows in its own spot. Tests; drawn off screen.
 - 2026-11-11: The yellow flag also shows for the driver who caused it, asked for by the user: the local car's
   incidents (off track, slow, stopped, spun, wrong way, respawned) count like everyone else's, so its own HUD shows
   the box with its name, the map rings it and turns its sector yellow. Not in the pits, as for every car. The
