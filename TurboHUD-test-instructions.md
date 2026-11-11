@@ -1,6 +1,6 @@
 # TurboHUD: test for the Mac, step by step
 
-Nov 11, 2026 · build 2026.11.11.2 · about 35 minutes
+Nov 11, 2026 · build 2026.11.11.3 · about 40 minutes
 
 Thank you for testing again. Thanks to your logs from our session, this build fixes three things in races you join online:
 
@@ -8,7 +8,15 @@ Thank you for testing again. Thanks to your logs from our session, this build fi
 - In the third event, the HUD did not show until the event was restarted.
 - The HUD took about 10 seconds (sometimes more) to show after a race started. From the second race of a session on, it should now show within about 2 to 3 seconds.
 
-It also has the new delta bar (round ends, green or red, easier to read). This test checks those, and measures which of two ways of drawing TurboHUD costs TSU fewer frames. You said the stutter and FPS drops were gone: the measurements in Part 3 put numbers on that.
+New since then:
+
+- **Yellow flags**: when another car is off the track, slow, stopped, spun or put back on the track in your sector or the next one, a yellow **YELLOW - Sector N** shows with the drivers, and the track map rings those cars in yellow.
+- The **delta bar** glides instead of jumping, and is green or red, never white.
+- A **purple sector** turns green once someone else is faster in it.
+- The **track map** is learnt only from a clean lap (no trip over the grass); an old map with a detour mends itself after one clean lap.
+- The **move-mode panel** is tidier: sections under Timing, Car, Race and Other, with **All** and **None** buttons beside "Show".
+
+This test checks those, and measures which of two ways of drawing TurboHUD costs TSU fewer frames. You said the stutter and FPS drops were gone: the measurements in Part 3 put numbers on that.
 
 Go through it from top to bottom. Every step is one thing to do. Where it says **✏️ Write down**, fill in the answer on this sheet.
 
@@ -20,13 +28,17 @@ TurboHUD only reads what the game shows. It changes nothing in TSU or in CrossOv
 
 You need:
 
-- [ ] The file `TurboHUD-2026.11.11.2-macos-arm64.dmg`
+- [ ] The file `TurboHUD-2026.11.11.3-macos-arm64.dmg`
 - [ ] TSU in CrossOver, as last time
 - [ ] The same way of reading TSU's FPS as last time
 - [ ] The Terminal app (in **Applications > Utilities**)
 - [ ] For Part 6: an online race to join, someone else's server (we can host one for you)
 
 Pick one track and one car, and use them for Parts 3 and 4. Keep TSU in **Fullscreen**, as last time. Race against AI, offline, so every measurement has the same cars.
+
+For fair FPS numbers: keep the Mac on its **power adapter**, with **Low Power Mode off**, and don't change **System Settings > Displays > Refresh rate** during the test (ProMotion is best).
+
+**✏️ Write down:** Refresh rate setting: ______ On the power adapter? ______
 
 **✏️ Write down:** Did anything change since last time (Mac, screen, TSU's graphics settings)? ______
 
@@ -37,7 +49,7 @@ Pick one track and one car, and use them for Parts 3 and 4. Keep TSU in **Fullsc
 In our session TurboHUD ran straight from the disk image. Please install it, as below.
 
 1. If TurboHUD is running, quit it: press **Control + Shift + Q**.
-2. Double-click `TurboHUD-2026.11.11.2-macos-arm64.dmg`. A window opens.
+2. Double-click `TurboHUD-2026.11.11.3-macos-arm64.dmg`. A window opens.
 3. Drag **TurboHUD** onto **Applications**. If asked, choose **Replace**.
 4. Close the window. In Finder, click the eject button next to **TurboHUD** in the sidebar. **Always eject it**: TurboHUD must start from Applications, never from the disk image.
 5. **Don't open TurboHUD yet.** The first measurement is without it.
@@ -76,14 +88,14 @@ Always close move mode (**Control + Shift + L**) before you drive.
 1. Open **Applications** and double-click **TurboHUD**.
    - If macOS says it "could not verify" TurboHUD, see **Help** at the end, then come back here.
 2. Wait until the lap and the times show on the screen.
-3. Press **Control + Shift + L**. **Tick every box in the "Show" column.** Press **Control + Shift + L** again.
+3. Press **Control + Shift + L**. Click **All** next to "Show" at the top of the panel: every box is ticked. Press **Control + Shift + L** again.
 4. Drive for one minute.
 
 **✏️ Write down:** FPS: ______ Stutter? ______
 
 ### Measurement 3: only the local time
 
-1. Press **Control + Shift + L**. **Untick every box except "Local time".** Press **Control + Shift + L** again.
+1. Press **Control + Shift + L**. Click **None** next to "Show", then tick **Local time** (under OTHER). Press **Control + Shift + L** again.
 2. Drive for one minute.
 
 **✏️ Write down:** FPS: ______ Stutter? ______
@@ -97,32 +109,36 @@ Always close move mode (**Control + Shift + L**) before you drive.
    TURBOHUD_ONE_WINDOW=0 /Applications/TurboHUD.app/Contents/MacOS/TurboHUD
    ```
 
-3. Wait until the lap and the times show. Press **Control + Shift + L**, **tick every box in the "Show" column**, and press **Control + Shift + L** again.
+3. Wait until the lap and the times show. Press **Control + Shift + L**, click **All** next to "Show", and press **Control + Shift + L** again.
 4. Drive for one minute.
 
 **✏️ Write down:** FPS: ______ Stutter? ______
 
 ### Measurement 5: the other way of drawing, only the local time
 
-1. Press **Control + Shift + L**. **Untick every box except "Local time".** Press **Control + Shift + L** again.
+1. Press **Control + Shift + L**. Click **None**, then tick **Local time**. Press **Control + Shift + L** again.
 2. Drive for one minute.
 
 **✏️ Write down:** FPS: ______ Stutter? ______
 
 ---
 
-## Part 4: A quick look, with the new delta bar (3 minutes)
+## Part 4: A quick look at what's new (5 minutes)
 
 1. Press **Control + Shift + Q** to quit TurboHUD, then open it again from **Applications** (the normal way).
-2. Press **Control + Shift + L** and tick every box in the "Show" column again, then press **Control + Shift + L**.
+2. Press **Control + Shift + L**. Look at the panel: are all its buttons readable (All, None, Save, Load, Delete, Undo, Lock ...)? Click **None**, then **Undo**: everything should come back in one go. Click **All**, then press **Control + Shift + L**.
 3. Keep driving and look at TurboHUD. Is everything there and updating (lap, times, the bars, the track map, the radar)?
 4. Look at the **delta bar** (the bar under the top centre, with your time against your best lap). From your second lap on it should be:
    - round at both ends
    - always **green** or **red**, never white: green while you gain on your best lap, red while you lose
-   - easy to read: the numbers stand out on both colours
-   - calm: it doesn't flick between green and red
+   - easy to read, and moving smoothly rather than jumping
+5. **Yellow flag**: when an AI car ahead of you goes off, spins or stops, a yellow **YELLOW - Sector N** should show with its name, and the track map should ring it in yellow. It goes about 3 seconds after the car is back up to speed.
+
+**✏️ Write down:** Panel buttons readable? None and Undo worked? ______
 
 **✏️ Write down:** Everything there and updating? ______ The delta bar: ______
+
+**✏️ Write down:** Yellow flag: did it show when a car had trouble? Too often, too late, or about right? ______
 
 ---
 
@@ -146,6 +162,8 @@ This checks the fixes. Stay in the same session for at least **three races**, as
 
 **✏️ Write down:** If you joined while a race was already running: did it show? ______
 
+**✏️ Write down:** Online, did the yellow flag show when other drivers went off or spun? ______
+
 Stay in the race and go to Part 7.
 
 ---
@@ -162,7 +180,7 @@ T=~/Library/Application\ Support/TurboHUD
 echo "--- version"; grep -m1 'TurboHUD 2026' "$T/turbohud.log"
 echo "--- running from"; pgrep -fl 'MacOS/TurboHUD'
 echo "--- reader"; grep -E 'reading TSU through|canvas' "$T/turbohud.log" | head -5
-echo "--- race"; grep -E "TSU:|TSU's log|search|quick look|watching|event type|connection dropped" "$T/turbohud.log" | tail -40
+echo "--- race"; grep -E "TSU:|TSU's log|search|quick look|watching|event type|track map|connection dropped" "$T/turbohud.log" | tail -40
 echo "--- reads"; grep -E 'race reads|race pages' "$T/turbohud.log" | tail -10
 echo "--- reader errors"; tail -20 "$T/bottle_reader.log" 2>/dev/null
 ```
@@ -211,11 +229,14 @@ If TSU freezes: quit it with **Stop** in Steam, as last time.
 | 4 | FPS, other way, everything shown | |
 | 5 | FPS, other way, only the local time | |
 | | Stutter in any of them? Which? | |
+| | Panel buttons readable? None and Undo worked? | |
 | | Everything there and updating? | |
-| | The delta bar (round, green or red, readable, calm)? | |
+| | The delta bar (round, green or red, readable, smooth)? | |
+| | Yellow flag offline: shows when it should? | |
 | | Online race 1: did the HUD show? After how many seconds? | |
 | | Online races 2, 3 ...: after how many seconds? | |
 | | Online, joined during a race: did it show? | |
+| | Online yellow flags? | |
 | | Anything left after quitting TurboHUD? | |
 | | TSU quit normally? | |
 

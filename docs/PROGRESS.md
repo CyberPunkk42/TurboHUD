@@ -1004,3 +1004,9 @@ its "Recent changes".
   (`PANEL_WORD_BUTTON`), with 3 px between the preset rows, whose buttons touched. Checked with the macOS
   style drawn off the screen: 400 x 914 points. A test that each word button is as wide as it needs (it
   fails with the old widths).
+- 2026-11-11: Build 2026.11.11.3 for the tester (`releases/`, macOS 27, built with `--any-macos`, smoke test
+  passed with TSU closed), with everything since 2026.11.11.2: yellow flags (and their option), the gliding
+  delta bar, purple sectors turning green, the track map from clean laps, the tidier move-mode panel with All
+  and None. `TurboHUD-test-instructions.md` for it: the power adapter, Low Power Mode and refresh rate noted
+  in Part 1; All and None in the measurements; Part 4 looks at the panel, the delta bar and a yellow flag
+  against AI; Part 6 asks about yellow flags online. It replaces 2026.11.11.2 in `releases/`.

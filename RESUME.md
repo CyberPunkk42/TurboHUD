@@ -75,6 +75,12 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-11: Build 2026.11.11.3 for the tester (`releases/`, macOS 27, built with `--any-macos`, smoke test
+  passed with TSU closed), with everything since 2026.11.11.2: yellow flags (and their option), the gliding
+  delta bar, purple sectors turning green, the track map from clean laps, the tidier move-mode panel with All
+  and None. `TurboHUD-test-instructions.md` for it: the power adapter, Low Power Mode and refresh rate noted
+  in Part 1; All and None in the measurements; Part 4 looks at the panel, the delta bar and a yellow flag
+  against AI; Part 6 asks about yellow flags online. It replaces 2026.11.11.2 in `releases/`.
 - 2026-11-11: The move-mode panel's word buttons fit their words, reported by the user: with fixed widths
   macOS cut "None" to "lon" and "Delete" to "elete" (the off-screen render, with Qt's own style, had not
   shown it). All, None, Save, Load and Delete are now at least 54 px and as wide as the system needs
