@@ -225,6 +225,12 @@ starting TurboHUD again.
 - **Ctrl+Shift+Q** quits; the panel and the icon's menu have **Quit** as well. On Linux
   there are no shortcuts: use the icon, or `run_turbohud.sh --toggle` / `--quit` (see
   Linux above).
+- **Ctrl+Shift+S** takes a screenshot of the game with the HUD on it (also **Take a screenshot** in the
+  icon's menu; Linux: `run_turbohud.sh --screenshot`), of the screen the HUD is on, saved as a PNG in
+  `Pictures/TurboHUD` (**Open the screenshots folder** in the menu; `screenshot_folder` in the settings
+  file names another). Steam's F12 needs Steam's overlay, which TSU in CrossOver with D3DMetal does not
+  show. On the Mac it uses macOS's own screenshot tool, with its camera sound, and macOS asks once
+  whether TurboHUD may record the screen. TSU has nothing on Ctrl+Shift+S (its editor saves with Ctrl+S).
 
 Where each section sits, its size, whether it shows, and the look are saved in
 `settings.json`, with a log of the last run in

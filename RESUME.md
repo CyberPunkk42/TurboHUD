@@ -75,6 +75,14 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-11: A screenshot shortcut, Ctrl+Shift+S, asked for by the user: Steam's F12 did nothing, as Steam's
+  overlay never shows in TSU's bottle with D3DMetal (its log: no frame from Steam's UI; screenshots last
+  worked on 20 October). Ctrl+Shift+S is free: TSU's bindings know only Ctrl as a modifier (its editor saves
+  with Ctrl+S; S is player 2's brake and Backwards in menus, without modifiers), and macOS and Windows use
+  it for nothing. `turbohud/screenshot.py` saves the screen most shown sections are on to Pictures/TurboHUD
+  (`screenshot_folder` in the settings), named by the time: macOS's `screencapture -D`, with its camera sound
+  (Screen Recording asked for once); Linux `grim`, else Qt; Windows Qt. Also in the icon's menu (Take a
+  screenshot, Open the screenshots folder) and `run_turbohud.sh --screenshot`. Tests. Not yet tried by hand.
 - 2026-11-11: The Mac app without the Windows Python, asked for by the user: the Rust reader ran in online races
   on the tester's Mac (builds from 2026.11.11 use it only: had it failed, no HUD would have shown). The app ships
   only `turbohud-reader.exe`; with it missing the start says so, with no Python in its place. The Python reader

@@ -112,6 +112,9 @@ def parse_args(argv):
     commands.add_argument(
         '--preset', type=int, choices=PRESETS, help='load a layout preset in a running TurboHUD'
     )
+    commands.add_argument(
+        '--screenshot', action='store_true', help='a screenshot of the game with the HUD (as Ctrl+Shift+S)'
+    )
     commands.add_argument('--quit', action='store_true', help='quit a running TurboHUD')
     parser.add_argument('--seconds', type=float, help='quit after this many seconds (for tests)')
     args = parser.parse_args(argv)
@@ -247,7 +250,14 @@ def run(args, folder):
         session_rows,
     )
     from turbohud.hud.painter import text_ink, text_width, use_game_flags
-    from turbohud.overlay import HOTKEY_LOCK, HOTKEY_PRESETS, HOTKEY_QUIT, choose_platform, native_for
+    from turbohud.overlay import (
+        HOTKEY_LOCK,
+        HOTKEY_PRESETS,
+        HOTKEY_QUIT,
+        HOTKEY_SCREENSHOT,
+        choose_platform,
+        native_for,
+    )
     from turbohud.overlay.settings_window import SettingsWindow
     from turbohud.overlay.window import HudCanvases, MovePanel, SectionWindow, window_flags
 
@@ -597,6 +607,37 @@ def run(args, folder):
         save()
         log.info('other cars on the track map %s', 'on' if others else 'off')
 
+    def take_screenshot_now():
+        """A screenshot of the screen most of the shown sections are on (turbohud.screenshot)."""
+        from collections import Counter
+
+        from turbohud.screenshot import screenshot_folder, take_screenshot
+
+        shown = [w for w in windows.values() if w.wanted] or list(windows.values())
+        found = Counter(QGuiApplication.screenAt(w.geometry().center()) for w in shown)
+        found.pop(None, None)
+        screen = found.most_common(1)[0][0] if found else QGuiApplication.primaryScreen()
+        try:
+            take_screenshot(
+                screen, QGuiApplication.screens().index(screen), screenshot_folder(settings.screenshot_folder)
+            )
+        except OSError as error:
+            log.warning('screenshot: %s', error)
+
+    def open_screenshots_folder():
+        from PySide6.QtCore import QUrl
+        from PySide6.QtGui import QDesktopServices
+
+        from turbohud.screenshot import screenshot_folder
+
+        folder = screenshot_folder(settings.screenshot_folder)
+        try:
+            folder.mkdir(parents=True, exist_ok=True)
+        except OSError as error:
+            log.warning('screenshots folder: %s', error)
+            return
+        QDesktopServices.openUrl(QUrl.fromLocalFile(str(folder)))
+
     def relearn_track():
         """Forget the current track's map; the next clean lap learns it again."""
         if track_map is None or not track_map.relearn():
@@ -938,6 +979,14 @@ def run(args, folder):
     relearn_action.triggered.connect(lambda: relearn_track())
     if any(section.drawing == 'map' for section in layout):
         menu.addAction(relearn_action)
+    screenshot_action = QAction('Take a screenshot (Ctrl+Shift+S)', menu)
+    screenshot_action.triggered.connect(
+        lambda: QTimer.singleShot(300, take_screenshot_now)
+    )  # once the menu is gone
+    menu.addAction(screenshot_action)
+    screenshots_folder_action = QAction('Open the screenshots folder', menu)
+    screenshots_folder_action.triggered.connect(lambda: open_screenshots_folder())
+    menu.addAction(screenshots_folder_action)
     settings_action = QAction('Settings…', menu)
     settings_action.triggered.connect(lambda: open_settings())
     menu.addAction(settings_action)
@@ -957,13 +1006,16 @@ def run(args, folder):
         elif number == HOTKEY_QUIT:
             log.info('Ctrl+Shift+Q pressed')
             QTimer.singleShot(0, app.quit)
+        elif number == HOTKEY_SCREENSHOT:
+            log.info('Ctrl+Shift+S pressed')
+            QTimer.singleShot(0, take_screenshot_now)
         elif number in HOTKEY_PRESETS:
             preset = HOTKEY_PRESETS[number]
             log.info('Ctrl+Shift+%d pressed', preset)
             QTimer.singleShot(0, lambda: load_preset(preset))
 
     shortcuts = native.register_hotkeys(on_hotkey)
-    log.info('Ctrl+Shift+L and Ctrl+Shift+Q registered' if shortcuts else 'no system-wide shortcuts')
+    log.info('Ctrl+Shift+L, Q and S registered' if shortcuts else 'no system-wide shortcuts')
 
     def on_command(command):
         """A command from the command line (turbohud.control): 'ok' or an error text."""
@@ -973,6 +1025,7 @@ def run(args, folder):
             'move': lambda: set_locked(False),
             'lock': lambda: set_locked(True),
             'settings': open_settings,
+            'screenshot': lambda: take_screenshot_now(),
             'quit': app.quit,
             **{f'preset{number}': partial(load_preset, number) for number in PRESETS},
         }
@@ -1138,7 +1191,7 @@ def run(args, folder):
 
 def command_of(args):
     """The command for a running TurboHUD that the arguments ask for, or None."""
-    for name in ('toggle', 'lock', 'settings', 'quit'):
+    for name in ('toggle', 'lock', 'settings', 'screenshot', 'quit'):
         if getattr(args, name):
             return name
     return f'preset{args.preset}' if args.preset else None
