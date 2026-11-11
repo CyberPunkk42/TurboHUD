@@ -1232,3 +1232,10 @@ its "Recent changes".
   hang without the fix). Also seen: Ctrl+Shift+L was taken by AMD Adrenalin (error 1409) until the user unbound it
   there; TSU's Windows log names sessions, not events, so TurboHUD searches without it. 9 tests fail on Windows on
   `main` already (Unix sockets, symlinks, fonts), none touched here.
+- 2026-11-11: The race recorder on Windows, and each event's mode, asked for by the user to gather data from the
+  special events (Sumo, King of the Hill, Capture the flag ...): `experiments/tsu_race_recorder.py` reads TSU straight
+  on Windows (`%APPDATA%\TurboHUDecordings`), writes each event's type, and twice a second the changed fields of
+  the event's state, controller, logic and settings and of the mode objects they lead to, also while the race cannot
+  be read. Tried on the user's PC in an online Battle event (`TS.BattleEventMode`, level 6): capture time, capturing
+  player and team, players alive and rounds are there (`experiments/README.md`). Tests. Built on
+  `fix/windows-race-search`, which it needs on Windows.

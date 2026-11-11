@@ -76,6 +76,13 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-11: The race recorder on Windows, and each event's mode, asked for by the user to gather data from the
+  special events (Sumo, King of the Hill, Capture the flag ...): `experiments/tsu_race_recorder.py` reads TSU straight
+  on Windows (`%APPDATA%\TurboHUDecordings`), writes each event's type, and twice a second the changed fields of
+  the event's state, controller, logic and settings and of the mode objects they lead to, also while the race cannot
+  be read. Tried on the user's PC in an online Battle event (`TS.BattleEventMode`, level 6): capture time, capturing
+  player and team, players alive and rounds are there (`experiments/README.md`). Tests. Built on
+  `fix/windows-race-search`, which it needs on Windows.
 - 2026-11-11: The online race search never ended on Windows, found on the user's first Windows run (TSU's own build
   on Windows, the Rust reader beside it): with a race running, the search stopped at a stale pointer to the
   controller's class, and its event state led to memory whose "parents" went round in a circle, so reading its fields
