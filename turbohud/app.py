@@ -304,8 +304,10 @@ def run(args, folder):
                 settings.blue_seconds,
                 delta_bar,
                 settings.sector_bars,
-                yellow_flags,
+                yellow_flags if settings.yellow_flags else None,
             )
+            if not settings.yellow_flags:
+                yellow_flags.reset()  # turned on again, it starts afresh
             if pad is not None and 'pedals' in current:
                 current['pedals'] = combined(current['pedals'], pad.pedals())
             return with_local_time(current, snapshot, time.localtime())
@@ -488,6 +490,18 @@ def run(args, folder):
                     'One bar per stretch between checkpoints: purple, green or dark yellow',
                 )
             )
+        if any(section.name == 'yellowflag' for section in layout):
+            listed.append(
+                (
+                    'yellow_flags',
+                    'Yellow flags',
+                    settings.yellow_flags,
+                    (
+                        'When another car is off the track, slow, stopped or spun in your sector or the next:'
+                        ' the Yellow flag section and a yellow ring on the track map'
+                    ),
+                )
+            )
         return listed
 
     def set_radar_cone(cone):
@@ -513,6 +527,14 @@ def run(args, folder):
                 window.update()
         save()
         log.info('sector bars %s', 'on' if shown else 'off')
+
+    def set_yellow_flags(shown):
+        nonlocal settings
+        settings = replace(settings, yellow_flags=shown)
+        yellow_flags_action.setChecked(shown)
+        show_option('yellow_flags', shown)
+        save()
+        log.info('yellow flags %s', 'on' if shown else 'off')
 
     def set_map_others(others):
         nonlocal settings
@@ -679,6 +701,7 @@ def run(args, folder):
                 'radar_cone': set_radar_cone,
                 'map_others': set_map_others,
                 'sector_bars': set_sector_bars,
+                'yellow_flags': set_yellow_flags,
             }
             settings_window.option_changed.connect(lambda key, on: setters[key](on))
             settings_window.reads_changed.connect(set_reads)
@@ -824,6 +847,11 @@ def run(args, folder):
     sector_bars_action.triggered.connect(lambda checked: set_sector_bars(checked))
     if any(section.sectors for section in layout):
         menu.addAction(sector_bars_action)
+    yellow_flags_action = QAction('Yellow flags', menu, checkable=True)
+    yellow_flags_action.setChecked(settings.yellow_flags)
+    yellow_flags_action.triggered.connect(lambda checked: set_yellow_flags(checked))
+    if any(section.name == 'yellowflag' for section in layout):
+        menu.addAction(yellow_flags_action)
     map_others_action = QAction('Other cars on the track map', menu, checkable=True)
     map_others_action.setChecked(settings.map_others)
     map_others_action.triggered.connect(lambda checked: set_map_others(checked))

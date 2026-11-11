@@ -985,3 +985,8 @@ its "Recent changes".
   in the air still count), nearly stands or goes backwards (`trackmap.driving_clean`), as after a respawn. A
   learnt track is saved with `clean`; one saved before still shows, and is learnt again and replaced from the
   next clean lap, so the tracks already saved mend themselves. Tests.
+- 2026-11-11: Yellow flags can be turned off, asked for by the user: **Yellow flags** in the TurboHUD icon's
+  menu and under Settings… (on by default, kept in the settings as `yellow_flags`). Off, there is no Yellow
+  flag section and no yellow ring on the track map, and the cars are not followed (turned on again, it starts
+  afresh). Tests for the setting and the fresh start. Not seen in the app yet: an off-screen start of the
+  app crashes on the Mac with or without the change (its native window code), so a check by hand is left.

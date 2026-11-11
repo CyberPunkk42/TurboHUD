@@ -2112,6 +2112,13 @@ class YellowFlagTests(unittest.TestCase):
         flags.update(stopped_me)
         self.assertEqual(flags.update(dataclasses.replace(stopped_me, clock=3 * race.UNITS_PER_SECOND)), ())
 
+    def test_turned_off_and_on_again_it_starts_afresh(self):
+        flags = race.YellowFlags()
+        self.drive(flags, 10.0, self.car(speed=0.2))
+        flags.reset()  # the option was off meanwhile
+        self.assertEqual(self.drive(flags, 13.0, self.car(speed=0.2)), ())  # not stopped for 3 s: just seen
+        self.assertEqual(self.kinds(self.drive(flags, 15.1, self.car(speed=0.2))), [('Other', 'stopped')])
+
     def test_the_section_shows_my_sector_and_the_next(self):
         state = self.state(10.0, me_passed=4)  # I am in sector 2 (checkpoints 3 to 5)
         incidents = (
