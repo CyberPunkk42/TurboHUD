@@ -947,3 +947,8 @@ its "Recent changes".
   before a first race was found, nor while a race is watched. The readers are unchanged: the Mac side hands
   them the shorter list of regions. Tests. Not seen in a race yet: it only comes into play where TSU's log
   says nothing, so on the tester's Mac (a new build).
+- 2026-11-11: Build 2026.11.11.2 for the tester (`releases/`, macOS 27, built with `--any-macos`, smoke test
+  passed with TSU closed), with the three fixes of the night for races joined online: no race log to go by,
+  a race found where the last one was, and the quick look near the last race. `TurboHUD-test-instructions.md`
+  for it: Part 6 now asks for at least three races in one session and how many seconds each took to show,
+  and the log to copy includes `quick look`. It replaces 2026.11.11 in `releases/`.

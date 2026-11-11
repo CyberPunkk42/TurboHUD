@@ -9,7 +9,7 @@ none is left.
    Mac" below), though it looks and works as before. To tell whether it helps at all: in one race, with the
    Metal HUD, a minute each of TurboHUD closed, every section shown, the same with
    `TURBOHUD_ONE_WINDOW=0 sh run_turbohud.sh`, one section shown in each of the two, and closed again.
-2. Build 2026.11.11 for the tester (`releases/`; it replaces 2026.11.10), with
+2. Build 2026.11.11.2 for the tester (`releases/`; it replaces 2026.11.11), with
    `TurboHUD-test-instructions.md` for it: a race joined online (point 2b), the new delta bar, the Rust
    reader (the Python one as fallback, `TURBOHUD_PY_READER=1`), and five FPS measurements in one race
    against AI: closed; one window with every section, then only the local time; a window each
@@ -26,8 +26,10 @@ none is left.
    10 s wait, so up to about 20 s). The third event's race was found but not read until the event was
    restarted: fixed the same night (`RESUME.md`). And his stutter and FPS drops were gone with 2026.11.11
    (the user, no numbers yet). Built the same night: a quick look near the last race every 2 s while there
-   is no log to go by (`RESUME.md`). Next tester build: from the second race of a session on, the HUD within
-   about 2 to 3 s of the start, with `quick look: race found` in the log.
+   is no log to go by (`RESUME.md`). Build 2026.11.11.2: from the second race of a session on, the HUD within
+   about 2 to 3 s of the start, with `quick look: race found` in the log. Which change since 2026.11.08.2
+   (his last measured build) took his stutter away is not known: his Part 3 numbers, the one window
+   against a window each, would tell the most.
 3. At each quit of TSU the user notes whether it froze and whether TurboHUD ran ("Other points").
 4. When one comes up: a special event (map expected), King of the Hill or Sumo (no map), a track without
    sector lines (3 even sector bars expected), joining as a driver after spectating.

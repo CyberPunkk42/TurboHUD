@@ -1,8 +1,14 @@
 # TurboHUD: test for the Mac, step by step
 
-Nov 11, 2026 · build 2026.11.11 · about 35 minutes
+Nov 11, 2026 · build 2026.11.11.2 · about 35 minutes
 
-Thank you for testing again. Thanks to your logs, this build fixes why TurboHUD showed only the clock in every race you joined online: your TSU had stopped writing the log TurboHUD looked at, so TurboHUD thought no race was running. It also has a new delta bar (round ends, green or red, easier to read). This test checks the online fix, and measures which of two ways of drawing TurboHUD costs TSU fewer frames.
+Thank you for testing again. Thanks to your logs from our session, this build fixes three things in races you join online:
+
+- TurboHUD showed only the clock: your TSU had stopped writing the log TurboHUD looked at, so it thought no race was running.
+- In the third event, the HUD did not show until the event was restarted.
+- The HUD took about 10 seconds (sometimes more) to show after a race started. From the second race of a session on, it should now show within about 2 to 3 seconds.
+
+It also has the new delta bar (round ends, green or red, easier to read). This test checks those, and measures which of two ways of drawing TurboHUD costs TSU fewer frames. You said the stutter and FPS drops were gone: the measurements in Part 3 put numbers on that.
 
 Go through it from top to bottom. Every step is one thing to do. Where it says **✏️ Write down**, fill in the answer on this sheet.
 
@@ -14,7 +20,7 @@ TurboHUD only reads what the game shows. It changes nothing in TSU or in CrossOv
 
 You need:
 
-- [ ] The file `TurboHUD-2026.11.11-macos-arm64.dmg`
+- [ ] The file `TurboHUD-2026.11.11.2-macos-arm64.dmg`
 - [ ] TSU in CrossOver, as last time
 - [ ] The same way of reading TSU's FPS as last time
 - [ ] The Terminal app (in **Applications > Utilities**)
@@ -28,10 +34,10 @@ Pick one track and one car, and use them for Parts 3 and 4. Keep TSU in **Fullsc
 
 ## Part 2: Install the new TurboHUD (3 minutes)
 
-Last time TurboHUD ran straight from the disk image. Please install it this time, as below.
+In our session TurboHUD ran straight from the disk image. Please install it, as below.
 
 1. If TurboHUD is running, quit it: press **Control + Shift + Q**.
-2. Double-click `TurboHUD-2026.11.11-macos-arm64.dmg`. A window opens.
+2. Double-click `TurboHUD-2026.11.11.2-macos-arm64.dmg`. A window opens.
 3. Drag **TurboHUD** onto **Applications**. If asked, choose **Replace**.
 4. Close the window. In Finder, click the eject button next to **TurboHUD** in the sidebar. **Always eject it**: TurboHUD must start from Applications, never from the disk image.
 5. **Don't open TurboHUD yet.** The first measurement is without it.
@@ -126,15 +132,17 @@ Leave TurboHUD running. Leave the race, and get ready to join an online race.
 
 ---
 
-## Part 6: A race joined online (about 8 minutes)
+## Part 6: Races joined online (about 15 minutes)
 
-This is the fix. Before, TurboHUD showed only the clock in every race you joined online.
+This checks the fixes. Stay in the same session for at least **three races**, as in our session.
 
-1. In TSU, join an online race on someone else's server (one we host, or the event server).
-2. Once the race is running, wait **up to one minute**.
-3. Drive, and look at TurboHUD.
+1. In TSU, join an online session on someone else's server (one we host, or the event server).
+2. In each race, drive and look at TurboHUD. Note roughly how many seconds after the start the lap, the times and the other sections show. In the first race of the session, allow **up to one minute**.
+3. Stay for the next race, and the one after, and do the same.
 
-**✏️ Write down:** Did the lap, the times and the other sections show? How long after the race started? ______
+**✏️ Write down:** Race 1: did the HUD show? After about how many seconds? ______
+
+**✏️ Write down:** Race 2: ______ Race 3: ______ (more if you raced more)
 
 **✏️ Write down:** If you joined while a race was already running: did it show? ______
 
@@ -154,7 +162,7 @@ T=~/Library/Application\ Support/TurboHUD
 echo "--- version"; grep -m1 'TurboHUD 2026' "$T/turbohud.log"
 echo "--- running from"; pgrep -fl 'MacOS/TurboHUD'
 echo "--- reader"; grep -E 'reading TSU through|canvas' "$T/turbohud.log" | head -5
-echo "--- race"; grep -E "TSU:|TSU's log|search|watching|event type|connection dropped" "$T/turbohud.log" | tail -30
+echo "--- race"; grep -E "TSU:|TSU's log|search|quick look|watching|event type|connection dropped" "$T/turbohud.log" | tail -40
 echo "--- reads"; grep -E 'race reads|race pages' "$T/turbohud.log" | tail -10
 echo "--- reader errors"; tail -20 "$T/bottle_reader.log" 2>/dev/null
 ```
@@ -205,7 +213,8 @@ If TSU freezes: quit it with **Stop** in Steam, as last time.
 | | Stutter in any of them? Which? | |
 | | Everything there and updating? | |
 | | The delta bar (round, green or red, readable, calm)? | |
-| | Online: did the HUD show? How long after the start? | |
+| | Online race 1: did the HUD show? After how many seconds? | |
+| | Online races 2, 3 ...: after how many seconds? | |
 | | Online, joined during a race: did it show? | |
 | | Anything left after quitting TurboHUD? | |
 | | TSU quit normally? | |

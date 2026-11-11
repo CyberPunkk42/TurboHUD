@@ -75,6 +75,11 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-11: Build 2026.11.11.2 for the tester (`releases/`, macOS 27, built with `--any-macos`, smoke test
+  passed with TSU closed), with the three fixes of the night for races joined online: no race log to go by,
+  a race found where the last one was, and the quick look near the last race. `TurboHUD-test-instructions.md`
+  for it: Part 6 now asks for at least three races in one session and how many seconds each took to show,
+  and the log to copy includes `quick look`. It replaces 2026.11.11 in `releases/`.
 - 2026-11-11: A quick look for the next online race where the last one was, asked for by the user: on the
   tester's Mac, whose TSU writes no race log, a race showed about 10 s after its start (up to about 20 s: a
   search with no race takes 8 to 10 s there, then 10 s wait; up to a minute after a long lobby). Now, between
