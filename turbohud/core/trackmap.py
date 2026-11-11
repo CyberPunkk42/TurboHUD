@@ -10,6 +10,11 @@ driven a whole lap without a break, that lap is the track. Until then the longes
 stretch driven so far shows. A learnt track is saved in TurboHUD's own folder, under a
 name made from the track's checkpoint lines, so the next race there has it at once.
 
+Only a clean lap counts (asked for by the user on 2026-11-11: a first lap with a trip over
+the grass was learnt, and kept, as the track): a car's path starts afresh while it has all
+four wheels off the tarmac, nearly stands or goes backwards, as when it is put back on the
+track. A track saved before that is still shown, and learnt again from the next clean lap.
+
 A spectator sees every car, with the leader marked. On the map otherwise: the local player, the race leader, the next car ahead and the next car
 behind in the race order (the player list's, held steady while cars pass), and smaller
 dots for backmarkers (cars the local player is about to lap) on the road between the
@@ -35,6 +40,8 @@ ROAD_SHARE = 0.03  # the road's width on the map, as a share of the map
 LEAST_ROAD = 2.5  # pixels
 LAPPING_SHARE = 0.5  # a car more than half a lap behind in the race and ahead on the road is a backmarker
 TRACKS_FOLDER = 'tracks'
+CLEAN_GRIP = 0.9  # all four wheels on less grip than this: off the tarmac (as race.YELLOW_OFF_GRIP)
+CLEAN_SPEED = 1.0  # slower than this along the car (or backwards): not driving the track
 
 log = logging.getLogger(__name__)
 
@@ -223,10 +230,21 @@ def backmarkers(order, me, ahead, gates, laps):
     return found
 
 
+def driving_clean(player):
+    """Whether the car drives the track: False with all four wheels off the tarmac (kerbs
+    and a wheel in the air do not count), nearly standing or going backwards; True where
+    that is not known."""
+    grips = player.wheel_grips
+    if grips is not None and all(0.0 < grip < CLEAN_GRIP for grip in grips):
+        return False
+    return player.forward_speed is None or player.forward_speed >= CLEAN_SPEED
+
+
 class TrackPaths:
     """Every car's path as it drives: (checkpoints passed, (x, z)) whenever its
     position changes. A path starts afresh in the pits, when the car is put back on the
-    track (a jump), or when its count goes back (a new race). Only the last lap is
+    track (a jump), when it leaves the track or stands (see driving_clean), or when its
+    count goes back (a new race). Only the last lap is
     kept. `lap()` gives the first whole lap any car has driven."""
 
     def __init__(self):
@@ -236,7 +254,7 @@ class TrackPaths:
         for player in players:
             if player.position is None or player.estimated or player.finished:
                 continue
-            if player.in_pit:
+            if player.in_pit or not driving_clean(player):
                 self.paths.pop(player.name, None)
                 continue
             count, position = len(player.passed), player.position
@@ -290,6 +308,7 @@ class TrackMap:
         self.folder = Path(folder) if folder is not None else None
         self._gates = None
         self.learned = None  # the whole lap's TrackOutline, once known
+        self.clean = False  # whether `learned` came from a clean lap (an older file may not have)
         self.paths = TrackPaths()
         self._partial = None  # (path length, TrackOutline) while no lap is known
 
@@ -297,27 +316,35 @@ class TrackMap:
         return self.folder / TRACKS_FOLDER / f'{track_key(gates)}.json' if self.folder else None
 
     def _load(self, gates):
+        """(the saved outline or None, whether it was learnt from a clean lap)."""
         path = self._file(gates)
         if path is None:
-            return None
+            return None, False
         try:
             data = json.loads(path.read_text(encoding='utf-8'))
             points = [(float(x), float(z)) for x, z in data['points']]
             mark = data.get('start')
             start = ((float(mark[0]), float(mark[1])), (float(mark[2]), float(mark[3]))) if mark else None
             outline = outline_from_path(points, data.get('closed') is True, start)
+            clean = data.get('clean') is True
         except (OSError, ValueError, KeyError, TypeError):
-            return None
+            return None, False
         if outline is not None:
-            log.info('track map: learnt track loaded (%s)', path.name)
-        return outline
+            later = '' if clean else ', from before clean laps: learnt again from the next one'
+            log.info('track map: learnt track loaded (%s)%s', path.name, later)
+        return outline, clean
 
     def _save(self, gates, points, start):
         path = self._file(gates)
         if path is None:
             return
         mark = [*start[0], *start[1]] if start else None
-        data = {'points': [[round(x, 2), round(z, 2)] for x, z in points], 'closed': True, 'start': mark}
+        data = {
+            'points': [[round(x, 2), round(z, 2)] for x, z in points],
+            'closed': True,
+            'start': mark,
+            'clean': True,
+        }
         try:
             path.parent.mkdir(parents=True, exist_ok=True)
             temporary = path.with_name(path.name + '.tmp')
@@ -331,18 +358,21 @@ class TrackMap:
         """The outline to draw: the learnt lap, or the longest stretch driven so far."""
         if gates != self._gates:
             self._gates, self.paths, self._partial = gates, TrackPaths(), None
-            self.learned = self._load(gates) if gates else None
-        if self.learned is not None:
+            self.learned, self.clean = self._load(gates) if gates else (None, False)
+        if self.learned is not None and self.clean:
             return self.learned
         self.paths.add(players, laps)
         lap = self.paths.lap(laps)
         if lap is not None:
             points, index = lap
             start = start_mark(points, gates[0], index)
-            self.learned = outline_from_path(points, True, start)
-            if self.learned is not None:
+            learned = outline_from_path(points, True, start)
+            if learned is not None:
+                self.learned, self.clean = learned, True
                 self._save(gates, points, start)
                 return self.learned
+        if self.learned is not None:
+            return self.learned  # an older one, until a clean lap takes its place
         longest = self.paths.longest()
         if self._partial is None or len(longest) != self._partial[0]:
             self._partial = (len(longest), outline_from_path(longest, False))

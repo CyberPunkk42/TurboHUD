@@ -1,5 +1,6 @@
 import dataclasses
 import importlib.util
+import json
 import math
 import os
 import sys
@@ -64,7 +65,7 @@ def roles(view):
     return {dot.role: dot for dot in view.dots}
 
 
-def driver(name, u, local=False, in_pit=False, estimated=False, radius=RADIUS):
+def driver(name, u, local=False, in_pit=False, estimated=False, radius=RADIUS, **more):
     """A car `u` checkpoints round the test track (it passed line 0 at u = 0): on the
     circle of `radius`, anticlockwise from (radius, 0)."""
     count = math.floor(u) + 1
@@ -73,7 +74,7 @@ def driver(name, u, local=False, in_pit=False, estimated=False, radius=RADIUS):
     turn = 2 * math.pi * u / LINES
     position = (radius * math.cos(turn), radius * math.sin(turn))
     return race.PlayerState(
-        name, 0, max(len(laps) - 1, 0), laps, False, in_pit, local, position, estimated=estimated
+        name, 0, max(len(laps) - 1, 0), laps, False, in_pit, local, position, estimated=estimated, **more
     )
 
 
@@ -163,6 +164,46 @@ class LearntTrackTests(unittest.TestCase):
         drive(track_map, 4.0, since=4.0, radius=RADIUS + trackmap.JUMP + 10)  # put back elsewhere
         drive(track_map, LINES + 1.5, since=4.05)
         self.assertIsNone(track_map.learned)
+
+    def test_a_trip_over_the_grass_is_not_learnt_as_the_track(self):
+        # Asked for by the user on 2026-11-11: such a first lap was learnt and kept.
+        track_map = trackmap.TrackMap()
+        drive(track_map, 4.0)
+        drive(track_map, 4.3, since=4.05, wheel_grips=(0.5,) * 4)  # all four wheels on the grass
+        drive(track_map, LINES + 1.5, since=4.35)
+        self.assertIsNone(track_map.learned)  # the path started afresh there: no whole lap yet
+        drive(track_map, 2 * LINES + 5, since=LINES + 1.55)
+        self.assertIsNotNone(track_map.learned)  # the next clean lap is
+
+    def test_standing_or_going_backwards_starts_the_path_afresh(self):
+        for speed in (0.2, -3.0):
+            track_map = trackmap.TrackMap()
+            drive(track_map, 4.0, forward_speed=30.0)
+            drive(track_map, 4.1, since=4.05, forward_speed=speed)
+            drive(track_map, LINES + 1.5, since=4.15, forward_speed=30.0)
+            self.assertIsNone(track_map.learned, speed)
+
+    def test_kerbs_a_wheel_off_or_in_the_air_still_count_as_clean(self):
+        for grips in ((0.93,) * 4, (1.0, 0.5, 0.5, 0.5), (0.0, 0.5, 0.5, 0.5)):
+            track_map = trackmap.TrackMap()
+            drive(track_map, LINES + 1.5, wheel_grips=grips, forward_speed=30.0)
+            self.assertIsNotNone(track_map.learned, grips)
+
+    def test_a_track_saved_before_clean_laps_shows_until_a_clean_lap_replaces_it(self):
+        with tempfile.TemporaryDirectory() as folder:
+            drive(trackmap.TrackMap(folder=folder), LINES + 1.5)
+            file = Path(folder) / trackmap.TRACKS_FOLDER / f'{trackmap.track_key(GATES)}.json'
+            data = json.loads(file.read_text())
+            self.assertIs(data.pop('clean'), True)
+            data['points'] = [[x * 1.5, z * 1.5] for x, z in data['points']]  # an older, wrong one
+            file.write_text(json.dumps(data))
+            again = trackmap.TrackMap(folder=folder)
+            me = driver('Me', 0.5, local=True)
+            older = again.update(state([me]), [me]).outline
+            self.assertGreater(max(math.hypot(x, z) for x, z in older.points), RADIUS * 1.4)  # shown
+            view = drive(again, LINES + 1.5, since=0.55)
+            self.assertLess(max(math.hypot(x, z) for x, z in view.outline.points), RADIUS + 1)  # replaced
+            self.assertIs(json.loads(file.read_text())['clean'], True)
 
     def test_a_learnt_track_is_saved_and_known_at_once_next_time(self):
         with tempfile.TemporaryDirectory() as folder:
