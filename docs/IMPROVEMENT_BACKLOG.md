@@ -17,9 +17,10 @@ original probe. Add the results to `experiments/README.md`. Check the shortcuts
 especially: the Windows hotkey code has only run on a build machine. Expected: windowed
 and Fullscreen work; Exclusive may not, and an overlay that injects into the game is out
 of scope.
-Then live data: Windows lets a program read another of the same user
-(`OpenProcess` with `PROCESS_VM_READ`, `ReadProcessMemory`), so no probe or launch
-option should be needed; the lookup by name (`turbohud/core`) stays as it is.
+Then live data: built 2026-11-11 with the Rust reader started beside TSU (`LocalReader`), the
+same reader and questions as on the Mac, so no probe or launch option; Python in TurboHUD itself
+where the reader is missing. To try on a Windows PC: a race offline, hosting and as an online
+client, and the log's `reading TSU through the Rust reader` and `race reads` lines.
 What is built and what is left on Windows: `docs/WINDOWS_AND_CROSSOVER.md`.
 
 ## 2b. CrossOver: all of TurboHUD inside the bottle (a trial)

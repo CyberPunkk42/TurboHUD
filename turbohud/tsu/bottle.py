@@ -17,10 +17,12 @@ and the bottle's settings are only read, to warn about a graphics setting that m
 import json
 import logging
 import os
+import queue
 import re
 import select
 import subprocess
 import sys
+import threading
 import time
 from pathlib import Path
 
@@ -143,31 +145,58 @@ def reader_command(environ, bundle=None):
 
 
 READ_AHEAD = 64 * 1024  # bytes asked for at a time from the reader in the bottle
+NO_WINDOW = 0x08000000  # Windows' CREATE_NO_WINDOW: the reader opens no console window
 
 
 class Pipe:
     """Questions to a reader over its standard input and output. Raises ConnectionError
     when it has ended, TimeoutError when it has gone silent, ReadError when it refuses."""
 
-    def __init__(self, sink, source_fd, on_close=None):
+    def __init__(self, sink, source_fd, on_close=None, threaded=None):
         self.sink = sink
         self.source_fd = source_fd
         self.on_close = on_close
+        # Windows cannot wait on a pipe with select: there a thread reads the answers.
+        self.chunks = None
+        if threaded is None:
+            threaded = sys.platform == 'win32'
+        if threaded:
+            self.chunks = queue.Queue()
+            threading.Thread(target=self._pump, name='reader answers', daemon=True).start()
         self.metadata = None  # (base, bytes), kept while this reader lasts
         self.in_game = 0.0  # seconds its reads have spent on the game's memory, for the log
         self.game_reads = 0  # reads of the game's memory it asked for, for the log
         self._page_reads = 0  # questions for many pages, for a log line now and then
         self._received = b''  # what has come but was not asked for yet
 
+    def _pump(self):
+        """Hand on what the reader writes, chunk by chunk; b'' once it has ended."""
+        while True:
+            try:
+                chunk = os.read(self.source_fd, READ_AHEAD)
+            except OSError:
+                chunk = b''
+            self.chunks.put(chunk)
+            if not chunk:
+                return
+
+    def _chunk(self, size, timeout):
+        if self.chunks is not None:
+            try:
+                return self.chunks.get(timeout=timeout)
+            except queue.Empty:
+                raise TimeoutError('the reader does not answer') from None
+        ready, _, _ = select.select([self.source_fd], [], [], timeout)
+        if not ready:
+            raise TimeoutError('the reader in the bottle does not answer')
+        return os.read(self.source_fd, max(size - len(self._received), READ_AHEAD))
+
     def _take(self, size, timeout):
         """`size` bytes of the answer. An answer comes in one piece, so one wait is enough
         for all its parts: each wait lets go of Python's lock, and when the overlay is busy
         drawing it can take a while to get it back (see LiveRace.start)."""
         while len(self._received) < size:
-            ready, _, _ = select.select([self.source_fd], [], [], timeout)
-            if not ready:
-                raise TimeoutError('the reader in the bottle does not answer')
-            chunk = os.read(self.source_fd, max(size - len(self._received), READ_AHEAD))
+            chunk = self._chunk(size, timeout)
             if not chunk:
                 raise ConnectionError('the reader in the bottle has ended')
             self._received += chunk
@@ -264,6 +293,42 @@ class Pipe:
             self.on_close = None
 
 
+def spawn_reader(command, env):
+    """Start a reader (`command`, environment `env`), its errors going to READER_LOG beside
+    the settings; its Pipe. Closing the Pipe ends the reader."""
+    try:
+        folder = settings_dir()
+        folder.mkdir(parents=True, exist_ok=True)
+        errors = (folder / READER_LOG).open('wb')
+    except OSError:
+        errors = subprocess.DEVNULL
+    try:
+        process = subprocess.Popen(
+            command,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=errors,
+            bufsize=0,
+            env=env,
+            creationflags=NO_WINDOW if sys.platform == 'win32' else 0,
+        )
+    finally:
+        if errors is not subprocess.DEVNULL:
+            errors.close()
+
+    def finish():
+        # The pipe closing ends the reader, however TurboHUD ends.
+        for stream in (process.stdin, process.stdout):
+            stream.close()
+        try:
+            process.wait(2)
+        except subprocess.TimeoutExpired:
+            process.kill()
+            process.wait()
+
+    return Pipe(process.stdin, process.stdout.fileno(), finish)
+
+
 class Bottle:
     """Starts the reader for the running TSU and connects to it. Its reader stays up
     while a game loads, so each new try does not start another."""
@@ -312,38 +377,18 @@ class Bottle:
         if wine is None:
             raise OSError('CrossOver was not found')
         self.reader_kind, reader = reader_command(self.environ)
-        command = [str(wine), '--bottle', bottle, *reader]
-        try:
-            folder = settings_dir()
-            folder.mkdir(parents=True, exist_ok=True)
-            errors = (folder / READER_LOG).open('wb')
-        except OSError:
-            errors = subprocess.DEVNULL
-        try:
-            # WINEDEBUG: Wine's own notes would fill the log with lines about the bottle.
-            process = subprocess.Popen(
-                command,
-                stdin=subprocess.PIPE,
-                stdout=subprocess.PIPE,
-                stderr=errors,
-                bufsize=0,
-                env={**self.environ, 'WINEDEBUG': '-all'},
-            )
-        finally:
-            if errors is not subprocess.DEVNULL:
-                errors.close()
+        # WINEDEBUG: Wine's own notes would fill the log with lines about the bottle.
+        return spawn_reader([str(wine), '--bottle', bottle, *reader], {**self.environ, 'WINEDEBUG': '-all'})
 
-        def finish():
-            # The pipe closing ends the reader, however TurboHUD ends.
-            for stream in (process.stdin, process.stdout):
-                stream.close()
-            try:
-                process.wait(2)
-            except subprocess.TimeoutExpired:
-                process.kill()
-                process.wait()
-
-        return Pipe(process.stdin, process.stdout.fileno(), finish)
+    def _handshake(self, pipe):
+        """Wait for a new reader to say it is ready; it says why when it is not."""
+        try:
+            header, _payload = pipe.receive(START_TIMEOUT)
+            if not header.get('ok') or header.get('ready') != READY:
+                raise OSError(header.get('error') or 'an unknown answer from the reader')
+        except BaseException:
+            pipe.close()
+            raise
 
     def _open(self):
         if self.pipe is not None:
@@ -358,13 +403,7 @@ class Bottle:
         try:
             bottle = self.bottle_of(pid)
             pipe = self.start(bottle)
-            try:
-                header, _payload = pipe.receive(START_TIMEOUT)
-                if not header.get('ok') or header.get('ready') != READY:
-                    raise OSError(header.get('error') or 'an unknown answer from the bottle')
-            except BaseException:
-                pipe.close()
-                raise
+            self._handshake(pipe)
         except OSError as error:
             log.warning('the reader in the bottle did not start: %s', error)
             self.failed = self.clock() + RETRY_START, str(error)
@@ -410,3 +449,41 @@ class Bottle:
             self.pipe.close()
             self.pipe = None
             self.warning = None
+
+
+LOCAL_RETRY = 2.0  # seconds between tries while TSU does not run (on Windows a start is cheap)
+
+
+class LocalReader(Bottle):
+    """On Windows: the Rust reader started straight beside TSU, without CrossOver or a
+    bottle (Windows lets a program read another of the same user). The same reader and
+    questions as on the Mac, so the race is read the same way; while TSU does not run, the
+    reader says so and ends, and the next try comes LOCAL_RETRY seconds later."""
+
+    def __init__(self, environ=None, start=None, clock=time.monotonic, reader=None):
+        super().__init__(environ=environ, start=start, clock=clock)
+        self.reader = Path(reader) if reader is not None else rust_reader()
+        self.reader_kind = 'Rust'
+
+    def _start(self, _bottle=None):
+        return spawn_reader([str(self.reader)], dict(self.environ))
+
+    def _open(self):
+        if self.pipe is not None:
+            return self.pipe
+        if self.failed is not None and self.clock() < self.failed[0]:
+            raise OSError(self.failed[1])
+        started = self.clock()
+        try:
+            pipe = self.start(None)
+            self._handshake(pipe)
+        except OSError as error:
+            why = 'TSU is not running' if 'not running' in str(error) else str(error)
+            if self.failed is None or self.failed[1] != why:
+                log.info('the Rust reader: %s', why)
+            self.failed = self.clock() + LOCAL_RETRY, why
+            raise OSError(why) from None
+        log.info('reading TSU through the Rust reader, started in %.1f s', self.clock() - started)
+        self.failed = None
+        self.pipe = pipe
+        return pipe

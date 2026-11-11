@@ -11,7 +11,7 @@ native Mac app beside it. Nothing here is built yet; this is the analysis and th
 | Overlay windows (Qt: on top, see-through, click-through) | built, not yet run over TSU on Windows |
 | Shortcuts (`turbohud/overlay/windows.py`: `RegisterHotKey`, focus hand-back) | built, run only on a build machine |
 | Reading TSU (`turbohud/tsu/winmemory.py`: `find_process`, `WindowsProcess`, page cache, paced search, `connect`) | built and used daily, but only inside the bottle by `bottle_reader.py` |
-| Live race in the app | not wired: `start_live_race` in `turbohud/app.py` returns `None` on Windows, so the HUD shows only a session clock and the local time |
+| Live race in the app | built 2026-11-11, not yet run on Windows: `start_live_race` starts the Rust reader (`reader/`) beside TSU (`LocalReader` in `turbohud/tsu/bottle.py`; the pipe's answers taken by a thread, as Windows cannot select on a pipe), else, where it is missing, reads in Python from TurboHUD itself (`winmemory.connect`). The Windows build ships the Rust reader |
 | Gamepad triggers | Linux only (`/dev/input/js*`); on Windows XInput would be the way |
 | Builds | `tools/build_app.py` makes a Windows ZIP, built on Windows |
 

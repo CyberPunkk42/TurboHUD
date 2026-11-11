@@ -20,7 +20,7 @@
   the race tests (offline with 19 AI, Fullscreen, hosting online, spectating) were confirmed
   by the user on 2026-11-08. While locked, on the Mac, all sections are drawn in one window
   per screen (2026-11-09), for the frames; seen over TSU on 2026-11-10, with no gain showing yet. On Windows it
-  still shows a session clock and the local time. Start from the source with
+  reads the race through the Rust reader started beside TSU (built 2026-11-11, not yet run on Windows). Start from the source with
   `run_turbohud.sh` / `run_turbohud.cmd`.
 - Layout, in the move-mode panel: a text section's box fits closely round its text, three
   presets (Ctrl+Shift+1, 2, 3 load them; Linux: `--preset`), groups that move and resize
@@ -62,8 +62,8 @@
   three races in a row in 0.4 s (2026-11-10).
 0. Tests: keep them from reaching a running TurboHUD (until then run them with
    `XDG_RUNTIME_DIR` set to an empty private folder).
-1. Windows: the overlay over TSU (windowed, Fullscreen, Fullscreen Exclusive), then
-   live data (reading memory as the same user, without a probe).
+1. Windows: the overlay over TSU (windowed, Fullscreen, Fullscreen Exclusive), and the live data
+   through the Rust reader (built 2026-11-11, not yet run there).
    Also a trial of all of TurboHUD inside the CrossOver bottle (backlog item 2b,
    `docs/WINDOWS_AND_CROSSOVER.md`): first the Qt probe in the bottle.
 2. macOS: live data is connected; check it in races (offline and online), over
@@ -75,6 +75,14 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-11: Live race data on Windows, asked for by the user, with the Rust reader: on Windows the reader
+  (`reader/`, already a Windows program that finds TSU.exe and knows when it runs under Wine) is started
+  straight beside TSU by `LocalReader` (`turbohud/tsu/bottle.py`), no CrossOver or bottle, with no console
+  window; while TSU does not run it is tried again every 2 s. Windows cannot wait on a pipe with select, so
+  there a thread takes the reader's answers (`Pipe(threaded=...)`); starting a reader moved to
+  `spawn_reader`. Where the reader is missing, TurboHUD reads TSU itself in Python (`winmemory.connect`). The
+  Windows build ships the reader where it is built. Tests; the threaded way checked against the user's race
+  on the Mac through the bottle (20 players, 9 ms a read). Not yet run on Windows.
 - 2026-11-11: Clan tags and car names are read again every 5 s (`LABEL_REFRESH`), reported by the user: with
   the AI's clan tag forced and their own changed in a race against AI, the lap times did not split, as
   TurboHUD had read every tag once, before the change, and kept it for good (a fresh reader saw LMP and

@@ -10,7 +10,8 @@ times and the delta to your best lap, fuel, tires, health, the draft, speed with
 bars, the player list with gaps, yellow and blue flags, a proximity radar and a track map (see
 [Use](#use)). It works offline, in hotlaps and online. On macOS, with TSU in CrossOver,
 the same HUD needs no setup (see [Live race data on macOS](#live-race-data-on-macos)). On
-Windows it shows a session clock and the local time for now.
+Windows it reads the race the same way, with a small read-only reader started beside TSU (Windows
+lets a program read another of the same user): built, not yet tried on a Windows PC.
 
 ## Install and first start
 
@@ -129,8 +130,7 @@ starting TurboHUD again.
   and best lap** in the menu or the settings turns them off), fuel and tires left (with the laps
   they last), health (in events with damage), the draft (slipstream) with the downforce it costs, the fuel to spare or short for the finish, speed with throttle and brake
   bars (km/h or mph), the player list with flags, pit status and gaps, the lap times
-  (every driver's best lap and running lap), the local time
-  (on Windows for now the session clock and the local time), a blue flag
+  (every driver's best lap and running lap), the local time, a blue flag
   bar, a proximity radar and a track map. On the first start they sit one below the other at the left of your largest
   screen (laid out as on a 1920x1080 screen), the blue flag at its top centre,
   **locked**: clicks go through them to the game.

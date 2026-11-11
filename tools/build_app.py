@@ -115,6 +115,11 @@ def pyinstaller_args(system=sys.platform):
         '--icon', str(ICON),
         '--add-data', f'{ICON}:assets',  # for the tray and window icon at runtime
     ]  # fmt: skip
+    if system == 'win32':
+        if RUST_READER.exists():
+            args += ['--add-data', f'{RUST_READER}:reader']  # read beside TSU (turbohud/tsu/bottle.py)
+        else:
+            print(f'warning: no Rust reader at {RUST_READER}: the app reads TSU in Python (slower)')
     if system == 'darwin':
         args += ['--osx-bundle-identifier', BUNDLE_ID]
         args += ['--add-data', f'{WIN_PYTHON}:win-python']
