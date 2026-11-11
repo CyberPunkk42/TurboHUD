@@ -2159,6 +2159,21 @@ class YellowFlagTests(unittest.TestCase):
         self.assertEqual([round(g, 4) for g in me.wheel_grips], [0.8999, 0.8999, 0.5, 0.0])
         self.assertEqual(me.wheel_layers, (24, 24, 18, None))
 
+    def test_a_wrecked_car_counts_at_once_and_first(self):
+        # Asked for by the user on 2026-11-11: a car that lost all its hit points (damage on).
+        flags = race.YellowFlags()
+        found = self.drive(flags, 10.0, self.car(speed=0.0, wrecked=True))
+        self.assertEqual(self.kinds(found), [('Other', 'wrecked')])
+
+    def test_the_reader_sees_a_car_with_no_hit_points_left_as_wrecked(self):
+        def local(health):
+            reader = build([10_000], laps_completed=0, clock=20_000, limit=0, car=(5.0, 7.0), health=health)
+            return next(p for p in reader.read().players if p.local)
+
+        self.assertTrue(local(0).wrecked)
+        self.assertFalse(local(120).wrecked)
+        self.assertFalse(local(None).wrecked)  # no damage: the hit points stay at the most
+
     def test_slow_after_a_second_stopped_after_two(self):
         flags = race.YellowFlags()
         self.drive(flags, 10.0, self.car(speed=0.2))

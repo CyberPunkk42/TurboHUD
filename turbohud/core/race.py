@@ -472,6 +472,7 @@ class PlayerState:
     spawns: int | None = None  # how often it was put back on the track (a respawn)
     shortcut: bool = False  # TSU slows it now for a shortcut (its updater's speed cap is set)
     jump_start: bool = False  # TSU's false-start penalty is on for it (VehicleState.startPenaltyOn)
+    wrecked: bool = False  # it has lost all its hit points (only where damage is on)
     tag: str = ''  # the clan tag (TS.PlayerProfile.teamTag: 'FTR' for [FTR]); it may name a class
     car: str = ''  # the car's name (TS.VehicleProperties.name): the class of a driver without a tag
 
@@ -1305,7 +1306,7 @@ class LapReader:
         in_pit, position, velocity, forward, draft_drag = False, None, None, None, None
         forward_speed = wheel_grips = wheel_layers = spawns = None
         car = ''
-        shortcut = jump_start = False
+        shortcut = jump_start = wrecked = False
         try:
             vehicle = self._ref('player', player, 'm_vehicle')
         except NotFound:
@@ -1322,6 +1323,12 @@ class LapReader:
                 # The whole pit area, from its entrance to its exit, not only the pit box.
                 state = self._ref('vehicle', vehicle, 'm_state')
                 in_pit = in_pit or bool(memory.u8(state + self._offset('vstate', state, 'inPitArea')))
+                try:
+                    # Without damage the hit points stay at the most: never wrecked.
+                    most = self._number('vstate', state, 'maxHitPoints')
+                    wrecked = most > 0 and self._number('vstate', state, 'hitPoints') <= 0
+                except (NotFound, ReadError):
+                    pass
                 spawns = self._number('vstate', state, 'spawnCount')
                 # Seen 2026-11-11 for half a second on the player's car at a start.
                 jump_start = bool(memory.u8(state + self._offset('vstate', state, 'startPenaltyOn')))
@@ -1370,6 +1377,7 @@ class LapReader:
             car=car,
             shortcut=shortcut,
             jump_start=jump_start,
+            wrecked=wrecked,
         )
 
     def _wheels(self, updater):
@@ -2794,10 +2802,11 @@ YELLOW_OFF_GRIP = 0.9  # where the surfaces' layers are not known: all four whee
 YELLOW_OFF_FOR = 0.5  # seconds off the track before it counts
 YELLOW_SLOW = 8.0  # game units a second along the car (about 29 km/h; racing: 20 to 60): slow
 YELLOW_SLOW_FOR = 1.0
-YELLOW_STOPPED = 1.0  # this slow either way: stopped
+YELLOW_STOPPED = 1.0  # this slow either way (on the track or off it): stopped
 YELLOW_STOPPED_FOR = 2.0
 YELLOW_BACKWARDS = -1.0  # this fast backwards: spun, or facing the wrong way
 YELLOW_BACKWARDS_FOR = 0.3
+YELLOW_WRECKED_FOR = 0.0  # a car that lost all its hit points (damage on) counts at once
 YELLOW_WRONG_WAY = 0.5  # moving this share of its speed or more against the race (60 degrees off or more) ...
 YELLOW_WRONG_WAY_FOR = 1.5  # ... faster than YELLOW_SLOW, this many seconds: driving the wrong way
 YELLOW_RESPAWN_FOR = 3.0  # seconds a car put back on the track counts as an incident
@@ -2816,7 +2825,7 @@ YELLOW_ROWS = 3  # incidents listed at most
 YELLOW_COLOR = '#ffd400'  # the flag: the section's background (hud's Section.background) and the map's ring
 YELLOW_TEXT = '#111111'  # its text, dark on the yellow (asked for by the user on 2026-11-11)
 # What happened, most serious first: the one shown when several hold.
-YELLOW_KINDS = ('stopped', 'wrong way', 'spun', 'respawned', 'off track', 'slow')  # most serious first
+YELLOW_KINDS = ('wrecked', 'stopped', 'wrong way', 'spun', 'respawned', 'off track', 'slow')  # most serious first
 
 
 @dataclass(frozen=True)
@@ -2849,15 +2858,16 @@ def car_sector(player, starts, passed=None):
 
 class YellowFlags:
     """Follows every car through the race (the local one too, asked for by the user on
-    2026-11-11: the driver who caused a flag sees it) to give its incidents: stopped, driving the
-    wrong way (against the race, asked for by the user on 2026-11-11; only once the track map
-    knows the track, see update), spun (going backwards along the car), put back on the
-    track, all four wheels off it, or slow, each once it has held
-    a moment; an incident ends YELLOW_CLEAR_AFTER seconds after the car is back on the track
-    and up to speed. Not for a car in the pits, one that finished, or before it has passed
+    2026-11-11: the driver who caused a flag sees it) to give its incidents: wrecked (all hit
+    points lost, asked for by the user on 2026-11-11), stopped, driving the wrong way (against
+    the race, asked for by the user on 2026-11-11; only once the track map knows the track, see
+    update), spun (going backwards along the car), put back on the track, all four wheels on
+    the grass (trackmap.off_the_track), or slow, each once it has held a moment; an incident ends YELLOW_CLEAR_AFTER seconds after the car is
+    back on the track and up to speed. Not for a car in the pits, one that finished, or before it has passed
     its first checkpoint (the grid). Times go by the race clock."""
 
     HOLD: typing.ClassVar[dict] = {
+        'wrecked': YELLOW_WRECKED_FOR,
         'stopped': YELLOW_STOPPED_FOR,
         'wrong way': YELLOW_WRONG_WAY_FOR,
         'spun': YELLOW_BACKWARDS_FOR,
@@ -2955,6 +2965,7 @@ class YellowFlags:
             return None
         speed, grips = player.forward_speed, player.wheel_grips
         holds = {
+            'wrecked': player.wrecked,
             'stopped': speed is not None and abs(speed) < YELLOW_STOPPED,
             'wrong way': self._wrong_way(player, look),
             'spun': speed is not None and speed < YELLOW_BACKWARDS,

@@ -52,11 +52,12 @@ CLEAN_SPEED = 1.0  # slower than this along the car (or backwards): not driving 
 # The Unity layers of TSU's surfaces (TS.TSMaterialProperties.m_layer; names from the game's
 # globalgamemanagers, read 2026-11-11): 4 Water, 7 Ice, 13 Asphalt, 14 AsphaltSlippery, 15 Dirt, 16 Pit,
 # 17 Curb, 18 Terrain, 19 Rock, 20 Rubber, 21 Wood, 22 Concrete, 23 Brick, 24 Plastic, 25 Metal.
-# Only these are off the track: on a circuit the user drove over every surface with TurboHUD
-# reading (2026-11-11), the grass beside it was Terrain (grip 0.5), while its wide plastic kerbs
-# (grip 0.9, just under CLEAN_GRIP) and concrete run-off are driven on as track. Dirt counts as
-# track, as a rallycross track is made of it.
-OFF_TRACK_LAYERS = frozenset({4, 18})
+# Only Terrain is off the track (asked for by the user on 2026-11-11: a yellow flag for all four
+# wheels on the terrain, nothing else): on a circuit the user drove over every surface with
+# TurboHUD reading, the grass beside it was Terrain (grip 0.5), while its wide plastic kerbs (grip
+# 0.9, just under CLEAN_GRIP) and concrete run-off are driven on as track, and concrete may be a
+# track's own surface. Dirt counts as track too, as a rallycross track is made of it.
+OFF_TRACK_LAYERS = frozenset({18})
 
 
 def off_the_track(grips, layers=None):
