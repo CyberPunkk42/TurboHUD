@@ -7,6 +7,7 @@ section's box fits closely round its text, so its name shows only when the point
 on it; the others show their name. The panel says what to do, shows or hides sections, and locks or quits.
 """
 
+import dataclasses
 import functools
 import logging
 import math
@@ -338,7 +339,9 @@ class SectionWindow(QWidget):
         )
         left = 0
         down = content_shift(self.section, self.height(), scale, text_ink)
-        if self.locked and self.backdrop and rows:
+        if self.section.background and rows:  # its own colour, also in move mode, to see it
+            self._paint_backdrop(painter, rows, scale, bars, down, self.section.background)
+        elif self.locked and self.backdrop and rows:
             self._paint_backdrop(painter, rows, scale, bars, down)
         if self.section.pedals and rows:  # no bars without a speed (menu, no game)
             throttle, brake = self.pedals or (None, None)
@@ -349,7 +352,11 @@ class SectionWindow(QWidget):
             )
         painter.translate(0, down)
         centre = self.text_centred and text_can_centre(self.section)
-        draw_hud(painter, hud_lines(rows, scale), self.theme, scale, left, self.width() - left, centre)
+        theme = self.theme
+        if self.section.background and rows:
+            # On a solid box the text needs no dark edge: on the yellow flag it smudged the letters.
+            theme = dataclasses.replace(theme, outline_color='#00000000')
+        draw_hud(painter, hud_lines(rows, scale), theme, scale, left, self.width() - left, centre)
         if self.section.level and rows:
             sample = SECTORS_SAMPLE if self.section.sectors else LEVEL_SAMPLE
             level = self.level or (None if self.locked else sample)
@@ -366,11 +373,11 @@ class SectionWindow(QWidget):
                     draw_level(painter, level_bar(self.width(), content_height, scale, *level))
         painter.translate(0, -down)
 
-    def _paint_backdrop(self, painter, rows, scale, bars, down=0):
+    def _paint_backdrop(self, painter, rows, scale, bars, down=0, color=None):
         """The light tint, only as large as the text (and pedal bars): half the margin
         round it, moved `down` with the text and kept inside the window. A section with a
         right-hand column (the player list) is as wide as its window, where that column
-        is drawn."""
+        is drawn. `color` ('#rrggbb'): a solid box of that colour instead (Section.background)."""
         # Digits as zeros: a tint that follows them would flicker as a number runs.
         width, height = content_size(steady_rows(rows), scale, text_width)
         pad = round(MARGIN * scale / 2)
@@ -393,7 +400,7 @@ class SectionWindow(QWidget):
             x = (self.width() - width) / 2 + left  # round the text in the middle of the box
         rect = QRectF(x, top, max(width - 2 * left, 1), max(tall, 1))
         painter.setPen(Qt.NoPen)
-        painter.setBrush(QColor(*BACKDROP))
+        painter.setBrush(QColor(color) if color else QColor(*BACKDROP))
         painter.drawRoundedRect(rect, 6, 6)
 
     def _paint_radar(self, painter):

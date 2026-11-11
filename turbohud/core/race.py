@@ -2533,7 +2533,8 @@ YELLOW_BACKWARDS_FOR = 0.3
 YELLOW_RESPAWN_FOR = 3.0  # seconds a car put back on the track counts as an incident
 YELLOW_CLEAR_AFTER = 3.0  # seconds the flag stays once the car is back on the track and up to speed
 YELLOW_ROWS = 3  # incidents listed at most
-YELLOW_COLOR = '#ffd400'
+YELLOW_COLOR = '#ffd400'  # the flag: the section's background (hud's Section.background) and the map's ring
+YELLOW_TEXT = '#111111'  # its text, dark on the yellow (asked for by the user on 2026-11-11)
 # What happened, most serious first: the one shown when several hold.
 YELLOW_KINDS = ('stopped', 'spun', 'respawned', 'off track', 'slow')
 
@@ -2661,10 +2662,10 @@ def yellow_rows(incidents, state):
     first = near[0]
     title = 'YELLOW'
     where = f'  -  Sector {first.sector + 1}' if first.sector is not None else ''
-    rows = [Row(title + where, 'title', YELLOW_COLOR)]
+    rows = [Row(title + where, 'title', YELLOW_TEXT)]
     for incident in near[:YELLOW_ROWS]:
         sector = f'S{incident.sector + 1}  ' if incident.sector is not None else ''
-        rows.append(Row(f'{sector}{incident.name[:MAX_NAME_SHOWN]}  {incident.kind}', 'small', YELLOW_COLOR))
+        rows.append(Row(f'{sector}{incident.name[:MAX_NAME_SHOWN]}  {incident.kind}', 'small', YELLOW_TEXT))
     return rows
 
 

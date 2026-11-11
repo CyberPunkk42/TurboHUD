@@ -260,6 +260,7 @@ class Section:
     drawing: str = ''  # what it draws instead of text: 'flag' (blue flag), 'radar' or 'map'
     level: bool = False  # a bar below the text showing how much is left (fuel, tires, health)
     sectors: bool = False  # with `level`: the room below the text holds the lap's sector bars
+    background: str = ''  # '#rrggbb': a solid box behind its text, in place of the Tint (the yellow flag)
 
 
 LAP_TIME_ROWS = 20  # how many drivers the lap times section is made for
@@ -269,7 +270,7 @@ OLD_LAP_TIME_ROWS = 16  # before layout 3
 def has_tint(section):
     """Whether a section has a Tint option: every text section (a light tint behind its
     text) and the track map (its dark square)."""
-    return not section.drawing or section.drawing == 'map'
+    return (not section.drawing and not section.background) or section.drawing == 'map'
 
 
 def default_tint(section, backdrop=False):
@@ -356,12 +357,13 @@ RACE_SECTIONS = (
         'Yellow flag',
         (
             (
-                Row('YELLOW  -  Sector 3', 'title', '#ffd400'),
-                Row('S3  Playername1234567  respawned', 'small', '#ffd400'),
-                Row('S3  Playername1234567  off track', 'small', '#ffd400'),
-                Row('S4  Playername1234567  stopped', 'small', '#ffd400'),
+                Row('YELLOW  -  Sector 3', 'title', '#111111'),
+                Row('S3  Playername1234567  respawned', 'small', '#111111'),
+                Row('S3  Playername1234567  off track', 'small', '#111111'),
+                Row('S4  Playername1234567  stopped', 'small', '#111111'),
             ),
         ),
+        background='#ffd400',
     ),
     Section('blueflag', 'Blue flag', (), bar=(480, 24), drawing='flag'),
     Section('deltabar', 'Delta bar', (), bar=(360, 36), drawing='delta'),
