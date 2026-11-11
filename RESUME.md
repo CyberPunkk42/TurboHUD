@@ -75,6 +75,11 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-11: Build 2026.11.11.8 for the tester (`releases/`, macOS 27, `--any-macos`, smoke test passed with
+  TurboHUD closed; 32.4 MB), as 2026.11.11.7 with the own yellow flag and ring, the smaller own dot, the yellow sector
+  following a car backwards, the radar's zoom cap with edge arrows, classes on the radar and clan tags in the lap
+  times. The test sheet names it, says what's new and checks them (Part 4 points 10 to 13, Part 6). The 2026.11.11.4
+  to .7 images are still in `releases/`, to be removed by hand.
 - 2026-11-11: Clan tags in the lap times, asked for by the user: outside a multi-class race (where the tags name the
   classes), each driver's clan tag shows in a column of its own after the name, lined up on the left, cut to 5
   characters (`MAX_TAG_SHOWN`); a driver without one shows nothing there. A new column in the layout (`Row.tag`,
