@@ -75,6 +75,16 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-11: Shortcut penalties, asked for by the user: TSU slows a car that takes a shortcut its track
+  defines ("Shortcut detected!"). Found in a race recorded with cuts (only reading): a car is slowed while
+  `CarStateUpdater.m_shortuctMaxSpeedWithoutLimitedGas` (TSU's spelling) is a speed cap (about 28) instead
+  of no limit, for every car (the AI's too); the length is `EventState.shortcutSlowdownUpdater.m_slowdownTicks`
+  (150 there) at 50 ticks a second (measured). A new section, Shortcut penalty (orange box, dark text:
+  SHORTCUT 2.4 s, counting down from when it began; `ShortcutPenalties`, `shortcut_rows`), and CUT 2.4s in
+  orange in the lap times in place of the lap. The move-mode panel's spacing is a little tighter to keep it
+  under 800 px with the new row (788 off screen). Also seen: `VehicleState.startPenaltyOn` for a false start.
+  Tests; read from the user's race (3.0 s, a slowed AI car seen). Not yet seen in the HUD; online as a client
+  not yet checked.
 - 2026-11-11: Hazard ahead, asked for by the user in place of an automatic full course yellow (which a car
   left by a player who quit, lost the connection or a gamepad would set off for everyone): the yellow box's
   heading becomes CAR STOPPED AHEAD or WRONG WAY AHEAD, with that car first, while a stopped car on the

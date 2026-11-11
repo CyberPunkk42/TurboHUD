@@ -41,6 +41,8 @@ log = logging.getLogger(__name__)
 
 UNITS_PER_SECOND = 10_000
 # EventState.times: ticks, time, ..., time limit (int32 each).
+TICKS_PER_SECOND = 50  # TSU's physics ticks (measured 2026-11-11: 50 a second of the race clock)
+SHORTCUT_NO_LIMIT = 1e30  # a speed cap above this is TSU's 'no limit' (the largest float)
 TIMES_TICKS, TIMES_NOW, TIMES_LIMIT = 0, 4, 20
 # How far the HUD runs the current lap on by itself between two reads.
 MAX_EXTRAPOLATION = 1.0  # seconds
@@ -80,6 +82,7 @@ class LapState:
     draft: 'DraftSettings | None' = None  # the event's drafting, None where it is off
     spectating: bool = False  # the player only watches: no car, the lap counts are the leader's
     on_a_track: bool = True  # a race mode (a circuit, or A to B): False in arena modes, without a map
+    shortcut_seconds: float = 0.0  # how long TSU slows a car for a shortcut here (0: not known, or off)
 
     @property
     def lap_times(self):
@@ -465,6 +468,9 @@ class PlayerState:
     forward_speed: float | None = None  # game units a second along the car; below 0 backwards
     wheel_grips: tuple | None = None  # the grip of the surface under each of its four wheels (0: in the air)
     spawns: int | None = None  # how often it was put back on the track (a respawn)
+    shortcut: bool = (
+        False  # TSU slows it now for a shortcut (CarStateUpdater.m_shortuctMaxSpeedWithoutLimitedGas)
+    )
     tag: str = ''  # the clan tag (TS.PlayerProfile.teamTag: 'FTR' for [FTR]); it may name a class
     car: str = ''  # the car's name (TS.VehicleProperties.name): the class of a driver without a tag
 
@@ -525,6 +531,7 @@ class LapReader:
         self._player = None
         self._laps = {}  # finished lap object -> its checkpoint times
         self._tags = {}  # profile object -> (its clan tag, when read): see _kept_text
+        self._shortcut_for, self._shortcut_length = None, 0.0  # see _shortcut_seconds
         self._cars = {}  # vehicle object -> (its car's name, when read)
         self._gates = None  # checkpoint lines, ((x1, z1), (x2, z2)) each
         self._sector_lines = ()  # the checkpoints of type Sector (TS.CheckpointType), read with the lines
@@ -970,6 +977,7 @@ class LapReader:
             position=position,
             draft=self._draft_settings(),
             on_a_track=self._on_a_track(),
+            shortcut_seconds=self._shortcut_seconds(state_object),
         )
         live = state.live_fuel_trend(self._fuel_marks, self._fuel_history)
         if live is not None:
@@ -978,6 +986,20 @@ class LapReader:
             share = self._count_draft(state)
             state = dataclasses.replace(state, car=dataclasses.replace(state.car, draft_last_lap=share))
         return state
+
+    def _shortcut_seconds(self, state):
+        """How long TSU slows a car for a shortcut in this event: EventState's
+        ShortcutSlowdownUpdater.m_slowdownTicks (150 on the user's track, 2026-11-11), in
+        seconds at TICKS_PER_SECOND. Read once an event; 0.0 where it is missing."""
+        if self._shortcut_for is not state:
+            self._shortcut_for, self._shortcut_length = state, 0.0
+            try:
+                updater = self._ref('state', state, 'shortcutSlowdownUpdater')
+                ticks = self._number('slowdown', updater, 'm_slowdownTicks')
+                self._shortcut_length = max(float(ticks), 0.0) / TICKS_PER_SECOND
+            except (NotFound, ReadError):
+                pass
+        return self._shortcut_length
 
     def _players_with_positions(self, state, gates, clock):
         """Every player, with a position from the replay recorder or worked out where
@@ -1282,6 +1304,7 @@ class LapReader:
         in_pit, position, velocity, forward, draft_drag = False, None, None, None, None
         forward_speed = wheel_grips = spawns = None
         car = ''
+        shortcut = False
         try:
             vehicle = self._ref('player', player, 'm_vehicle')
         except NotFound:
@@ -1311,6 +1334,13 @@ class LapReader:
                 except (NotFound, ReadError):
                     pass
                 forward_speed, wheel_grips = self._wheels(updater)
+                try:
+                    # Found 2026-11-11 (a race recorded with shortcuts taken): no limit (the
+                    # largest float) normally, a speed of about 28 while TSU slows the car.
+                    cap = self._number('updater', updater, 'm_shortuctMaxSpeedWithoutLimitedGas')
+                    shortcut = math.isfinite(cap) and cap < SHORTCUT_NO_LIMIT
+                except (NotFound, ReadError):
+                    pass
             try:
                 where = vehicle + self._offset('vehicle', vehicle, 'm_statsNewPosition')
                 x, _y, z = struct.unpack('<3f', memory.read(where, 12))
@@ -1334,6 +1364,7 @@ class LapReader:
             spawns=spawns,
             tag=tag,
             car=car,
+            shortcut=shortcut,
         )
 
     def _wheels(self, updater):
@@ -1831,6 +1862,7 @@ def race_sections(
     sector_bars=True,
     yellow_flags=None,
     class_tags=(),
+    shortcuts=None,
 ):
     """{section name: rows} for a live-reader snapshot (see core.hud.RACE_SECTIONS); a
     section with nothing to show has no rows. Nothing before the grid: in the menus, the
@@ -1842,7 +1874,8 @@ def race_sections(
     DeltaBar) gives the delta bar, under 'deltaview'; `sector_bars` False leaves the sector
     bars out (an option); `yellow_flags` (a YellowFlags) gives the yellow flag section and
     the cars ringed on the track map; `class_tags`: the clan tags that name a class, for the
-    lap times of a multi-class race (none: no classes)."""
+    lap times of a multi-class race (none: no classes); `shortcuts` (a ShortcutPenalties)
+    gives the shortcut section and CUT in the lap times."""
     if not on_grid(snapshot, now):
         return {}
     state = snapshot.state
@@ -1877,7 +1910,13 @@ def race_sections(
     if state.players:
         order = standings.order(state.players, now) if standings is not None else None
         sections['players'] = players_rows(state.players, order, state.clock, state.gates)
-        sections['laptimes'] = lap_times_rows(state.players, order, clock_now(snapshot, now), class_tags)
+        cuts = shortcuts.left(state) if shortcuts is not None else None
+        sections['laptimes'] = lap_times_rows(
+            state.players, order, clock_now(snapshot, now), class_tags, cuts
+        )
+        rows = shortcut_rows(state, cuts or {})
+        if rows:
+            sections['shortcut'] = rows
         opacity = blue_flag_opacity(
             blue_flag(state.players, clock_now(snapshot, now), blue_within), blue_within
         )
@@ -2462,6 +2501,42 @@ def player_current_lap(player, clock):
     return clock - start
 
 
+# Shortcut penalties (asked for by the user on 2026-11-11): TSU slows a car that took a
+# shortcut its track defines for some seconds; TurboHUD shows the player's own as an orange box
+# counting down, and every driver's as CUT in the lap times.
+SHORTCUT_COLOR = '#ff8c1a'  # the box (hud's Section.background) and CUT in the lap times
+SHORTCUT_TEXT = '#111111'  # dark text on the orange
+
+
+class ShortcutPenalties:
+    """Follows when each car's shortcut slowdown began, to count down what is left."""
+
+    def __init__(self):
+        self._since = {}  # name -> race clock (seconds) when its slowdown began
+
+    def left(self, state):
+        """{name: seconds left, or None where not known} for the cars TSU slows now."""
+        now = state.clock / UNITS_PER_SECOND
+        slowed = {p.name for p in state.players if p.shortcut}
+        self._since = {name: since for name, since in self._since.items() if name in slowed and since <= now}
+        found = {}
+        for name in slowed:
+            since = self._since.setdefault(name, now)
+            length = state.shortcut_seconds
+            found[name] = max(length - (now - since), 0.0) if length > 0 else None
+        return found
+
+
+def shortcut_rows(state, left):
+    """The player's own shortcut penalty: SHORTCUT and the seconds left, or [] without one."""
+    me = next((p for p in state.players if p.local), None)
+    if me is None or me.name not in left:
+        return []
+    seconds = left[me.name]
+    text = 'SHORTCUT' + (f'  {seconds:.1f} s' if seconds is not None else '')
+    return [Row(text, 'title', SHORTCUT_TEXT, centred=True)]
+
+
 OTHER_CLASS = 'Other'  # in a multi-class race, the drivers whose clan tag names no class
 
 
@@ -2513,14 +2588,15 @@ def by_class(order, classes):
     return grouped, places
 
 
-def lap_times_rows(players, order=None, clock=0, class_tags=()):
+def lap_times_rows(players, order=None, clock=0, class_tags=(), cuts=None):
     """The lap times list: a heading, then each driver in race order with flag and name,
     their best lap and the running time of their current lap ('Fin' once finished) at
     race `clock`. The race's fastest lap is purple, as in F1. Up to MAX_LAP_TIME_ROWS drivers.
 
     In a multi-class race (car_classes, from the clan tags in `class_tags`) the drivers
     come by class, each class below a line labelled with its name, numbered and with its
-    fastest lap purple within the class."""
+    fastest lap purple within the class. `cuts` (ShortcutPenalties.left): CUT and the seconds
+    left in orange, in the lap's place, for a driver TSU slows for a shortcut."""
     order = list(ranked(players) if order is None else order)
     classes = car_classes(order, class_tags)
     places = None
@@ -2561,6 +2637,10 @@ def lap_times_rows(players, order=None, clock=0, class_tags=()):
         plain_pit = player.in_pit and not player.finished and not timed
         bracket = _pit_bracket(player) if timed else ''
         time_now = 'Fin' if player.finished else format_tenths(running) if running is not None else '-'
+        cut_text = ''
+        if cuts and player.name in cuts:
+            left = cuts[player.name]
+            cut_text = f'CUT {left:.1f}s' if left is not None else 'CUT'
         rows.append(
             Row(
                 f'{position}. {name}',
@@ -2576,8 +2656,8 @@ def lap_times_rows(players, order=None, clock=0, class_tags=()):
                     if best is not None and best == fastest.get(group)
                     else 'text'
                 ),
-                right='PIT' if plain_pit else bracket or time_now,
-                right_color='lift' if plain_pit or bracket else 'text',
+                right=cut_text if cut_text else 'PIT' if plain_pit else bracket or time_now,
+                right_color=SHORTCUT_COLOR if cut_text else 'lift' if plain_pit or bracket else 'text',
                 rule=rule,
             )
         )

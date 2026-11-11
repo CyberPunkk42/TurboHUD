@@ -291,6 +291,7 @@ def run(args, folder):
             RACING,
             DeltaBar,
             Radar,
+            ShortcutPenalties,
             Standings,
             YellowFlags,
             race_sections,
@@ -310,6 +311,7 @@ def run(args, folder):
         radar = Radar()
         delta_bar = DeltaBar()
         yellow_flags = YellowFlags()
+        shortcuts = ShortcutPenalties()
         track_map = TrackMap(settings.map_others, folder)  # learnt tracks beside the settings
 
         def contents():
@@ -329,6 +331,7 @@ def run(args, folder):
                 settings.sector_bars,
                 yellow_flags if settings.yellow_flags else None,
                 settings.class_tags if settings.classes else (),
+                shortcuts,
             )
             if not settings.yellow_flags:
                 yellow_flags.reset()  # turned on again, it starts afresh

@@ -1264,3 +1264,49 @@ class ClassTests(unittest.TestCase):
             class_tags=self.TAGS,
         )
         self.assertEqual([line.rule for line in hud_lines(rows)], ['', 'LMP', 'GT3'])
+
+
+class ShortcutTests(unittest.TestCase):
+    """TSU's shortcut slowdown (asked for by the user on 2026-11-11): the player's own as an
+    orange box counting down, every driver's as CUT in the lap times."""
+
+    def state(self, seconds, *players, length=3.0):
+        return race.LapState(
+            clock=round(seconds * race.UNITS_PER_SECOND),
+            time_limit=0,
+            laps_completed=1,
+            laps_to_finish=5,
+            lap_starts=[0, 0],
+            players=tuple(players),
+            shortcut_seconds=length,
+        )
+
+    def driver(self, name, shortcut, local=False):
+        laps = [lap(0), lap(40_000, count=2)]
+        return dataclasses.replace(player(name, laps, laps=1, local=local), shortcut=shortcut)
+
+    def test_counts_down_from_when_it_began(self):
+        penalties = race.ShortcutPenalties()
+        me, other = self.driver('Me', True, local=True), self.driver('Other', False)
+        self.assertEqual(penalties.left(self.state(10.0, me, other)), {'Me': 3.0})
+        self.assertEqual(penalties.left(self.state(11.5, me, other)), {'Me': 1.5})
+        self.assertEqual(penalties.left(self.state(14.0, me, other)), {'Me': 0.0})  # not below 0
+        free = self.driver('Me', False, local=True)
+        self.assertEqual(penalties.left(self.state(15.0, free, other)), {})
+        self.assertEqual(penalties.left(self.state(20.0, me, other)), {'Me': 3.0})  # a new one
+        unknown = race.ShortcutPenalties().left(self.state(10.0, me, length=0.0))
+        self.assertEqual(unknown, {'Me': None})
+
+    def test_the_players_own_box_and_cut_in_the_lap_times(self):
+        me, other = self.driver('Me', False, local=True), self.driver('Other', True)
+        state = self.state(10.0, me, other)
+        self.assertEqual(race.shortcut_rows(state, {'Other': 2.0}), [])  # not the player's
+        rows = race.shortcut_rows(state, {'Me': 2.44})
+        self.assertEqual(rows[0].text, 'SHORTCUT  2.4 s')
+        self.assertTrue(rows[0].centred)
+        self.assertEqual(race.shortcut_rows(state, {'Me': None})[0].text, 'SHORTCUT')
+        table = race.lap_times_rows([me, other], clock=60_000, cuts={'Other': 2.44})
+        cut = next(row for row in table if 'Other' in row.text)
+        self.assertEqual((cut.right, cut.right_color), ('CUT 2.4s', race.SHORTCUT_COLOR))
+        plain = next(row for row in table if 'Me' in row.text)
+        self.assertNotIn('CUT', plain.right)

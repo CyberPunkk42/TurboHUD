@@ -170,6 +170,11 @@ starting TurboHUD again.
   stopped on the tarmac, or one going the wrong way, is up to 5 seconds ahead of you on the road, the
   box says **CAR STOPPED AHEAD** or **WRONG WAY AHEAD** instead, with that car first (once the track is
   learnt; a car parked on the grass is ignored). Only your own HUD warns: nothing changes for anyone else.
+- **Shortcut penalty**: on tracks whose maker defined shortcuts, TSU slows a car that takes one for a
+  few seconds (the track's setting; 3 s on the one tried). While it slows you, an orange box says
+  **SHORTCUT** with the seconds left; in the lap times any driver it slows shows an orange **CUT** with the
+  seconds left, in place of the lap time. Cuts TSU does not penalise (over the grass elsewhere) are not
+  shown here: the yellow flags show those as off track.
 - **Settings…** (TurboHUD icon's menu, or the move-mode panel) picks the text,
   highlight and outline colours, makes all sections bigger or smaller at once, and holds
   the options for the whole HUD: mph, the tint behind all sections, the radar's
