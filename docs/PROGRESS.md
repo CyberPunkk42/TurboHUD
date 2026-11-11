@@ -1214,3 +1214,11 @@ its "Recent changes".
   following a car backwards, the radar's zoom cap with edge arrows, classes on the radar and clan tags in the lap
   times. The test sheet names it, says what's new and checks them (Part 4 points 10 to 13, Part 6). The 2026.11.11.4
   to .7 images are still in `releases/`, to be removed by hand.
+- 2026-11-11: A private GitHub repository for the Mac and the Windows PC, asked for by the user (remote `github`,
+  `https://github.com/CyberPunkk42/TurboHUD.git`). Before the first push every file, path and commit of the history was
+  checked for personal data: the files had only placeholders, but 299 commits had the user's real name as author
+  (Git took it from the Mac account, as no Git name was set) and 115 a personal email. The history was rewritten so
+  every author and committer is CyberPunkk42 with the GitHub noreply email (files, messages and dates the same,
+  checked commit by commit; a backup of the old history outside the project). This clone's `user.name` is now set,
+  the hook's local terms list the real name, the email and the Mac's computer names, and AGENTS.md says what may be
+  pushed where.
