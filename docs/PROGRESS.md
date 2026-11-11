@@ -929,3 +929,12 @@ its "Recent changes".
   build from the disk image), the same five FPS measurements, a quick look with the delta bar, a race joined
   online (the fix), the log (now with `TSU's log` and where TurboHUD runs from), and the quit check. It
   replaces 2026.11.10 in `releases/`.
+- 2026-11-11: A race TSU puts where the last one was is read afresh. In a session the user hosted, the
+  tester's HUD showed in the first two events with build 2026.11.11 but not in the third: the search found
+  the race (`race found (-0.0 MiB from the last one)`), yet no `event type` or `TSU: racing` followed until
+  the event was restarted two minutes later. The new race's event state was at the last one's address, so
+  the reader took it for the same race and read it with what it kept of the last one (the local player,
+  laps), and every read failed. Now a search that finds a race, or a race that is gone, forgets all that.
+  The live race also logs when the reason there is no race changes (`TSU: still ...`, at most every 10 s):
+  a race found but not read looked like waiting all along. Tests (both new reader tests fail without the
+  fix). Not yet seen on the tester's Mac (needs a new build).

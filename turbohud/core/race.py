@@ -638,6 +638,7 @@ class LapReader:
             self._controller = None
             self._next_search = 0.0  # gone (race over): look again at once
             self._empty_since = None
+            self._state = None  # and nothing kept from it counts for the next race
         if self._spectated is not None:
             # The race the player watches, while its clock runs: no search is needed, and
             # one would hold the reads up for as long as it takes. A look at it each read
@@ -702,6 +703,11 @@ class LapReader:
                 if driving:
                     self._controller, self._spectated = candidate, None
                     self._searched_past = False
+                    # A new race, even where the last one was: TSU may put its event state at
+                    # the very address of the last one (seen 2026-11-11, a tester's third event
+                    # of a session), and the kept player and laps of that race made every read
+                    # fail until the event was restarted.
+                    self._state = None
                     result = 'race found' + self._from_the_last(candidate)
                     self._found_at = candidate
                     return state
@@ -736,6 +742,7 @@ class LapReader:
         # Not the one whose clock stood still, if there is another: an old race can linger.
         self._spectated, state, hit = next((w for w in watchable if w[0] != self._spectated), watchable[0])
         self._watched_clock, self._watched_moved = None, False
+        self._state = None  # read afresh, as a race found to drive in
         # Where it was among the hits: a search stops at the first race to watch, past the one
         # whose clock stood or never ran.
         log.info(

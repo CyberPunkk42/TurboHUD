@@ -185,7 +185,9 @@ busy). So TurboHUD searches only when it has to: when there is no offline or hos
 race, and TSU's own log file says an event is running (TSU writes "Event started." and
 "Event ended." into `log.txt` as it happens, with dated copies in `Logs/`; TurboHUD only
 reads them, and goes by the newest). In
-menus and lobbies it does not search at all. While an event runs without a race found
+menus and lobbies it does not search at all. A log counts only when TSU wrote it since it
+started and it names an event: some players' TSU stops writing it, and then TurboHUD
+searches anyway, as it does with no log at all, on the waits below. While an event runs without a race found
 yet, it waits 10 seconds after each search before the next.
 
 When you spectate, the race is there but has no local player. A search then finds no
