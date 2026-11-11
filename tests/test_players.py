@@ -1213,6 +1213,28 @@ class LapTimesTests(unittest.TestCase):
         self.assertIn('19. P18', [r.text for r in rows])
 
 
+class ClanTagColumnTests(unittest.TestCase):
+    """Asked for by the user on 2026-11-11: clan tags in a column of their own, outside a
+    multi-class race."""
+
+    def driver(self, name, tag, start):
+        return dataclasses.replace(player(name, [lap(start), lap(start + 40_000, count=1)], laps=1), tag=tag)
+
+    def test_tags_show_cut_to_five_and_not_without_the_option(self):
+        drivers = [self.driver('A', 'FTR', 0), self.driver('B', '', 100), self.driver('C', 'TOOLONGTAG', 200)]
+        rows = race.lap_times_rows(drivers, clock=50_000, clan_tags=True)
+        self.assertEqual([r.tag for r in rows[1:]], ['FTR', '', 'TOOLO'])
+        rows = race.lap_times_rows(drivers, clock=50_000)
+        self.assertEqual([r.tag for r in rows[1:]], ['', '', ''])
+
+    def test_not_in_a_multi_class_race_where_the_tags_name_the_classes(self):
+        drivers = [self.driver('A', 'GT3', 0), self.driver('B', 'LMP', 100)]
+        rows = race.lap_times_rows(drivers, clock=50_000, class_tags=('GT3', 'LMP'), clan_tags=True)
+        self.assertEqual({r.tag for r in rows}, {''})
+        rows = race.lap_times_rows(drivers, clock=50_000, class_tags=(), clan_tags=True)  # classes off
+        self.assertEqual([r.tag for r in rows[1:]], ['GT3', 'LMP'])
+
+
 class ClassTests(unittest.TestCase):
     """A multi-class race (asked for by the user on 2026-11-11): classes from the clan tags."""
 

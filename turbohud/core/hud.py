@@ -25,6 +25,7 @@ class Line:
     before: str = ''  # a column lined up on the right just before `middle`, in the text's colour
     rule: str = ''  # a line above it, labelled with this (a class in the lap times)
     centred: bool = False  # in the middle of the box, whatever the section's other lines do
+    tag: str = ''  # a column lined up on the left just before `before` (a clan tag in the lap times)
 
 
 @dataclass(frozen=True)
@@ -45,6 +46,7 @@ class Row:
     before: str = ''  # a column lined up on the right just before `middle`, in the text's colour
     rule: str = ''  # a line in the gap above it, labelled with this (a class in the lap times)
     centred: bool = False  # in the middle of the box (the yellow flag's heading)
+    tag: str = ''  # a column lined up on the left just before `before` (a clan tag in the lap times)
 
 
 FLAG_WIDTH = 1.5  # a flag's room before the text, in font sizes
@@ -139,6 +141,7 @@ def _content(rows, sizes):
                 row.before,
                 row.rule,
                 row.centred,
+                row.tag,
             )
         )
     return lines, baseline
@@ -160,6 +163,8 @@ def _left_width(line, measure):
 def line_width(line, measure):
     """How wide a line is with its flag and its columns."""
     width = _left_width(line, measure)
+    if line.tag:
+        width += COLUMN_GAP * line.size + measure(line.tag, line.size)
     if line.before:
         width += COLUMN_GAP * line.size + measure(line.before, line.size)
     if line.middle:
@@ -176,8 +181,10 @@ def lines_width(lines, measure):
         return max((line_width(line, measure) for line in lines), default=0)
     gap = max(COLUMN_GAP * line.size for line in lines)
     before = max((measure(line.before, line.size) for line in lines if line.before), default=None)
+    tag = max((measure(line.tag, line.size) for line in lines if line.tag), default=None)
     return (
         max(_left_width(line, measure) for line in lines)
+        + (tag + gap if tag is not None else 0)
         + (before + gap if before is not None else 0)
         + gap
         + max((measure(line.middle, line.size) for line in lines if line.middle), default=0)
@@ -200,6 +207,18 @@ def before_right(lines, middle_end, measure):
     middle = max((measure(line.middle, line.size) for line in lines if line.middle), default=0)
     gap = max((COLUMN_GAP * line.size for line in lines if line.middle), default=0)
     return middle_end - middle - gap
+
+
+def tag_left(lines, before_end, measure):
+    """Where the `tag` column starts (it is left-aligned there): before the widest `before`
+    column, which ends at `before_end`, and the widest tag, with a gap; None without tags."""
+    tag = max((measure(line.tag, line.size) for line in lines if line.tag), default=None)
+    if tag is None:
+        return None
+    before = max((measure(line.before, line.size) for line in lines if line.before), default=None)
+    gap = max(COLUMN_GAP * line.size for line in lines)
+    start = before_end - before - gap if before is not None else before_end
+    return start - tag
 
 
 def content_size(rows, scale, measure):
@@ -231,6 +250,7 @@ def steady_rows(rows):
             tail=steady_text(row.tail),
             middle=steady_text(row.middle),
             before=steady_text(row.before),
+            tag=steady_text(row.tag),
             right=steady_text(row.right),
         )
         for row in rows

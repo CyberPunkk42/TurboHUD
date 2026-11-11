@@ -1865,6 +1865,7 @@ def race_sections(
     yellow_flags=None,
     class_tags=(),
     shortcuts=None,
+    clan_tags=True,
 ):
     """{section name: rows} for a live-reader snapshot (see core.hud.RACE_SECTIONS); a
     section with nothing to show has no rows. Nothing before the grid: in the menus, the
@@ -1882,7 +1883,7 @@ def race_sections(
         return {}
     state = snapshot.state
     if state.spectating:
-        return _watching_sections(snapshot, now, standings, track_map, class_tags)
+        return _watching_sections(snapshot, now, standings, track_map, class_tags, clan_tags)
     if state.finished or state.laps_to_finish and state.laps_completed >= state.laps_to_finish:
         # Finished: the lap sections say so, and the rest stays (the player list above
         # all) while the others race on, until the race is over and the clock stops.
@@ -1915,7 +1916,7 @@ def race_sections(
         cuts = shortcuts.left(state) if shortcuts is not None else None
         jumped = shortcuts.jump_starts(state) if shortcuts is not None else frozenset()
         sections['laptimes'] = lap_times_rows(
-            state.players, order, clock_now(snapshot, now), class_tags, cuts, jumped
+            state.players, order, clock_now(snapshot, now), class_tags, cuts, jumped, clan_tags
         )
         rows = shortcut_rows(state, cuts or {}, jumped)
         if rows:
@@ -1954,7 +1955,7 @@ def race_sections(
     return sections
 
 
-def _watching_sections(snapshot, now, standings, track_map, class_tags=()):
+def _watching_sections(snapshot, now, standings, track_map, class_tags=(), clan_tags=True):
     """What a spectator sees: the race, with the leader's lap, the player list with the
     gaps to the leader, the lap times and the map; nothing about a car of their own."""
     state = snapshot.state
@@ -1962,7 +1963,9 @@ def _watching_sections(snapshot, now, standings, track_map, class_tags=()):
     if state.players:
         order = standings.order(state.players, now) if standings is not None else ranked(state.players)
         sections['players'] = players_rows(state.players, order, state.clock, state.gates, watching=True)
-        sections['laptimes'] = lap_times_rows(state.players, order, clock_now(snapshot, now), class_tags)
+        sections['laptimes'] = lap_times_rows(
+            state.players, order, clock_now(snapshot, now), class_tags, clan_tags=clan_tags
+        )
         if track_map is not None and state.on_a_track:
             shown = track_map.update(state, order)
             if shown is not None:
@@ -2564,6 +2567,7 @@ def shortcut_rows(state, left, jumped=frozenset()):
     return [Row(text, 'title', SHORTCUT_TEXT, centred=True)]
 
 
+MAX_TAG_SHOWN = 5  # characters of a clan tag in the lap times
 OTHER_CLASS = 'Other'  # in a multi-class race, the drivers whose clan tag names no class
 # The proximity radar's colours for the classes (asked for by the user on 2026-11-11): none the radar
 # already uses (red beside, yellow closing in, grey, white for the player, cyan for the slipstream).
@@ -2625,7 +2629,9 @@ def by_class(order, classes):
     return grouped, places
 
 
-def lap_times_rows(players, order=None, clock=0, class_tags=(), cuts=None, jumped=frozenset()):
+def lap_times_rows(
+    players, order=None, clock=0, class_tags=(), cuts=None, jumped=frozenset(), clan_tags=False
+):
     """The lap times list: a heading, then each driver in race order with flag and name,
     their best lap and the running time of their current lap ('Fin' once finished) at
     race `clock`. The race's fastest lap is purple, as in F1. Up to MAX_LAP_TIME_ROWS drivers.
@@ -2633,7 +2639,9 @@ def lap_times_rows(players, order=None, clock=0, class_tags=(), cuts=None, jumpe
     In a multi-class race (car_classes, from the clan tags in `class_tags`) the drivers
     come by class, each class below a line labelled with its name, numbered and with its
     fastest lap purple within the class. `cuts` (ShortcutPenalties.left): CUT and the seconds
-    left in orange, in the lap's place, for a driver TSU slows for a shortcut."""
+    left in orange, in the lap's place, for a driver TSU slows for a shortcut. With `clan_tags`,
+    outside a multi-class race, each driver's clan tag in a column after the name (asked for
+    by the user on 2026-11-11), cut to MAX_TAG_SHOWN."""
     order = list(ranked(players) if order is None else order)
     classes = car_classes(order, class_tags)
     places = None
@@ -2698,6 +2706,7 @@ def lap_times_rows(players, order=None, clock=0, class_tags=(), cuts=None, jumpe
                 right=cut_text if cut_text else 'PIT' if plain_pit else bracket or time_now,
                 right_color=SHORTCUT_COLOR if cut_text else 'lift' if plain_pit or bracket else 'text',
                 rule=rule,
+                tag=(player.tag or '')[:MAX_TAG_SHOWN] if clan_tags and not classes else '',
             )
         )
     return rows

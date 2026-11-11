@@ -334,6 +334,7 @@ def run(args, folder):
                 yellow_flags if settings.yellow_flags else None,
                 settings.class_tags if settings.classes else (),
                 shortcut_penalties,
+                settings.clan_tags,
             )
             if not settings.yellow_flags:
                 yellow_flags.reset()  # turned on again, it starts afresh
@@ -559,6 +560,14 @@ def run(args, folder):
                     ),
                 )
             )
+            listed.append(
+                (
+                    'clan_tags',
+                    'Clan tags in the lap times',
+                    settings.clan_tags,
+                    "Each driver's clan tag in a column after the name (not in a race with classes, where they name the classes)",
+                )
+            )
         return listed
 
     def set_radar_cone(cone):
@@ -600,6 +609,14 @@ def run(args, folder):
         show_option('classes', shown)
         save()
         log.info('classes in the lap times %s', 'on' if shown else 'off')
+
+    def set_clan_tags(shown):
+        nonlocal settings
+        settings = replace(settings, clan_tags=shown)
+        clan_tags_action.setChecked(shown)
+        show_option('clan_tags', shown)
+        save()
+        log.info('clan tags in the lap times %s', 'on' if shown else 'off')
 
     def set_map_others(others):
         nonlocal settings
@@ -791,6 +808,7 @@ def run(args, folder):
                 'sector_bars': set_sector_bars,
                 'yellow_flags': set_yellow_flags,
                 'classes': set_classes,
+                'clan_tags': set_clan_tags,
             }
             settings_window.option_changed.connect(lambda key, on: setters[key](on))
             settings_window.reads_changed.connect(set_reads)
@@ -951,8 +969,12 @@ def run(args, folder):
     classes_action = QAction('Classes in the lap times', menu, checkable=True)
     classes_action.setChecked(settings.classes)
     classes_action.triggered.connect(lambda checked: set_classes(checked))
+    clan_tags_action = QAction('Clan tags in the lap times', menu, checkable=True)
+    clan_tags_action.setChecked(settings.clan_tags)
+    clan_tags_action.triggered.connect(lambda checked: set_clan_tags(checked))
     if any(section.name == 'laptimes' for section in layout):
         menu.addAction(classes_action)
+        menu.addAction(clan_tags_action)
     map_others_action = QAction('Other cars on the track map', menu, checkable=True)
     map_others_action.setChecked(settings.map_others)
     map_others_action.triggered.connect(lambda checked: set_map_others(checked))

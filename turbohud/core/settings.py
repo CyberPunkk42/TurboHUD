@@ -93,6 +93,7 @@ class Settings:
     radar_cone: bool = True  # the proximity radar shows the slipstream behind cars ahead
     sector_bars: bool = True  # the sector bars below the last and best lap
     yellow_flags: bool = True  # the yellow flag section and the yellow rings on the track map
+    clan_tags: bool = True  # the lap times show each driver's clan tag, outside a multi-class race
     classes: bool = True  # the lap times grouped by class, from the drivers' clan tags (see class_tags)
     class_tags: tuple = CLASS_TAGS  # the clan tags that name a class (upper case, without brackets)
     layout_version: int = 1  # how to read the section sizes: LAYOUT_VERSION is the latest
@@ -256,6 +257,7 @@ def load_settings(path):
         sector_bars=data.get('sector_bars') is not False,
         yellow_flags=data.get('yellow_flags') is not False,
         classes=data.get('classes') is not False,
+        clan_tags=data.get('clan_tags') is not False,
         class_tags=_class_tags(data.get('class_tags')),
         layout_version=_layout_version(data.get('layout_version')),
         presets=_presets(data.get('presets'), data.get('backdrop') is True),
@@ -289,6 +291,7 @@ def save_settings(path, settings):
         'sector_bars': settings.sector_bars,
         'yellow_flags': settings.yellow_flags,
         'classes': settings.classes,
+        'clan_tags': settings.clan_tags,
         'class_tags': list(settings.class_tags),
         'layout_version': settings.layout_version,
         'blue_seconds': settings.blue_seconds,

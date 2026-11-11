@@ -153,6 +153,10 @@ class SpeedUnitSettingTests(unittest.TestCase):
             self.assertFalse(s.load_settings(path).yellow_flags)
             path.write_text(json.dumps({}))
             self.assertTrue(s.load_settings(path).classes)
+            self.assertTrue(s.load_settings(path).clan_tags)  # on, as when they came
+            s.save_settings(path, s.Settings(clan_tags=False))
+            self.assertFalse(s.load_settings(path).clan_tags)
+            path.write_text(json.dumps({}))
             self.assertEqual(s.load_settings(path).class_tags, s.CLASS_TAGS)
             s.save_settings(path, s.Settings(classes=False, class_tags=('GT3', 'LMP')))
             self.assertFalse(s.load_settings(path).classes)

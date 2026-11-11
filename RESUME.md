@@ -75,6 +75,12 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-11: Clan tags in the lap times, asked for by the user: outside a multi-class race (where the tags name the
+  classes), each driver's clan tag shows in a column of its own after the name, lined up on the left, cut to 5
+  characters (`MAX_TAG_SHOWN`); a driver without one shows nothing there. A new column in the layout (`Row.tag`,
+  `tag_left`), and an option, Clan tags in the lap times, in the menu and Settings (on by default, `clan_tags`). The
+  box keeps its size: with tags the text gets a little smaller where it would not fit. Tests; drawn off screen;
+  TurboHUD started from source for 6 s, no error. Not yet seen in a race.
 - 2026-11-11: Classes on the proximity radar, asked for by the user: in a multi-class race (classes from the clan
   tags, as in the lap times; off with them), a car of another class than the player's is filled in its class's colour
   (`RADAR_CLASS_COLORS`: blue, green, purple, pink, given out by the class's name so each keeps it all race; none the
