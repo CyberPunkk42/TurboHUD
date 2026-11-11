@@ -1268,3 +1268,8 @@ its "Recent changes".
   changes: one piece at a time, paced. `tools/get_rust.sh` now also sets up Rust and llvm-mingw on Windows (Git
   Bash; llvm-mingw's Windows zip pinned by GitHub's SHA256), the same Rust 1.99.1 and target as on the Mac. Rust
   tests (40, one reading the test's own memory with 4 threads). Not yet seen: whether TSU stutters during the 6 s.
+- 2026-11-12: Windows build 2026.11.12.2 to share, asked for by the user: `releases/TurboHUD-2026.11.12.2-windows-x64.zip`
+  (42.1 MB), as 2026.11.12 with the race search reading with 4 threads (the zip's reader is the one built from
+  `main` by `tools/get_rust.sh`, checked byte for byte). Smoke test passed with TurboHUD closed (started as
+  2026.11.12.2, quit cleanly); the zip checked for the privacy terms, none. It replaces 2026.11.12, still in
+  `releases/`, to be removed by hand.
