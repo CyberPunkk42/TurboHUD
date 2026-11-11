@@ -2526,7 +2526,7 @@ YELLOW_OFF_GRIP = 0.9  # all four wheels on less grip than this: off the track (
 YELLOW_OFF_FOR = 0.5  # seconds off the track before it counts
 YELLOW_SLOW = 8.0  # game units a second along the car (about 29 km/h; racing: 20 to 60): slow
 YELLOW_SLOW_FOR = 1.0
-YELLOW_STOPPED = 1.0  # this slow either way: stopped, a double yellow
+YELLOW_STOPPED = 1.0  # this slow either way: stopped
 YELLOW_STOPPED_FOR = 2.0
 YELLOW_BACKWARDS = -1.0  # this fast backwards: spun, or facing the wrong way
 YELLOW_BACKWARDS_FOR = 0.3
@@ -2541,15 +2541,12 @@ YELLOW_KINDS = ('stopped', 'spun', 'respawned', 'off track', 'slow')
 @dataclass(frozen=True)
 class Incident:
     """A car the yellow flag is out for: `kind` one of YELLOW_KINDS, in `sector` (0 for the
-    first; None where the track's sectors are not known). A stopped car is a double yellow."""
+    first; None where the track's sectors are not known). The flag is always a plain yellow,
+    a stopped car too (asked for by the user on 2026-11-11: no double yellow)."""
 
     name: str
     kind: str
     sector: int | None
-
-    @property
-    def double(self):
-        return self.kind == 'stopped'
 
 
 def car_sector(player, starts):
@@ -2647,7 +2644,7 @@ class YellowFlags:
 
 def yellow_rows(incidents, state):
     """The yellow flag section: incidents in the local player's sector and the next one,
-    as marshals show them; a double yellow for a stopped car. [] without any."""
+    as marshals show them. [] without any."""
     me = next((p for p in state.players if p.local), None)
     if me is None:
         return []
@@ -2662,7 +2659,7 @@ def yellow_rows(incidents, state):
         return []
     near.sort(key=lambda incident: (incident.sector != mine, YELLOW_KINDS.index(incident.kind)))
     first = near[0]
-    title = 'DOUBLE YELLOW' if any(incident.double for incident in near) else 'YELLOW'
+    title = 'YELLOW'
     where = f'  -  Sector {first.sector + 1}' if first.sector is not None else ''
     rows = [Row(title + where, 'title', YELLOW_COLOR)]
     for incident in near[:YELLOW_ROWS]:

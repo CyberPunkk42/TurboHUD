@@ -996,6 +996,8 @@ its "Recent changes".
   their boxes, and a faint dot marks an option a section does not have; the presets are a small table with
   Save, Load and Delete (a word, where a bin icon was). 393 x 786 px, from 568 x 667 (still under the 800 px
   the panel is held to). Tests; the panel rendered off screen, not yet seen on the Mac's screen.
+- 2026-11-11: The yellow flag is always a plain YELLOW, asked for by the user: no DOUBLE YELLOW for a stopped
+  car (its line still says "stopped"). Tests.
 - 2026-11-11: The move-mode panel's word buttons fit their words, reported by the user: with fixed widths
   macOS cut "None" to "lon" and "Delete" to "elete" (the off-screen render, with Qt's own style, had not
   shown it). All, None, Save, Load and Delete are now at least 54 px and as wide as the system needs

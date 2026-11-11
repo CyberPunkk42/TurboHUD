@@ -356,7 +356,7 @@ RACE_SECTIONS = (
         'Yellow flag',
         (
             (
-                Row('DOUBLE YELLOW  -  Sector 3', 'title', '#ffd400'),
+                Row('YELLOW  -  Sector 3', 'title', '#ffd400'),
                 Row('S3  Playername1234567  respawned', 'small', '#ffd400'),
                 Row('S3  Playername1234567  off track', 'small', '#ffd400'),
                 Row('S4  Playername1234567  stopped', 'small', '#ffd400'),

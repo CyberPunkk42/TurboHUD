@@ -2064,13 +2064,12 @@ class YellowFlagTests(unittest.TestCase):
             self.drive(flags, 10.0, self.car(grips=grips))
             self.assertEqual(self.drive(flags, 12.0, self.car(grips=grips)), (), grips)
 
-    def test_slow_after_a_second_stopped_after_two_a_double_yellow(self):
+    def test_slow_after_a_second_stopped_after_two(self):
         flags = race.YellowFlags()
         self.drive(flags, 10.0, self.car(speed=0.2))
         self.assertEqual(self.kinds(self.drive(flags, 11.1, self.car(speed=0.2))), [('Other', 'slow')])
         stopped = self.drive(flags, 12.1, self.car(speed=0.2))
         self.assertEqual(self.kinds(stopped), [('Other', 'stopped')])
-        self.assertTrue(stopped[0].double)
 
     def test_going_backwards_is_a_spin(self):
         flags = race.YellowFlags()
@@ -2131,9 +2130,11 @@ class YellowFlagTests(unittest.TestCase):
         self.assertEqual([row.text for row in rows[1:]], ['S2  Here  off track', 'S3  Next  slow'])
         self.assertEqual({row.color for row in rows}, {race.YELLOW_COLOR})
 
-    def test_a_stopped_car_ahead_is_a_double_yellow(self):
+    def test_a_stopped_car_ahead_is_a_plain_yellow(self):
+        # Asked for by the user on 2026-11-11: no double yellow.
         rows = race.yellow_rows((race.Incident('Ahead', 'stopped', 2),), self.state(10.0, me_passed=4))
-        self.assertEqual(rows[0].text, 'DOUBLE YELLOW  -  Sector 3')
+        self.assertEqual(rows[0].text, 'YELLOW  -  Sector 3')
+        self.assertEqual(rows[1].text, 'S3  Ahead  stopped')
 
     def test_from_the_last_sector_the_next_is_the_first(self):
         rows = race.yellow_rows((race.Incident('Over the line', 'spun', 0),), self.state(10.0, me_passed=7))
