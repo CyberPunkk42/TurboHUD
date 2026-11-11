@@ -75,6 +75,10 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-11: The yellow flag's box keeps its size, reported by the user: it was drawn only as large as its
+  text, so it grew and shrank with each incident listed. A section with a background of its own now fills
+  its whole window with it (`_paint_backdrop`), the size given in move mode; the text keeps its size in it,
+  as it is worked out from the section's sample rows. Test (one incident and three: the same box and text size).
 - 2026-11-11: The Mac app without the Windows Python, asked for by the user: the Rust reader ran in online races
   on the tester's Mac (builds from 2026.11.11 use it only: had it failed, no HUD would have shown). The app ships
   only `turbohud-reader.exe`; with it missing the start says so, with no Python in its place. The Python reader

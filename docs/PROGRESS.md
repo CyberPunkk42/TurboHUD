@@ -1088,3 +1088,7 @@ its "Recent changes".
   when a package of requirements.txt is not installed (`missing_requirements`): the build environment lacked
   texture2ddecoder, so the app would have had no game flags; without it they stay emoji. The disk image: 32.5 MB
   from 44.7 MB. Tests; built (not started) and its contents checked.
+- 2026-11-11: The yellow flag's box keeps its size, reported by the user: it was drawn only as large as its
+  text, so it grew and shrank with each incident listed. A section with a background of its own now fills
+  its whole window with it (`_paint_backdrop`), the size given in move mode; the text keeps its size in it,
+  as it is worked out from the section's sample rows. Test (one incident and three: the same box and text size).
