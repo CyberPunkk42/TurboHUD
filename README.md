@@ -138,6 +138,11 @@ starting TurboHUD again.
   the lap section says "Spectating" with the leader's lap, the player list shows the gaps
   to the leader, the lap times list every driver, and the track map shows every car with
   the leader in gold.
+- The **country flags** in the player list and lap times are TSU's own: at its start TurboHUD reads them
+  from your copy of the game (only reading; a fraction of a second, and only again after a game update)
+  and keeps them, made small, in its own folder (`flags/`). They are not part of TurboHUD. Each fits the
+  same box, so a square or narrow flag is no larger than the others. Where the game is not found, the
+  system's emoji flags show (Windows has none: the country code).
 - **Settings…** sets how soon the blue flag and the radar show, and how many times a second
   the race is read (20, 10 or 5). Fewer reads ask less of the game, but the delta and the
   track map move less smoothly, and a track first learnt at 5 gets a coarser line.

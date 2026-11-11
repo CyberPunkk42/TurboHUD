@@ -75,6 +75,18 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-11: TSU's own flags in the player list and lap times, asked for by the user (the emoji flags
+  depend on the system, and Windows shows none): `turbohud/tsu/gameflags.py` finds TSU's `_Data` folder
+  (Steam's libraries; on the Mac inside the CrossOver bottles), reads the 221 flag textures by TS.Flag's
+  names from `resources.assets` and `sharedassets0.assets` (only reading; a reader of its own for Unity
+  2021.3's files without type trees, another version is left alone) and unpacks the crunched DXT with
+  `texture2ddecoder` (MIT, new in `requirements.txt`, 0.2 MB; UnityPy would have added about 27 MB). They are
+  kept 48 px high as PNGs in TurboHUD's folder (`flags/`, 0.9 MB) with the game files' sizes and times, and
+  read again only after they change; at start in a background thread, 0.6 s on the user's Mac. Drawn in a
+  box 0.7 x 1.2 font sizes, centred and level with the text, with a thin edge; emoji or code where none.
+  The game's flags are never part of TurboHUD. Also found in a race (only reading): the clan tag is
+  `TS.PlayerProfile.teamTag` ('FTR', without brackets). Tests with a fake game file; read from the real
+  game on the Mac and drawn off screen. Not yet seen in the app, on Linux or on Windows.
 - 2026-11-11: A track is learnt from three clean laps, asked for by the user: a shortcut on the tarmac or kerbs
   is a clean lap, so a first lap through one was learnt. The first clean lap still shows at once; once
   `LEARN_LAPS` (3) are in, laps under `SHORT_LAP` (98.5 %) of the longest are left out (a shortcut saves

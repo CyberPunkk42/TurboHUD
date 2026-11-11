@@ -6,6 +6,7 @@ import os
 import shutil
 import signal
 import sys
+import threading
 import time
 from dataclasses import replace
 from functools import partial
@@ -231,7 +232,7 @@ def run(args, folder):
         screen_of,
         session_rows,
     )
-    from turbohud.hud.painter import text_ink, text_width
+    from turbohud.hud.painter import text_ink, text_width, use_game_flags
     from turbohud.overlay import HOTKEY_LOCK, HOTKEY_PRESETS, HOTKEY_QUIT, choose_platform, native_for
     from turbohud.overlay.settings_window import SettingsWindow
     from turbohud.overlay.window import HudCanvases, MovePanel, SectionWindow, window_flags
@@ -323,6 +324,21 @@ def run(args, folder):
             }
 
     started = time.monotonic()
+    # TSU's own flags, read from the game in the background (a fraction of a second, or
+    # nothing when they are kept from before); emoji flags until then.
+    game_flags = []  # the folder, once the reading is over (None: none)
+
+    def read_game_flags():
+        from turbohud.tsu.gameflags import prepare_flags
+
+        try:
+            game_flags.append(prepare_flags(folder))
+        except Exception:
+            log.exception('flags: not read from the game')
+            game_flags.append(None)
+
+    threading.Thread(target=read_game_flags, name='game flags', daemon=True).start()
+    flags_used = False
     screens = [screen.geometry().getRect() for screen in QGuiApplication.screens()]
     # Where TurboHUD's own windows (the panel, the settings) go: not under the menu bar or Dock.
     usable = [screen.availableGeometry().getRect() for screen in QGuiApplication.screens()]
@@ -996,7 +1012,13 @@ def run(args, folder):
     apply_reads()
 
     def tick():
-        nonlocal last_seen, shown_status, drawn_before
+        nonlocal last_seen, shown_status, drawn_before, flags_used
+        if game_flags and not flags_used:
+            flags_used = True
+            if game_flags[0] is not None:
+                use_game_flags(game_flags[0])
+                for window in windows.values():
+                    window.update()  # drawn again with the game's flags
         racing, fresh = False, True
         if live is not None:
             snapshot = live.snapshot()

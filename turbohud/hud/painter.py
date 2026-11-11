@@ -202,11 +202,71 @@ def emoji_family():
     return next((family for family in EMOJI_FAMILIES if family in installed), None)
 
 
+FLAG_HEIGHT = 0.7  # a game flag's box: this many font sizes high ...
+FLAG_BOX_WIDTH = 1.2  # ... and at most this wide; FLAG_WIDTH leaves the rest before the text
+FLAG_MIDDLE = 0.36  # its middle this many font sizes above the baseline, level with the letters
+_flag_folder = None  # TSU's flags read by turbohud.tsu.gameflags, once they are there
+
+
+def use_game_flags(folder):
+    """Draw flags from the PNGs in `folder` (turbohud.tsu.gameflags); None: emoji again."""
+    global _flag_folder
+    _flag_folder = folder
+    _flag_file.cache_clear()
+    _flag_image.cache_clear()
+
+
+@lru_cache(maxsize=256)
+def _flag_file(code):
+    if _flag_folder is None:
+        return None
+    image = QImage(str(_flag_folder / f'{code}.png'))
+    return None if image.isNull() else image
+
+
+@lru_cache(maxsize=512)
+def _flag_image(code, height, most_width):
+    """The game's flag for `code` fitted, keeping its shape, into `most_width` x `height`
+    device pixels, or None without one."""
+    image = _flag_file(code)
+    if image is None:
+        return None
+    width = image.width() * height / image.height()
+    if width > most_width:
+        width, height = most_width, image.height() * most_width / image.width()
+    return image.scaled(
+        max(1, round(width)), max(1, round(height)), Qt.IgnoreAspectRatio, Qt.SmoothTransformation
+    )
+
+
+def flag_box(x, baseline, size, image_width, image_height):
+    """Where a game flag `image_width` x `image_height` (logical pixels) goes: in the
+    middle of its box (FLAG_BOX_WIDTH x FLAG_HEIGHT font sizes), level with the text."""
+    left = x + (FLAG_BOX_WIDTH * size - image_width) / 2
+    top = baseline - FLAG_MIDDLE * size - image_height / 2
+    return QRectF(left, top, image_width, image_height)
+
+
 def draw_flag(painter, x, baseline, code, size, outline):
-    """A country flag from its ISO code: as an emoji where a colour emoji font is
-    installed, else the code as text."""
+    """A country flag from its code: TSU's own image where it was read from the game
+    (all of the same height, and none wider than its box), else an emoji where a colour
+    emoji font is installed, else the code as text."""
     from turbohud.core.flags import flag_emoji
 
+    ratio = painter.device().devicePixelRatioF() if painter.device() is not None else 1.0
+    image = _flag_image(code, round(FLAG_HEIGHT * size * ratio), round(FLAG_BOX_WIDTH * size * ratio))
+    if image is not None:
+        box = flag_box(x, baseline, size, image.width() / ratio, image.height() / ratio)
+        painter.save()
+        painter.setRenderHint(QPainter.SmoothPixmapTransform, True)
+        painter.drawImage(box, image)
+        edge = QColor(outline)
+        edge.setAlpha(min(edge.alpha(), 140))
+        painter.setPen(QPen(edge, 1))
+        painter.setBrush(Qt.NoBrush)
+        painter.drawRect(box)  # a thin edge: white flags stay apart from a light game behind
+        painter.restore()
+        return
     family = emoji_family()
     if family and len(code) == 2 and code.isalpha():
         font = QFont(family)
