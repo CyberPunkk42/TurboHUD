@@ -7,7 +7,7 @@ Thank you for testing again. This build has everything from 2026.11.11.4 (the fi
 - **The flags are TSU's own**: the player list and lap times show the same flag pictures as the game, all the same size, instead of the Mac's emoji. TurboHUD reads them from your copy of TSU when it starts (only reading).
 - **Yellow flags, more of them**: a car going the **wrong way** shows as such; the yellow box keeps the **same size** whatever it lists, with **YELLOW - Sector N** in the middle; and the sector with the incident turns **yellow on the track map**.
 - **Hazard ahead**: when a car stopped on the track, or one going the wrong way, is a few seconds ahead of you, the yellow box says **CAR STOPPED AHEAD** or **WRONG WAY AHEAD**.
-- **Shortcut penalty**: on tracks with shortcuts TSU slows you for, an orange box says **SHORTCUT** with the seconds left, and the lap times show an orange **CUT** for any driver being slowed. A false start shows **JUMP START** in the same box for 5 seconds.
+- **Shortcut penalty**: on tracks with shortcuts TSU slows you for, an orange box says **SHORTCUT** with the seconds left, and the lap times show an orange **CUT** for any driver being slowed. A false start shows **JUMP START** in the same box while you hold the throttle on the red lights, and 1.5 seconds more.
 - **Classes**: in a race where drivers use clan tags such as **[GT3]** and **[LMP]**, the lap times are grouped by class, each under a line with its name.
 - **The track map** is learnt from three clean laps (a lap through a shortcut is left out), and the TurboHUD icon's menu has **Relearn this track's map** for a map learnt wrong.
 - The app is smaller: 32 MB instead of 45.
@@ -132,7 +132,7 @@ Always close move mode (**Control + Shift + L**) before you drive.
 6. **Flags**: look at the player list and the lap times. The flags should look like TSU's own, all the same size.
 7. If a car stops on the track just ahead of you, the yellow box should say **CAR STOPPED AHEAD**.
 8. If your track has shortcuts that TSU slows you for: take one. An orange **SHORTCUT** box should count down, and the lap times should show **CUT** next to you. (First place the box: in move mode, tick **Penalties** under RACE and drag it where you like.)
-9. In one race against AI, move off a moment before the start (a false start). The orange box should say **JUMP START** for about 5 seconds.
+9. In one race against AI, hold the throttle while the red lights are on (a false start). The orange box should say **JUMP START** while you hold it, and go 1.5 seconds after you let go or the lights go out.
 
 **✏️ Write down:** Panel buttons readable? None and Undo worked? ______
 

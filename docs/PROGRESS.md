@@ -1165,3 +1165,6 @@ its "Recent changes".
   TurboHUD closed: the Rust reader read the user's race, no error; 32.4 MB), as 2026.11.11.5 with JUMP START. The
   test sheet names it, the box is Penalties in move mode, and Part 4 asks for a false start. The 2026.11.11.4
   and .5 images are still in `releases/`, to be removed by hand.
+- 2026-11-11: JUMP START shows while TSU's false-start flag is on, then 1.5 s (`JUMP_START_SHOWN`, from 5 s), asked
+  for by the user: the flag is on while the throttle is held on the red lights, and as they go out (TSU holds the
+  car). The test sheet (build 2026.11.11.6 has the 5 s) and README say so. Test.
