@@ -51,6 +51,9 @@ WINE_SEARCH_SHARE = 0.5  # in Wine, the share of the time a search may read
 # Bytes below the last race's place where the search for the next begins. Three races in a row lay
 # within 0.5 MiB of the one before (2026-11-10); a race further below is found on the way round.
 SEARCH_BEFORE = 4 << 20
+# How far a quick look for the next race reaches from where the search would begin: on a tester's Mac
+# one race lay 209.5 MiB above the last (2026-11-11), the others within 0.5 MiB.
+NEAR_SPAN = 256 << 20
 
 
 def region(start, size, protect, kind, path=''):
@@ -198,6 +201,16 @@ def search_start(address):
     """Where a search for the next race begins when the last one was at `address`: a
     little below it, as the game may put the new race's objects on either side."""
     return max(address - SEARCH_BEFORE, 0) // PAGE * PAGE
+
+
+def near(regions, address, span=NEAR_SPAN):
+    """The parts of `regions` within `span` bytes up from search_start(address), as (start,
+    end): where a quick look for the next race reads, a few percent of the game's data."""
+    low = search_start(address)
+    high = low + span
+    return [
+        (max(start, low), min(end, high)) for start, end, *_ in sorted(regions) if start < high and end > low
+    ]
 
 
 def starting_at(regions, address):
@@ -510,6 +523,7 @@ def connect(name='TSU.exe'):
             find_pointers=lambda value: paced(data(), value),
             searcher=paced,
             find_pointers_from=lambda value, address: paced(data(), value, search_start(address)),
+            find_pointers_near=lambda value, address: paced(near(data(), address), value),
         )
         il2cpp = Il2Cpp(memory, metadata, base)
         reader = LapReader(il2cpp, event_running=EventLog(tsu_data(), since=process.started()).running)

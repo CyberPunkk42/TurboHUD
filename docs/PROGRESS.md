@@ -938,3 +938,12 @@ its "Recent changes".
   The live race also logs when the reason there is no race changes (`TSU: still ...`, at most every 10 s):
   a race found but not read looked like waiting all along. Tests (both new reader tests fail without the
   fix). Not yet seen on the tester's Mac (needs a new build).
+- 2026-11-11: A quick look for the next online race where the last one was, asked for by the user: on the
+  tester's Mac, whose TSU writes no race log, a race showed about 10 s after its start (up to about 20 s: a
+  search with no race takes 8 to 10 s there, then 10 s wait; up to a minute after a long lobby). Now, between
+  searches, while there is no race and TSU's log does not say none runs, TurboHUD searches only 256 MiB
+  from just below the last race (`winmemory.NEAR_SPAN`, `near`; one race lay 209.5 MiB above the last),
+  every 2 s from the end of the last look (`QUICK_LOOK_EVERY`), and logs `quick look: race found ...`. Not
+  before a first race was found, nor while a race is watched. The readers are unchanged: the Mac side hands
+  them the shorter list of regions. Tests. Not seen in a race yet: it only comes into play where TSU's log
+  says nothing, so on the tester's Mac (a new build).

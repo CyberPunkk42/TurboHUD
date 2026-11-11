@@ -999,6 +999,78 @@ class CarTests(unittest.TestCase):
         self.assertEqual(reader.read().laps_completed, 1)
         self.assertNotEqual(reader._player, 0xDEAD0000)
 
+    def quick_looking(self, running=None):
+        """An online reader whose race was found, then ended; the fake game can look near
+        it. Returns (reader, clock, the race to put back, the quick looks made)."""
+        now = [100.0]
+        reader = build(
+            [10_000, 944_595],
+            laps_completed=1,
+            clock=1_000_000,
+            limit=0,
+            name='Host',
+            online=True,
+            clock_fn=lambda: now[0],
+            event_running=running,
+        )
+        reader.read()
+        g, memory, looks = reader.game, reader.il.memory, []
+        find = memory.find_pointers
+
+        def near(value, address):
+            looks.append(address)
+            return find(value)
+
+        memory.find_pointers_near = near
+        state = g.read(g.client_controller + 0x48, 8)
+        g.q(g.client_controller + 0x48, 0)  # the race is over
+        with self.assertRaises(race.NotFound):
+            reader.read()  # lost: a search at once, which finds nothing
+        looks.clear()
+        return reader, now, state, looks
+
+    def test_between_searches_a_quick_look_near_the_last_race_finds_the_next(self):
+        reader, now, state, looks = self.quick_looking()
+        g = reader.game
+        searches = g.searches
+        now[0] += 3  # well before the next search, 10 s on
+        g.put(g.client_controller + 0x48, state)  # the next race, where the last one was
+        with self.assertLogs('turbohud.core.race', 'INFO') as logs:
+            self.assertEqual(reader.read().laps_completed, 1)
+        self.assertEqual(looks, [g.client_controller])
+        self.assertIn('quick look: race found (+0.0 MiB from the last one)', logs.output[0])
+        self.assertEqual(g.searches - searches, 1)  # the fake counts the look as a search: no other
+        reader.read()
+        self.assertEqual(len(looks), 1)  # found: no more looks
+
+    def test_quick_looks_come_at_most_every_2_s(self):
+        reader, now, _state, looks = self.quick_looking()
+        for step in (0.5, 0.5, 0.5, 0.5, 0.5):  # 2.5 s, short of the next search
+            now[0] += step
+            with self.assertRaises(race.NotFound):
+                reader.read()
+        self.assertEqual(len(looks), 2)  # at 100.5 and 102.5
+        self.assertEqual(race.QUICK_LOOK_EVERY, 2.0)
+
+    def test_no_quick_look_while_the_games_log_says_no_event_runs(self):
+        says = [True]  # an event, until the race is over
+        reader, now, _state, looks = self.quick_looking(running=lambda: says[0])
+        says[0] = False
+        now[0] += 3
+        with self.assertRaises(race.NotFound):
+            reader.read()
+        self.assertEqual(looks, [])
+
+    def test_no_quick_look_before_a_race_was_found(self):
+        reader = build([10_000], laps_completed=0, clock=20_000, limit=0, online=True, clock_fn=lambda: 100.0)
+        looks = []
+        reader.il.memory.find_pointers_near = lambda value, address: looks.append(address) or []
+        reader.game.q(reader.game.client_controller + 0x48, 0)  # no race
+        for _ in range(3):
+            with self.assertRaises(race.NotFound):
+                reader.read()
+        self.assertEqual(looks, [])  # nowhere to look yet: the searches find the first race
+
     def search_from(self, reader):
         """Give the fake a reader that can begin a search at an address; the list says
         where each search began (None: at the lowest address)."""

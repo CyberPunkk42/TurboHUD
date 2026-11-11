@@ -418,6 +418,10 @@ CLIENT_SEARCH_MOST = 60.0  # the wait doubles up to this while an event holds no
 # joining a race in progress sees it set up a little later. Only then does the wait grow, for
 # sessions that hold no race at all (a custom session).
 CLIENT_SEARCH_QUICK_FOR = 60.0
+# While there is no race and TSU's log gives no word of one, a quick look where the last race was, this
+# often (from the end of the last look): a new race shows within seconds, not at the next search (a
+# tester's Mac, 2026-11-11: about 10 s after the start, up to about 20 s, and 60 s after a long lobby).
+QUICK_LOOK_EVERY = 2.0
 CLIENT_SPECTATE_EVERY = 30.0  # the same while the race last watched has its clock standing
 SPECTATE_STILL = 5.0  # seconds a watched race's clock may stand before it counts as over
 CLIENT_LOG_EVERY = 2.0  # seconds between looks at TSU's log while it says no event runs
@@ -496,6 +500,7 @@ class LapReader:
         self._watched_moved = False  # whether that clock has run since the race was picked
         self._searched_past = False  # a search past a picked race that never ran, done once
         self._next_search = 0.0  # when to look for it again
+        self._next_quick_look = 0.0  # when to look again where the last race was
         self._search_wait = CLIENT_SEARCH_EVERY  # how long after a search that found nothing
         self._empty_since = None  # when the searches began to find nothing, while they do
         self._state = None  # the TS.EventState the caches below belong to
@@ -673,7 +678,10 @@ class LapReader:
             if long_wait and self._log_says() is False:
                 self._search_wait, self._empty_since = CLIENT_SEARCH_EVERY, None
                 self._next_search = self._clock() + CLIENT_LOG_EVERY
-            raise error
+            state = self._quick_look()
+            if state is None:
+                raise error
+            return state
         if self._event_running is not None and self._log_says() is False:
             # Menus and lobbies: no event, nothing to search for (a search reads all
             # of the game's data and keeps a CPU core busy for over a second).
@@ -753,6 +761,48 @@ class LapReader:
             self._from_the_last(self._spectated),
         )
         self._found_at = self._spectated
+        return state
+
+    def _quick_look(self):
+        """Between searches: the event state of a race the player drives in, found near
+        where the last race was (memory.find_pointers_near), or None. At most every
+        QUICK_LOOK_EVERY seconds, only after a race was found, while no race is watched,
+        and not while TSU's log says no event runs."""
+        memory = self.il.memory
+        if (
+            memory.find_pointers_near is None
+            or self._found_at is None
+            or self._client_class is None
+            or self._spectated is not None
+            or self._clock() < self._next_quick_look
+            or self._event_running is not None
+            and self._log_says() is False
+        ):
+            return None
+        started, found = self._clock(), None
+        try:
+            for candidate in memory.find_pointers_near(self._client_class, self._found_at):
+                try:
+                    state, driving = self._race_of(candidate)
+                except (NotFound, OSError):
+                    continue
+                if driving:
+                    found = candidate, state
+                    break
+        except OSError:
+            pass  # the reader could not look: the next search will
+        finally:
+            self._next_quick_look = self._clock() + QUICK_LOOK_EVERY
+        if found is None:
+            return None
+        candidate, state = found
+        log.info(
+            'quick look: race found%s, after %.1f s', self._from_the_last(candidate), self._clock() - started
+        )
+        self._controller, self._spectated, self._searched_past = candidate, None, False
+        self._state = None  # a new race: nothing kept from the last one counts
+        self._search_wait, self._empty_since = CLIENT_SEARCH_EVERY, None
+        self._found_at = candidate
         return state
 
     def _log_says(self):
