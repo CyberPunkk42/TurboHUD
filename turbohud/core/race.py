@@ -1941,10 +1941,12 @@ def _sector_times(laps, index, starts):
 def sector_colours(state):
     """The colours of the sector bars below the last and best lap, or None: for the lap
     being driven, and for LAP_FLASH after the start line the lap just ended (until a
-    sector of the new one is done). Each sector as on F1's timing screens: purple when
-    faster than anyone else in the race had driven it by then and than the driver's own
-    earlier laps, green when only the latter, dark yellow when slower than the driver's
-    best; None while still to come."""
+    sector of the new one is done). Each sector as on F1's timing screens: purple while
+    faster than anyone else in the race has driven it (a time as fast counts for whoever
+    set it first) and than the driver's own earlier laps, green when only the latter, dark
+    yellow when slower than the driver's best; None while still to come. A purple sector
+    turns green once someone else goes faster, as the best lap does (asked for by the
+    user on 2026-11-11: it stayed purple, so two drivers showed a purple first sector)."""
     laps = state.checkpoints
     count = len(state.gates) or max((len(lap) for lap in laps[: state.laps_completed]), default=0)
     starts = sector_starts(count, state.sector_lines)
@@ -1975,8 +1977,10 @@ def sector_colours(state):
         time, end = sector
         own = [lap[number][0] for lap in earlier if lap[number] is not None]
         personal = not own or time < min(own)
-        before = [lap[number][0] for lap in others if lap[number] is not None and lap[number][1] < end]
-        if personal and (not before or time < min(before)):
+        beaten = any(
+            lap[number] is not None and (lap[number][0], lap[number][1]) < (time, end) for lap in others
+        )
+        if personal and not beaten:
             colours.append(SESSION_BEST_COLOR)
         else:
             colours.append(PERSONAL_BEST_COLOR if personal else SECTOR_SLOW_COLOR)

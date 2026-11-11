@@ -75,6 +75,10 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-11: A purple sector turns green once someone else in the race goes faster in it, asked for by the
+  user: it kept the colour it had when set, so the user and another driver both showed a purple first sector.
+  Now only the fastest has it, as with the best lap (a time as fast counts for whoever set it first); green
+  stays for a personal best, dark yellow for slower. Tests.
 - 2026-11-11: Build 2026.11.11.2 for the tester (`releases/`, macOS 27, built with `--any-macos`, smoke test
   passed with TSU closed), with the three fixes of the night for races joined online: no race log to go by,
   a race found where the last one was, and the quick look near the last race. `TurboHUD-test-instructions.md`
