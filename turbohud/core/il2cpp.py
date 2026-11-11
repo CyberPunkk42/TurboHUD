@@ -60,7 +60,14 @@ class Memory:
     a race, and a class loaded later lies outside an old list."""
 
     def __init__(
-        self, read, regions, read_many=None, find_pointers=None, searcher=None, find_pointers_from=None
+        self,
+        read,
+        regions,
+        read_many=None,
+        find_pointers=None,
+        searcher=None,
+        find_pointers_from=None,
+        find_pointers_near=None,
     ):
         self.read = read
         self._regions = regions
@@ -75,6 +82,9 @@ class Memory:
         # round to it, for a reader that hands out its hits one by one (Windows and
         # CrossOver); None where a search gives all its hits at once (the probe).
         self.find_pointers_from = find_pointers_from
+        # (value, address) -> as find_pointers_from, but only a stretch around `address`:
+        # a quick look, cheap enough to make often (Windows and CrossOver); None: none.
+        self.find_pointers_near = find_pointers_near
 
     @property
     def regions(self):

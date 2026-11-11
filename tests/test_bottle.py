@@ -476,6 +476,17 @@ class PipeTests(ReaderCase):
             hits = pipe.find_pointers_from(value, 0x18000)
             self.assertEqual(list(hits), [0x18000, 0x10010])
 
+    def test_a_quick_look_searches_only_near_the_last_race(self):
+        value = 0x1122334455667788
+        data = bytearray(64 * 1024)
+        data[0x10:0x18] = struct.pack('<Q', value)
+        data[0x8000:0x8008] = struct.pack('<Q', value)
+        process = FakeProcess(data=bytes(data))
+        pipe = self.reader(process)
+        pipe.receive()
+        with mock.patch.object(bt, 'near', lambda regions, address: [(address - 0x1000, address + 0x1000)]):
+            self.assertEqual(list(pipe.find_pointers_near(value, 0x18000)), [0x18000])  # not 0x10010
+
     def test_a_reader_that_ended_is_a_connection_error(self):
         pipe = self.reader(FakeProcess(alive=False))
         pipe.receive()

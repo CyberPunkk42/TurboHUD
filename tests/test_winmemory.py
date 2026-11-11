@@ -330,6 +330,15 @@ class SearchTests(unittest.TestCase):
         self.assertEqual(wm.search_start(0x2000), 0)
         self.assertEqual(wm.SEARCH_BEFORE, 4 << 20)  # eight times the furthest seen, read in well under 0.1 s
 
+    def test_a_quick_look_reads_only_near_the_last_race(self):
+        mib = 1 << 20
+        regions = [(0, 8 * mib, 'x'), (16 * mib, 400 * mib, 'x'), (500 * mib, 600 * mib, 'x')]
+        low = 20 * mib - wm.SEARCH_BEFORE  # where a search from a race at 20 MiB begins
+        self.assertEqual(wm.near(regions, 20 * mib), [(low, low + wm.NEAR_SPAN)])
+        self.assertEqual(wm.near(regions, 6 * mib, span=12 * mib), [(2 * mib, 8 * mib)])  # cut at both ends
+        self.assertEqual(wm.near(regions, 450 * mib), [(500 * mib, 600 * mib)])  # above, up to the span
+        self.assertEqual(wm.NEAR_SPAN, 256 << 20)  # one race lay 209.5 MiB above the last (2026-11-11)
+
     def test_pauses_so_reading_takes_its_share_of_the_time(self):
         memory = self.memory_with()
         ticks = iter([0.0, 0.002, 1.0, 1.002])  # each piece takes 2 ms to read

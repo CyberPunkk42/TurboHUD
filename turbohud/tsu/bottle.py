@@ -28,7 +28,7 @@ from turbohud.core.il2cpp import Il2Cpp, Memory, NotFound, ReadError
 from turbohud.core.race import LapReader
 from turbohud.core.settings import settings_dir
 from turbohud.tsu.bottle_reader import HEADER, READY, pack
-from turbohud.tsu.winmemory import PAGE, CachedReader, PageCache, search_start, searchable
+from turbohud.tsu.winmemory import PAGE, CachedReader, PageCache, near, search_start, searchable
 
 START_TIMEOUT = 30.0  # seconds for a reader to start: a sleeping bottle wakes up slowly
 TIMEOUT = 5.0  # seconds before a silent reader counts as stuck
@@ -247,6 +247,10 @@ class Pipe:
         """The same, beginning a little below `address`: where the last race was."""
         return self.search([r for r in self.maps() if searchable(r)], value, search_start(address))
 
+    def find_pointers_near(self, value, address):
+        """The same, only within winmemory.NEAR_SPAN of there: a quick look."""
+        return self.search(near([r for r in self.maps() if searchable(r)], address), value)
+
     def game_metadata(self):
         """(where it is mapped, its bytes)."""
         if self.metadata is None:
@@ -389,6 +393,7 @@ class Bottle:
                 find_pointers=pipe.find_pointers,
                 searcher=pipe.search,
                 find_pointers_from=pipe.find_pointers_from,
+                find_pointers_near=pipe.find_pointers_near,
             )
             reader = LapReader(Il2Cpp(memory, metadata, base), event_running=pipe.event_running)
             return CachedReader(reader, cache, lambda: pipe.in_game, lambda: pipe.game_reads), self
