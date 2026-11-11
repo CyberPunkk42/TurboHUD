@@ -666,7 +666,7 @@ class RedrawTests(unittest.TestCase):
         from turbohud.core.hud import RACE_SECTIONS
 
         for section in RACE_SECTIONS:
-            if section.bar:
+            if section.bar or section.background:  # a bright box, not text: see the yellow flag's test
                 continue
             for share in (1.0, 2.0, 0.6):
                 with self.subTest(section=section.name, share=share):
@@ -675,6 +675,61 @@ class RedrawTests(unittest.TestCase):
                     )
                     self.assertGreaterEqual(top, 1)
                     self.assertLessEqual(bottom, height - 2)
+
+
+class YellowFlagLookTests(unittest.TestCase):
+    """The yellow flag on a yellow box with dark text (asked for by the user on 2026-11-11)."""
+
+    @classmethod
+    def setUpClass(cls):
+        os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
+        from PySide6.QtWidgets import QApplication
+
+        cls.app = QApplication.instance() or QApplication([])
+
+    def test_a_yellow_box_behind_dark_text_only_while_there_is_a_flag(self):
+        from turbohud.core import race
+        from turbohud.core.hud import RACE_SECTIONS
+        from turbohud.core.settings import Theme
+        from turbohud.overlay.window import SectionWindow
+
+        class Native:
+            def raise_window(self, window):
+                return 'test'
+
+        section = next(s for s in RACE_SECTIONS if s.name == 'yellowflag')
+        window = SectionWindow(Native(), Theme(), section)
+        self.addCleanup(window.close)
+        window.resize(*window.base)
+        window.set_locked(True)
+        rows = race.yellow_rows((race.Incident('Someone', 'stopped', 0),), self._state())
+        window.show_content(rows)
+        image = window.grab().toImage()
+        colours = [image.pixelColor(x, y) for x in range(image.width()) for y in range(image.height())]
+        yellow = [
+            c for c in colours if c.alpha() > 200 and c.red() > 220 and c.green() > 180 and c.blue() < 80
+        ]
+        dark = [c for c in colours if c.alpha() > 200 and max(c.red(), c.green(), c.blue()) < 60]
+        self.assertGreater(len(yellow), len(colours) // 10)  # a solid yellow box
+        self.assertGreater(len(dark), 50)  # with dark text on it
+        window.show_content([])
+        self.assertEqual(
+            window.grab().toImage().pixelColor(window.width() // 2, 10).alpha(), 0
+        )  # no flag, no box
+
+    def _state(self):
+        from turbohud.core import race
+
+        me = race.PlayerState('Me', 0, 1, ((0,), (0, 1000)), local=True)
+        return race.LapState(
+            clock=0,
+            time_limit=0,
+            laps_completed=1,
+            laps_to_finish=5,
+            lap_starts=[0, 0],
+            players=(me,),
+            gates=(((0, 0), (1, 1)),) * 9,
+        )
 
 
 class MovePanelPresetTests(unittest.TestCase):
@@ -852,7 +907,10 @@ class MovePanelPresetTests(unittest.TestCase):
         panel = self.panel()
         got = []
         panel.tint_changed.connect(lambda *change: got.append(change))
-        self.assertEqual(set(panel.tints), {s.name for s in RACE_SECTIONS if not s.drawing} | {'trackmap'})
+        tinted = {
+            s.name for s in RACE_SECTIONS if not s.drawing and not s.background
+        }  # a background is its own
+        self.assertEqual(set(panel.tints), tinted | {'trackmap'})
         panel.tints['trackmap'].setChecked(True)
         self.assertEqual(got.pop(), ('trackmap', True))
         panel.tints['fuel'].setChecked(True)

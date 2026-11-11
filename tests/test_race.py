@@ -2128,7 +2128,7 @@ class YellowFlagTests(unittest.TestCase):
         rows = race.yellow_rows(incidents, state)
         self.assertEqual(rows[0].text, 'YELLOW  -  Sector 2')  # the stopped car is behind me
         self.assertEqual([row.text for row in rows[1:]], ['S2  Here  off track', 'S3  Next  slow'])
-        self.assertEqual({row.color for row in rows}, {race.YELLOW_COLOR})
+        self.assertEqual({row.color for row in rows}, {race.YELLOW_TEXT})  # dark, on the yellow background
 
     def test_a_stopped_car_ahead_is_a_plain_yellow(self):
         # Asked for by the user on 2026-11-11: no double yellow.

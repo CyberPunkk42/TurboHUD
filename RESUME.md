@@ -75,6 +75,11 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-11: The yellow flag is a yellow box with dark text, asked for by the user: sections can have a solid
+  background of their own (`hud.Section.background`, drawn where the Tint would be, also in move mode, and
+  taking the Tint's place in the panel); the yellow flag's is `race.YELLOW_COLOR` with `YELLOW_TEXT`
+  (#111111) text, drawn without the dark outline, which smudged the letters on the yellow. Tests, and a look
+  at it drawn off the screen.
 - 2026-11-11: Build 2026.11.11.3 for the tester (`releases/`, macOS 27, built with `--any-macos`, smoke test
   passed with TSU closed), with everything since 2026.11.11.2: yellow flags (and their option), the gliding
   delta bar, purple sectors turning green, the track map from clean laps, the tidier move-mode panel with All

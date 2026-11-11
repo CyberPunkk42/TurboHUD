@@ -143,7 +143,7 @@ starting TurboHUD again.
   track map move less smoothly, and a track first learnt at 5 gets a coarser line.
 - The **blue flag** is a navy bar that shows when a car about to lap you is within 2
   seconds behind: faint at 2 s, fully visible from 0.5 s, gone once it has passed.
-- The **yellow flag** shows, in yellow, when another car has an incident in your sector or
+- The **yellow flag**, dark text on a yellow box, shows when another car has an incident in your sector or
   the next one, as marshals show it: all four wheels off the tarmac, slow, stopped,
   spun (going backwards) or put back on the track. It names the sector and the
   drivers, and the track map rings those cars in yellow. It goes 3 seconds after the car is

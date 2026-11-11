@@ -1010,3 +1010,8 @@ its "Recent changes".
   and None. `TurboHUD-test-instructions.md` for it: the power adapter, Low Power Mode and refresh rate noted
   in Part 1; All and None in the measurements; Part 4 looks at the panel, the delta bar and a yellow flag
   against AI; Part 6 asks about yellow flags online. It replaces 2026.11.11.2 in `releases/`.
+- 2026-11-11: The yellow flag is a yellow box with dark text, asked for by the user: sections can have a solid
+  background of their own (`hud.Section.background`, drawn where the Tint would be, also in move mode, and
+  taking the Tint's place in the panel); the yellow flag's is `race.YELLOW_COLOR` with `YELLOW_TEXT`
+  (#111111) text, drawn without the dark outline, which smudged the letters on the yellow. Tests, and a look
+  at it drawn off the screen.
