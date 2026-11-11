@@ -1197,3 +1197,9 @@ its "Recent changes".
   so on a 200 px radar a car is about 8 by 23 px, a third larger. A car that counts beyond that is an arrow at the top
   or bottom edge in its usual colour, fainter the further off it is (`radar_reach` for what counts). Tests; drawn off
   screen. Not yet seen in a race.
+- 2026-11-11: Classes on the proximity radar, asked for by the user: in a multi-class race (classes from the clan
+  tags, as in the lap times; off with them), a car of another class than the player's is filled in its class's colour
+  (`RADAR_CLASS_COLORS`: blue, green, purple, pink, given out by the class's name so each keeps it all race; none the
+  radar already uses), with the red (beside) or yellow (closing in) as a thick outline. The player's own class and
+  Other look as before. Merged with the radar's zoom cap: a car of another class past the edge is an arrow in its
+  class's colour. Tests; drawn off screen; TurboHUD started from source for 6 s, no error. Not yet seen in a race.

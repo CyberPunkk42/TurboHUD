@@ -93,6 +93,7 @@ PANEL_EMPTY = '#5d7799'  # the dot where a section has no such option
 RADAR_ARROW = 1.2  # a car past the radar's edge: an arrow this many times a car's width each side
 RADAR_ARROW_LEAST = 7.0  # ... and at least this many pixels
 RADAR_ARROW_FADE = 0.6  # its opacity falls by this much from beside the edge to the warning time
+RADAR_CLASS_WARNING = 2.5  # a car of another class: the width of its red or yellow warning outline
 RADAR_CAR_AT = 0.5  # the local car's height in the radar, from the top: the middle
 CONE_STEPS = 8  # points along a slipstream cone's far edge
 CONE_OUT, CONE_IN = 30, 80  # a slipstream cone's opacity (0-255): elsewhere, local car in it
@@ -534,7 +535,23 @@ class SectionWindow(QWidget):
         for blip in view.blips:
             if abs(blip.ahead) > view.view:
                 continue  # an arrow at the edge, drawn last (edge)
-            car(blip.ahead, blip.side, blip.angle, blip_color(blip))
+            color = blip_color(blip)
+            if blip.class_color is None:
+                car(blip.ahead, blip.side, blip.angle, color)
+            else:
+                # Another class: filled in its class's colour, the warning (red, yellow) as its outline.
+                car(blip.ahead, blip.side, blip.angle, blip.class_color)
+                if color != RADAR_OTHER:
+                    painter.save()
+                    painter.translate(centre.x() + blip.side * per_unit, centre.y() - blip.ahead * per_unit)
+                    painter.rotate(math.degrees(blip.angle))
+                    painter.setPen(QPen(QColor(color), RADAR_CLASS_WARNING))
+                    painter.setBrush(Qt.NoBrush)
+                    pad = RADAR_CLASS_WARNING / 2
+                    painter.drawRoundedRect(
+                        QRectF(-w / 2 - pad, -h / 2 - pad, w + 2 * pad, h + 2 * pad), w / 4, w / 4
+                    )
+                    painter.restore()
             if blip.in_cone:  # the car being drafted: a cyan outline
                 painter.save()
                 painter.translate(centre.x() + blip.side * per_unit, centre.y() - blip.ahead * per_unit)
@@ -547,7 +564,7 @@ class SectionWindow(QWidget):
         painter.setClipping(False)
         for blip in view.blips:  # beyond the radar's reach (RADAR_VIEW_MAX): an arrow at its edge
             if abs(blip.ahead) > view.view:
-                edge(blip, blip_color(blip))
+                edge(blip, blip.class_color or blip_color(blip))  # another class: its colour
         painter.setOpacity(1.0)
         if not self.locked:
             painter.setPen(QPen(QColor(*BORDER), 2))

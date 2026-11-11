@@ -190,7 +190,9 @@ starting TurboHUD again.
   half a second behind or ahead (faint) up to alongside (fully visible): red beside you, yellow
   closing in. It shows at most about six car lengths ahead and behind, so the cars stay large; a car
   further off that already counts (with a longer warning time in **Settings…**) is an arrow at the
-  top or bottom edge, fainter the further away it is.
+  top or bottom edge, fainter the further away it is. In a multi-class race (see **Classes in the lap
+  times**), a car of another class than yours is filled in its class's colour (blue, green, purple, pink,
+  by the class's name), with the red or yellow as its outline, and its arrow at the edge is in that colour.
 - The **track map** shows the track from above with you (a white ring, a little smaller than the other cars
   and always on top, so a car under it shows inside the ring; ringed in yellow when you caused a yellow flag), the race leader
   (gold), the next car ahead (red) and the next car behind (green); when you pass a

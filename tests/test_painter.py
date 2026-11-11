@@ -183,6 +183,29 @@ class RedrawTests(unittest.TestCase):
         far_ahead, far_behind = shown(RADAR_VIEW_MAX * 2), shown(-RADAR_VIEW_MAX * 2)
         self.assertGreater(far_ahead, far_behind + 20)  # an arrow at the top edge only for a car far ahead
 
+    def test_a_car_of_another_class_is_its_class_colour_with_the_warning_round_it(self):
+        # Asked for by the user on 2026-11-11.
+        from turbohud.core.hud import RACE_SECTIONS
+        from turbohud.core.race import RADAR_CLASS_COLORS, Blip, RadarView
+        from turbohud.core.settings import Theme
+        from turbohud.overlay.window import SectionWindow
+
+        class Native:
+            def raise_window(self, window):
+                return 'test'
+
+        window = SectionWindow(Native(), Theme(), next(s for s in RACE_SECTIONS if s.name == 'radar'))
+        self.addCleanup(window.close)
+        window.resize(200, 200)
+        blue = RADAR_CLASS_COLORS[0]
+        window.show_content([], radar=RadarView(1.0, (Blip(10.0, 0.0, 0.0, 0.3, None, blue),), within=1.0))
+        image = window.grab().toImage()
+        pixels = [image.pixelColor(x, y) for x in range(80, 121) for y in range(20, 80)]
+        self.assertTrue(any(c.blue() > 200 and c.red() < 120 for c in pixels))  # the class colour
+        self.assertTrue(
+            any(c.red() > 200 and c.green() > 160 and c.blue() < 100 for c in pixels)
+        )  # yellow warning
+
     def test_the_move_mode_sample_follows_the_cone_option(self):
         from turbohud.core.hud import RACE_SECTIONS
         from turbohud.core.settings import Theme
