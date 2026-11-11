@@ -975,3 +975,7 @@ its "Recent changes".
   pits, finished, or before the first checkpoint. Each lasts 3 s past the car being back to normal. The
   section lists those in the player's sector and the next (`yellow_rows`), up to three, with the sector.
   Tests; not seen in a race yet, and the thresholds are first guesses to tune from races.
+- 2026-11-11: The delta bar's fill glides, asked for by the user: it eases towards the delta in about 0.2 s
+  instead of jumping to each read's value (`DELTA_FILL_EASE`, 0.08 s); the number stays exact, and a steady
+  change is followed under 0.1 s behind. A new lap puts the fill where the delta is at once. It still moves
+  20 times a second, as the HUD is drawn: smoother would take more redraws, which cost frames. Tests.
