@@ -166,7 +166,10 @@ starting TurboHUD again.
   back on the track and up to speed; not for cars in the pits. **Yellow flags** in the
   TurboHUD icon's menu or under **Settings…** turns them off (the section and the rings). Placed in the
   same spot as the blue flag, both stay visible when both are out: the one that came second goes right
-  next to the first (the blue flag below, the yellow box above), and neither moves while it shows.
+  next to the first (the blue flag below, the yellow box above), and neither moves while it shows. When a car
+  stopped on the tarmac, or one going the wrong way, is up to 5 seconds ahead of you on the road, the
+  box says **CAR STOPPED AHEAD** or **WRONG WAY AHEAD** instead, with that car first (once the track is
+  learnt; a car parked on the grass is ignored). Only your own HUD warns: nothing changes for anyone else.
 - **Settings…** (TurboHUD icon's menu, or the move-mode panel) picks the text,
   highlight and outline colours, makes all sections bigger or smaller at once, and holds
   the options for the whole HUD: mph, the tint behind all sections, the radar's

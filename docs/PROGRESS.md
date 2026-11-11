@@ -1127,3 +1127,10 @@ its "Recent changes".
   move mode and saving use each flag's own place. The yellow flag system itself was confirmed in a race by
   the user the same day (heading centred, steady box, the sector yellow on the map). Tests for the rules;
   not yet seen in a race with both flags out.
+- 2026-11-11: Hazard ahead, asked for by the user in place of an automatic full course yellow (which a car
+  left by a player who quit, lost the connection or a gamepad would set off for everyone): the yellow box's
+  heading becomes CAR STOPPED AHEAD or WRONG WAY AHEAD, with that car first, while a stopped car on the
+  tarmac (a wheel on tarmac or kerb grip; parked on the grass it is ignored) or one going the wrong way is
+  up to 5 s ahead on the road at the player's speed (`YellowFlags.hazard`, `HAZARD_*`; the distance along the
+  learnt road, `TrackMap.road_ahead`). It stays at least 2 s, so it never blinks. Only the player's own HUD;
+  off with Yellow flags. No new reads of the game. Tests; not yet seen in a race.
