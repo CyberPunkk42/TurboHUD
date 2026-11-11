@@ -1926,7 +1926,8 @@ def race_sections(
         if opacity is not None:
             sections['blue'] = opacity
         heading = track_map.heading if track_map is not None and state.on_a_track else None
-        incidents = yellow_flags.update(state, heading) if yellow_flags is not None else ()
+        gate_at = track_map.gate_at if heading is not None else None
+        incidents = yellow_flags.update(state, heading, gate_at) if yellow_flags is not None else ()
         hazard = None
         if yellow_flags is not None and track_map is not None and state.on_a_track:
             hazard = yellow_flags.hazard(state, incidents, track_map.road_ahead)
@@ -2795,11 +2796,16 @@ class Incident:
     sector: int | None
 
 
-def car_sector(player, starts):
-    """The sector (index into `starts`, see sector_starts) the car is in, or None."""
-    if not starts or not player.checkpoints:
+def car_sector(player, starts, passed=None):
+    """The sector (index into `starts`, see sector_starts) the car is in, or None.
+    `passed`: the checkpoint it is past where that is known otherwise (where it is on the
+    road, TrackMap.gate_at), else the last one it crossed in its lap."""
+    if not starts:
         return None
-    passed = len(player.checkpoints[-1]) - 1  # the last checkpoint passed in its lap
+    if passed is None:
+        if not player.checkpoints:
+            return None
+        passed = len(player.checkpoints[-1]) - 1  # the last checkpoint passed in its lap
     sector = 0
     for index, start in enumerate(starts):
         if start <= passed:
@@ -2869,11 +2875,14 @@ class YellowFlags:
         self._hazard = None
         return None
 
-    def update(self, state, heading=None):
+    def update(self, state, heading=None, gate_at=None):
         """The incidents now, most serious first (a tuple of Incident). `heading(position,
         hint)` gives the way the race goes there and a hint for the car's next look (as
         core.trackmap.TrackMap.heading), or None where it is not known; without it no car
-        is driving the wrong way."""
+        is driving the wrong way. `gate_at(point, gates)` (TrackMap.gate_at): the checkpoint
+        a point of the learnt road is past, so an incident's sector is where the car is, not
+        where it last crossed a line (reported by the user on 2026-11-11: a car driving
+        backwards kept the sector it turned round in)."""
         now = state.clock / UNITS_PER_SECOND
         starts = sector_starts(len(state.gates), state.sector_lines) if state.gates else ()
         found, seen = [], set()
@@ -2882,7 +2891,12 @@ class YellowFlags:
             car = self._cars.setdefault(
                 player.name, {'since': {}, 'kind': None, 'until': None, 'spawns': None}
             )
-            kind = self._kind(car, player, now, heading)
+            look = None
+            if heading is not None and player.position is not None:
+                look = heading(player.position, car.get('hint'))
+                if look is not None:
+                    car['hint'] = look[1]
+            kind = self._kind(car, player, now, look)
             if kind is not None:
                 car['kind'], car['until'] = kind, now + YELLOW_CLEAR_AFTER
             elif car['until'] is not None and (
@@ -2890,12 +2904,13 @@ class YellowFlags:
             ):
                 car['kind'] = car['until'] = None  # back up to speed (or the clock went back: a new race)
             if car['kind'] is not None:
-                found.append(Incident(player.name, car['kind'], car_sector(player, starts)))
+                passed = gate_at(look[1], state.gates) if look is not None and gate_at is not None else None
+                found.append(Incident(player.name, car['kind'], car_sector(player, starts, passed)))
         for name in set(self._cars) - seen:
             del self._cars[name]  # left the race
         return tuple(sorted(found, key=lambda incident: YELLOW_KINDS.index(incident.kind)))
 
-    def _kind(self, car, player, now, heading=None):
+    def _kind(self, car, player, now, look=None):
         """The most serious incident that holds for the car now, or None."""
         spawns = player.spawns
         if spawns is not None and car['spawns'] is not None and spawns > car['spawns']:
@@ -2907,7 +2922,7 @@ class YellowFlags:
         speed, grips = player.forward_speed, player.wheel_grips
         holds = {
             'stopped': speed is not None and abs(speed) < YELLOW_STOPPED,
-            'wrong way': self._wrong_way(car, player, heading),
+            'wrong way': self._wrong_way(player, look),
             'spun': speed is not None and speed < YELLOW_BACKWARDS,
             'off track': grips is not None and all(0.0 < grip < YELLOW_OFF_GRIP for grip in grips),
             'slow': speed is not None and speed < YELLOW_SLOW,
@@ -2931,20 +2946,18 @@ class YellowFlags:
         return None
 
     @staticmethod
-    def _wrong_way(car, player, heading):
+    def _wrong_way(player, look):
         """Whether the car moves against the race: faster than YELLOW_SLOW, at least
-        YELLOW_WRONG_WAY of its speed against the way the race goes where it is. Its
-        velocity, not where it points: a car facing back but sliding on is not."""
-        if heading is None or player.velocity is None or player.position is None:
+        YELLOW_WRONG_WAY of its speed against the way the race goes where it is (`look`,
+        from TrackMap.heading). Its velocity, not where it points: a car facing back but
+        sliding on is not."""
+        if look is None or player.velocity is None:
             return False
         vx, vz = player.velocity
         moving = math.hypot(vx, vz)
         if moving < YELLOW_SLOW:
             return False
-        found = heading(player.position, car.get('hint'))
-        if found is None:
-            return False
-        (dx, dz), car['hint'] = found
+        dx, dz = look[0]
         return vx * dx + vz * dz < -YELLOW_WRONG_WAY * moving
 
 

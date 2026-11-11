@@ -2134,6 +2134,24 @@ class YellowFlagTests(unittest.TestCase):
         rows = race.yellow_rows(found, self.state(11.6, self.car(**against), me_passed=4))
         self.assertTrue(rows[-1].text.endswith('Other  wrong way'))
 
+    def test_the_sector_is_where_the_car_is_once_the_road_is_known(self):
+        # Reported by the user on 2026-11-11: a car driving backwards kept the yellow sector it turned
+        # round in, as it crosses no line going backwards. Its last line passed is 4 (sector 2), but the
+        # road puts it back past line 2 (sector 1).
+        def heading(position, hint):
+            return (1.0, 0.0), 20  # the race goes along +x; the learnt line's point 20
+
+        def gate_at(point, gates):
+            return 2 if point == 20 else None
+
+        flags = race.YellowFlags()
+        back = {'position': (0.0, 0.0), 'velocity': (-30.0, 0.0)}
+        for seconds in (10.0, 11.6):
+            found = flags.update(self.state(seconds, self.car(passed=4, **back)), heading, gate_at)
+        self.assertEqual([(i.kind, i.sector) for i in found], [('wrong way', 0)])
+        found = flags.update(self.state(11.7, self.car(passed=4, **back)), heading)  # no road: as before
+        self.assertEqual([(i.kind, i.sector) for i in found], [('wrong way', 1)])
+
     def test_wrong_way_beats_a_spin_but_not_sliding_on_or_crawling_back(self):
         def heading(position, hint):
             return (1.0, 0.0), 0

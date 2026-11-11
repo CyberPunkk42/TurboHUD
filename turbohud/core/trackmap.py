@@ -537,6 +537,27 @@ class TrackMap:
             self._save(gates, best, start, len(self._laps))
             self._laps = []
 
+    def gate_at(self, index, gates):
+        """The checkpoint line (index into `gates`) last crossed, driving the right way, at the
+        learnt line's point `index` (see heading): where a car is on the road, whichever lines
+        it really passed (a car driving backwards passes none). None while no whole lap is
+        learnt."""
+        if self.learned is None or not self.learned.closed or not gates:
+            return None
+        points = self.learned.points
+        key = (id(self.learned), gates)
+        if getattr(self, '_marks_key', None) != key:
+            self._marks_key, self._marks = key, gate_marks(points, gates)
+        count, first = len(points), self._marks[0]
+        if not 0 <= index < count:
+            return None
+        here = (index - first) % count
+        return max(
+            (gate for gate, mark in enumerate(self._marks) if (mark - first) % count <= here),
+            key=lambda gate: (self._marks[gate] - first) % count,
+            default=0,
+        )
+
     def yellow_stretches(self, gates, sectors):
         """The stretches of the learnt road for `sectors`, each (first checkpoint, the
         next sector's first checkpoint) of a lap: the road between where it crosses those

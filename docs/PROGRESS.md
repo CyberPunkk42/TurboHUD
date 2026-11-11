@@ -1185,3 +1185,9 @@ its "Recent changes".
   flag (an outline, so a car under you still shows; the entry before this one said the map ringed it, which it did
   not until now), and a little smaller than the other cars (0.9 of them, from 1.15), so over one, your white ring
   shows inside that car's dot. It was already drawn last, on top. Tests; drawn off screen. Not yet seen in a race.
+- 2026-11-11: A yellow flag's sector follows the car on the road, reported by the user: a car driving backwards kept
+  the yellow sector it turned round in, on the map and in the box, as the sector came from the last checkpoint it
+  crossed, and a car going backwards crosses none. Once the track is learnt, the sector now comes from where the car
+  is on the learnt road (`TrackMap.gate_at`, from the point the wrong-way check already follows each car to, read by
+  read, so a track that crosses itself keeps it on its own stretch); before that, as before. Tests; TurboHUD started
+  from source for 6 s, no error. Not yet seen in a race.
