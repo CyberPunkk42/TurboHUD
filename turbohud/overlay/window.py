@@ -130,6 +130,7 @@ MAP_OTHER_ALPHA = 150  # the other cars are faint
 MAP_PIT_OPACITY = 0.4  # a car in the pits is dimmed
 MAP_RING = 0.4  # the local player's ring: its width, as a share of its radius
 MAP_YELLOW = '#ffd400'  # the ring around a car the yellow flag is out for (race.YELLOW_COLOR)
+MAP_YELLOW_ROAD_ALPHA = 220  # a sector under a yellow flag, over the road
 
 
 @functools.cache  # the same one each time, so the map's road layer is kept (SectionWindow._road_layer)
@@ -522,6 +523,17 @@ class SectionWindow(QWidget):
                 return QPointF(left + x_off + point[0] * scale, top + y_off - point[1] * scale)
 
             painter.drawImage(QPointF(0, 0), self._road_image(painter, view, box, at, scale, size))
+            if view.yellow:  # a sector under a yellow flag: its road in yellow, over the usual one
+                road = road_width(size)
+                yellow = QColor(MAP_YELLOW)
+                yellow.setAlpha(MAP_YELLOW_ROAD_ALPHA)
+                painter.setPen(QPen(yellow, road, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin))
+                painter.setBrush(Qt.NoBrush)
+                for part in view.yellow:
+                    path = QPainterPath(at(part[0]))
+                    for point in part[1:]:
+                        path.lineTo(at(point))
+                    painter.drawPath(path)
             radius = max(2.5, size * MAP_DOT)
             painter.setClipRect(box)  # a car off the learnt track (a road from the grid) stays inside
             for dot in view.dots:

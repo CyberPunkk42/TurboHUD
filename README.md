@@ -161,7 +161,8 @@ starting TurboHUD again.
   the next one, as marshals show it: all four wheels off the tarmac, slow, stopped,
   spun (going backwards), driving the wrong way (against the race, for 1.5 s; once the track
   map has learnt the track) or put back on the track. It names the sector and the
-  drivers, and the track map rings those cars in yellow. It goes 3 seconds after the car is
+  drivers, and the track map rings those cars in yellow and turns their sector's road yellow (once
+  it has learnt the track). It goes 3 seconds after the car is
   back on the track and up to speed; not for cars in the pits. **Yellow flags** in the
   TurboHUD icon's menu or under **Settings…** turns them off (the section and the rings).
 - **Settings…** (TurboHUD icon's menu, or the move-mode panel) picks the text,

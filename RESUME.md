@@ -75,6 +75,12 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-11: A sector under a yellow flag turns yellow on the track map, asked for by the user: each
+  sector with an incident (any kind) has its stretch of the learnt road drawn yellow over the usual road, all
+  round the track (`yellow_sector_spans` in race.py, `TrackMap.yellow_stretches`). The sectors are the
+  track's sector lines as for the sector bars; where the road crosses each checkpoint line is worked out once
+  per track (`gate_marks`: nearest to the line, not its middle, which can lie far off the road). Only once a
+  whole lap is learnt; off with Yellow flags. Tests; drawn off screen. Not yet seen in a race.
 - 2026-11-11: The yellow flag's box keeps its size, reported by the user: it was drawn only as large as its
   text, so it grew and shrank with each incident listed. A section with a background of its own now fills
   its whole window with it (`_paint_backdrop`), the size given in move mode; the text keeps its size in it,

@@ -334,6 +334,29 @@ class LearntTrackTests(unittest.TestCase):
         drive(alone, SAVED)
         self.assertTrue(alone.settled)  # one car alone gives every lap
 
+    def test_a_sector_under_a_yellow_flag_is_its_stretch_of_the_road(self):
+        # Asked for by the user on 2026-11-11.
+        track_map = learnt_map()
+        self.assertEqual(trackmap.TrackMap().yellow_stretches(GATES, {(0, 4)}), ())  # nothing learnt yet
+        self.assertEqual(track_map.yellow_stretches(GATES, set()), ())
+        (first,) = track_map.yellow_stretches(GATES, {(0, 4)})  # from the start line to line 4: the top half
+        self.assertTrue(all(z > -2 for _x, z in first))
+        self.assertAlmostEqual(math.hypot(*first[0]), RADIUS, delta=1.5)
+        self.assertLess(math.dist(first[0], (RADIUS, 0)), 4)
+        self.assertLess(math.dist(first[-1], (-RADIUS, 0)), 4)
+        (last,) = track_map.yellow_stretches(GATES, {(6, 0)})  # the last sector, round to the start line
+        self.assertTrue(all(x > -2 and z < 2 for x, z in last))
+        self.assertEqual(len(track_map.yellow_stretches(GATES, {(0, 4), (6, 0)})), 2)
+
+    def test_stretches_go_forwards_round_the_end(self):
+        points = [(float(i), 0.0) for i in range(6)]
+        self.assertEqual(trackmap.stretch(points, 1, 3), ((1.0, 0.0), (2.0, 0.0), (3.0, 0.0)))
+        self.assertEqual([p[0] for p in trackmap.stretch(points, 4, 1)], [4.0, 5.0, 0.0, 1.0])
+        self.assertEqual(len(trackmap.stretch(points, 2, 2)), 7)  # the whole loop
+        self.assertEqual(
+            trackmap.gate_marks(points, [((3.0, -50.0), (3.0, 5.0))]), (3,)
+        )  # a line far to one side
+
     def test_one_read_is_no_map(self):
         me = car('Me', 3, local=True)
         self.assertIsNone(trackmap.TrackMap().update(state([me]), [me]))
@@ -549,6 +572,29 @@ class MapWindowTests(unittest.TestCase):
         ]
         self.assertTrue(found)
         self.assertTrue(all(30 <= x <= 270 for x, _y in found))  # inside the square
+
+    def test_a_yellow_sector_is_drawn_in_yellow(self):
+        import dataclasses
+
+        window = self.window()
+        track_map = learnt_map()
+        view = track_map.update(state([car('Me', 13, local=True)]), [car('Me', 13, local=True)])
+
+        def yellows():
+            image = window.grab().toImage()
+            return [
+                (x, y)
+                for x in range(0, image.width(), 2)
+                for y in range(0, image.height(), 2)
+                if (c := image.pixelColor(x, y)).red() > 200 and c.green() > 170 and c.blue() < 90
+            ]
+
+        window.trackmap = view
+        self.assertEqual(yellows(), [])
+        window.trackmap = dataclasses.replace(view, yellow=track_map.yellow_stretches(GATES, {(0, 4)}))
+        found = yellows()
+        self.assertGreater(len(found), 20)
+        self.assertTrue(all(y < 130 for _x, y in found))  # the top half of the map: z up
 
     def test_a_spectators_map_draws_its_cars(self):
         from PySide6.QtGui import QColor
