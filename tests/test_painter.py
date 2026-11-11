@@ -335,7 +335,8 @@ class RedrawTests(unittest.TestCase):
             (x, y)
             for x in range(image.width())
             for y in range(image.height())
-            if min(image.pixelColor(x, y).getRgb()) >= 150
+            # Bright and solid: white text, and coloured text (the yellow flag's) too.
+            if max(image.pixelColor(x, y).getRgb()[:3]) >= 150 and image.pixelColor(x, y).alpha() >= 150
         ]
         xs, ys = [x for x, _y in found], [y for _x, y in found]
         return (min(xs), min(ys), max(xs), max(ys)), (image.width(), image.height())

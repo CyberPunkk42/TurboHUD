@@ -351,6 +351,18 @@ RACE_SECTIONS = (
             ),
         ),
     ),
+    Section(
+        'yellowflag',
+        'Yellow flag',
+        (
+            (
+                Row('DOUBLE YELLOW  -  Sector 3', 'title', '#ffd400'),
+                Row('S3  Playername1234567  respawned', 'small', '#ffd400'),
+                Row('S3  Playername1234567  off track', 'small', '#ffd400'),
+                Row('S4  Playername1234567  stopped', 'small', '#ffd400'),
+            ),
+        ),
+    ),
     Section('blueflag', 'Blue flag', (), bar=(480, 24), drawing='flag'),
     Section('deltabar', 'Delta bar', (), bar=(360, 36), drawing='delta'),
     Section('radar', 'Proximity radar', (), bar=(160, 160), drawing='radar'),

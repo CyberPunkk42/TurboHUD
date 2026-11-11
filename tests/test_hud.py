@@ -193,6 +193,7 @@ class TextCanCentreTests(unittest.TestCase):
                 'health',
                 'draft',
                 'localtime',
+                'yellowflag',
             },
         )
 
@@ -462,6 +463,7 @@ class SectionTests(unittest.TestCase):
                 'localtime',
                 'players',
                 'laptimes',
+                'yellowflag',
                 'blueflag',
                 'deltabar',
                 'radar',
