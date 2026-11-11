@@ -484,6 +484,35 @@ class RedrawTests(unittest.TestCase):
             window.grab()
         self.assertEqual(window.road_draws, 1)
 
+    def test_my_own_dot_stays_on_top_and_its_yellow_ring_covers_no_car_below(self):
+        # Asked for by the user on 2026-11-11: my dot a little smaller and on top, ringed in yellow
+        # when I caused a flag.
+        from dataclasses import replace
+
+        from turbohud.core.trackmap import MapDot
+        from turbohud.overlay.window import MAP_PADDING, MAP_SIZES, _sample_map, map_transform
+
+        self.assertLess(MAP_SIZES['me'], MAP_SIZES['ahead'])
+        window = self.map_window()
+        sample = _sample_map()
+        where = sample.outline.points[0]
+        dots = (MapDot(where, 'ahead'), MapDot(where, 'me', yellow=True))
+        window.show_content([], trackmap=replace(sample, dots=dots))
+        image = window.grab().toImage()
+        size = min(window.width(), window.height())
+        scale, x_off, y_off = map_transform(sample.outline.bounds, (size, size), size * MAP_PADDING)
+        left, top = (window.width() - size) / 2, (window.height() - size) / 2
+        x, y = round(left + x_off + where[0] * scale), round(top + y_off - where[1] * scale)
+        middle = image.pixelColor(x, y)
+        self.assertGreater(middle.red(), 150)  # the red car below still shows in my ring's middle
+        self.assertLess(middle.green(), 120)
+        yellow = 0
+        for dx in range(-14, 15):
+            for dy in range(-14, 15):
+                c = image.pixelColor(x + dx, y + dy)
+                yellow += c.red() > 200 and c.green() > 180 and c.blue() < 80
+        self.assertGreater(yellow, 10)  # the yellow ring round it
+
     def test_the_maps_road_is_drawn_again_when_what_it_shows_changes(self):
         from dataclasses import replace
 

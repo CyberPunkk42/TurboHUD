@@ -119,7 +119,7 @@ MAP_COLORS = {
     'car': '#e6ebf2',  # a spectator's map: every car
 }
 MAP_SIZES = {
-    'me': 1.15,
+    'me': 0.9,  # a little smaller than the cars around: over one, its ring shows inside that car's dot (the user)
     'leader': 1.0,
     'ahead': 1.0,
     'behind': 1.0,
@@ -131,6 +131,7 @@ MAP_OTHER_ALPHA = 150  # the other cars are faint
 MAP_PIT_OPACITY = 0.4  # a car in the pits is dimmed
 MAP_RING = 0.4  # the local player's ring: its width, as a share of its radius
 MAP_YELLOW = '#ffd400'  # the ring around a car the yellow flag is out for (race.YELLOW_COLOR)
+MAP_OWN_YELLOW = 3.0  # the width of the yellow ring round the player's own dot when it caused a flag
 MAP_YELLOW_ROAD_ALPHA = 220  # a sector under a yellow flag, over the road
 
 
@@ -567,7 +568,16 @@ class SectionWindow(QWidget):
                 if dot.role == 'other':
                     color.setAlpha(MAP_OTHER_ALPHA)
                 r = radius * MAP_SIZES[dot.role]
-                if dot.yellow:  # the yellow flag is out for it: a yellow ring, outside any other
+                if (
+                    dot.yellow and dot.role == 'me'
+                ):  # the player's own flag: an outline, never covering a car below
+                    ring = max(1.5, r * MAP_RING)
+                    painter.setBrush(Qt.NoBrush)
+                    painter.setPen(QPen(QColor(MAP_YELLOW), MAP_OWN_YELLOW))
+                    painter.drawEllipse(
+                        at(dot.position), r + ring / 2 + MAP_OWN_YELLOW / 2, r + ring / 2 + MAP_OWN_YELLOW / 2
+                    )
+                elif dot.yellow:  # the yellow flag is out for it: a yellow ring, outside any other
                     painter.setPen(Qt.NoPen)
                     painter.setBrush(QColor(MAP_YELLOW))
                     painter.drawEllipse(at(dot.position), r + 5, r + 5)

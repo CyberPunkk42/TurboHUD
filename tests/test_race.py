@@ -2344,6 +2344,10 @@ class YellowFlagTests(unittest.TestCase):
         self.assertNotIn(
             (3.0, 0.0), [dot.position for dot in view.dots]
         )  # an unflagged other car stays hidden
+        self.assertFalse(view.dots[-1].yellow)  # my own dot, not flagged
+        with mock.patch.object(TrackMap, 'outline', lambda self, order, gates, length: 'outline'):
+            view = track_map.update(state, players, yellow=frozenset({'Me'}))
+        self.assertEqual((view.dots[-1].role, view.dots[-1].yellow), ('me', True))  # asked for by the user
 
 
 class LiveRaceTests(unittest.TestCase):
