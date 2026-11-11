@@ -75,6 +75,12 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-11: The move-mode panel's word buttons fit their words, reported by the user: with fixed widths
+  macOS cut "None" to "lon" and "Delete" to "elete" (the off-screen render, with Qt's own style, had not
+  shown it). All, None, Save, Load and Delete are now at least 54 px and as wide as the system needs
+  (`PANEL_WORD_BUTTON`), with 3 px between the preset rows, whose buttons touched. Checked with the macOS
+  style drawn off the screen: 400 x 914 points. A test that each word button is as wide as it needs (it
+  fails with the old widths).
 - 2026-11-11: The move-mode panel tidied, asked for by the user: **All** and **None** beside the Show heading
   show or hide every section at once, one step for Undo (`MovePanel.all_wanted`, the app's `set_all_wanted`);
   the sections come under Timing, Car, Race and Other (`hud.panel_categories`); the column headings sit over

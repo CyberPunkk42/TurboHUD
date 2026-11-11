@@ -83,8 +83,9 @@ LEVEL_SAMPLE = (0.7, 'ahead')  # a level bar in move mode, to place the section
 SECTORS_SAMPLE = Sectors(('#c77dff', '#5ee07a', None))  # the sector bars in move mode
 PANEL_COMBO_WIDTH = 56  # the move-mode panel's group lists: wide enough for '-' and A to D
 PANEL_SMALL_BUTTON = 32  # its one-character buttons (centre, match a group, delete a preset)
-PANEL_PRESET_BUTTON = 54  # its Save, Load and Delete buttons
-PANEL_ALL_BUTTON = 44  # its All and None buttons above the Show column
+# Its word buttons (All, None, Save, Load, Delete) are at least this wide, and wider where the
+# system's buttons need it for the word: with a fixed width macOS cut "None" and "Delete" short.
+PANEL_WORD_BUTTON = 54
 PANEL_HEADING = '#9fb8d8'  # the panel's small headings: the columns and the kinds of section
 PANEL_EMPTY = '#5d7799'  # the dot where a section has no such option
 RADAR_CAR_AT = 0.5  # the local car's height in the radar, from the top: the middle
@@ -773,7 +774,7 @@ class MovePanel(QWidget):
             ('None', False, 'Hide every section (one step for Undo)'),
         ):
             button = QPushButton(text)
-            button.setFixedWidth(PANEL_ALL_BUTTON)
+            button.setMinimumWidth(PANEL_WORD_BUTTON)
             button.setToolTip(tip)
             button.clicked.connect(lambda _checked=False, w=wanted: self._set_all(w))
             show.addWidget(button)
@@ -900,19 +901,19 @@ class MovePanel(QWidget):
         self._update_matches()
         presets = QGridLayout()
         presets.setHorizontalSpacing(4)
-        presets.setVerticalSpacing(0)
+        presets.setVerticalSpacing(3)
         presets.addWidget(QLabel('Presets:'), 0, 0, Qt.AlignTop)
         self.preset_loads = {}
         self.preset_deletes = {}
         for line, number in enumerate(PRESETS):
             presets.addWidget(QLabel(f'<b>{number}</b>'), line, 1, Qt.AlignRight)
             save = QPushButton('Save')
-            save.setFixedWidth(PANEL_PRESET_BUTTON)
+            save.setMinimumWidth(PANEL_WORD_BUTTON)
             save.setToolTip(f'Keep the layout as it is now in preset {number}, replacing what was there')
             save.clicked.connect(lambda _checked=False, n=number: self.preset_save_requested.emit(n))
             presets.addWidget(save, line, 2)
             load = QPushButton('Load')
-            load.setFixedWidth(PANEL_PRESET_BUTTON)
+            load.setMinimumWidth(PANEL_WORD_BUTTON)
             load.setToolTip(
                 f'Put the sections as preset {number} has them, also with Ctrl+Shift+{number}'
                 if shortcuts
@@ -923,7 +924,7 @@ class MovePanel(QWidget):
             presets.addWidget(load, line, 3)
             self.preset_loads[number] = load
             delete = QPushButton('Delete')
-            delete.setFixedWidth(PANEL_PRESET_BUTTON)
+            delete.setMinimumWidth(PANEL_WORD_BUTTON)
             delete.setAccessibleName(f'Delete preset {number}')
             delete.setToolTip(f'Delete preset {number}; Undo brings it back')
             delete.setEnabled(number in saved_presets)
