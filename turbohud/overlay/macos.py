@@ -8,7 +8,7 @@ import ctypes.util
 import logging
 from ctypes import c_bool, c_char_p, c_int32, c_long, c_uint32, c_ulong, c_void_p
 
-from turbohud.overlay import HOTKEY_LOCK, HOTKEY_PRESETS, HOTKEY_QUIT, HOTKEY_SCREENSHOT
+from turbohud.overlay import HOTKEY_LOCK, HOTKEY_PRESETS, HOTKEY_QUIT
 
 WINDOW_LEVEL = 1000  # NSScreenSaverWindowLevel
 NS_ACTIVATION_POLICY_ACCESSORY = 1
@@ -20,7 +20,6 @@ COLLECTION_BEHAVIOR = (1 << 0) | (1 << 4) | (1 << 6) | (1 << 8)
 KEY_L = 0x25
 KEY_Q = 0x0C
 KEYS_PRESET = {1: 0x12, 2: 0x13, 3: 0x14}  # the keys 1, 2 and 3
-KEY_S = 0x01
 CARBON_CONTROL = 1 << 12
 CARBON_SHIFT = 1 << 9
 
@@ -159,7 +158,6 @@ class Native:
         lock, quit_ = register(KEY_L, HOTKEY_LOCK), register(KEY_Q, HOTKEY_QUIT)
         for number, preset in HOTKEY_PRESETS.items():
             register(KEYS_PRESET[preset], number)
-        register(KEY_S, HOTKEY_SCREENSHOT)
         return status == 0 and lock and quit_
 
     def unregister_hotkeys(self):

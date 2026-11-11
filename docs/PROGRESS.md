@@ -1115,3 +1115,8 @@ its "Recent changes".
 - 2026-11-11: The yellow flag's heading (YELLOW - Sector N) in the middle of its box, asked for by the user;
   the drivers' lines stay on the left. A row can be centred on its own (`Row.centred`), whatever the rest of
   the section does. Test; drawn off screen.
+- 2026-11-11: The screenshot shortcut removed, asked for by the user: it saved nothing on the user's Mac
+  (macOS's tool, started from TurboHUD, gave no file). Ctrl+Shift+S, the menu's two items, `--screenshot`,
+  `screenshot_folder` and `turbohud/screenshot.py` are gone; Ctrl+Shift+S is TSU's again. A settings file
+  that still names `screenshot_folder` loads as before (the key is ignored, and gone at the next save). For screenshots: macOS's
+  Cmd+Shift+3 or 4.
