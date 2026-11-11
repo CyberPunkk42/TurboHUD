@@ -285,10 +285,19 @@ def build(
                     ('m_state', 0x30, False),
                     ('m_stateUpdater', 0x38, False),
                     ('m_statsNewPosition', 0x64, False),
+                    ('m_vehicleModel', 0x70, False),
                 ],
             )
         )
         g.put(vehicle + 0x64, struct.pack('<3f', car[0], 10.0, car[1]))
+        model = g.alloc_obj(g.klass('TS', 'VehicleModel', [('m_properties', 0x18, False)]))
+        properties = g.alloc_obj(g.klass('TS', 'VehicleProperties', [('name', 0x20, False)]))
+        car_name = 'Ligier JS320'
+        text = g.alloc_obj(0, 0x14 + 2 * len(car_name) + 2)
+        g.put(text + 0x10, struct.pack('<i', len(car_name)) + car_name.encode('utf-16-le'))
+        g.q(properties + 0x20, text)
+        g.q(model + 0x18, properties)
+        g.q(vehicle + 0x70, model)
         state = g.alloc_obj(
             g.klass(
                 'TS',
@@ -1603,6 +1612,9 @@ class CarTests(unittest.TestCase):
         )
         me = next(p for p in reader.read().players if p.local)
         self.assertEqual(me.position, (12.5, -3.0))
+        self.assertEqual(me.car, 'Ligier JS320')  # its car's name, read once per vehicle
+        self.assertEqual(len(reader._cars), 1)
+        self.assertEqual(next(p for p in reader.read().players if p.local).car, 'Ligier JS320')
 
     def test_without_car_data_there_are_no_car_sections(self):
         reader = build([10_000], laps_completed=0, clock=20_000, limit=0)

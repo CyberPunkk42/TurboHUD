@@ -146,7 +146,9 @@ starting TurboHUD again.
 - **Multi-class races**: drivers name their class with their clan tag in TSU (`[GT3]`, `[LMP]`,
   `[LMP2]` ...). With two or more classes in the race, the lap times list comes by class, each below a
   thin line labelled with its name, numbered within its class and with the class's fastest lap in purple.
-  Drivers whose tag is no class (a team's, such as `[FTR]`) come last under **Other**. **Classes in the
+  A driver without a class tag (or with a team's, such as `[FTR]`) gets the class of the car they
+  drive: the class most tagged drivers in that car have in this race. Drivers in a car no one tagged
+  drives come last under **Other**. **Classes in the
   lap times** (TurboHUD icon's menu or Settings) turns it off. The tags that count are listed in the
   settings file as `class_tags` (LMP, LMP1 to LMP3, LMH, LMDH, HYPER, GTP, DPI, GT1 to GT4, GTE, GTLM, GTD,
   GTC, GTS, TCR, CUP, F1 to F4, PRO, AM, PROAM, SILV by default).

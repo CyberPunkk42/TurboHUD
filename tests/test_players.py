@@ -1189,6 +1189,47 @@ class ClassTests(unittest.TestCase):
         self.assertEqual(sorted(classes.values()), ['GT3', 'LMP', race.OTHER_CLASS])
         self.assertEqual(race.car_classes(two, ()), {})  # turned off
 
+    def test_a_driver_without_a_tag_takes_the_class_of_its_car(self):
+        def driver(name, tag, car):
+            return dataclasses.replace(self.driver(name, tag, 60_000), car=car)
+
+        drivers = [
+            driver('Gt tagged', 'GT3', 'Porsche GT3'),
+            driver('Gt untagged', '', 'Porsche GT3'),
+            driver('Team tag', 'FTR', 'Porsche GT3'),  # a tag that is no class: the car's
+            driver('Proto', 'LMP', 'Ligier JS320'),
+            driver('Proto untagged', '', 'Ligier JS320'),
+            driver('Says GT3', 'GT3', 'Ligier JS320'),  # the tag goes first
+            driver('Unknown car', '', 'Tatuus'),  # no tagged driver in it
+            driver('No car read', '', ''),
+        ]
+        classes = race.car_classes(drivers, self.TAGS)
+        self.assertEqual(
+            [classes[id(d)] for d in drivers],
+            ['GT3', 'GT3', 'GT3', 'LMP', 'LMP', 'GT3', race.OTHER_CLASS, race.OTHER_CLASS],
+        )
+        # Most of the tagged drivers in a car name its class; a tie: the one seen first.
+        mixed = [
+            driver('A', 'LMP', 'X'),
+            driver('B', 'GT3', 'X'),
+            driver('C', 'GT3', 'X'),
+            driver('D', '', 'X'),
+        ]
+        self.assertEqual(race.car_classes(mixed, self.TAGS)[id(mixed[3])], 'GT3')
+        tie = [driver('A', 'LMP', 'X'), driver('B', 'GT3', 'X'), driver('D', '', 'X')]
+        self.assertEqual(race.car_classes(tie, self.TAGS)[id(tie[2])], 'LMP')
+        one_class = [
+            driver('A', 'GT3', 'X'),
+            driver('B', '', 'X'),
+            driver('C', '', 'Y'),
+            driver('D', 'FTR', 'Y'),
+        ]
+        self.assertEqual(race.car_classes(one_class, self.TAGS), {})  # one class, many cars: as before
+        rows = race.lap_times_rows(one_class, clock=2_000_000, class_tags=self.TAGS)
+        self.assertEqual([row.rule for row in rows], [''] * len(rows))
+        untagged = [driver('A', '', 'X'), driver('B', '', 'Y')]
+        self.assertEqual(race.car_classes(untagged, self.TAGS), {})  # no tags: no classes
+
     def test_by_class_with_places_in_each_its_fastest_lap_purple(self):
         drivers = [
             self.driver('Proto', 'LMP', 600_000),
