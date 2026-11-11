@@ -76,6 +76,12 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-12: The first Windows build to share, asked for by the user: `releases/TurboHUD-2026.11.12-windows-x64.zip`
+  (42.1 MB, with the Rust reader and texture2ddecoder; built on the Windows PC with PyInstaller 6.22.2 in
+  `.buildtools/win-build-venv`), from `main` with the Windows race search fix, the race recorder and the surface
+  rule. Smoke test passed with TurboHUD closed (the app started as 2026.11.12 and quit cleanly); every file in the
+  zip, the packed Python modules too, checked for the privacy terms: none. Not signed: Windows SmartScreen asks once
+  (More info, Run anyway).
 - 2026-11-11: Off the track by the surface's layer, reported by the user: the wide plastic kerbs of a circuit raised
   yellow flags. Their grip is 0.9 (stored as 0.8999), just under the 0.9 limit, and TurboHUD took all four wheels
   under it as off the track. Read with the user driving over every surface (TSU's Unity layers from its
