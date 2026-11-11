@@ -2808,7 +2808,8 @@ def car_sector(player, starts):
 
 
 class YellowFlags:
-    """Follows every other car through the race to give its incidents: stopped, driving the
+    """Follows every car through the race (the local one too, asked for by the user on
+    2026-11-11: the driver who caused a flag sees it) to give its incidents: stopped, driving the
     wrong way (against the race, asked for by the user on 2026-11-11; only once the track map
     knows the track, see update), spun (going backwards along the car), put back on the
     track, all four wheels off it, or slow, each once it has held
@@ -2848,6 +2849,8 @@ class YellowFlags:
                 car = by_name.get(incident.name)
                 if incident.kind not in HAZARD_KINDS or car is None or car.position is None:
                     continue
+                if car.local:
+                    continue  # the player's own car is no hazard ahead of them
                 if incident.kind == 'stopped' and not on_tarmac(car):
                     continue  # parked on the grass: in no one's way
                 distance = road_ahead(me.position, car.position)
@@ -2874,9 +2877,7 @@ class YellowFlags:
         now = state.clock / UNITS_PER_SECOND
         starts = sector_starts(len(state.gates), state.sector_lines) if state.gates else ()
         found, seen = [], set()
-        for player in state.players:
-            if player.local:
-                continue
+        for player in state.players:  # the local car too: its driver sees the flag it caused (the user)
             seen.add(player.name)
             car = self._cars.setdefault(
                 player.name, {'since': {}, 'kind': None, 'until': None, 'spawns': None}

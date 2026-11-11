@@ -157,7 +157,7 @@ starting TurboHUD again.
   track map move less smoothly, and a track first learnt at 5 gets a coarser line.
 - The **blue flag** is a navy bar that shows when a car about to lap you is within 2
   seconds behind: faint at 2 s, fully visible from 0.5 s, gone once it has passed.
-- The **yellow flag**, dark text on a yellow box, shows when another car has an incident in your sector or
+- The **yellow flag**, dark text on a yellow box, shows when a car, yours too, has an incident in your sector or
   the next one, as marshals show it: all four wheels off the tarmac, slow, stopped,
   spun (going backwards), driving the wrong way (against the race, for 1.5 s; once the track
   map has learnt the track) or put back on the track. It names the sector and the
@@ -169,7 +169,7 @@ starting TurboHUD again.
   next to the first (the blue flag below, the yellow box above), and neither moves while it shows. When a car
   stopped on the tarmac, or one going the wrong way, is up to 5 seconds ahead of you on the road, the
   box says **CAR STOPPED AHEAD** or **WRONG WAY AHEAD** instead, with that car first (once the track is
-  learnt; a car parked on the grass is ignored). Only your own HUD warns: nothing changes for anyone else.
+  learnt; a car parked on the grass is ignored; your own car never counts as ahead). Only your own HUD warns: nothing changes for anyone else.
 - **Shortcut penalty**: on tracks whose maker defined shortcuts, TSU slows a car that takes one for a
   few seconds (the track's setting; 3 s on the one tried). While it slows you, an orange box says
   **SHORTCUT** with the seconds left; in the lap times any driver it slows shows an orange **CUT** with the
