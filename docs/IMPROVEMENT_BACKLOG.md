@@ -25,6 +25,8 @@ First run on the user's PC (2026-11-11): the reader started, Ctrl+Shift+L worked
 Adrenalin let go of it, and an online race was found once a hang in the search was fixed. Still to
 see: the HUD through a whole race, offline and hosting, and the overlay over Fullscreen Exclusive.
 Also: a spare shortcut when another app holds Ctrl+Shift+L, and the 9 tests that fail on Windows.
+The race search reads with 4 threads on Windows since 2026-11-12 (about 6 s for all of TSU's data, from 19 s):
+listen for stutter in those seconds at the start of an online race.
 What is built and what is left on Windows: `docs/WINDOWS_AND_CROSSOVER.md`.
 
 ## 2b. CrossOver: all of TurboHUD inside the bottle (a trial)

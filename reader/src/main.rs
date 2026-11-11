@@ -33,7 +33,7 @@ fn run() -> i32 {
     use std::os::windows::io::{AsRawHandle, FromRawHandle};
 
     use json::{object, Value};
-    use memory::WINE_SEARCH_SHARE;
+    use memory::{SEARCH_BATCH, SEARCH_THREADS, WINE_SEARCH_SHARE};
     use service::{failure, pack, Service, READY};
 
     // Standard output is the pipe, written whole, a message at a time: no line buffering,
@@ -56,7 +56,14 @@ fn run() -> i32 {
     };
     say(&object([("ok", Value::Bool(true)), ("ready", Value::Str(READY.into()))]));
     let mut events = gamelog::EventLog::new(gamelog::tsu_data(), process.started());
-    let share = if win32::under_wine() { WINE_SEARCH_SHARE } else { 1.0 };
+    // In Wine (the Mac) a search reads one piece at a time, paced: a fast one made TSU
+    // stutter there. On Windows itself it reads several pieces at once (memory::SEARCH_BATCH).
+    let wine = win32::under_wine();
+    let share = if wine { WINE_SEARCH_SHARE } else { 1.0 };
+    let mut process = process;
+    if !wine {
+        process.threads = SEARCH_THREADS;
+    }
     let process_ref = &process;
     let mut service = Service::new(
         process_ref,
@@ -68,6 +75,9 @@ fn run() -> i32 {
         Box::new(move || events.running()),
         share,
     );
+    if !wine {
+        service.batch = SEARCH_BATCH;
+    }
     match service.serve(&mut source, &mut sink) {
         Ok(()) => 0,
         Err(error) => {
