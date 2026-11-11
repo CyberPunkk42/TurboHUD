@@ -888,6 +888,18 @@ class MovePanelPresetTests(unittest.TestCase):
             self.assertTrue(any(heading in text for text in texts), heading)
         self.assertEqual(len(panel.boxes), len(RACE_SECTIONS))  # every section still there
 
+    def test_every_word_button_is_wide_enough_for_its_word(self):
+        # Reported by the user on 2026-11-11: with a fixed width macOS cut "None" and "Delete" short.
+        from PySide6.QtWidgets import QPushButton
+
+        panel = self.panel(saved_presets=(1,))
+        panel.show()
+        words = ('All', 'None', 'Save', 'Load', 'Delete', 'Undo', 'Lock', 'Settings…', 'Quit TurboHUD')
+        buttons = [b for b in panel.findChildren(QPushButton) if b.text() in words]
+        self.assertEqual({b.text() for b in buttons}, set(words))
+        for button in buttons:
+            self.assertGreaterEqual(button.width(), button.sizeHint().width(), button.text())
+
     def test_the_panel_stays_compact(self):
         # It was 675 x 978 px with the options and a row per preset: most of a laptop's screen.
         panel = self.panel()
