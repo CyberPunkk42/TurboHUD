@@ -465,9 +465,8 @@ class PlayerState:
     forward_speed: float | None = None  # game units a second along the car; below 0 backwards
     wheel_grips: tuple | None = None  # the grip of the surface under each of its four wheels (0: in the air)
     spawns: int | None = None  # how often it was put back on the track (a respawn)
-    tag: str = (
-        ''  # the driver's clan tag (TS.PlayerProfile.teamTag, 'FTR' for [FTR]); a class may be named by it
-    )
+    tag: str = ''  # the clan tag (TS.PlayerProfile.teamTag: 'FTR' for [FTR]); it may name a class
+    car: str = ''  # the car's name (TS.VehicleProperties.name): the class of a driver without a tag
 
     @functools.cached_property
     def passed(self):
@@ -523,6 +522,7 @@ class LapReader:
         self._player = None
         self._laps = {}  # finished lap object -> its checkpoint times
         self._tags = {}  # profile object -> its clan tag: read once, it seldom changes
+        self._cars = {}  # vehicle object -> its car's name: read once, a car keeps its model
         self._gates = None  # checkpoint lines, ((x1, z1), (x2, z2)) each
         self._sector_lines = ()  # the checkpoints of type Sector (TS.CheckpointType), read with the lines
         self._fuel_history = {}  # lap index -> fuel used when it started
@@ -1225,6 +1225,25 @@ class LapReader:
             self._tags[profile] = tag
         return tag
 
+    def _car_name(self, vehicle):
+        """The car's name (TS.Vehicle.m_vehicleModel.m_properties.name, found in a race on
+        2026-11-11; each car has its own model object, so the name tells cars apart), read
+        once per vehicle."""
+        name = self._cars.get(vehicle)
+        if name is None:
+            try:
+                model = self._ref('vehicle', vehicle, 'm_vehicleModel')
+                properties = self._ref('model', model, 'm_properties')
+                name = self._string(
+                    self.il.memory.u64(properties + self._offset('carprops', properties, 'name'))
+                )
+            except (NotFound, ReadError, OSError, UnicodeDecodeError):
+                name = ''
+            if len(self._cars) > 512:
+                self._cars.clear()
+            self._cars[vehicle] = name
+        return name
+
     def _player_state(self, player):
         il, memory = self.il, self.il.memory
         local = memory.i32(player + self._offset('player', player, 'm_localHumanIndex')) >= 0
@@ -1255,11 +1274,13 @@ class LapReader:
                 checkpoints.append(passed)
         in_pit, position, velocity, forward, draft_drag = False, None, None, None, None
         forward_speed = wheel_grips = spawns = None
+        car = ''
         try:
             vehicle = self._ref('player', player, 'm_vehicle')
         except NotFound:
             vehicle = None
         if vehicle is not None:
+            car = self._car_name(vehicle)
             updater = None
             try:
                 updater = self._ref('vehicle', vehicle, 'm_stateUpdater')
@@ -1305,6 +1326,7 @@ class LapReader:
             wheel_grips=wheel_grips,
             spawns=spawns,
             tag=tag,
+            car=car,
         )
 
     def _wheels(self, updater):
@@ -2433,13 +2455,32 @@ OTHER_CLASS = 'Other'  # in a multi-class race, the drivers whose clan tag names
 
 
 def car_classes(players, class_tags):
-    """{id(player): class} for a multi-class race: the class a driver's clan tag names
-    (one of `class_tags`; OTHER_CLASS for the rest), or {} unless at least two classes
-    are in the race (asked for by the user on 2026-11-11, as in WEC or IMSA)."""
+    """{id(player): class} for a multi-class race (asked for by the user on 2026-11-11, as
+    in WEC or IMSA): the class a driver's clan tag names (one of `class_tags`); for a
+    driver without one, the class most drivers tagged with a class have in the same car
+    (so a GT3 car is GT3 whoever drives it); OTHER_CLASS for the rest. {} unless at least
+    two classes are in the race."""
     if not class_tags:
         return {}
-    named = {id(player): class_tag(player.tag) for player in players}
-    named = {key: tag if tag in class_tags else OTHER_CLASS for key, tag in named.items()}
+    tagged = {}
+    for player in players:
+        tag = class_tag(player.tag)
+        if tag in class_tags:
+            tagged[id(player)] = tag
+    by_car = {}  # car -> {class: drivers tagged with it}, in race order
+    for player in players:
+        if id(player) in tagged and player.car:
+            counts = by_car.setdefault(player.car, {})
+            counts[tagged[id(player)]] = counts.get(tagged[id(player)], 0) + 1
+    named = {}
+    for player in players:
+        if id(player) in tagged:
+            named[id(player)] = tagged[id(player)]
+        elif player.car in by_car:
+            counts = by_car[player.car]
+            named[id(player)] = max(counts, key=counts.get)  # a tie: the class seen first
+        else:
+            named[id(player)] = OTHER_CLASS
     if len(set(named.values()) - {OTHER_CLASS}) < 2:
         return {}
     return named

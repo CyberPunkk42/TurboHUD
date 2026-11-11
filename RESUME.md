@@ -75,6 +75,13 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-11: In a multi-class race, a driver without a class tag takes the class of their car, asked for by
+  the user: each car's name is read once per car (`TS.Vehicle.m_vehicleModel.m_properties.name`, found in a
+  race against AI the same day: 'Ligier JS320 P3 v2'; every car has a model object of its own, so the name
+  is what tells cars apart). `car_classes` gives an untagged driver (or one with a tag that is no class) the
+  class most tagged drivers in the same car have in this race, the first seen on a tie; the tag always goes
+  first; a car no tagged driver drives stays Other; no tags, no classes. No list of TSU's cars needed. Tests;
+  read through the real reader in the user's race (20 cars, the names and the tag; 13 ms a race read).
 - 2026-11-11: Multi-class lap times, asked for by the user (as in real multi-class racing): each driver's
   clan tag is read (`TS.PlayerProfile.teamTag`, found in a race the same day: 'FTR' for [FTR]; read once per
   profile, so a race read asks no more of the game). With two or more classes among the tags in

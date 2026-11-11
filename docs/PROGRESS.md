@@ -1060,3 +1060,10 @@ its "Recent changes".
   drivers. **Classes in the lap times** in the menu and Settings (on by default). The Settings window takes
   no typing (an overlay without focus), so other tags go in the settings file. Tests; drawn off screen. Not
   yet seen in a race with class tags.
+- 2026-11-11: In a multi-class race, a driver without a class tag takes the class of their car, asked for by
+  the user: each car's name is read once per car (`TS.Vehicle.m_vehicleModel.m_properties.name`, found in a
+  race against AI the same day: 'Ligier JS320 P3 v2'; every car has a model object of its own, so the name
+  is what tells cars apart). `car_classes` gives an untagged driver (or one with a tag that is no class) the
+  class most tagged drivers in the same car have in this race, the first seen on a tie; the tag always goes
+  first; a car no tagged driver drives stays Other; no tags, no classes. No list of TSU's cars needed. Tests;
+  read through the real reader in the user's race (20 cars, the names and the tag; 13 ms a race read).
