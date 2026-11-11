@@ -9,14 +9,15 @@ none is left.
    Mac" below), though it looks and works as before. To tell whether it helps at all: in one race, with the
    Metal HUD, a minute each of TurboHUD closed, every section shown, the same with
    `TURBOHUD_ONE_WINDOW=0 sh run_turbohud.sh`, one section shown in each of the two, and closed again.
-2. Build 2026.11.10 for the tester (`releases/`), with `TurboHUD-test-instructions.md` for it: the Rust
+2. Build 2026.11.11 for the tester (`releases/`; it replaces 2026.11.10), with
+   `TurboHUD-test-instructions.md` for it: a race joined online (point 2b), the new delta bar, the Rust
    reader (the Python one as fallback, `TURBOHUD_PY_READER=1`), and five FPS measurements in one race
    against AI: closed; one window with every section, then only the local time; a window each
    (`TURBOHUD_ONE_WINDOW=0`) with every section, then only the local time. Put their results under
    "Tester's Mac", with the quick look, the log (`(the Rust reader)`, the `race reads` median), whether a
    reader was left and whether TSU froze. Results of 2026.11.09.2, if they come, go there too.
 2b. The tester's TSU writes no race log (2026-11-11), so TurboHUD never searched for races he joined online
-   and showed only the clock; fixed the same day (`RESUME.md`). Next tester build: check a race joined as a
+   and showed only the clock; fixed the same day (`RESUME.md`). Build 2026.11.11 (point 2): check a race joined as a
    client (a session the user hosts, and the event server) shows the HUD, and that the log has
    `TSU's log: not known (searching anyway)` then `search: race found`. He ran TurboHUD from the disk image
    that time: install it into Applications first.

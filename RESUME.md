@@ -75,6 +75,12 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-11: Build 2026.11.11 for the tester (`releases/`, macOS 27, built with `--any-macos`, smoke test
+  passed: the Rust reader read the user's race), with the fix for online races where TSU writes no race log
+  and the new delta bar. `TurboHUD-test-instructions.md` for it: install into Applications (he ran the last
+  build from the disk image), the same five FPS measurements, a quick look with the delta bar, a race joined
+  online (the fix), the log (now with `TSU's log` and where TurboHUD runs from), and the quit check. It
+  replaces 2026.11.10 in `releases/`.
 - 2026-11-11: Online races on Macs whose TSU writes no race log, found with the tester in a session the user
   hosted: the tester saw only the clock in every race joined as a client (the user's sessions and the event
   server), in every build since 2026.11.09, and the log showed `TSU: waiting for race (m_activeServer is null)`
