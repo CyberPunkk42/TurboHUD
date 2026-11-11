@@ -75,6 +75,13 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-11: A track is learnt from three clean laps, asked for by the user: a shortcut on the tarmac or kerbs
+  is a clean lap, so a first lap through one was learnt. The first clean lap still shows at once; once
+  `LEARN_LAPS` (3) are in, laps under `SHORT_LAP` (98.5 %) of the longest are left out (a shortcut saves
+  distance), and of the rest the one whose line runs nearest the others is kept (`choose_lap`, `lap_gap`, at
+  about 100 points a lap) and saved with `laps`. One lap a car while there are three or more cars, so one
+  driver who cuts every lap is outvoted; alone or with one other car, more laps of the same car count. A track
+  saved from a single lap still shows and is learnt again this way. Tests. Not yet seen in a race.
 - 2026-11-11: The yellow flag says **wrong way** for a car driving against the race, asked for by the user (a
   "ghost driver"): moving faster than 8 units a second with at least half its speed against the way the race
   goes there, for 1.5 s (`YELLOW_WRONG_WAY`, `_FOR`). Its velocity counts, not where it points, so a car that

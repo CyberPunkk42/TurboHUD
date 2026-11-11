@@ -108,9 +108,8 @@ The user saw it work in a race (2026-11-03), and the track is now learnt from th
 (checked live in an AI event; the user confirmed it works). Still to check: the track's shape (tight
 hairpins, tracks that cross themselves, point-to-point tracks), the road's width, the
 dots changing over at an overtake, backmarkers, and as an online client. A map learnt wrong can be relearnt
-(Relearn map, 2026-11-11; still to try in a race). Next, asked for by the user: learn from several clean laps
-and keep the one that matches the others best, so a shortcut on tarmac (not caught as off the track) is not
-learnt. Possible
+(Relearn map, 2026-11-11; still to try in a race), and a track is chosen from three clean laps (2026-11-11):
+still to see on a track with a shortcut on tarmac, and whether SHORT_LAP (0.985) leaves out a good lap. Possible
 later: an arrow for the direction of travel, the pit lane, a hotlap alone (the map
 then needs one whole lap of your own first).
 

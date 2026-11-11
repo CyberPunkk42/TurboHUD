@@ -170,8 +170,11 @@ starting TurboHUD again.
   grey dots. It is square; resize it at its corner in move mode. The track's shape
   is learnt from where the cars drive: on a track new to TurboHUD the map grows during
   the first lap and is complete once any car has driven a whole clean lap (not through the
-  grass with all four wheels, nor standing or going backwards); after that it is saved and
-  shows at once. A map saved by an older TurboHUD is learnt again from the next clean lap.
+  grass with all four wheels, nor standing or going backwards). TurboHUD then compares three
+  clean laps, from different cars where there are enough, and keeps the one that runs nearest
+  the others, leaving out laps clearly shorter than the rest: so a shortcut on the tarmac is
+  not learnt unless most laps take it. That lap is saved and shows at once next time. A map
+  saved by an older TurboHUD shows, and is learnt again this way.
   If a map was learnt wrong, **Relearn this track's map** (TurboHUD icon's menu) or
   **Relearn map** (move-mode panel), during a race on that track, forgets it, the saved
   one too: the map then grows again and is learnt from the next whole clean lap.
