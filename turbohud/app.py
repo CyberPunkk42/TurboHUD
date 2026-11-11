@@ -311,7 +311,9 @@ def run(args, folder):
         radar = Radar()
         delta_bar = DeltaBar()
         yellow_flags = YellowFlags()
-        shortcuts = ShortcutPenalties()
+        shortcut_penalties = (
+            ShortcutPenalties()
+        )  # not `shortcuts`: that name holds whether the hotkeys are there
         track_map = TrackMap(settings.map_others, folder)  # learnt tracks beside the settings
 
         def contents():
@@ -331,7 +333,7 @@ def run(args, folder):
                 settings.sector_bars,
                 yellow_flags if settings.yellow_flags else None,
                 settings.class_tags if settings.classes else (),
-                shortcuts,
+                shortcut_penalties,
             )
             if not settings.yellow_flags:
                 yellow_flags.reset()  # turned on again, it starts afresh
