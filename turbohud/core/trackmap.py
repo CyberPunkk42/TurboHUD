@@ -87,6 +87,31 @@ class TrackMapView:
     outline: TrackOutline
     dots: tuple  # MapDot, drawn in this order (the local player last, on top)
     road: str = ''  # the road's colour for a moment after a fast lap ('#rrggbb'); '' is the usual
+    yellow: tuple = ()  # stretches of the road ((x, z) points each) in a sector under a yellow flag
+
+
+def _to_segment(point, segment):
+    """How far `point` is from the line `segment` ((x, z), (x, z))."""
+    (x1, z1), (x2, z2) = segment
+    dx, dz = x2 - x1, z2 - z1
+    length = dx * dx + dz * dz
+    share = 0.0 if length == 0 else min(max(((point[0] - x1) * dx + (point[1] - z1) * dz) / length, 0.0), 1.0)
+    return math.dist(point, (x1 + share * dx, z1 + share * dz))
+
+
+def gate_marks(points, gates):
+    """For each checkpoint line in `gates`, the index of the point of the learnt line
+    (`points`) nearest to it: where the road crosses it. A line, unlike its middle, crosses
+    the road even where it reaches far to one side."""
+    return tuple(min(range(len(points)), key=lambda i, g=gate: _to_segment(points[i], g)) for gate in gates)
+
+
+def stretch(points, start, end):
+    """The points of a closed line from index `start` to `end`, going forwards (round the
+    end of the list where need be); the whole line when they meet."""
+    count = len(points)
+    steps = (end - start) % count or count
+    return tuple(points[(start + step) % count] for step in range(steps + 1))
 
 
 def _middle(gate):
@@ -491,10 +516,28 @@ class TrackMap:
             self._save(gates, best, start, len(self._laps))
             self._laps = []
 
-    def update(self, state, order, yellow=frozenset()):
+    def yellow_stretches(self, gates, sectors):
+        """The stretches of the learnt road for `sectors`, each (first checkpoint, the
+        next sector's first checkpoint) of a lap: the road between where it crosses those
+        lines (asked for by the user on 2026-11-11: a sector under a yellow flag turns yellow on
+        the map). () while no whole lap is learnt."""
+        if not sectors or self.learned is None or not self.learned.closed or not gates:
+            return ()
+        points = self.learned.points
+        key = (id(self.learned), gates)
+        if getattr(self, '_marks_key', None) != key:
+            self._marks_key, self._marks = key, gate_marks(points, gates)
+        found = []
+        for first, after in sorted(sectors):
+            if 0 <= first < len(gates) and 0 <= after % len(gates) < len(gates):
+                found.append(stretch(points, self._marks[first], self._marks[after % len(gates)]))
+        return tuple(found)
+
+    def update(self, state, order, yellow=frozenset(), yellow_sectors=()):
         """The view for the race `state` (LapState) with its players in race `order`,
         or None without a track, or without a local player unless spectating. The cars
-        named in `yellow` are ringed, and shown even where other cars are not."""
+        named in `yellow` are ringed, and shown even where other cars are not; the sectors
+        in `yellow_sectors` (see yellow_stretches) turn yellow on the road."""
         order = list(order)
         me = next((p for p in order if p.local), None)
         if me is None and not state.spectating:
@@ -507,7 +550,9 @@ class TrackMap:
             dots = [MapDot(p.position, 'car', p.in_pit) for p in order[1:] if p.position is not None]
             if order and order[0].position is not None:
                 dots.append(MapDot(order[0].position, 'leader', order[0].in_pit))
-            return TrackMapView(outline, tuple(dots))
+            return TrackMapView(
+                outline, tuple(dots), yellow=self.yellow_stretches(state.gates, yellow_sectors)
+            )
         index = order.index(me)
         leader = order[0] if index > 0 else None
         ahead = order[index - 1] if index > 0 else None
@@ -536,4 +581,4 @@ class TrackMap:
                 dots.append(MapDot(player.position, role, player.in_pit, ahead_too, flagged))
         if me.position is not None:
             dots.append(MapDot(me.position, 'me', me.in_pit))
-        return TrackMapView(outline, tuple(dots))
+        return TrackMapView(outline, tuple(dots), yellow=self.yellow_stretches(state.gates, yellow_sectors))

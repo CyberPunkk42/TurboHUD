@@ -1088,3 +1088,9 @@ its "Recent changes".
   when a package of requirements.txt is not installed (`missing_requirements`): the build environment lacked
   texture2ddecoder, so the app would have had no game flags; without it they stay emoji. The disk image: 32.5 MB
   from 44.7 MB. Tests; built (not started) and its contents checked.
+- 2026-11-11: A sector under a yellow flag turns yellow on the track map, asked for by the user: each
+  sector with an incident (any kind) has its stretch of the learnt road drawn yellow over the usual road, all
+  round the track (`yellow_sector_spans` in race.py, `TrackMap.yellow_stretches`). The sectors are the
+  track's sector lines as for the sector bars; where the road crosses each checkpoint line is worked out once
+  per track (`gate_marks`: nearest to the line, not its middle, which can lie far off the road). Only once a
+  whole lap is learnt; off with Yellow flags. Tests; drawn off screen. Not yet seen in a race.

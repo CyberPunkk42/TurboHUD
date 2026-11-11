@@ -1896,6 +1896,7 @@ def race_sections(
                 state,
                 order if order is not None else ranked(state.players),
                 yellow=frozenset(incident.name for incident in incidents),
+                yellow_sectors=yellow_sector_spans(incidents, state),
             )
             if shown is not None:
                 flash = lap_flash(state)
@@ -2792,6 +2793,20 @@ class YellowFlags:
             return False
         (dx, dz), car['hint'] = found
         return vx * dx + vz * dz < -YELLOW_WRONG_WAY * moving
+
+
+def yellow_sector_spans(incidents, state):
+    """The sectors with an incident, each as (its first checkpoint, the next sector's first
+    checkpoint), for the track map's yellow road (core.trackmap.TrackMap.yellow_stretches)."""
+    if not incidents or not state.gates:
+        return frozenset()
+    starts = sector_starts(len(state.gates), state.sector_lines)
+    spans = set()
+    for incident in incidents:
+        if incident.sector is not None and 0 <= incident.sector < len(starts):
+            following = starts[(incident.sector + 1) % len(starts)]
+            spans.add((starts[incident.sector], following))
+    return frozenset(spans)
 
 
 def yellow_rows(incidents, state):

@@ -2159,6 +2159,24 @@ class YellowFlagTests(unittest.TestCase):
             found = flags.update(self.state(seconds, self.car(**reversing)), lambda position, hint: None)
         self.assertEqual(self.kinds(found), [('Other', 'spun')])  # no learnt track: not known
 
+    def test_the_sectors_with_incidents_for_the_map(self):
+        state = self.state(10.0)
+        starts = race.sector_starts(len(state.gates), state.sector_lines)
+        spans = race.yellow_sector_spans(
+            (
+                race.Incident('A', 'stopped', 0),
+                race.Incident('B', 'slow', 0),
+                race.Incident('C', 'slow', None),
+            ),
+            state,
+        )
+        self.assertEqual(spans, {(starts[0], starts[1 % len(starts)])})
+        last = len(starts) - 1
+        self.assertEqual(
+            race.yellow_sector_spans((race.Incident('A', 'slow', last),), state), {(starts[last], 0)}
+        )
+        self.assertEqual(race.yellow_sector_spans((), state), frozenset())
+
     def test_a_respawn_counts_for_three_seconds(self):
         flags = race.YellowFlags()
         self.drive(flags, 10.0, self.car(spawns=0))
