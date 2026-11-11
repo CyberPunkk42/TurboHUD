@@ -659,6 +659,14 @@ class ReaderFilesTests(unittest.TestCase):
             )
         self.assertEqual(result.returncode, 0, result.stderr)
 
+    def test_the_windows_app_ships_the_rust_reader_but_no_python_one(self):
+        with mock.patch.object(build_app, 'RUST_READER', Path(__file__)):
+            windows = build_app.pyinstaller_args('win32')
+        self.assertIn(f'{Path(__file__)}:reader', windows)
+        self.assertFalse([arg for arg in windows if 'win-python' in arg])
+        with mock.patch.object(build_app, 'RUST_READER', Path('/nonexistent/reader.exe')):
+            self.assertFalse([arg for arg in build_app.pyinstaller_args('win32') if ':reader' in arg])
+
     def test_only_the_mac_app_ships_them(self):
         mac = build_app.pyinstaller_args('darwin')
         self.assertIn(f'{build_app.WIN_PYTHON}:win-python', mac)
@@ -674,6 +682,95 @@ class ReaderFilesTests(unittest.TestCase):
         self.assertEqual(python.parent.name, 'win-python')
         self.assertIn('turbohud/tsu/bottle_reader.py', build_app.READER_FILES)
         self.assertEqual(reader, Path('/b/turbohud/tsu/bottle_reader.py'))
+
+
+class ThreadedPipeTests(unittest.TestCase):
+    """Windows cannot select on a pipe: there a thread hands on the reader's answers. Run
+    here on real pipes, with the thread asked for."""
+
+    def pipe(self):
+        source, writer = os.pipe()
+        self.addCleanup(os.close, writer)
+        pipe = bt.Pipe(io.BytesIO(), source, lambda: os.close(source), threaded=True)
+        return pipe, writer
+
+    def test_answers_whole_in_pieces_and_one_after_another(self):
+        pipe, writer = self.pipe()
+        message = br.pack({'n': 1}, b'x' * 300) + br.pack({'n': 2}, b'b')
+        os.write(writer, message[:5])
+        thread = threading.Timer(0.02, lambda: os.write(writer, message[5:]))
+        thread.start()
+        self.addCleanup(thread.join)
+        with mock.patch.object(bt.select, 'select', side_effect=AssertionError('select on Windows')):
+            self.assertEqual(pipe.receive(1.0), ({'n': 1}, b'x' * 300))
+            self.assertEqual(pipe.receive(1.0), ({'n': 2}, b'b'))
+
+    def test_silent_and_ended_readers(self):
+        pipe, writer = self.pipe()
+        with self.assertRaises(TimeoutError):
+            pipe.receive(0.05)
+        source, end = os.pipe()
+        ended = bt.Pipe(io.BytesIO(), source, threaded=True)
+        os.close(end)
+        with self.assertRaises(ConnectionError):
+            ended.receive(1.0)
+        os.close(source)
+
+    def test_on_windows_by_itself(self):
+        source, writer = os.pipe()
+        with mock.patch.object(bt.sys, 'platform', 'win32'):
+            pipe = bt.Pipe(io.BytesIO(), source, lambda: os.close(source))
+        self.assertIsNotNone(pipe.chunks)
+        os.close(writer)
+        with self.assertRaises(ConnectionError):
+            pipe.receive(1.0)
+        pipe.close()
+
+
+class LocalReaderTests(ReaderCase):
+    """Windows: the Rust reader started straight beside TSU."""
+
+    def test_reads_through_the_reader_once_it_is_ready(self):
+        starts = []
+
+        def start(_where):
+            starts.append(1)
+            return self.reader()
+
+        local = bt.LocalReader(environ={}, start=start, clock=lambda: 0.0, reader='/r/turbohud-reader.exe')
+        with self.assertLogs('turbohud.tsu.bottle', 'INFO') as logs:
+            pipe = local._open()
+        self.assertIs(local._open(), pipe)  # kept
+        self.assertEqual(starts, [1])
+        self.assertIn('reading TSU through the Rust reader', '\n'.join(logs.output))
+        self.assertEqual(local.reader_kind, 'Rust')
+        local.close()
+        self.assertIsNone(local.pipe)
+
+    def test_while_tsu_does_not_run_it_tries_again_after_a_while(self):
+        now = [0.0]
+        starts = []
+
+        def start(_where):
+            starts.append(now[0])
+            return self.reader(greeting={'ok': False, 'error': 'TSU.exe is not running in this bottle'})
+
+        local = bt.LocalReader(environ={}, start=start, clock=lambda: now[0])
+        with self.assertRaisesRegex(OSError, '^TSU is not running$'):
+            local.connect()
+        now[0] = bt.LOCAL_RETRY / 2
+        with self.assertRaisesRegex(OSError, 'not running'):
+            local.connect()
+        self.assertEqual(starts, [0.0])  # not started again so soon
+        now[0] = bt.LOCAL_RETRY
+        with self.assertRaises(OSError):
+            local.connect()
+        self.assertEqual(starts, [0.0, bt.LOCAL_RETRY])
+
+    def test_it_runs_the_reader_itself_with_no_window(self):
+        with mock.patch.object(bt, 'spawn_reader', return_value='pipe') as spawn:
+            self.assertEqual(bt.LocalReader(environ={'A': '1'}, reader='/r/x.exe')._start(), 'pipe')
+        spawn.assert_called_once_with([str(Path('/r/x.exe'))], {'A': '1'})
 
 
 class StartLiveRaceTests(unittest.TestCase):
@@ -693,8 +790,20 @@ class StartLiveRaceTests(unittest.TestCase):
         start.assert_called_once()
         self.assertIsNone(live._close)
 
-    def test_windows_keeps_the_clock_for_now(self):
-        self.assertIsNone(self.started('win32')[0])
+    def test_windows_reads_through_the_rust_reader_where_it_is_there(self):
+        with mock.patch.object(bt, 'rust_reader', return_value=Path(__file__)):
+            live, start = self.started('win32')
+        start.assert_called_once()
+        self.assertIsInstance(live._connect.__self__, bt.LocalReader)
+        self.assertEqual(live._close.__self__, live._connect.__self__)
+        with mock.patch.object(bt, 'rust_reader', return_value=Path('/nonexistent/reader.exe')):
+            live, _start = self.started('win32')
+        from turbohud.tsu import winmemory
+
+        self.assertIs(live._connect, winmemory.connect)  # missing: read in Python, from TurboHUD itself
+
+    def test_elsewhere_the_clock_stays(self):
+        self.assertIsNone(self.started('sunos5')[0])
 
     def test_stop_ends_what_stays_open_between_connects(self):
         closed = []

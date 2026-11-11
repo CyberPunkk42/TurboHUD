@@ -1072,3 +1072,11 @@ its "Recent changes".
   TurboHUD had read every tag once, before the change, and kept it for good (a fresh reader saw LMP and
   GT3). A car's object may also come back as another car in a later race. Kept 5 s, a race read still
   seldom asks the game for them. Test.
+- 2026-11-11: Live race data on Windows, asked for by the user, with the Rust reader: on Windows the reader
+  (`reader/`, already a Windows program that finds TSU.exe and knows when it runs under Wine) is started
+  straight beside TSU by `LocalReader` (`turbohud/tsu/bottle.py`), no CrossOver or bottle, with no console
+  window; while TSU does not run it is tried again every 2 s. Windows cannot wait on a pipe with select, so
+  there a thread takes the reader's answers (`Pipe(threaded=...)`); starting a reader moved to
+  `spawn_reader`. Where the reader is missing, TurboHUD reads TSU itself in Python (`winmemory.connect`). The
+  Windows build ships the reader where it is built. Tests; the threaded way checked against the user's race
+  on the Mac through the bottle (20 players, 9 ms a read). Not yet run on Windows.

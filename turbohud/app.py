@@ -146,8 +146,9 @@ def tray_text(status, warning=None):
 
 def start_live_race(platform=sys.platform):
     """Start reading TSU's race: on Linux through the memory probe (TSU started from Steam
-    with the launch option), on the Mac through a reader in TSU's CrossOver bottle. None
-    elsewhere, where the HUD keeps its session clock."""
+    with the launch option), on the Mac through a reader in TSU's CrossOver bottle, on
+    Windows through the Rust reader started beside TSU (or, where it is missing, read from
+    TurboHUD itself in Python). None elsewhere, where the HUD keeps its session clock."""
     if platform == 'darwin':
         from turbohud.tsu.bottle import Bottle
         from turbohud.tsu.client import LiveRace
@@ -160,6 +161,19 @@ def start_live_race(platform=sys.platform):
 
         live = LiveRace()
         way = 'the memory probe'
+    elif platform == 'win32':
+        from turbohud.tsu.bottle import LocalReader, rust_reader
+        from turbohud.tsu.client import LiveRace
+
+        if rust_reader().exists():
+            reader = LocalReader()
+            live = LiveRace(connect=reader.connect, close=reader.close)
+            way = 'the Rust reader'
+        else:
+            from turbohud.tsu import winmemory
+
+            live = LiveRace(connect=winmemory.connect)
+            way = 'TurboHUD itself (the Rust reader is missing: Python)'
     else:
         return None
     live.start()
