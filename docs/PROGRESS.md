@@ -1161,3 +1161,7 @@ its "Recent changes".
   Penalties, for 5 s from when it was last seen (`JUMP_START_SHOWN`), and as an orange JUMP in the lap times
   for any driver TSU flags. A shortcut countdown goes first, though none comes at a start. Tests; the per-frame
   code run against the user's live race (the flag read for 20 cars, no error). Not yet seen with a false start.
+- 2026-11-11: Build 2026.11.11.6 for the tester (`releases/`, macOS 27, `--any-macos`, smoke test passed with
+  TurboHUD closed: the Rust reader read the user's race, no error; 32.4 MB), as 2026.11.11.5 with JUMP START. The
+  test sheet names it, the box is Penalties in move mode, and Part 4 asks for a false start. The 2026.11.11.4
+  and .5 images are still in `releases/`, to be removed by hand.

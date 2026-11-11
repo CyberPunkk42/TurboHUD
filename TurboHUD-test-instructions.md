@@ -1,13 +1,13 @@
 # TurboHUD: test for the Mac, step by step
 
-Nov 11, 2026 · build 2026.11.11.5 · about 45 minutes
+Nov 11, 2026 · build 2026.11.11.6 · about 45 minutes
 
 Thank you for testing again. This build has everything from 2026.11.11.4 (the fixes for races joined online, yellow flags, the gliding delta bar, the tidier panel), and much more:
 
 - **The flags are TSU's own**: the player list and lap times show the same flag pictures as the game, all the same size, instead of the Mac's emoji. TurboHUD reads them from your copy of TSU when it starts (only reading).
 - **Yellow flags, more of them**: a car going the **wrong way** shows as such; the yellow box keeps the **same size** whatever it lists, with **YELLOW - Sector N** in the middle; and the sector with the incident turns **yellow on the track map**.
 - **Hazard ahead**: when a car stopped on the track, or one going the wrong way, is a few seconds ahead of you, the yellow box says **CAR STOPPED AHEAD** or **WRONG WAY AHEAD**.
-- **Shortcut penalty**: on tracks with shortcuts TSU slows you for, an orange box says **SHORTCUT** with the seconds left, and the lap times show an orange **CUT** for any driver being slowed.
+- **Shortcut penalty**: on tracks with shortcuts TSU slows you for, an orange box says **SHORTCUT** with the seconds left, and the lap times show an orange **CUT** for any driver being slowed. A false start shows **JUMP START** in the same box for 5 seconds.
 - **Classes**: in a race where drivers use clan tags such as **[GT3]** and **[LMP]**, the lap times are grouped by class, each under a line with its name.
 - **The track map** is learnt from three clean laps (a lap through a shortcut is left out), and the TurboHUD icon's menu has **Relearn this track's map** for a map learnt wrong.
 - The app is smaller: 32 MB instead of 45.
@@ -24,7 +24,7 @@ TurboHUD only reads what the game shows. It changes nothing in TSU or in CrossOv
 
 You need:
 
-- [ ] The file `TurboHUD-2026.11.11.5-macos-arm64.dmg`
+- [ ] The file `TurboHUD-2026.11.11.6-macos-arm64.dmg`
 - [ ] TSU in CrossOver, as last time
 - [ ] The same way of reading TSU's FPS as last time
 - [ ] The Terminal app (in **Applications > Utilities**)
@@ -45,7 +45,7 @@ For fair FPS numbers: keep the Mac on its **power adapter**, with **Low Power Mo
 In our session TurboHUD ran straight from the disk image. Please install it, as below.
 
 1. If TurboHUD is running, quit it: press **Control + Shift + Q**.
-2. Double-click `TurboHUD-2026.11.11.5-macos-arm64.dmg`. A window opens.
+2. Double-click `TurboHUD-2026.11.11.6-macos-arm64.dmg`. A window opens.
 3. Drag **TurboHUD** onto **Applications**. If asked, choose **Replace**.
 4. Close the window. In Finder, click the eject button next to **TurboHUD** in the sidebar. **Always eject it**: TurboHUD must start from Applications, never from the disk image.
 5. **Don't open TurboHUD yet.** The first measurement is without it.
@@ -131,7 +131,8 @@ Always close move mode (**Control + Shift + L**) before you drive.
 5. **Yellow flag**: when an AI car ahead of you goes off, spins or stops, a yellow box with **YELLOW - Sector N** and its name should show, and the track map should ring it in yellow and turn its sector yellow. It goes about 3 seconds after the car is back up to speed. The box should keep its size the whole time.
 6. **Flags**: look at the player list and the lap times. The flags should look like TSU's own, all the same size.
 7. If a car stops on the track just ahead of you, the yellow box should say **CAR STOPPED AHEAD**.
-8. If your track has shortcuts that TSU slows you for: take one. An orange **SHORTCUT** box should count down, and the lap times should show **CUT** next to you. (First place the box: in move mode, tick **Shortcut penalty** under RACE and drag it where you like.)
+8. If your track has shortcuts that TSU slows you for: take one. An orange **SHORTCUT** box should count down, and the lap times should show **CUT** next to you. (First place the box: in move mode, tick **Penalties** under RACE and drag it where you like.)
+9. In one race against AI, move off a moment before the start (a false start). The orange box should say **JUMP START** for about 5 seconds.
 
 **✏️ Write down:** Panel buttons readable? None and Undo worked? ______
 
@@ -141,7 +142,7 @@ Always close move mode (**Control + Shift + L**) before you drive.
 
 **✏️ Write down:** Flags like TSU's, all the same size? ______
 
-**✏️ Write down:** CAR STOPPED AHEAD or SHORTCUT seen? Did they look right? ______
+**✏️ Write down:** CAR STOPPED AHEAD, SHORTCUT or JUMP START seen? Did they look right? ______
 
 ---
 
@@ -241,7 +242,7 @@ If TSU freezes: quit it with **Stop** in Steam, as last time.
 | | The delta bar (round, green or red, readable, smooth)? | |
 | | Yellow flag offline: shows when it should? Sector yellow on the map? | |
 | | Flags like TSU's, all the same size? | |
-| | CAR STOPPED AHEAD / SHORTCUT seen and right? | |
+| | CAR STOPPED AHEAD / SHORTCUT / JUMP START seen and right? | |
 | | Online race 1: did the HUD show? After how many seconds? | |
 | | Online races 2, 3 ...: after how many seconds? | |
 | | Online, joined during a race: did it show? | |

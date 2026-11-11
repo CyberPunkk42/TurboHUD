@@ -25,7 +25,7 @@ Open from 2026-11-11 (the user stopped there; all merged):
    Mac" below), though it looks and works as before. To tell whether it helps at all: in one race, with the
    Metal HUD, a minute each of TurboHUD closed, every section shown, the same with
    `TURBOHUD_ONE_WINDOW=0 sh run_turbohud.sh`, one section shown in each of the two, and closed again.
-2. Build 2026.11.11.5 for the tester (`releases/`; it replaces 2026.11.11.4: TSU's own flags, wrong way, hazard ahead, the
+2. Build 2026.11.11.6 for the tester (`releases/`; it replaces 2026.11.11.4 and .5, with JUMP START added: TSU's own flags, wrong way, hazard ahead, the
    yellow sector on the map, the steady yellow box, flags stacked, classes, the shortcut penalty, three-lap track
    learning and Relearn, no Windows Python; Parts 4 and 6 of the sheet look at them), with
    `TurboHUD-test-instructions.md` for it: a race joined online (point 2b), the new delta bar, the Rust
