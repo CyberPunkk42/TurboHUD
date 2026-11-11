@@ -1067,3 +1067,8 @@ its "Recent changes".
   class most tagged drivers in the same car have in this race, the first seen on a tie; the tag always goes
   first; a car no tagged driver drives stays Other; no tags, no classes. No list of TSU's cars needed. Tests;
   read through the real reader in the user's race (20 cars, the names and the tag; 13 ms a race read).
+- 2026-11-11: Clan tags and car names are read again every 5 s (`LABEL_REFRESH`), reported by the user: with
+  the AI's clan tag forced and their own changed in a race against AI, the lap times did not split, as
+  TurboHUD had read every tag once, before the change, and kept it for good (a fresh reader saw LMP and
+  GT3). A car's object may also come back as another car in a later race. Kept 5 s, a race read still
+  seldom asks the game for them. Test.

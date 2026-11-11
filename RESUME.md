@@ -75,6 +75,11 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-11: Clan tags and car names are read again every 5 s (`LABEL_REFRESH`), reported by the user: with
+  the AI's clan tag forced and their own changed in a race against AI, the lap times did not split, as
+  TurboHUD had read every tag once, before the change, and kept it for good (a fresh reader saw LMP and
+  GT3). A car's object may also come back as another car in a later race. Kept 5 s, a race read still
+  seldom asks the game for them. Test.
 - 2026-11-11: In a multi-class race, a driver without a class tag takes the class of their car, asked for by
   the user: each car's name is read once per car (`TS.Vehicle.m_vehicleModel.m_properties.name`, found in a
   race against AI the same day: 'Ligier JS320 P3 v2'; every car has a model object of its own, so the name
