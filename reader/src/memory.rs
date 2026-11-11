@@ -12,6 +12,12 @@ pub const MERGE_GAP: u64 = 48; // pages: wanted pages at most this far apart (19
 pub const SPAN_MOST: u64 = 512; // pages a merged read covers at most (2 MiB)
 pub const BREAKS_MOST: usize = 4096; // gaps kept as not readable across; forgotten all at once beyond
 pub const WINE_SEARCH_SHARE: f64 = 0.5; // in Wine, the share of the time a search may read
+// Outside Wine (TSU's own Windows build) a search reads this many pieces in one step, with
+// SEARCH_THREADS threads (win32.rs): measured on the user's PC on 2026-11-12, all of TSU's
+// 4.3 GB took 19.9 s with one thread, 10.4 s with 2, 5.7 s with 4 and 3.4 s with 8, as
+// Windows copies another program's memory slowly but in parallel. Four leave TSU the rest.
+pub const SEARCH_BATCH: usize = 16;
+pub const SEARCH_THREADS: usize = 4;
 
 pub const MEM_COMMIT: u32 = 0x1000;
 pub const MEM_IMAGE: u32 = 0x100_0000;
@@ -52,6 +58,12 @@ pub trait Process {
     fn read(&self, address: u64, size: usize) -> io::Result<Vec<u8>>;
     fn regions(&self) -> Vec<Region>;
     fn alive(&self) -> bool;
+
+    /// Several reads, answered in their order: one after another here; a process may do
+    /// them at once (WindowsProcess, outside Wine).
+    fn read_many(&self, pieces: &[(u64, usize)]) -> Vec<io::Result<Vec<u8>>> {
+        pieces.iter().map(|&(address, size)| self.read(address, size)).collect()
+    }
 }
 
 /// (first, last) page numbers of the reads that cover `pages` (sorted, no repeats): pages
@@ -165,8 +177,9 @@ pub struct Search {
     index: usize,
     address: Option<u64>,
     hits: VecDeque<u64>,
-    pattern: [u8; 8],
+    value: u64,
     share: f64,
+    batch: usize, // pieces read in one step (1: one at a time)
 }
 
 pub const ALIGN: u64 = 8;
@@ -181,39 +194,81 @@ impl Search {
             }
             Some(address) => starting_at(regions, address),
         };
-        Search { regions, index: 0, address: None, hits: VecDeque::new(), pattern: value.to_le_bytes(), share }
+        Search { regions, index: 0, address: None, hits: VecDeque::new(), value, share, batch: 1 }
     }
 
-    /// The next hit, or None once all the regions are read.
+    /// The same search, reading `batch` pieces in each step (with Process::read_many):
+    /// it then reads that far ahead of the hits taken.
+    pub fn batched(mut self, batch: usize) -> Search {
+        self.batch = batch.max(1);
+        self
+    }
+
+    /// The next hit, or None once all the regions are read (one piece at a time: the tests).
+    #[cfg(test)]
     pub fn next_hit(
         &mut self,
         read: &dyn Fn(u64, usize) -> io::Result<Vec<u8>>,
+        sleep: &mut dyn FnMut(Duration),
+    ) -> Option<u64> {
+        self.next_hit_many(&|pieces| pieces.iter().map(|&(a, s)| read(a, s)).collect(), sleep)
+    }
+
+    /// next_hit, with the pieces of a step read by `read_many` (Process::read_many).
+    pub fn next_hit_many(
+        &mut self,
+        read_many: &dyn Fn(&[(u64, usize)]) -> Vec<io::Result<Vec<u8>>>,
         sleep: &mut dyn FnMut(Duration),
     ) -> Option<u64> {
         loop {
             if let Some(hit) = self.hits.pop_front() {
                 return Some(hit);
             }
-            let (start, end) = *self.regions.get(self.index)?;
+            let pieces = self.next_pieces();
+            if pieces.is_empty() {
+                return None;
+            }
+            let began = Instant::now();
+            let found = read_many(&pieces);
+            for (&(address, _size), data) in pieces.iter().zip(found) {
+                self.scan(address, &data.unwrap_or_default());
+            }
+            if self.share < 1.0 {
+                sleep(began.elapsed().mul_f64((1.0 - self.share) / self.share));
+            }
+        }
+    }
+
+    /// The next `batch` pieces to read, in order: (address, size) each, a piece reading 7
+    /// bytes past its end so that a word starting in it is whole. Empty once all are read.
+    fn next_pieces(&mut self) -> Vec<(u64, usize)> {
+        let mut pieces = Vec::with_capacity(self.batch);
+        while pieces.len() < self.batch {
+            let Some(&(start, end)) = self.regions.get(self.index) else { break };
             let address = *self.address.get_or_insert(start);
             if address >= end {
                 self.index += 1;
                 self.address = None;
                 continue;
             }
-            let size = (CHUNK + 7).min(end - address);
-            let began = Instant::now();
-            let data = read(address, size as usize).unwrap_or_default();
-            let mut offset = (ALIGN - address % ALIGN) % ALIGN;
-            while offset < CHUNK && offset as usize + 8 <= data.len() {
-                if data[offset as usize..offset as usize + 8] == self.pattern {
-                    self.hits.push_back(address + offset);
-                }
-                offset += ALIGN;
-            }
+            pieces.push((address, (CHUNK + 7).min(end - address) as usize));
             self.address = Some(address + CHUNK);
-            if self.share < 1.0 {
-                sleep(began.elapsed().mul_f64((1.0 - self.share) / self.share));
+        }
+        pieces
+    }
+
+    /// Note the hits in a piece read at `address`: each aligned word that starts in it, as
+    /// a number (the words of the next piece's first bytes, read along, are its own).
+    fn scan(&mut self, address: u64, data: &[u8]) {
+        let skip = ((ALIGN - address % ALIGN) % ALIGN) as usize;
+        let words = data.get(skip..).unwrap_or_default().chunks_exact(8);
+        for (index, word) in words.enumerate() {
+            let offset = skip + 8 * index;
+            if offset as u64 >= CHUNK {
+                break;
+            }
+            if u64::from_le_bytes(word.try_into().unwrap()) == self.value {
+                self.hits.push_back(address + offset as u64);
             }
         }
     }
@@ -421,6 +476,65 @@ pub mod tests {
         assert_eq!(starting_at(&regions, 0x2800)[0], (0x3000, 0x4000));
         assert_eq!(starting_at(&regions, 0), vec![(0x1000, 0x2000), (0x3000, 0x4000), (0x5000, 0x6000)]);
         assert_eq!(starting_at(&regions, 0x9000)[0], (0x1000, 0x2000));
+    }
+
+    #[test]
+    fn a_batched_search_finds_the_same_hits_in_the_same_order() {
+        let mut data = vec![0u8; 5 * CHUNK as usize + 4096];
+        for at in [0x10, CHUNK as usize - 8, CHUNK as usize, 3 * CHUNK as usize + 0x40, 5 * CHUNK as usize + 8] {
+            data[at..at + 8].copy_from_slice(&VALUE.to_le_bytes());
+        }
+        let memory = FakeMemory::new(0x1000_0000, data);
+        let regions = [(0x1000_0000, 0x1000_0000 + 5 * CHUNK + 4096)];
+        let one = all_hits(&memory, &regions, None);
+        for batch in [2, 3, 16] {
+            let mut search = Search::new(&regions, VALUE, 1.0, None).batched(batch);
+            let read_many = |pieces: &[(u64, usize)]| pieces.iter().map(|&(a, s)| memory.read(a, s)).collect();
+            let mut hits = Vec::new();
+            while let Some(hit) = search.next_hit_many(&read_many, &mut |_| {}) {
+                hits.push(hit);
+            }
+            assert_eq!(hits, one, "batch {batch}");
+        }
+        assert_eq!(one.len(), 5);
+    }
+
+    #[test]
+    fn a_batched_search_reads_one_step_ahead_at_most() {
+        let mut data = vec![0u8; 8 * CHUNK as usize];
+        data[0x10..0x18].copy_from_slice(&VALUE.to_le_bytes());
+        let memory = FakeMemory::new(0x1000_0000, data);
+        let mut search = Search::new(&[(0x1000_0000, 0x1000_0000 + 8 * CHUNK)], VALUE, 1.0, None).batched(3);
+        let steps = RefCell::new(Vec::new());
+        let read_many = |pieces: &[(u64, usize)]| {
+            steps.borrow_mut().push(pieces.len());
+            pieces.iter().map(|&(a, s)| memory.read(a, s)).collect()
+        };
+        assert_eq!(search.next_hit_many(&read_many, &mut |_| {}), Some(0x1000_0010));
+        assert_eq!(*steps.borrow(), vec![3]); // the first good hit: the rest is not read
+    }
+
+    #[test]
+    fn read_many_answers_in_the_pieces_order() {
+        struct Numbered;
+        impl Process for Numbered {
+            fn read(&self, address: u64, size: usize) -> io::Result<Vec<u8>> {
+                if address == 2 {
+                    return Err(io::Error::other("not readable"));
+                }
+                Ok(vec![address as u8; size])
+            }
+            fn regions(&self) -> Vec<Region> {
+                Vec::new()
+            }
+            fn alive(&self) -> bool {
+                true
+            }
+        }
+        let found = Numbered.read_many(&[(1, 2), (2, 2), (3, 1)]);
+        assert_eq!(found[0].as_ref().unwrap(), &vec![1, 1]);
+        assert!(found[1].is_err());
+        assert_eq!(found[2].as_ref().unwrap(), &vec![3]);
     }
 
     #[test]

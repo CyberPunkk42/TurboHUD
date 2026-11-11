@@ -1258,3 +1258,13 @@ its "Recent changes".
   rule. Smoke test passed with TurboHUD closed (the app started as 2026.11.12 and quit cleanly); every file in the
   zip, the packed Python modules too, checked for the privacy terms: none. Not signed: Windows SmartScreen asks once
   (More info, Run anyway).
+- 2026-11-12: A faster race search on Windows, asked for by the user (could Rust do better?): measured on the user's
+  PC, a whole search of TSU's 4.3 GB took 18.8 s through the Rust reader, and as long in Python, as the time is
+  Windows copying another program's memory (`ReadProcessMemory`), not the scan (comparing words as numbers changed
+  nothing). That copying runs in parallel: 1 thread 19.9 s, 2 10.4 s, 4 5.7 s, 8 3.4 s. So outside Wine the reader
+  reads 16 pieces in a step with 4 threads (`SEARCH_BATCH`, `SEARCH_THREADS` in `reader/src/memory.rs`;
+  `Process::read_many`, threaded in `WindowsProcess`), in the same order, stopping at the first good hit as before.
+  Seen against the user's TSU: 5.75 s a whole search, from 18.86 s, the same 42 hits. In Wine (the Mac) nothing
+  changes: one piece at a time, paced. `tools/get_rust.sh` now also sets up Rust and llvm-mingw on Windows (Git
+  Bash; llvm-mingw's Windows zip pinned by GitHub's SHA256), the same Rust 1.99.1 and target as on the Mac. Rust
+  tests (40, one reading the test's own memory with 4 threads). Not yet seen: whether TSU stutters during the 6 s.

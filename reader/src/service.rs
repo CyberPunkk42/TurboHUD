@@ -70,6 +70,7 @@ pub struct Service<'a> {
     pub metadata_file: Box<dyn Fn() -> io::Result<PathBuf> + 'a>,
     pub event_running: Box<dyn FnMut() -> Option<bool> + 'a>,
     pub share: f64,
+    pub batch: usize, // pieces a search reads in one step (memory::SEARCH_BATCH, or 1)
     pub sleep: Box<dyn FnMut(Duration) + 'a>,
     search: Option<Search>,
     breaks: HashSet<(u64, u64)>, // gaps a merged read failed across: see read_pages
@@ -95,6 +96,7 @@ impl<'a> Service<'a> {
             metadata_file,
             event_running,
             share,
+            batch: 1,
             sleep: Box::new(std::thread::sleep),
             search: None,
             breaks: HashSet::new(),
@@ -201,13 +203,13 @@ impl<'a> Service<'a> {
                     None | Some(Value::Null) => None,
                     Some(_) => Some(address(request, "first")?),
                 };
-                self.search = Some(Search::new(&regions, value, self.share, first));
+                self.search = Some(Search::new(&regions, value, self.share, first).batched(self.batch));
                 Ok((Value::Object(vec![ok()]), Vec::new()))
             }
             "search_next" => {
                 let process = self.process;
                 let hit = match self.search.as_mut() {
-                    Some(search) => search.next_hit(&|a, s| process.read(a, s), &mut *self.sleep),
+                    Some(search) => search.next_hit_many(&|pieces| process.read_many(pieces), &mut *self.sleep),
                     None => None,
                 };
                 let hit = hit.map_or(Value::Null, |h| Value::Int(h as i128));

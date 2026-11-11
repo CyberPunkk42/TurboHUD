@@ -101,9 +101,24 @@ pub fn find_process(name: &str) -> Option<u32> {
     }
 }
 
-/// Another program of this user, opened for reading only.
+/// Another program of this user, opened for reading only. `threads`: how many reads
+/// read_many does at once (1: one after another).
 pub struct WindowsProcess {
     handle: Handle,
+    pub threads: usize,
+}
+
+/// `size` bytes at `address` of the process behind `handle`.
+fn read_at(handle: Handle, address: u64, size: usize) -> io::Result<Vec<u8>> {
+    let mut buffer = vec![0u8; size];
+    let mut done = 0usize;
+    let ok =
+        unsafe { ReadProcessMemory(handle, address as *const c_void, buffer.as_mut_ptr().cast(), size, &mut done) };
+    if ok == 0 || done != size {
+        let error = io::Error::last_os_error();
+        return Err(io::Error::other(format!("cannot read {size} bytes at {address:#x} ({error})")));
+    }
+    Ok(buffer)
 }
 
 impl WindowsProcess {
@@ -113,7 +128,7 @@ impl WindowsProcess {
             let error = io::Error::last_os_error();
             return Err(io::Error::other(format!("cannot open process {process_id} for reading ({error})")));
         }
-        Ok(WindowsProcess { handle })
+        Ok(WindowsProcess { handle, threads: 1 })
     }
 
     /// When the program started, or None where not known.
@@ -146,16 +161,40 @@ impl Drop for WindowsProcess {
 
 impl Process for WindowsProcess {
     fn read(&self, address: u64, size: usize) -> io::Result<Vec<u8>> {
-        let mut buffer = vec![0u8; size];
-        let mut done = 0usize;
-        let ok = unsafe {
-            ReadProcessMemory(self.handle, address as *const c_void, buffer.as_mut_ptr().cast(), size, &mut done)
-        };
-        if ok == 0 || done != size {
-            let error = io::Error::last_os_error();
-            return Err(io::Error::other(format!("cannot read {size} bytes at {address:#x} ({error})")));
+        read_at(self.handle, address, size)
+    }
+
+    /// The reads shared out over `threads` threads, each taking every threads-th piece;
+    /// answered in the pieces' order. A process handle may be used by several threads at
+    /// once, and ReadProcessMemory only reads.
+    fn read_many(&self, pieces: &[(u64, usize)]) -> Vec<io::Result<Vec<u8>>> {
+        let threads = self.threads.min(pieces.len());
+        if threads <= 1 {
+            return pieces.iter().map(|&(address, size)| read_at(self.handle, address, size)).collect();
         }
-        Ok(buffer)
+        let handle = self.handle as usize; // a number, to hand to the threads
+        let mut found: Vec<Option<io::Result<Vec<u8>>>> = (0..pieces.len()).map(|_| None).collect();
+        std::thread::scope(|scope| {
+            let workers: Vec<_> = (0..threads)
+                .map(|first| {
+                    scope.spawn(move || {
+                        (first..pieces.len())
+                            .step_by(threads)
+                            .map(|index| {
+                                let (address, size) = pieces[index];
+                                (index, read_at(handle as Handle, address, size))
+                            })
+                            .collect::<Vec<_>>()
+                    })
+                })
+                .collect();
+            for worker in workers {
+                for (index, result) in worker.join().expect("a read thread panicked") {
+                    found[index] = Some(result);
+                }
+            }
+        });
+        found.into_iter().map(|result| result.expect("every piece read")).collect()
     }
 
     /// The readable memory. Wine names no mapped files, so a mapped file may come with an
@@ -193,5 +232,26 @@ impl Process for WindowsProcess {
     fn alive(&self) -> bool {
         let mut code = 0u32;
         unsafe { GetExitCodeProcess(self.handle, &mut code) != 0 && code == STILL_ACTIVE }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn read_many_with_threads_gives_what_one_thread_reads() {
+        // This test program reads its own memory, as the reader reads TSU's.
+        let data: Vec<u8> = (0..40 * 4096).map(|i| (i * 7 % 251) as u8).collect();
+        let base = data.as_ptr() as u64;
+        let mut process = WindowsProcess::open(std::process::id()).expect("open this process");
+        let pieces: Vec<(u64, usize)> = (0..10).map(|i| (base + i * 4096 * 4, 4096 * 4)).collect();
+        let one: Vec<_> = process.read_many(&pieces).into_iter().map(Result::unwrap).collect();
+        process.threads = 4;
+        let many: Vec<_> = process.read_many(&pieces).into_iter().map(Result::unwrap).collect();
+        assert_eq!(one, many);
+        assert_eq!(many.concat(), data);
+        let failed = process.read_many(&[(base, 16), (8, 16), (base + 16, 16)]);
+        assert!(failed[0].is_ok() && failed[1].is_err() && failed[2].is_ok());
     }
 }
