@@ -484,6 +484,9 @@ class PlayerState:
         return self.checkpoints[self.laps_completed][0]
 
 
+LABEL_REFRESH = 5.0  # seconds a clan tag or car name is kept before it is read again
+
+
 class LapReader:
     """Reads the race. What does not change during a race (field positions, the local
     player, finished laps, the track's checkpoint lines) is kept between reads, so a read
@@ -521,8 +524,8 @@ class LapReader:
         self._offsets = {}  # (role, field) -> offset
         self._player = None
         self._laps = {}  # finished lap object -> its checkpoint times
-        self._tags = {}  # profile object -> its clan tag: read once, it seldom changes
-        self._cars = {}  # vehicle object -> its car's name: read once, a car keeps its model
+        self._tags = {}  # profile object -> (its clan tag, when read): see _kept_text
+        self._cars = {}  # vehicle object -> (its car's name, when read)
         self._gates = None  # checkpoint lines, ((x1, z1), (x2, z2)) each
         self._sector_lines = ()  # the checkpoints of type Sector (TS.CheckpointType), read with the lines
         self._fuel_history = {}  # lap index -> fuel used when it started
@@ -1211,38 +1214,42 @@ class LapReader:
                 )
         return found
 
+    def _kept_text(self, kept, key, read):
+        """`read()`'s text, kept in `kept` for key and read again once LABEL_REFRESH seconds
+        have passed (seen 2026-11-11: a clan tag changed between races, and kept for good, never
+        showed; an object's address may also come back as another car in a later race)."""
+        now = self._clock()
+        entry = kept.get(key)
+        if entry is None or now - entry[1] >= LABEL_REFRESH:
+            try:
+                text = read()
+            except (NotFound, ReadError, OSError, UnicodeDecodeError):
+                text = ''
+            if len(kept) > 512:
+                kept.clear()
+            kept[key] = entry = (text, now)
+        return entry[0]
+
     def _team_tag(self, profile):
         """The profile's clan tag (TS.PlayerProfile.teamTag, found in a race on 2026-11-11:
-        'FTR' for [FTR]), read once per profile so a race read asks no more of the game."""
-        tag = self._tags.get(profile)
-        if tag is None:
-            try:
-                tag = self._string(self.il.memory.u64(profile + self._offset('profile', profile, 'teamTag')))
-            except (NotFound, OSError, UnicodeDecodeError):
-                tag = ''
-            if len(self._tags) > 512:
-                self._tags.clear()
-            self._tags[profile] = tag
-        return tag
+        'FTR' for [FTR]), kept a few seconds so a race read seldom asks the game for it."""
+        return self._kept_text(
+            self._tags,
+            profile,
+            lambda: self._string(self.il.memory.u64(profile + self._offset('profile', profile, 'teamTag'))),
+        )
 
     def _car_name(self, vehicle):
         """The car's name (TS.Vehicle.m_vehicleModel.m_properties.name, found in a race on
-        2026-11-11; each car has its own model object, so the name tells cars apart), read
-        once per vehicle."""
-        name = self._cars.get(vehicle)
-        if name is None:
-            try:
-                model = self._ref('vehicle', vehicle, 'm_vehicleModel')
-                properties = self._ref('model', model, 'm_properties')
-                name = self._string(
-                    self.il.memory.u64(properties + self._offset('carprops', properties, 'name'))
-                )
-            except (NotFound, ReadError, OSError, UnicodeDecodeError):
-                name = ''
-            if len(self._cars) > 512:
-                self._cars.clear()
-            self._cars[vehicle] = name
-        return name
+        2026-11-11; each car has its own model object, so the name tells cars apart), kept
+        a few seconds."""
+
+        def read():
+            model = self._ref('vehicle', vehicle, 'm_vehicleModel')
+            properties = self._ref('model', model, 'm_properties')
+            return self._string(self.il.memory.u64(properties + self._offset('carprops', properties, 'name')))
+
+        return self._kept_text(self._cars, vehicle, read)
 
     def _player_state(self, player):
         il, memory = self.il, self.il.memory

@@ -960,6 +960,21 @@ class CarTests(unittest.TestCase):
         self.assertEqual(me.checkpoints[0][0], 10_000)
         self.assertEqual(len(players), 1)  # the other one has no statistics: left out
 
+    def test_a_changed_clan_tag_is_read_again_after_a_few_seconds(self):
+        # Seen 2026-11-11: tags changed between races were kept from before for good.
+        now = [100.0]
+        reader = build(
+            [10_000, 944_595], laps_completed=1, clock=1_000_000, limit=0, name='A', clock_fn=lambda: now[0]
+        )
+        self.assertEqual(next(p for p in reader.read().players if p.local).tag, 'GT3')
+        profile = next(iter(reader._tags))
+        text = reader.il.memory.u64(profile + 0x48)
+        reader.game.put(text + 0x14, 'LMP'.encode('utf-16-le'))
+        now[0] += 1.0
+        self.assertEqual(next(p for p in reader.read().players if p.local).tag, 'GT3')  # kept a moment
+        now[0] += race.LABEL_REFRESH
+        self.assertEqual(next(p for p in reader.read().players if p.local).tag, 'LMP')
+
     def test_an_online_race_is_found_through_its_client_controller(self):
         reader = build(
             [10_000, 944_595], laps_completed=1, clock=1_000_000, limit=0, name='Host', online=True
