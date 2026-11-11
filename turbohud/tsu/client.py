@@ -25,6 +25,7 @@ READ_INTERVAL = 0.05  # seconds between reads in a race: the live delta updates 
 WAIT_INTERVAL = 1.0  # seconds between tries while TSU or a race is not there
 TIMEOUT = 5.0  # seconds before a silent probe counts as gone
 TIMES_EVERY = 30.0  # seconds between the log's lines on how long race reads take
+DETAIL_LOG_EVERY = 10.0  # seconds between lines saying why there is still no race, when that changes
 # What the reader says while a session sets up its race (seen in drives): the race
 # objects are not there yet. In the menu it says m_activeServer is null instead.
 STARTING_SIGNS = ('m_eventListener is null', 'm_eventState is null', 'no local player')
@@ -159,6 +160,7 @@ class LiveRace:
         self._stop = threading.Event()
         self._thread = None
         self._reader = self._conn = None
+        self._detail_logged = (None, None)  # (the detail, when) last logged while waiting
 
     def snapshot(self):
         with self._lock:
@@ -185,10 +187,19 @@ class LiveRace:
         with self._lock:
             old = self._snapshot
             self._snapshot = snapshot
+        now = self._clock()
         if old.status != snapshot.status:
             if old.status == RACING:
                 self._times.flush()  # the race's last numbers, before what follows it
             log.info('TSU: %s%s', snapshot.status, f' ({snapshot.detail})' if snapshot.detail else '')
+            self._detail_logged = (snapshot.detail, now)
+        elif snapshot.status != RACING and snapshot.detail != self._detail_logged[0]:
+            # Still no race, for another reason: worth a line, as a race found but not read
+            # (seen 2026-11-11) looked like waiting all along. Not more often than this, as a
+            # reason can come and go with each read.
+            if self._detail_logged[1] is None or now - self._detail_logged[1] >= DETAIL_LOG_EVERY:
+                log.info('TSU: still %s (%s)', snapshot.status, snapshot.detail)
+                self._detail_logged = (snapshot.detail, now)
 
     def _drop(self):
         if self._conn is not None:

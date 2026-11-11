@@ -969,6 +969,36 @@ class CarTests(unittest.TestCase):
         self.assertEqual(g.searches, searches + 1)
         self.assertTrue(any('race found' in line for line in logs.output))
 
+    def test_a_race_found_where_the_last_one_was_is_read_afresh(self):
+        # A tester's third event of a session (2026-11-11): TSU put the new race's event state
+        # at the last one's address, and the reader went on with what it kept of the last race.
+        reader = build(
+            [10_000, 944_595], laps_completed=1, clock=1_000_000, limit=0, name='Host', online=True
+        )
+        reader.read()
+        g = reader.game
+        state = g.read(g.client_controller + 0x48, 8)
+        g.q(g.client_controller + 0x48, 0)  # the race is over
+        with self.assertRaises(race.NotFound):
+            reader.read()
+        reader._player = 0xDEAD0000  # what was kept of the last race no longer holds
+        reader._next_search = 0.0
+        g.put(g.client_controller + 0x48, state)  # the next race, at the same place
+        self.assertEqual(reader.read().laps_completed, 1)
+        self.assertNotEqual(reader._player, 0xDEAD0000)  # looked up anew
+
+    def test_a_race_still_there_after_its_end_is_read_afresh_when_found_again(self):
+        # The race object stayed, but the search found it anew: nothing kept counts.
+        reader = build(
+            [10_000, 944_595], laps_completed=1, clock=1_000_000, limit=0, name='Host', online=True
+        )
+        reader.read()
+        reader._controller = None  # as after the race was lost
+        reader._player = 0xDEAD0000
+        reader._next_search = 0.0
+        self.assertEqual(reader.read().laps_completed, 1)
+        self.assertNotEqual(reader._player, 0xDEAD0000)
+
     def search_from(self, reader):
         """Give the fake a reader that can begin a search at an address; the list says
         where each search began (None: at the lowest address)."""
@@ -1955,6 +1985,30 @@ class LiveRaceTests(unittest.TestCase):
         live = self.live(lambda: (Reader(), None))
         self.assertEqual(live.step(), self.client.READ_INTERVAL)
         self.assertEqual(live.snapshot().status, race.STARTING)
+
+    def test_a_new_reason_for_no_race_is_logged_at_most_every_10_s(self):
+        reasons = ['m_activeServer is null']
+
+        class Reader:
+            def read(self):
+                raise il.NotFound(reasons[0])
+
+        live = self.live(lambda: (Reader(), None))
+        with self.assertLogs('turbohud.tsu.client', 'INFO') as logs:
+            live.step()
+            reasons[0] = 'implausible list size'  # a race found but not read
+            self.now += 1
+            live.step()  # too soon after the last line
+            self.now += 10
+            live.step()
+            live.step()  # the same reason: no line
+        self.assertEqual(
+            logs.output,
+            [
+                'INFO:turbohud.tsu.client:TSU: waiting for race (m_activeServer is null)',
+                'INFO:turbohud.tsu.client:TSU: still waiting for race (implausible list size)',
+            ],
+        )
 
     def test_in_the_menu_it_waits_for_a_race_and_keeps_the_connection(self):
         calls = []

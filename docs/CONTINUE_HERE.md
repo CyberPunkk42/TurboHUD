@@ -21,6 +21,12 @@ none is left.
    client (a session the user hosts, and the event server) shows the HUD, and that the log has
    `TSU's log: not known (searching anyway)` then `search: race found`. He ran TurboHUD from the disk image
    that time: install it into Applications first.
+   Seen with 2026.11.11 the same night, in a session the user hosted: the HUD showed, about 10 s after the
+   start (no log to go by: the timed search; each search with no race takes 8 to 10 s on his Mac, then
+   10 s wait, so up to about 20 s). The third event's race was found but not read until the event was
+   restarted: fixed the same night (`RESUME.md`). And his stutter and FPS drops were gone with 2026.11.11
+   (the user, no numbers yet). Next, offered: a quick look near the last race every 2 s while there is no
+   log to go by (up to 256 MiB around it: one race lay 209.5 MiB from the last), then a new tester build.
 3. At each quit of TSU the user notes whether it froze and whether TurboHUD ran ("Other points").
 4. When one comes up: a special event (map expected), King of the Hill or Sumo (no map), a track without
    sector lines (3 even sector bars expected), joining as a driver after spectating.
