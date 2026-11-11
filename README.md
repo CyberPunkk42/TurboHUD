@@ -165,8 +165,8 @@ starting TurboHUD again.
   it has learnt the track). It goes 3 seconds after the car is
   back on the track and up to speed; not for cars in the pits. **Yellow flags** in the
   TurboHUD icon's menu or under **Settings…** turns them off (the section and the rings). Placed in the
-  same spot as the blue flag, both stay visible when both are out: the one that came second goes right
-  next to the first (the blue flag below, the yellow box above), and neither moves while it shows. When a car
+  same spot as the blue flag, while both are out the yellow box gets a thick blue frame instead of a
+  second box, so nothing more of the track is covered; placed apart, each shows in its own spot. When a car
   stopped on the tarmac, or one going the wrong way, is up to 5 seconds ahead of you on the road, the
   box says **CAR STOPPED AHEAD** or **WRONG WAY AHEAD** instead, with that car first (once the track is
   learnt; a car parked on the grass is ignored). Only your own HUD warns: nothing changes for anyone else.
