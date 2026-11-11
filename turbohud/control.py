@@ -5,6 +5,7 @@
     run_turbohud.sh --lock       move mode off
     run_turbohud.sh --settings   open the settings window
     run_turbohud.sh --preset 1   load layout preset 1 (or 2, or 3)
+    run_turbohud.sh --screenshot a screenshot of the game with the HUD (Ctrl+Shift+S)
     run_turbohud.sh --quit       quit TurboHUD
 
 Where the system has no shortcuts for TurboHUD (Linux), these can be bound to keys in
@@ -18,7 +19,18 @@ import socket
 import sys
 from pathlib import Path
 
-COMMANDS = ('toggle', 'move', 'lock', 'settings', 'quit', 'ping', 'preset1', 'preset2', 'preset3')
+COMMANDS = (
+    'toggle',
+    'move',
+    'lock',
+    'settings',
+    'quit',
+    'ping',
+    'preset1',
+    'preset2',
+    'preset3',
+    'screenshot',
+)
 TIMEOUT = 2.0  # seconds for the running TurboHUD to answer
 
 

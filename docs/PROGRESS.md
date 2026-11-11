@@ -1088,3 +1088,17 @@ its "Recent changes".
   when a package of requirements.txt is not installed (`missing_requirements`): the build environment lacked
   texture2ddecoder, so the app would have had no game flags; without it they stay emoji. The disk image: 32.5 MB
   from 44.7 MB. Tests; built (not started) and its contents checked.
+- 2026-11-11: A screenshot shortcut, Ctrl+Shift+S, asked for by the user: Steam's F12 did nothing, as Steam's
+  overlay never shows in TSU's bottle with D3DMetal (its log: no frame from Steam's UI; screenshots last
+  worked on 20 October). Ctrl+Shift+S is free: TSU's bindings know only Ctrl as a modifier (its editor saves
+  with Ctrl+S; S is player 2's brake and Backwards in menus, without modifiers), and macOS and Windows use
+  it for nothing. `turbohud/screenshot.py` saves the screen most shown sections are on to Pictures/TurboHUD
+  (`screenshot_folder` in the settings), named by the time: macOS's `screencapture -D`, with its camera sound
+  (Screen Recording asked for once); Linux `grim`, else Qt; Windows Qt. Also in the icon's menu (Take a
+  screenshot, Open the screenshots folder) and `run_turbohud.sh --screenshot`. Tests. Not yet tried by hand.
+- 2026-11-11: Screenshots that were not saved, reported by the user: Ctrl+Shift+S started macOS's
+  `screencapture` twice, but no file came, and the tool's errors were thrown away. Most likely the Screen
+  Recording permission: now TurboHUD asks macOS first (`CGPreflightScreenCaptureAccess`; when not allowed,
+  `CGRequestScreenCaptureAccess` and a tray message saying where to allow it), and waits for the tool aside,
+  logging `screenshot saved: <path>` or `screenshot not saved (<the tool's words>)`. Started from the source,
+  the permission belongs to the terminal app. Tests.

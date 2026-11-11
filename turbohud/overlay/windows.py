@@ -6,13 +6,14 @@ from ctypes import wintypes
 
 from PySide6.QtCore import QAbstractNativeEventFilter, QCoreApplication
 
-from turbohud.overlay import HOTKEY_LOCK, HOTKEY_PRESETS, HOTKEY_QUIT
+from turbohud.overlay import HOTKEY_LOCK, HOTKEY_PRESETS, HOTKEY_QUIT, HOTKEY_SCREENSHOT
 
 MOD_CONTROL = 0x2
 MOD_SHIFT = 0x4
 MOD_NOREPEAT = 0x4000
 VK_L = 0x4C
 VK_Q = 0x51
+VK_S = 0x53
 VK_ZERO = 0x30  # the keys 1, 2 and 3 follow it
 WM_HOTKEY = 0x0312
 
@@ -73,8 +74,10 @@ class Native:
         for number, preset in HOTKEY_PRESETS.items():
             if not user32.RegisterHotKey(None, number, modifiers, VK_ZERO + preset):
                 log.warning('hotkey %d not available (error %d)', number, ctypes.get_last_error())
+        if not user32.RegisterHotKey(None, HOTKEY_SCREENSHOT, modifiers, VK_S):
+            log.warning('hotkey %d not available (error %d)', HOTKEY_SCREENSHOT, ctypes.get_last_error())
         return ok
 
     def unregister_hotkeys(self):
-        for number in (HOTKEY_LOCK, HOTKEY_QUIT, *HOTKEY_PRESETS):
+        for number in (HOTKEY_LOCK, HOTKEY_QUIT, *HOTKEY_PRESETS, HOTKEY_SCREENSHOT):
             user32.UnregisterHotKey(None, number)
