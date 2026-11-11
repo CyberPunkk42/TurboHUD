@@ -145,7 +145,8 @@ starting TurboHUD again.
   seconds behind: faint at 2 s, fully visible from 0.5 s, gone once it has passed.
 - The **yellow flag**, dark text on a yellow box, shows when another car has an incident in your sector or
   the next one, as marshals show it: all four wheels off the tarmac, slow, stopped,
-  spun (going backwards) or put back on the track. It names the sector and the
+  spun (going backwards), driving the wrong way (against the race, for 1.5 s; once the track
+  map has learnt the track) or put back on the track. It names the sector and the
   drivers, and the track map rings those cars in yellow. It goes 3 seconds after the car is
   back on the track and up to speed; not for cars in the pits. **Yellow flags** in the
   TurboHUD icon's menu or under **Settings…** turns them off (the section and the rings).

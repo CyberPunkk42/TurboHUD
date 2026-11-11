@@ -249,6 +249,20 @@ class LearntTrackTests(unittest.TestCase):
             file.unlink(missing_ok=True)
             self.assertTrue(track_map.relearn())
 
+    def test_the_way_the_race_goes_follows_the_learnt_lap(self):
+        track_map = trackmap.TrackMap()
+        self.assertIsNone(track_map.heading((RADIUS, 0.0)))  # nothing learnt
+        drive(track_map, LINES + 1.5)  # anticlockwise round the circle
+        (dx, dz), index = track_map.heading((RADIUS, 0.0))
+        self.assertAlmostEqual(dx, 0.0, delta=0.05)
+        self.assertAlmostEqual(dz, 1.0, delta=0.05)
+        (dx, dz), later = track_map.heading((0.0, RADIUS + 3), index)  # far from the hint: looked for
+        self.assertAlmostEqual(dx, -1.0, delta=0.05)
+        self.assertAlmostEqual(dz, 0.0, delta=0.05)
+        _way, near = track_map.heading((0.0, RADIUS + 3), later)
+        self.assertEqual(near, later)
+        self.assertIsNone(track_map.heading(None))
+
     def test_one_read_is_no_map(self):
         me = car('Me', 3, local=True)
         self.assertIsNone(trackmap.TrackMap().update(state([me]), [me]))

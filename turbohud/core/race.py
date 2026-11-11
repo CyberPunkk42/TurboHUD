@@ -1831,7 +1831,8 @@ def race_sections(
         )
         if opacity is not None:
             sections['blue'] = opacity
-        incidents = yellow_flags.update(state) if yellow_flags is not None else ()
+        heading = track_map.heading if track_map is not None and state.on_a_track else None
+        incidents = yellow_flags.update(state, heading) if yellow_flags is not None else ()
         rows = yellow_rows(incidents, state)
         if rows:
             sections['yellowflag'] = rows
@@ -2530,13 +2531,15 @@ YELLOW_STOPPED = 1.0  # this slow either way: stopped
 YELLOW_STOPPED_FOR = 2.0
 YELLOW_BACKWARDS = -1.0  # this fast backwards: spun, or facing the wrong way
 YELLOW_BACKWARDS_FOR = 0.3
+YELLOW_WRONG_WAY = 0.5  # moving this share of its speed or more against the race (60 degrees off or more) ...
+YELLOW_WRONG_WAY_FOR = 1.5  # ... faster than YELLOW_SLOW, this many seconds: driving the wrong way
 YELLOW_RESPAWN_FOR = 3.0  # seconds a car put back on the track counts as an incident
 YELLOW_CLEAR_AFTER = 3.0  # seconds the flag stays once the car is back on the track and up to speed
 YELLOW_ROWS = 3  # incidents listed at most
 YELLOW_COLOR = '#ffd400'  # the flag: the section's background (hud's Section.background) and the map's ring
 YELLOW_TEXT = '#111111'  # its text, dark on the yellow (asked for by the user on 2026-11-11)
 # What happened, most serious first: the one shown when several hold.
-YELLOW_KINDS = ('stopped', 'spun', 'respawned', 'off track', 'slow')
+YELLOW_KINDS = ('stopped', 'wrong way', 'spun', 'respawned', 'off track', 'slow')  # most serious first
 
 
 @dataclass(frozen=True)
@@ -2563,14 +2566,17 @@ def car_sector(player, starts):
 
 
 class YellowFlags:
-    """Follows every other car through the race to give its incidents: stopped, spun (going
-    backwards), put back on the track, all four wheels off it, or slow, each once it has held
+    """Follows every other car through the race to give its incidents: stopped, driving the
+    wrong way (against the race, asked for by the user on 2026-11-11; only once the track map
+    knows the track, see update), spun (going backwards along the car), put back on the
+    track, all four wheels off it, or slow, each once it has held
     a moment; an incident ends YELLOW_CLEAR_AFTER seconds after the car is back on the track
     and up to speed. Not for a car in the pits, one that finished, or before it has passed
     its first checkpoint (the grid). Times go by the race clock."""
 
     HOLD: typing.ClassVar[dict] = {
         'stopped': YELLOW_STOPPED_FOR,
+        'wrong way': YELLOW_WRONG_WAY_FOR,
         'spun': YELLOW_BACKWARDS_FOR,
         'off track': YELLOW_OFF_FOR,
         'slow': YELLOW_SLOW_FOR,
@@ -2583,8 +2589,11 @@ class YellowFlags:
         """Forget every car: while turned off, nothing was followed."""
         self._cars = {}
 
-    def update(self, state):
-        """The incidents now, most serious first (a tuple of Incident)."""
+    def update(self, state, heading=None):
+        """The incidents now, most serious first (a tuple of Incident). `heading(position,
+        hint)` gives the way the race goes there and a hint for the car's next look (as
+        core.trackmap.TrackMap.heading), or None where it is not known; without it no car
+        is driving the wrong way."""
         now = state.clock / UNITS_PER_SECOND
         starts = sector_starts(len(state.gates), state.sector_lines) if state.gates else ()
         found, seen = [], set()
@@ -2595,7 +2604,7 @@ class YellowFlags:
             car = self._cars.setdefault(
                 player.name, {'since': {}, 'kind': None, 'until': None, 'spawns': None}
             )
-            kind = self._kind(car, player, now)
+            kind = self._kind(car, player, now, heading)
             if kind is not None:
                 car['kind'], car['until'] = kind, now + YELLOW_CLEAR_AFTER
             elif car['until'] is not None and (
@@ -2608,7 +2617,7 @@ class YellowFlags:
             del self._cars[name]  # left the race
         return tuple(sorted(found, key=lambda incident: YELLOW_KINDS.index(incident.kind)))
 
-    def _kind(self, car, player, now):
+    def _kind(self, car, player, now, heading=None):
         """The most serious incident that holds for the car now, or None."""
         spawns = player.spawns
         if spawns is not None and car['spawns'] is not None and spawns > car['spawns']:
@@ -2620,6 +2629,7 @@ class YellowFlags:
         speed, grips = player.forward_speed, player.wheel_grips
         holds = {
             'stopped': speed is not None and abs(speed) < YELLOW_STOPPED,
+            'wrong way': self._wrong_way(car, player, heading),
             'spun': speed is not None and speed < YELLOW_BACKWARDS,
             'off track': grips is not None and all(0.0 < grip < YELLOW_OFF_GRIP for grip in grips),
             'slow': speed is not None and speed < YELLOW_SLOW,
@@ -2641,6 +2651,23 @@ class YellowFlags:
             elif kind in since and now - since[kind] >= self.HOLD[kind]:
                 return kind
         return None
+
+    @staticmethod
+    def _wrong_way(car, player, heading):
+        """Whether the car moves against the race: faster than YELLOW_SLOW, at least
+        YELLOW_WRONG_WAY of its speed against the way the race goes where it is. Its
+        velocity, not where it points: a car facing back but sliding on is not."""
+        if heading is None or player.velocity is None or player.position is None:
+            return False
+        vx, vz = player.velocity
+        moving = math.hypot(vx, vz)
+        if moving < YELLOW_SLOW:
+            return False
+        found = heading(player.position, car.get('hint'))
+        if found is None:
+            return False
+        (dx, dz), car['hint'] = found
+        return vx * dx + vz * dz < -YELLOW_WRONG_WAY * moving
 
 
 def yellow_rows(incidents, state):
