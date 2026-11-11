@@ -75,6 +75,16 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-11: Yellow flags, asked for by the user (as in F1, DTM or GT racing): a new section, Yellow flag,
+  and a yellow ring on the track map. For every other car TurboHUD now reads its speed along the car
+  (`m_forwardSpeed`), the grip of the surface under each wheel (`TS.WheelUpdater.m_surfaceMaterial*`, each
+  material's grip read once) and its respawn count (`VehicleState.spawnCount`): all there online too
+  (`experiments/README.md`). `YellowFlags` makes incidents of them once they hold: stopped (under 1 unit a
+  second for 2 s, a double yellow), spun (backwards), respawned (3 s), off the track (all four wheels on
+  grip under 0.9 for 0.5 s; kerbs are 0.93, a wheel in the air 0) and slow (under 8 for 1 s); not in the
+  pits, finished, or before the first checkpoint. Each lasts 3 s past the car being back to normal. The
+  section lists those in the player's sector and the next (`yellow_rows`), up to three, with the sector.
+  Tests; not seen in a race yet, and the thresholds are first guesses to tune from races.
 - 2026-11-11: Recorded online as a client with `experiments/tsu_race_recorder.py` (a session hosted by
   someone else, one other human driver): the client has the other car's four wheel surfaces, its speed
   and how much it slides, live. So yellow flags can tell off the track (all four wheels off the tarmac),

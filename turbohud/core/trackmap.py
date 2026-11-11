@@ -54,12 +54,14 @@ class TrackOutline:
 @dataclass(frozen=True)
 class MapDot:
     """A car on the map. `role`: 'me', 'leader', 'ahead', 'behind', 'backmarker', 'other'
-    or, for a spectator, 'car'. `ahead_too`: the leader is also the next car ahead."""
+    or, for a spectator, 'car'. `ahead_too`: the leader is also the next car ahead.
+    `yellow`: the yellow flag is out for it (turbohud.core.race.YellowFlags)."""
 
     position: tuple
     role: str
     in_pit: bool = False
     ahead_too: bool = False
+    yellow: bool = False
 
 
 @dataclass(frozen=True)
@@ -346,9 +348,10 @@ class TrackMap:
             self._partial = (len(longest), outline_from_path(longest, False))
         return self._partial[1]
 
-    def update(self, state, order):
+    def update(self, state, order, yellow=frozenset()):
         """The view for the race `state` (LapState) with its players in race `order`,
-        or None without a track, or without a local player unless spectating."""
+        or None without a track, or without a local player unless spectating. The cars
+        named in `yellow` are ringed, and shown even where other cars are not."""
         order = list(order)
         me = next((p for p in order if p.local), None)
         if me is None and not state.spectating:
@@ -381,10 +384,13 @@ class TrackMap:
             for player in order:
                 if player.local or player.position is None:
                     continue
-                if roles.get(player.name, 'other') != role or (role == 'other' and not self.others):
+                flagged = player.name in yellow
+                if roles.get(player.name, 'other') != role or (
+                    role == 'other' and not self.others and not flagged
+                ):
                     continue
                 ahead_too = role == 'leader' and ahead is not None and ahead.name == player.name
-                dots.append(MapDot(player.position, role, player.in_pit, ahead_too))
+                dots.append(MapDot(player.position, role, player.in_pit, ahead_too, flagged))
         if me.position is not None:
             dots.append(MapDot(me.position, 'me', me.in_pit))
         return TrackMapView(outline, tuple(dots))

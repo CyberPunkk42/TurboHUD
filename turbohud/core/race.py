@@ -29,6 +29,7 @@ import math
 import struct
 import sys
 import time
+import typing
 from dataclasses import dataclass
 
 from turbohud.core.flags import flag_code, flag_text
@@ -412,6 +413,13 @@ LEVEL_TYPE_FIELD = 'm_initializedLevelType'
 # The event modes driven on a track; TSU's others: Battle, Collector, Hill, Soccer, Sumo, Tag.
 TRACK_MODES = ('TS.RaceEventMode',)
 REFERENCE_TYPES = (0x12, 0x15, 0x1C)  # class, generic instance, object: a field holding an address
+# The four wheels' surfaces in a car's TS.WheelUpdater (CarStateUpdater.wheels), each a TS.TSMaterialProperties.
+WHEEL_SURFACES = (
+    'm_surfaceMaterialFront1',
+    'm_surfaceMaterialFront2',
+    'm_surfaceMaterialBack1',
+    'm_surfaceMaterialBack2',
+)
 CLIENT_SEARCH_EVERY = 10.0  # seconds between searches for an online race while there is none
 CLIENT_SEARCH_MOST = 60.0  # the wait doubles up to this while an event holds no race to read
 # For this long after a search first found nothing, the wait stays CLIENT_SEARCH_EVERY: a player
@@ -453,6 +461,9 @@ class PlayerState:
     draft_drag: float | None = None  # its air resistance multiplier: under 1 while it drafts
     pit_seconds: float | None = None  # seconds from pit entry to pit exit, while that is shown
     pit_stopped: float = 0.0  # of those, seconds standing still (refuelling, tires, repairs)
+    forward_speed: float | None = None  # game units a second along the car; below 0 backwards
+    wheel_grips: tuple | None = None  # the grip of the surface under each of its four wheels (0: in the air)
+    spawns: int | None = None  # how often it was put back on the track (a respawn)
 
     @functools.cached_property
     def passed(self):
@@ -513,6 +524,7 @@ class LapReader:
         self._wear_history = {}  # lap index -> tire wear when it started
         self._fuel_marks = {}  # lap index -> {checkpoint: fuel used when passed}
         self._types = {}  # (role, field) -> (offset, type code)
+        self._grips = {}  # a surface (TS.TSMaterialProperties) -> its grip, read once an event
 
     def event_state(self):
         """The race's TS.EventState. A race the game runs itself (offline, hotlap) is
@@ -892,6 +904,7 @@ class LapReader:
             self._pit_stops = PitStops()
             self._recorder_tick, self._recorder_moved = None, 0
             self._draft, self._draft_time, self._draft_clock = None, {}, None
+            self._grips = {}
             self._fuel_history, self._wear_history, self._fuel_marks, self._types = {}, {}, {}, {}
             self._player = None
             self.event_type = self._event_type()
@@ -1221,6 +1234,7 @@ class LapReader:
             if passed:
                 checkpoints.append(passed)
         in_pit, position, velocity, forward, draft_drag = False, None, None, None, None
+        forward_speed = wheel_grips = spawns = None
         try:
             vehicle = self._ref('player', player, 'm_vehicle')
         except NotFound:
@@ -1236,6 +1250,7 @@ class LapReader:
                 # The whole pit area, from its entrance to its exit, not only the pit box.
                 state = self._ref('vehicle', vehicle, 'm_state')
                 in_pit = in_pit or bool(memory.u8(state + self._offset('vstate', state, 'inPitArea')))
+                spawns = self._number('vstate', state, 'spawnCount')
             except (NotFound, ReadError):
                 pass
             if updater is not None:
@@ -1247,6 +1262,7 @@ class LapReader:
                     draft_drag = self._number('updater', updater, 'm_draftingViscosityFactor')
                 except (NotFound, ReadError):
                     pass
+                forward_speed, wheel_grips = self._wheels(updater)
             try:
                 where = vehicle + self._offset('vehicle', vehicle, 'm_statsNewPosition')
                 x, _y, z = struct.unpack('<3f', memory.read(where, 12))
@@ -1265,7 +1281,38 @@ class LapReader:
             velocity,
             forward,
             draft_drag=draft_drag,
+            forward_speed=forward_speed,
+            wheel_grips=wheel_grips,
+            spawns=spawns,
         )
+
+    def _wheels(self, updater):
+        """(speed along the car, the grip under each of its four wheels) from a car's
+        TS.CarStateUpdater, for the yellow flags; None for what is missing. Each wheel's
+        surface is a TS.TSMaterialProperties shared by every car on it, so its grip is read
+        once (seen 2026-11-11: 1.0 on tarmac, 0.93 on kerbs, 0.5 on grass, 0 for a wheel in
+        the air), and also comes through for other cars online."""
+        speed = grips = None
+        try:
+            speed = self._number('updater', updater, 'm_forwardSpeed')
+        except (NotFound, ReadError):
+            pass
+        try:
+            wheels = self._ref('updater', updater, 'wheels')
+            found = []
+            for name in WHEEL_SURFACES:
+                material = self.il.memory.u64(wheels + self._offset('wheels', wheels, name))
+                if not material:
+                    found.append(0.0)  # nothing under it
+                    continue
+                grip = self._grips.get(material)
+                if grip is None:
+                    grip = self._grips[material] = float(self._number('material', material, 'grip'))
+                found.append(grip)
+            grips = tuple(found)
+        except (NotFound, ReadError):
+            pass
+        return speed, grips
 
     def _flat(self, obj, name):
         """A Vector3 field of a CarStateUpdater as (x, z), or None where it is missing."""
@@ -1724,6 +1771,7 @@ def race_sections(
     blue_within=BLUE_FROM,
     delta_bar=None,
     sector_bars=True,
+    yellow_flags=None,
 ):
     """{section name: rows} for a live-reader snapshot (see core.hud.RACE_SECTIONS); a
     section with nothing to show has no rows. Nothing before the grid: in the menus, the
@@ -1733,7 +1781,8 @@ def race_sections(
     (a core.trackmap.TrackMap) gives the track map, in the player list's order;
     `blue_within` is how many seconds behind a car shows the blue flag; `delta_bar` (a
     DeltaBar) gives the delta bar, under 'deltaview'; `sector_bars` False leaves the sector
-    bars out (an option)."""
+    bars out (an option); `yellow_flags` (a YellowFlags) gives the yellow flag section and
+    the cars ringed on the track map."""
     if not on_grid(snapshot, now):
         return {}
     state = snapshot.state
@@ -1774,11 +1823,19 @@ def race_sections(
         )
         if opacity is not None:
             sections['blue'] = opacity
+        incidents = yellow_flags.update(state) if yellow_flags is not None else ()
+        rows = yellow_rows(incidents, state)
+        if rows:
+            sections['yellowflag'] = rows
         view = radar.update(state.players, snapshot.read_at, state.draft) if radar is not None else None
         if view is not None:
             sections['radar'] = view
         if track_map is not None and state.on_a_track:  # no map, nor a track learnt, in an arena
-            shown = track_map.update(state, order if order is not None else ranked(state.players))
+            shown = track_map.update(
+                state,
+                order if order is not None else ranked(state.players),
+                yellow=frozenset(incident.name for incident in incidents),
+            )
             if shown is not None:
                 flash = lap_flash(state)
                 sections['trackmap'] = dataclasses.replace(shown, road=flash) if flash else shown
@@ -2452,6 +2509,154 @@ def blue_flag_opacity(seconds, within=BLUE_FROM):
         return None
     share = min(max((within - seconds) / max(within - BLUE_FULL, 1e-6), 0.0), 1.0)
     return BLUE_FAINT + (1 - BLUE_FAINT) * share
+
+
+# Yellow flags (asked for by the user on 2026-11-11, as in F1, DTM or GT racing), from what a
+# recording showed TSU keeps of every car, online too: the surface under each wheel, the speed
+# along the car, and how often it was put back on the track. TSU has no flags of its own.
+YELLOW_OFF_GRIP = 0.9  # all four wheels on less grip than this: off the track (grass 0.5; kerbs 0.93)
+YELLOW_OFF_FOR = 0.5  # seconds off the track before it counts
+YELLOW_SLOW = 8.0  # game units a second along the car (about 29 km/h; racing: 20 to 60): slow
+YELLOW_SLOW_FOR = 1.0
+YELLOW_STOPPED = 1.0  # this slow either way: stopped, a double yellow
+YELLOW_STOPPED_FOR = 2.0
+YELLOW_BACKWARDS = -1.0  # this fast backwards: spun, or facing the wrong way
+YELLOW_BACKWARDS_FOR = 0.3
+YELLOW_RESPAWN_FOR = 3.0  # seconds a car put back on the track counts as an incident
+YELLOW_CLEAR_AFTER = 3.0  # seconds the flag stays once the car is back on the track and up to speed
+YELLOW_ROWS = 3  # incidents listed at most
+YELLOW_COLOR = '#ffd400'
+# What happened, most serious first: the one shown when several hold.
+YELLOW_KINDS = ('stopped', 'spun', 'respawned', 'off track', 'slow')
+
+
+@dataclass(frozen=True)
+class Incident:
+    """A car the yellow flag is out for: `kind` one of YELLOW_KINDS, in `sector` (0 for the
+    first; None where the track's sectors are not known). A stopped car is a double yellow."""
+
+    name: str
+    kind: str
+    sector: int | None
+
+    @property
+    def double(self):
+        return self.kind == 'stopped'
+
+
+def car_sector(player, starts):
+    """The sector (index into `starts`, see sector_starts) the car is in, or None."""
+    if not starts or not player.checkpoints:
+        return None
+    passed = len(player.checkpoints[-1]) - 1  # the last checkpoint passed in its lap
+    sector = 0
+    for index, start in enumerate(starts):
+        if start <= passed:
+            sector = index
+    return sector
+
+
+class YellowFlags:
+    """Follows every other car through the race to give its incidents: stopped, spun (going
+    backwards), put back on the track, all four wheels off it, or slow, each once it has held
+    a moment; an incident ends YELLOW_CLEAR_AFTER seconds after the car is back on the track
+    and up to speed. Not for a car in the pits, one that finished, or before it has passed
+    its first checkpoint (the grid). Times go by the race clock."""
+
+    HOLD: typing.ClassVar[dict] = {
+        'stopped': YELLOW_STOPPED_FOR,
+        'spun': YELLOW_BACKWARDS_FOR,
+        'off track': YELLOW_OFF_FOR,
+        'slow': YELLOW_SLOW_FOR,
+    }
+
+    def __init__(self):
+        self._cars = {}  # name -> {'since': {condition: since}, 'kind', 'until', 'spawns', 'respawn_until'}
+
+    def update(self, state):
+        """The incidents now, most serious first (a tuple of Incident)."""
+        now = state.clock / UNITS_PER_SECOND
+        starts = sector_starts(len(state.gates), state.sector_lines) if state.gates else ()
+        found, seen = [], set()
+        for player in state.players:
+            if player.local:
+                continue
+            seen.add(player.name)
+            car = self._cars.setdefault(
+                player.name, {'since': {}, 'kind': None, 'until': None, 'spawns': None}
+            )
+            kind = self._kind(car, player, now)
+            if kind is not None:
+                car['kind'], car['until'] = kind, now + YELLOW_CLEAR_AFTER
+            elif car['until'] is not None and (
+                now >= car['until'] or now < car['until'] - YELLOW_CLEAR_AFTER * 4
+            ):
+                car['kind'] = car['until'] = None  # back up to speed (or the clock went back: a new race)
+            if car['kind'] is not None:
+                found.append(Incident(player.name, car['kind'], car_sector(player, starts)))
+        for name in set(self._cars) - seen:
+            del self._cars[name]  # left the race
+        return tuple(sorted(found, key=lambda incident: YELLOW_KINDS.index(incident.kind)))
+
+    def _kind(self, car, player, now):
+        """The most serious incident that holds for the car now, or None."""
+        spawns = player.spawns
+        if spawns is not None and car['spawns'] is not None and spawns > car['spawns']:
+            car['respawn_until'] = now + YELLOW_RESPAWN_FOR
+        car['spawns'] = spawns
+        if player.in_pit or player.finished or len(player.passed) < 2:
+            car['since'].clear()
+            return None
+        speed, grips = player.forward_speed, player.wheel_grips
+        holds = {
+            'stopped': speed is not None and abs(speed) < YELLOW_STOPPED,
+            'spun': speed is not None and speed < YELLOW_BACKWARDS,
+            'off track': grips is not None and all(0.0 < grip < YELLOW_OFF_GRIP for grip in grips),
+            'slow': speed is not None and speed < YELLOW_SLOW,
+        }
+        since = car['since']
+        for condition, holding in holds.items():
+            if not holding:
+                since.pop(condition, None)
+            elif condition not in since or since[condition] > now:
+                since[condition] = now
+        if car.get('respawn_until') is not None and now < car['respawn_until']:
+            respawned = True
+        else:
+            respawned, car['respawn_until'] = False, None
+        for kind in YELLOW_KINDS:
+            if kind == 'respawned':
+                if respawned:
+                    return kind
+            elif kind in since and now - since[kind] >= self.HOLD[kind]:
+                return kind
+        return None
+
+
+def yellow_rows(incidents, state):
+    """The yellow flag section: incidents in the local player's sector and the next one,
+    as marshals show them; a double yellow for a stopped car. [] without any."""
+    me = next((p for p in state.players if p.local), None)
+    if me is None:
+        return []
+    starts = sector_starts(len(state.gates), state.sector_lines) if state.gates else ()
+    mine = car_sector(me, starts)
+    if mine is None:
+        near = list(incidents)  # sectors not known: every incident
+    else:
+        ahead = {mine, (mine + 1) % len(starts)}
+        near = [incident for incident in incidents if incident.sector in ahead]
+    if not near:
+        return []
+    near.sort(key=lambda incident: (incident.sector != mine, YELLOW_KINDS.index(incident.kind)))
+    first = near[0]
+    title = 'DOUBLE YELLOW' if any(incident.double for incident in near) else 'YELLOW'
+    where = f'  -  Sector {first.sector + 1}' if first.sector is not None else ''
+    rows = [Row(title + where, 'title', YELLOW_COLOR)]
+    for incident in near[:YELLOW_ROWS]:
+        sector = f'S{incident.sector + 1}  ' if incident.sector is not None else ''
+        rows.append(Row(f'{sector}{incident.name[:MAX_NAME_SHOWN]}  {incident.kind}', 'small', YELLOW_COLOR))
+    return rows
 
 
 # Proximity radar. Positions and speeds are in the game's own unit, so the time gap

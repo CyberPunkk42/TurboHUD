@@ -7,7 +7,7 @@ Fullscreen mode too.
 Early version. On Linux, with TSU started through TurboHUD's memory probe (see
 [Live lap times on Linux](#live-lap-times-on-linux)), the HUD shows the live race: lap
 times and the delta to your best lap, fuel, tires, health, the draft, speed with pedal
-bars, the player list with gaps, a blue flag, a proximity radar and a track map (see
+bars, the player list with gaps, yellow and blue flags, a proximity radar and a track map (see
 [Use](#use)). It works offline, in hotlaps and online. On macOS, with TSU in CrossOver,
 the same HUD needs no setup (see [Live race data on macOS](#live-race-data-on-macos)). On
 Windows it shows a session clock and the local time for now.
@@ -143,6 +143,12 @@ starting TurboHUD again.
   track map move less smoothly, and a track first learnt at 5 gets a coarser line.
 - The **blue flag** is a navy bar that shows when a car about to lap you is within 2
   seconds behind: faint at 2 s, fully visible from 0.5 s, gone once it has passed.
+- The **yellow flag** shows, in yellow, when another car has an incident in your sector or
+  the next one, as marshals show it: all four wheels off the tarmac, slow, stopped (a double
+  yellow), spun (going backwards) or put back on the track. It names the sector and the
+  drivers, and the track map rings those cars in yellow. It goes 3 seconds after the car is
+  back on the track and up to speed; not for cars in the pits. Untick **Yellow flag** in
+  move mode to hide it.
 - **Settings…** (TurboHUD icon's menu, or the move-mode panel) picks the text,
   highlight and outline colours, makes all sections bigger or smaller at once, and holds
   the options for the whole HUD: mph, the tint behind all sections, the radar's

@@ -4,6 +4,7 @@ import sys
 import time
 import unittest
 from pathlib import Path
+from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
@@ -2018,6 +2019,141 @@ class RowsTests(unittest.TestCase):
         import time
 
         self.assertEqual(race.status_text(racing(MID_RACE, moved_at=time.monotonic())), 'racing')
+
+
+class YellowFlagTests(unittest.TestCase):
+    """Yellow flags from every other car's speed, wheel surfaces and respawns (asked for by
+    the user on 2026-11-11; what TSU keeps of other cars online: experiments/README.md)."""
+
+    TARMAC, KERB, GRASS = (1.0,) * 4, (0.93,) * 4, (0.5,) * 4
+    GATES = (((0, 0), (1, 1)),) * 9  # sectors start at checkpoints 0, 3 and 6
+
+    def car(self, name='Other', speed=40.0, grips=TARMAC, passed=4, local=False, **more):
+        lap = tuple(1000 * i for i in range(passed + 1))
+        return race.PlayerState(
+            name, 0, 1, ((0,), lap), local=local, forward_speed=speed, wheel_grips=grips, **more
+        )
+
+    def state(self, seconds, *others, me_passed=4):
+        return race.LapState(
+            clock=round(seconds * race.UNITS_PER_SECOND),
+            time_limit=0,
+            laps_completed=1,
+            laps_to_finish=20,
+            lap_starts=[0, 0],
+            players=(*others, self.car('Me', local=True, passed=me_passed)),
+            gates=self.GATES,
+        )
+
+    def drive(self, flags, seconds, *others, **more):
+        return flags.update(self.state(seconds, *others, **more))
+
+    def kinds(self, incidents):
+        return [(incident.name, incident.kind) for incident in incidents]
+
+    def test_all_four_wheels_off_the_tarmac_after_half_a_second(self):
+        flags = race.YellowFlags()
+        self.assertEqual(self.drive(flags, 10.0, self.car(grips=self.GRASS)), ())
+        self.assertEqual(
+            self.kinds(self.drive(flags, 10.6, self.car(grips=self.GRASS))), [('Other', 'off track')]
+        )
+
+    def test_kerbs_one_wheel_on_tarmac_or_a_wheel_in_the_air_are_not_off(self):
+        for grips in (self.KERB, (1.0, 0.5, 0.5, 0.5), (0.0, 0.5, 0.5, 0.5)):
+            flags = race.YellowFlags()
+            self.drive(flags, 10.0, self.car(grips=grips))
+            self.assertEqual(self.drive(flags, 12.0, self.car(grips=grips)), (), grips)
+
+    def test_slow_after_a_second_stopped_after_two_a_double_yellow(self):
+        flags = race.YellowFlags()
+        self.drive(flags, 10.0, self.car(speed=0.2))
+        self.assertEqual(self.kinds(self.drive(flags, 11.1, self.car(speed=0.2))), [('Other', 'slow')])
+        stopped = self.drive(flags, 12.1, self.car(speed=0.2))
+        self.assertEqual(self.kinds(stopped), [('Other', 'stopped')])
+        self.assertTrue(stopped[0].double)
+
+    def test_going_backwards_is_a_spin(self):
+        flags = race.YellowFlags()
+        self.drive(flags, 10.0, self.car(speed=-5.0))
+        self.assertEqual(self.kinds(self.drive(flags, 10.4, self.car(speed=-5.0))), [('Other', 'spun')])
+
+    def test_a_respawn_counts_for_three_seconds(self):
+        flags = race.YellowFlags()
+        self.drive(flags, 10.0, self.car(spawns=0))
+        self.assertEqual(self.kinds(self.drive(flags, 10.1, self.car(spawns=1))), [('Other', 'respawned')])
+        self.assertEqual(self.drive(flags, 13.2, self.car(spawns=1)), ())
+
+    def test_the_flag_stays_three_seconds_after_the_car_is_back(self):
+        flags = race.YellowFlags()
+        self.drive(flags, 10.0, self.car(grips=self.GRASS))
+        self.drive(flags, 10.6, self.car(grips=self.GRASS))
+        self.assertEqual(len(self.drive(flags, 12.0, self.car())), 1)  # back on the tarmac 1.4 s
+        self.assertEqual(self.drive(flags, 13.7, self.car()), ())
+
+    def test_racing_cars_have_none(self):
+        flags = race.YellowFlags()
+        for step in range(50):
+            self.assertEqual(self.drive(flags, 10 + step / 10, self.car(speed=35.0)), ())
+
+    def test_not_for_me_in_the_pits_finished_or_on_the_grid(self):
+        for car in (
+            self.car(speed=0.0, in_pit=True),
+            self.car(speed=0.0, finished=True),
+            race.PlayerState('Other', 0, 0, ((0,),), forward_speed=0.0, wheel_grips=self.TARMAC),  # the grid
+        ):
+            flags = race.YellowFlags()
+            self.drive(flags, 10.0, car)
+            self.assertEqual(self.drive(flags, 13.0, car), ())
+        flags = race.YellowFlags()
+        me = race.LapState(clock=0, time_limit=0, laps_completed=1, laps_to_finish=20, lap_starts=[0, 0])
+        stopped_me = dataclasses.replace(
+            me, players=(self.car('Me', speed=0.0, local=True),), gates=self.GATES
+        )
+        flags.update(stopped_me)
+        self.assertEqual(flags.update(dataclasses.replace(stopped_me, clock=3 * race.UNITS_PER_SECOND)), ())
+
+    def test_the_section_shows_my_sector_and_the_next(self):
+        state = self.state(10.0, me_passed=4)  # I am in sector 2 (checkpoints 3 to 5)
+        incidents = (
+            race.Incident('Far', 'stopped', 0),
+            race.Incident('Here', 'off track', 1),
+            race.Incident('Next', 'slow', 2),
+        )
+        rows = race.yellow_rows(incidents, state)
+        self.assertEqual(rows[0].text, 'YELLOW  -  Sector 2')  # the stopped car is behind me
+        self.assertEqual([row.text for row in rows[1:]], ['S2  Here  off track', 'S3  Next  slow'])
+        self.assertEqual({row.color for row in rows}, {race.YELLOW_COLOR})
+
+    def test_a_stopped_car_ahead_is_a_double_yellow(self):
+        rows = race.yellow_rows((race.Incident('Ahead', 'stopped', 2),), self.state(10.0, me_passed=4))
+        self.assertEqual(rows[0].text, 'DOUBLE YELLOW  -  Sector 3')
+
+    def test_from_the_last_sector_the_next_is_the_first(self):
+        rows = race.yellow_rows((race.Incident('Over the line', 'spun', 0),), self.state(10.0, me_passed=7))
+        self.assertEqual(rows[1].text, 'S1  Over the line  spun')
+
+    def test_nothing_near_no_section(self):
+        self.assertEqual(
+            race.yellow_rows((race.Incident('Far', 'slow', 0),), self.state(10.0, me_passed=4)), []
+        )
+        self.assertEqual(race.yellow_rows((), self.state(10.0)), [])
+
+    def test_the_track_map_rings_the_car_even_with_other_cars_hidden(self):
+        from turbohud.core.trackmap import TrackMap
+
+        track_map = TrackMap(others=False, folder=None)
+        players = [
+            race.PlayerState(name, 0, 1, ((0,),), local=name == 'Me', position=(float(i), 0.0))
+            for i, name in enumerate(['Leader', 'Me', 'Behind', 'Far back', 'Flagged'])
+        ]
+        state = race.LapState(clock=0, time_limit=0, laps_completed=1, laps_to_finish=5, lap_starts=[0])
+        with mock.patch.object(TrackMap, 'outline', lambda self, order, gates, length: 'outline'):
+            view = track_map.update(state, players, yellow=frozenset({'Flagged'}))
+        flagged = [dot for dot in view.dots if dot.yellow]
+        self.assertEqual([dot.position for dot in flagged], [(4.0, 0.0)])
+        self.assertNotIn(
+            (3.0, 0.0), [dot.position for dot in view.dots]
+        )  # an unflagged other car stays hidden
 
 
 class LiveRaceTests(unittest.TestCase):

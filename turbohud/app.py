@@ -269,6 +269,7 @@ def run(args, folder):
             DeltaBar,
             Radar,
             Standings,
+            YellowFlags,
             race_sections,
             status_text,
             with_local_time,
@@ -285,6 +286,7 @@ def run(args, folder):
         standings = Standings()
         radar = Radar()
         delta_bar = DeltaBar()
+        yellow_flags = YellowFlags()
         track_map = TrackMap(settings.map_others, folder)  # learnt tracks beside the settings
 
         def contents():
@@ -302,6 +304,7 @@ def run(args, folder):
                 settings.blue_seconds,
                 delta_bar,
                 settings.sector_bars,
+                yellow_flags,
             )
             if pad is not None and 'pedals' in current:
                 current['pedals'] = combined(current['pedals'], pad.pedals())

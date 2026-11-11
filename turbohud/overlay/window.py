@@ -124,6 +124,7 @@ MAP_SIZES = {
 MAP_OTHER_ALPHA = 150  # the other cars are faint
 MAP_PIT_OPACITY = 0.4  # a car in the pits is dimmed
 MAP_RING = 0.4  # the local player's ring: its width, as a share of its radius
+MAP_YELLOW = '#ffd400'  # the ring around a car the yellow flag is out for (race.YELLOW_COLOR)
 
 
 @functools.cache  # the same one each time, so the map's road layer is kept (SectionWindow._road_layer)
@@ -510,6 +511,10 @@ class SectionWindow(QWidget):
                 if dot.role == 'other':
                     color.setAlpha(MAP_OTHER_ALPHA)
                 r = radius * MAP_SIZES[dot.role]
+                if dot.yellow:  # the yellow flag is out for it: a yellow ring, outside any other
+                    painter.setPen(Qt.NoPen)
+                    painter.setBrush(QColor(MAP_YELLOW))
+                    painter.drawEllipse(at(dot.position), r + 5, r + 5)
                 if dot.ahead_too:  # the leader is also the next car ahead: a red ring
                     painter.setPen(Qt.NoPen)
                     painter.setBrush(QColor(MAP_COLORS['ahead']))
