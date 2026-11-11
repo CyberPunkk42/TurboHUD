@@ -1252,3 +1252,9 @@ its "Recent changes".
   before. Also a new incident, asked for by the user: wrecked, a car that lost all its hit points (damage on;
   `PlayerState.wrecked`), at once and first. Slow, spun, stopped (on or off the track), wrong way and respawned
   stay as they were. Tests. Not yet seen in a race.
+- 2026-11-12: The first Windows build to share, asked for by the user: `releases/TurboHUD-2026.11.12-windows-x64.zip`
+  (42.1 MB, with the Rust reader and texture2ddecoder; built on the Windows PC with PyInstaller 6.22.2 in
+  `.buildtools/win-build-venv`), from `main` with the Windows race search fix, the race recorder and the surface
+  rule. Smoke test passed with TurboHUD closed (the app started as 2026.11.12 and quit cleanly); every file in the
+  zip, the packed Python modules too, checked for the privacy terms: none. Not signed: Windows SmartScreen asks once
+  (More info, Run anyway).
