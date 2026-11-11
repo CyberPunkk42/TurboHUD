@@ -188,7 +188,9 @@ starting TurboHUD again.
   map's **Tint** turns its dark square on (the default) or off.
 - The **proximity radar** shows your car and the cars around you when one is within
   half a second behind or ahead (faint) up to alongside (fully visible): red beside you, yellow
-  closing in.
+  closing in. In a multi-class race (see **Classes in the lap times**), a car of another class than
+  yours is filled in its class's colour (blue, green, purple, pink, by the class's name), with the red or
+  yellow as its outline.
 - The **track map** shows the track from above with you (a white ring), the race leader
   (gold), the next car ahead (red) and the next car behind (green); when you pass a
   car, the next one ahead takes the red dot. Smaller bluish dots are backmarkers (cars

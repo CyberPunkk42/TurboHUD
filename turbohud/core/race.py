@@ -1933,7 +1933,11 @@ def race_sections(
         rows = yellow_rows(incidents, state, hazard)
         if rows:
             sections['yellowflag'] = rows
-        view = radar.update(state.players, snapshot.read_at, state.draft) if radar is not None else None
+        view = (
+            radar.update(state.players, snapshot.read_at, state.draft, car_classes(state.players, class_tags))
+            if radar is not None
+            else None
+        )
         if view is not None:
             sections['radar'] = view
         if track_map is not None and state.on_a_track:  # no map, nor a track learnt, in an arena
@@ -2560,6 +2564,16 @@ def shortcut_rows(state, left, jumped=frozenset()):
 
 
 OTHER_CLASS = 'Other'  # in a multi-class race, the drivers whose clan tag names no class
+# The proximity radar's colours for the classes (asked for by the user on 2026-11-11): none the radar
+# already uses (red beside, yellow closing in, grey, white for the player, cyan for the slipstream).
+RADAR_CLASS_COLORS = ('#4c8dff', '#3ecf7a', '#b06cff', '#ff6fb5')
+
+
+def radar_class_colors(classes):
+    """{class: colour} for the classes in `classes` (car_classes): given out by the class's
+    name, so each keeps its colour all race; OTHER_CLASS has none."""
+    named = sorted(set(classes.values()) - {OTHER_CLASS})
+    return {name: RADAR_CLASS_COLORS[i % len(RADAR_CLASS_COLORS)] for i, name in enumerate(named)}
 
 
 def car_classes(players, class_tags):
@@ -3032,6 +3046,9 @@ class Blip:
     angle: float
     seconds: float | None
     in_cone: bool | None = None  # a car ahead's slipstream: whether the local car is in it; None: not drawn
+    class_color: str | None = (
+        None  # a car of another class than the local one: its class's colour (radar_class_colors)
+    )
 
 
 @dataclass(frozen=True)
@@ -3156,7 +3173,7 @@ def draft_rows(state):
 
 
 def radar_blips(me, speed, others, draft=None, within=RADAR_FROM):
-    """Blips for `others` [(position, direction or None)] around the local car at `me`
+    """Blips for `others` [(position, direction or None[, class colour or None])] around the local car at `me`
     ((x, z), direction) at `speed`. A car counts when it is no more than RADAR_SIDE to
     the side, behind, beside or ahead: beside (overlapping in length) is 0 s, behind or
     ahead is the gap between the two cars' ends over the local speed. With the event's
@@ -3165,7 +3182,9 @@ def radar_blips(me, speed, others, draft=None, within=RADAR_FROM):
     (mx, mz), (fx, fz) = me
     cone = draft is not None and draft.reach is not None and draft.angle is not None
     blips = []
-    for (x, z), direction in others:
+    for other in others:
+        (x, z), direction = other[0], other[1]
+        class_color = other[2] if len(other) > 2 else None
         dx, dz = x - mx, z - mz
         ahead = dx * fx + dz * fz
         side = dx * fz - dz * fx  # right of the direction of travel (x right, z forward)
@@ -3180,7 +3199,7 @@ def radar_blips(me, speed, others, draft=None, within=RADAR_FROM):
             gap = abs(ahead) - CAR_LENGTH  # nose to tail; under 0: overlapping
             seconds = max(gap, 0.0) / speed
         in_cone = in_slipstream(ahead, side, angle, draft) if cone and ahead > CAR_LENGTH / 2 else None
-        blips.append(Blip(ahead, side, angle, seconds, in_cone))
+        blips.append(Blip(ahead, side, angle, seconds, in_cone, class_color))
     return tuple(blips)
 
 
@@ -3243,7 +3262,9 @@ class Radar:
             direction = (direction[0] / length, direction[1] / length)
         return position, direction, speed
 
-    def update(self, players, read_at, draft=None):
+    def update(self, players, read_at, draft=None, classes=None):
+        """`classes` (car_classes, {} outside a multi-class race): a car of another class than
+        the local one gets its class's colour."""
         if not self.cone:
             draft = None
         fresh = read_at != self.read_at
@@ -3257,13 +3278,18 @@ class Radar:
             self.opacity, self.counted_at = 0.0, None
             return None
         position, direction, speed = mine
+        classes = classes or {}
+        colors = radar_class_colors(classes)
+        my_class = classes.get(id(me))
         others = []
         for player in players:
             if player.local or player.in_pit or player.finished:
                 continue
             theirs = self._motion(player, read_at)
             if theirs is not None:
-                others.append((theirs[0], theirs[1]))
+                theirs_class = classes.get(id(player))
+                color = colors.get(theirs_class) if theirs_class != my_class else None
+                others.append((theirs[0], theirs[1], color))
         blips = radar_blips((position, direction), speed, others, draft, self.within)
         if fresh:
             nearest = min((b.seconds for b in blips if b.seconds is not None), default=None)

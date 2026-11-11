@@ -90,6 +90,7 @@ PANEL_SMALL_BUTTON = 32  # its one-character buttons (centre, match a group, del
 PANEL_WORD_BUTTON = 54
 PANEL_HEADING = '#9fb8d8'  # the panel's small headings: the columns and the kinds of section
 PANEL_EMPTY = '#5d7799'  # the dot where a section has no such option
+RADAR_CLASS_WARNING = 2.5  # a car of another class: the width of its red or yellow warning outline
 RADAR_CAR_AT = 0.5  # the local car's height in the radar, from the top: the middle
 CONE_STEPS = 8  # points along a slipstream cone's far edge
 CONE_OUT, CONE_IN = 30, 80  # a slipstream cone's opacity (0-255): elsewhere, local car in it
@@ -506,7 +507,22 @@ class SectionWindow(QWidget):
                 color = LIFT_COLOR
             else:
                 color = RADAR_OTHER
-            car(blip.ahead, blip.side, blip.angle, color)
+            if blip.class_color is None:
+                car(blip.ahead, blip.side, blip.angle, color)
+                continue
+            # Another class: filled in its class's colour, the warning (red, yellow) as its outline.
+            car(blip.ahead, blip.side, blip.angle, blip.class_color)
+            if color != RADAR_OTHER:
+                painter.save()
+                painter.translate(centre.x() + blip.side * per_unit, centre.y() - blip.ahead * per_unit)
+                painter.rotate(math.degrees(blip.angle))
+                painter.setPen(QPen(QColor(color), RADAR_CLASS_WARNING))
+                painter.setBrush(Qt.NoBrush)
+                pad = RADAR_CLASS_WARNING / 2
+                painter.drawRoundedRect(
+                    QRectF(-w / 2 - pad, -h / 2 - pad, w + 2 * pad, h + 2 * pad), w / 4, w / 4
+                )
+                painter.restore()
             if blip.in_cone:  # the car being drafted: a cyan outline
                 painter.save()
                 painter.translate(centre.x() + blip.side * per_unit, centre.y() - blip.ahead * per_unit)

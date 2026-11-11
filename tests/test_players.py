@@ -651,6 +651,41 @@ def moving(name, position, velocity, local=False):
     return race.PlayerState(name, GERMANY, 1, (lap(0),), False, False, local, position, velocity, (0.0, 1.0))
 
 
+class RadarClassTests(unittest.TestCase):
+    """Asked for by the user on 2026-11-11: in a multi-class race, cars of another class show on
+    the radar in their class's colour."""
+
+    def drive(self, me_tag, other_tag, classes_on=True):
+        me = lambda t: dataclasses.replace(moving('Me', (0.0, 40.0 * t), (0.0, 40.0), local=True), tag=me_tag)
+        other = lambda t: dataclasses.replace(
+            moving('Other', (2.0, 40.0 * t - 6.0), (0.0, 40.0)), tag=other_tag
+        )
+        third = lambda t: dataclasses.replace(
+            moving('Third', (40.0, 40.0 * t), (0.0, 40.0)), tag='GT3' if me_tag == 'LMP2' else 'LMP2'
+        )
+        radar = race.Radar()
+        view = None
+        for step in range(4):
+            t = step * 0.05
+            players = [me(t), other(t), third(t)]
+            tags = ('LMP2', 'GT3') if classes_on else ()
+            view = radar.update(players, t, None, race.car_classes(players, tags))
+        return view
+
+    def test_another_class_gets_its_colour_and_mine_none(self):
+        colors = race.radar_class_colors({1: 'LMP2', 2: 'GT3', 3: race.OTHER_CLASS})
+        self.assertEqual(colors, {'GT3': race.RADAR_CLASS_COLORS[0], 'LMP2': race.RADAR_CLASS_COLORS[1]})
+        (blip,) = self.drive('LMP2', 'GT3').blips
+        self.assertEqual(blip.class_color, colors['GT3'])
+        (blip,) = self.drive('LMP2', 'LMP2').blips
+        self.assertIsNone(blip.class_color)  # my own class: as before
+
+    def test_no_colours_with_classes_off_or_in_a_one_class_race(self):
+        (blip,) = self.drive('LMP2', 'GT3', classes_on=False).blips
+        self.assertIsNone(blip.class_color)
+        self.assertEqual(race.radar_class_colors({}), {})
+
+
 class WarningTimeTests(unittest.TestCase):
     def test_the_blue_flag_can_show_earlier(self):
         self.assertIsNone(race.blue_flag_opacity(3.0))
