@@ -451,7 +451,7 @@ never in the repository). Close TurboHUD first; Ctrl+C ends it.
 On Windows (2026-11-11) it reads TSU straight, as TurboHUD's Python reader does, and writes to
 `%APPDATA%\TurboHUD\recordings`:
 
-    .buildtoolsenv\Scripts\python.exe -B experiments	su_race_recorder.py [--minutes 15]
+    .buildtools\venv\Scripts\python.exe -B experiments\tsu_race_recorder.py [--minutes 15]
 
 It also records each event's mode, for the arena modes (Sumo, King of the Hill, Capture the flag,
 Battle, Soccer, Tag): a `kind: event` line with the mode, the level type and the classes of the event's
