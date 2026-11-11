@@ -433,3 +433,32 @@ The boxes have the places and sizes of TurboHUD's sections, read (only read) fro
 and change 20 times a second. With the user's layout the one window is nearly the whole screen
 (2055 x 1290). Checked 2026-11-09 with real windows on the Mac (all four phases, quits by itself); not
 yet measured over TSU.
+
+## Every car of a race, for yellow flags (`tsu_race_recorder.py`, macOS)
+
+Asked for by the user (2026-11-11): yellow flags as in F1, DTM or GT racing need the state of the
+other cars (off the track, slow or stopped, spun, wrecked). TSU has no flags of its own (its only
+"Yellow" names are colours). The recorder reads, through the reader in the bottle and only reading:
+10 times a second every car as TurboHUD sees it (position, velocity, heading, pits, checkpoints) and
+the checkpoint lines; twice a second every field of each car's `TS.EventPlayer`, `TS.Vehicle`,
+`TS.VehicleState` and `TS.CarStateUpdater`, and of the objects two steps on whose field names sound
+useful (wreck, stuck, respawn, wrong way, surface, wheel, shortcut, damage), only what changed. It
+writes `~/Library/Application Support/TurboHUD/recordings/race-<date>-<time>.jsonl.gz` (player names:
+never in the repository). Close TurboHUD first; Ctrl+C ends it.
+
+    .buildtools/venv/bin/python -B experiments/tsu_race_recorder.py [--minutes 15]
+
+### First look (2026-11-11, a race on the user's Mac with one other car, 6 s)
+- Each car's wheels: `TS.CarStateUpdater.wheels` is a `TS.WheelUpdater` with
+  `m_surfaceMaterialFront1/2` and `m_surfaceMaterialBack1/2`, the four wheels' surfaces, each a
+  `TS.TSMaterialProperties` (`grip`, `braking`, `acceleration`, `steering`, `viscosity`,
+  `extraTireWear`, `dust`, `leaveSkidmark`, `leaveTrail`, `pit`, `damage`, `m_layer`). One car was on
+  grip 1.0 with skid marks (tarmac), the other on all four wheels with grip 0.5, braking 0.5, extra
+  tire wear 1.0, dust and a trail (grass or dirt). Filled in for both cars, not only the local one.
+  Also `allWheelsG`, `frontWheelsG`, `backWheelsG` (about 0.5 to 1.3, meaning not known yet).
+- `TS.VehicleState`: `hitPoints`, `disabled`, `reversing`, `inPitArea`, `spawnTick`, `spawnCount`
+  (a respawn?).
+- The checkpoint line at the start was 100 game units across: whether the lines reach the track's
+  edges or beyond is still to see.
+- Still to record: a race against AI with the local car off the track, stopped and spun; then online
+  as a client, where the other cars' fields may never be filled in (only the server runs them).

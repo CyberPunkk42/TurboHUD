@@ -956,3 +956,8 @@ its "Recent changes".
   user: it kept the colour it had when set, so the user and another driver both showed a purple first sector.
   Now only the fastest has it, as with the best lap (a time as fast counts for whoever set it first); green
   stays for a personal best, dark yellow for slower. Tests.
+- 2026-11-11: `experiments/tsu_race_recorder.py`, for yellow flags, asked for by the user: records every car
+  of a race through the reader in the bottle (only reading) to a file outside the repository. A first look:
+  each car's four wheel surfaces (`TS.WheelUpdater.m_surfaceMaterial*`, each a `TS.TSMaterialProperties`
+  with grip, braking, dust ...) are there for the other car too, offline, so all four wheels off the tarmac
+  can be told for every car there. Online as a client is still to record (`experiments/README.md`).
