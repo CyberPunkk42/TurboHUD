@@ -134,7 +134,7 @@ turbohud/
 experiments/            the probes that settled the design; tsu_memory_probe.py is what
                         the Steam launch option runs
 tools/build_app.py      PyInstaller build, archive and smoke test for this system
-tools/get_windows_python.sh  the pinned Windows Python for the reader in the bottle
+tools/get_windows_python.sh  a pinned Windows Python, by hand, for the Python reader (TURBOHUD_PY_READER=1)
 tools/get_rust.sh   Rust and llvm-mingw into .buildtools (pinned), then builds the Rust reader
 reader/             macOS: the reader inside the bottle in Rust (a Windows program, no
                     dependencies); answers as bottle_reader.py does, and is started first

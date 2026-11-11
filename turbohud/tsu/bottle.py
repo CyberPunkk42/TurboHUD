@@ -112,8 +112,9 @@ def _output(command):
 
 
 def app_files(bundle=None):
-    """(Windows Python, the reader's file): inside the bundled app, or for a start from
-    the source in `.buildtools/win-python` (set up by `tools/get_windows_python.sh`)."""
+    """(Windows Python, the Python reader's file), for TURBOHUD_PY_READER=1 in a start from
+    the source: `.buildtools/win-python`, set up by hand with `tools/get_windows_python.sh`.
+    The bundled app ships neither since 2026-11-11 (the Rust reader only)."""
     bundle = getattr(sys, '_MEIPASS', None) if bundle is None else bundle
     if bundle:
         return Path(bundle) / 'win-python' / 'python.exe', Path(
@@ -133,14 +134,17 @@ def rust_reader(bundle=None):
 
 
 def reader_command(environ, bundle=None):
-    """(which reader, what to run in the bottle): the Rust reader where it is there, unless
-    TURBOHUD_PY_READER=1 asks for the Python one; else the Python reader."""
-    rust = rust_reader(bundle)
-    if environ.get(PYTHON_READER_SWITCH) != '1' and rust.exists():
+    """(which reader, what to run in the bottle): the Rust reader, unless
+    TURBOHUD_PY_READER=1 asks for the Python one (a start from the source, with the Windows
+    Python set up by hand)."""
+    if environ.get(PYTHON_READER_SWITCH) != '1':
+        rust = rust_reader(bundle)
+        if not rust.exists():
+            raise OSError(f'the reader is missing: {rust} (sh tools/get_rust.sh builds it)')
         return 'Rust', [str(rust)]
     python, reader = app_files(bundle)
     if not python.exists():
-        raise OSError(f'the Windows Python is missing: {python}')
+        raise OSError(f'the Windows Python is missing: {python} (sh tools/get_windows_python.sh)')
     return 'Python', [str(python), '-I', '-B', windows_path(reader)]
 
 

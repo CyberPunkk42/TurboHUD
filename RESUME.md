@@ -26,8 +26,8 @@
   presets (Ctrl+Shift+1, 2, 3 load them; Linux: `--preset`), groups that move and resize
   together and can match their text size and width, Centre buttons for every section, and
   Centre text, and Undo. Checked by hand on the Mac.
-- Builds: `tools/build_app.py` (PyInstaller) makes a Windows ZIP, a Mac app ZIP (with the
-  reader and its Windows Python, 39 MB) and a Linux `.tar.gz`, run locally on each system.
+- Builds: `tools/build_app.py` (PyInstaller) makes a Windows ZIP and a Mac disk image (each with the
+  Rust reader; the Mac one 32.5 MB, no Windows Python since 2026-11-11) and a Linux `.tar.gz`, run locally on each system.
   Nothing goes to GitHub any more; the old `.github/workflows/build.yml` is kept for
   reference only.
 - The overlay probe (`experiments/overlay_probe.py`, see `experiments/README.md`) answered
@@ -75,6 +75,14 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-11: The Mac app without the Windows Python, asked for by the user: the Rust reader ran in online races
+  on the tester's Mac (builds from 2026.11.11 use it only: had it failed, no HUD would have shown). The app ships
+  only `turbohud-reader.exe`; with it missing the start says so, with no Python in its place. The Python reader
+  stays for a start from the source with `TURBOHUD_PY_READER=1` and a Windows Python set up by hand, and as
+  Windows' fallback. `run_turbohud.sh` builds the reader on the Mac where it is missing. Also: a build stops
+  when a package of requirements.txt is not installed (`missing_requirements`): the build environment lacked
+  texture2ddecoder, so the app would have had no game flags; without it they stay emoji. The disk image: 32.5 MB
+  from 44.7 MB. Tests; built (not started) and its contents checked.
 - 2026-11-11: Live race data on Windows, asked for by the user, with the Rust reader: on Windows the reader
   (`reader/`, already a Windows program that finds TSU.exe and knows when it runs under Wine) is started
   straight beside TSU by `LocalReader` (`turbohud/tsu/bottle.py`), no CrossOver or bottle, with no console

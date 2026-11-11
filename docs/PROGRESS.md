@@ -1080,3 +1080,11 @@ its "Recent changes".
   `spawn_reader`. Where the reader is missing, TurboHUD reads TSU itself in Python (`winmemory.connect`). The
   Windows build ships the reader where it is built. Tests; the threaded way checked against the user's race
   on the Mac through the bottle (20 players, 9 ms a read). Not yet run on Windows.
+- 2026-11-11: The Mac app without the Windows Python, asked for by the user: the Rust reader ran in online races
+  on the tester's Mac (builds from 2026.11.11 use it only: had it failed, no HUD would have shown). The app ships
+  only `turbohud-reader.exe`; with it missing the start says so, with no Python in its place. The Python reader
+  stays for a start from the source with `TURBOHUD_PY_READER=1` and a Windows Python set up by hand, and as
+  Windows' fallback. `run_turbohud.sh` builds the reader on the Mac where it is missing. Also: a build stops
+  when a package of requirements.txt is not installed (`missing_requirements`): the build environment lacked
+  texture2ddecoder, so the app would have had no game flags; without it they stay emoji. The disk image: 32.5 MB
+  from 44.7 MB. Tests; built (not started) and its contents checked.
