@@ -979,3 +979,9 @@ its "Recent changes".
   instead of jumping to each read's value (`DELTA_FILL_EASE`, 0.08 s); the number stays exact, and a steady
   change is followed under 0.1 s behind. A new lap puts the fill where the delta is at once. It still moves
   20 times a second, as the HUD is drawn: smoother would take more redraws, which cost frames. Tests.
+- 2026-11-11: The track map is learnt only from a clean lap, reported by the user: a first lap with a trip
+  over the grass was learnt as the track and saved, so the map kept the detour in every later race there. A
+  car's path now starts afresh while it has all four wheels off the tarmac (grip under 0.9; kerbs and a wheel
+  in the air still count), nearly stands or goes backwards (`trackmap.driving_clean`), as after a respawn. A
+  learnt track is saved with `clean`; one saved before still shows, and is learnt again and replaced from the
+  next clean lap, so the tracks already saved mend themselves. Tests.

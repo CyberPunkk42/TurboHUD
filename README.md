@@ -168,8 +168,9 @@ starting TurboHUD again.
   track map** (TurboHUD icon's menu, or the settings) adds everyone else as faint
   grey dots. It is square; resize it at its corner in move mode. The track's shape
   is learnt from where the cars drive: on a track new to TurboHUD the map grows during
-  the first lap and is complete once any car has driven a whole lap; after that it is
-  saved and shows at once.
+  the first lap and is complete once any car has driven a whole clean lap (not through the
+  grass with all four wheels, nor standing or going backwards); after that it is saved and
+  shows at once. A map saved by an older TurboHUD is learnt again from the next clean lap.
 - Every section has **↔** and **↕** buttons under **Centre** in the move-mode panel: they
   centre its box across or down the screen it is on. **Mid text** puts a section's text
   in the middle of its box instead of at the left, so with both the text is in the middle

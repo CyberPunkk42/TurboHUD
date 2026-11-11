@@ -161,8 +161,9 @@ reads and takes about 10 ms.
 
 The track map's shape is learnt from where the cars drive, not from the checkpoint
 lines: on some tracks those are long and set off to one side, far from the road.
-TurboHUD records each car's path, and once any car has driven a whole lap (not through
-the pits), that lap is the track. Until then the map shows the longest stretch driven so
+TurboHUD records each car's path, and once any car has driven a whole clean lap (not
+through the pits, never with all four wheels off the tarmac, standing or going
+backwards: each of those starts its path afresh), that lap is the track. Until then the map shows the longest stretch driven so
 far; with AI or other players on track it is learnt within about a lap. The learnt
 track is saved (see the files below), so the next race on that track has its map at
 once. No track file of the game is read, so it works on every track, online too.
