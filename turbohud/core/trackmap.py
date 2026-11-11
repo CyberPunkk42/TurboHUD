@@ -601,5 +601,6 @@ class TrackMap:
                 ahead_too = role == 'leader' and ahead is not None and ahead.name == player.name
                 dots.append(MapDot(player.position, role, player.in_pit, ahead_too, flagged))
         if me.position is not None:
-            dots.append(MapDot(me.position, 'me', me.in_pit))
+            # Last, so it is drawn on top of every other car; ringed too when the player caused a yellow flag.
+            dots.append(MapDot(me.position, 'me', me.in_pit, yellow=me.name in yellow))
         return TrackMapView(outline, tuple(dots), yellow=self.yellow_stretches(state.gates, yellow_sectors))

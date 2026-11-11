@@ -1181,3 +1181,7 @@ its "Recent changes".
   incidents (off track, slow, stopped, spun, wrong way, respawned) count like everyone else's, so its own HUD shows
   the box with its name, the map rings it and turns its sector yellow. Not in the pits, as for every car. The
   hazard warning (CAR STOPPED AHEAD, WRONG WAY AHEAD) leaves the local car out. Tests. Not yet seen in a race.
+- 2026-11-11: Your own dot on the track map, asked for by the user: ringed in yellow when you caused a yellow
+  flag (an outline, so a car under you still shows; the entry before this one said the map ringed it, which it did
+  not until now), and a little smaller than the other cars (0.9 of them, from 1.15), so over one, your white ring
+  shows inside that car's dot. It was already drawn last, on top. Tests; drawn off screen. Not yet seen in a race.
