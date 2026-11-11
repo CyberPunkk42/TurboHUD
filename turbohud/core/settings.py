@@ -95,7 +95,6 @@ class Settings:
     yellow_flags: bool = True  # the yellow flag section and the yellow rings on the track map
     classes: bool = True  # the lap times grouped by class, from the drivers' clan tags (see class_tags)
     class_tags: tuple = CLASS_TAGS  # the clan tags that name a class (upper case, without brackets)
-    screenshot_folder: str = ''  # where Ctrl+Shift+S saves; '' for Pictures/TurboHUD (turbohud.screenshot)
     layout_version: int = 1  # how to read the section sizes: LAYOUT_VERSION is the latest
     presets: dict = field(default_factory=dict)  # number (one of PRESETS) -> a kept `sections`
     blue_seconds: float = 2.0  # how far behind a car about to lap the player shows the blue flag
@@ -258,7 +257,6 @@ def load_settings(path):
         yellow_flags=data.get('yellow_flags') is not False,
         classes=data.get('classes') is not False,
         class_tags=_class_tags(data.get('class_tags')),
-        screenshot_folder=data['screenshot_folder'] if isinstance(data.get('screenshot_folder'), str) else '',
         layout_version=_layout_version(data.get('layout_version')),
         presets=_presets(data.get('presets'), data.get('backdrop') is True),
         blue_seconds=_seconds(data.get('blue_seconds'), Settings.blue_seconds, BLUE_SECONDS),
@@ -292,7 +290,6 @@ def save_settings(path, settings):
         'yellow_flags': settings.yellow_flags,
         'classes': settings.classes,
         'class_tags': list(settings.class_tags),
-        'screenshot_folder': settings.screenshot_folder,
         'layout_version': settings.layout_version,
         'blue_seconds': settings.blue_seconds,
         'radar_seconds': settings.radar_seconds,

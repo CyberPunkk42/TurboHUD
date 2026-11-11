@@ -13,7 +13,6 @@ import sys
 HOTKEY_LOCK = 1
 HOTKEY_QUIT = 2
 HOTKEY_PRESETS = {3: 1, 4: 2, 5: 3}  # hotkey number -> the layout preset it loads
-HOTKEY_SCREENSHOT = 6  # Ctrl+Shift+S: a screenshot of the game with the HUD (turbohud.screenshot)
 
 
 def choose_platform(environ=None, platform=sys.platform):
