@@ -1218,6 +1218,15 @@ class ClassTests(unittest.TestCase):
         self.assertEqual(race.car_classes(mixed, self.TAGS)[id(mixed[3])], 'GT3')
         tie = [driver('A', 'LMP', 'X'), driver('B', 'GT3', 'X'), driver('D', '', 'X')]
         self.assertEqual(race.car_classes(tie, self.TAGS)[id(tie[2])], 'LMP')
+        one_class = [
+            driver('A', 'GT3', 'X'),
+            driver('B', '', 'X'),
+            driver('C', '', 'Y'),
+            driver('D', 'FTR', 'Y'),
+        ]
+        self.assertEqual(race.car_classes(one_class, self.TAGS), {})  # one class, many cars: as before
+        rows = race.lap_times_rows(one_class, clock=2_000_000, class_tags=self.TAGS)
+        self.assertEqual([row.rule for row in rows], [''] * len(rows))
         untagged = [driver('A', '', 'X'), driver('B', '', 'Y')]
         self.assertEqual(race.car_classes(untagged, self.TAGS), {})  # no tags: no classes
 
