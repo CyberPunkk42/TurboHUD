@@ -348,6 +348,17 @@ class LearntTrackTests(unittest.TestCase):
         self.assertTrue(all(x > -2 and z < 2 for x, z in last))
         self.assertEqual(len(track_map.yellow_stretches(GATES, {(0, 4), (6, 0)})), 2)
 
+    def test_how_far_a_car_is_ahead_on_the_road(self):
+        track_map = learnt_map()
+        quarter = 2 * math.pi * RADIUS / 4
+        at = {
+            u: (RADIUS * math.cos(2 * math.pi * u / LINES), RADIUS * math.sin(2 * math.pi * u / LINES))
+            for u in (1, 3)
+        }
+        self.assertAlmostEqual(track_map.road_ahead(at[1], at[3]), quarter, delta=quarter * 0.05)
+        self.assertAlmostEqual(track_map.road_ahead(at[3], at[1]), 3 * quarter, delta=quarter * 0.1)  # behind
+        self.assertIsNone(trackmap.TrackMap().road_ahead(at[1], at[3]))  # nothing learnt
+
     def test_stretches_go_forwards_round_the_end(self):
         points = [(float(i), 0.0) for i in range(6)]
         self.assertEqual(trackmap.stretch(points, 1, 3), ((1.0, 0.0), (2.0, 0.0), (3.0, 0.0)))

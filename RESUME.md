@@ -75,6 +75,13 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-11: Hazard ahead, asked for by the user in place of an automatic full course yellow (which a car
+  left by a player who quit, lost the connection or a gamepad would set off for everyone): the yellow box's
+  heading becomes CAR STOPPED AHEAD or WRONG WAY AHEAD, with that car first, while a stopped car on the
+  tarmac (a wheel on tarmac or kerb grip; parked on the grass it is ignored) or one going the wrong way is
+  up to 5 s ahead on the road at the player's speed (`YellowFlags.hazard`, `HAZARD_*`; the distance along the
+  learnt road, `TrackMap.road_ahead`). It stays at least 2 s, so it never blinks. Only the player's own HUD;
+  off with Yellow flags. No new reads of the game. Tests; not yet seen in a race.
 - 2026-11-11: The screenshot shortcut removed, asked for by the user: it saved nothing on the user's Mac
   (macOS's tool, started from TurboHUD, gave no file). Ctrl+Shift+S, the menu's two items, `--screenshot`,
   `screenshot_folder` and `turbohud/screenshot.py` are gone; Ctrl+Shift+S is TSU's again. A settings file

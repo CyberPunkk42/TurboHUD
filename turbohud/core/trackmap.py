@@ -430,6 +430,27 @@ class TrackMap:
         except OSError as error:
             log.warning('track map: could not save the learnt track: %s', error)
 
+    def road_ahead(self, position, other):
+        """How far `other` is ahead of `position` along the learnt road, in game units (a
+        lap, going forwards), or None while no whole lap is learnt."""
+        if self.learned is None or not self.learned.closed or position is None or other is None:
+            return None
+        points = self.learned.points
+        if len(points) < 3:
+            return None
+        if getattr(self, '_along_for', None) is not self.learned:
+            total, along = 0.0, [0.0]
+            for a, b in itertools.pairwise(points):
+                total += math.dist(a, b)
+                along.append(total)
+            self._along_for, self._along = self.learned, (along, total + math.dist(points[-1], points[0]))
+        along, lap = self._along
+
+        def nearest(point):
+            return min(range(len(points)), key=lambda i: math.dist(points[i], point))
+
+        return (along[nearest(other)] - along[nearest(position)]) % lap
+
     def heading(self, position, hint=None):
         """(the way the race goes at `position`, a unit (x, z), and the learnt line's point
         nearest it) or None while no whole lap is learnt. The learnt line runs in the

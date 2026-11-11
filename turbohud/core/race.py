@@ -1885,7 +1885,10 @@ def race_sections(
             sections['blue'] = opacity
         heading = track_map.heading if track_map is not None and state.on_a_track else None
         incidents = yellow_flags.update(state, heading) if yellow_flags is not None else ()
-        rows = yellow_rows(incidents, state)
+        hazard = None
+        if yellow_flags is not None and track_map is not None and state.on_a_track:
+            hazard = yellow_flags.hazard(state, incidents, track_map.road_ahead)
+        rows = yellow_rows(incidents, state, hazard)
         if rows:
             sections['yellowflag'] = rows
         view = radar.update(state.players, snapshot.read_at, state.draft) if radar is not None else None
@@ -2660,6 +2663,16 @@ YELLOW_WRONG_WAY = 0.5  # moving this share of its speed or more against the rac
 YELLOW_WRONG_WAY_FOR = 1.5  # ... faster than YELLOW_SLOW, this many seconds: driving the wrong way
 YELLOW_RESPAWN_FOR = 3.0  # seconds a car put back on the track counts as an incident
 YELLOW_CLEAR_AFTER = 3.0  # seconds the flag stays once the car is back on the track and up to speed
+# Hazard ahead (asked for by the user on 2026-11-11, instead of an automatic full course yellow,
+# which a car left by a player who quit or lost the connection would set off for everyone): only
+# this player's HUD warns, while a stopped car on the tarmac, or one going the wrong way, is a few
+# seconds ahead on the road. A car parked on the grass is no hazard.
+HAZARD_KINDS = {'stopped': 'CAR STOPPED AHEAD', 'wrong way': 'WRONG WAY AHEAD'}
+HAZARD_SECONDS = 5.0  # this far ahead at the player's speed ...
+HAZARD_LEAST_SPEED = (
+    15.0  # ... taken as at least this fast (game units a second), so a slow car still sees it
+)
+HAZARD_SHOWN_FOR = 2.0  # seconds a warning stays at least, so it never blinks
 YELLOW_ROWS = 3  # incidents listed at most
 YELLOW_COLOR = '#ffd400'  # the flag: the section's background (hud's Section.background) and the map's ring
 YELLOW_TEXT = '#111111'  # its text, dark on the yellow (asked for by the user on 2026-11-11)
@@ -2709,10 +2722,45 @@ class YellowFlags:
 
     def __init__(self):
         self._cars = {}  # name -> {'since': {condition: since}, 'kind', 'until', 'spawns', 'respawn_until'}
+        self._hazard = None  # ((heading, Incident), race time it was last seen): see hazard
 
     def reset(self):
         """Forget every car: while turned off, nothing was followed."""
         self._cars = {}
+        self._hazard = None
+
+    def hazard(self, state, incidents, road_ahead):
+        """The hazard ahead of the local player: (heading, Incident) or None. `road_ahead(a,
+        b)` is how far b is ahead of a on the road (core.trackmap.TrackMap.road_ahead), None
+        while not known. A warning stays HAZARD_SHOWN_FOR seconds at least."""
+        now = state.clock / UNITS_PER_SECOND
+        me = next((p for p in state.players if p.local), None)
+        found = None
+        if me is not None and me.position is not None and not me.in_pit and road_ahead is not None:
+            speed = max(me.forward_speed or 0.0, HAZARD_LEAST_SPEED)
+            by_name = {p.name: p for p in state.players}
+            best = None
+            for incident in incidents:
+                car = by_name.get(incident.name)
+                if incident.kind not in HAZARD_KINDS or car is None or car.position is None:
+                    continue
+                if incident.kind == 'stopped' and not on_tarmac(car):
+                    continue  # parked on the grass: in no one's way
+                distance = road_ahead(me.position, car.position)
+                if distance is None or distance > speed * HAZARD_SECONDS:
+                    continue
+                if best is None or distance < best[0]:
+                    best = (distance, incident)
+            if best is not None:
+                found = (HAZARD_KINDS[best[1].kind], best[1])
+        kept = self._hazard
+        if found is not None:
+            self._hazard = (found, now)
+            return found
+        if kept is not None and 0 <= now - kept[1] < HAZARD_SHOWN_FOR:
+            return kept[0]
+        self._hazard = None
+        return None
 
     def update(self, state, heading=None):
         """The incidents now, most serious first (a tuple of Incident). `heading(position,
@@ -2809,9 +2857,17 @@ def yellow_sector_spans(incidents, state):
     return frozenset(spans)
 
 
-def yellow_rows(incidents, state):
+def on_tarmac(player):
+    """Whether a car stands on the road: a wheel on grip as good as tarmac's or kerbs'
+    (YELLOW_OFF_GRIP); not known counts as on it."""
+    grips = player.wheel_grips
+    return grips is None or any(grip >= YELLOW_OFF_GRIP for grip in grips)
+
+
+def yellow_rows(incidents, state, hazard=None):
     """The yellow flag section: incidents in the local player's sector and the next one,
-    as marshals show them. [] without any."""
+    as marshals show them. [] without any. `hazard` (YellowFlags.hazard): its heading
+    instead of YELLOW, and its car first."""
     me = next((p for p in state.players if p.local), None)
     if me is None:
         return []
@@ -2822,13 +2878,17 @@ def yellow_rows(incidents, state):
     else:
         ahead = {mine, (mine + 1) % len(starts)}
         near = [incident for incident in incidents if incident.sector in ahead]
+    near.sort(key=lambda incident: (incident.sector != mine, YELLOW_KINDS.index(incident.kind)))
+    if hazard is not None:
+        near = [hazard[1], *(incident for incident in near if incident.name != hazard[1].name)]
     if not near:
         return []
-    near.sort(key=lambda incident: (incident.sector != mine, YELLOW_KINDS.index(incident.kind)))
     first = near[0]
-    title = 'YELLOW'
-    where = f'  -  Sector {first.sector + 1}' if first.sector is not None else ''
-    rows = [Row(title + where, 'title', YELLOW_TEXT, centred=True)]  # the heading in the middle (the user)
+    if hazard is not None:
+        title = hazard[0]
+    else:
+        title = 'YELLOW' + (f'  -  Sector {first.sector + 1}' if first.sector is not None else '')
+    rows = [Row(title, 'title', YELLOW_TEXT, centred=True)]  # the heading in the middle (the user)
     for incident in near[:YELLOW_ROWS]:
         sector = f'S{incident.sector + 1}  ' if incident.sector is not None else ''
         rows.append(Row(f'{sector}{incident.name[:MAX_NAME_SHOWN]}  {incident.kind}', 'small', YELLOW_TEXT))

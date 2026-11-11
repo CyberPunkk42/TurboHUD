@@ -2177,6 +2177,66 @@ class YellowFlagTests(unittest.TestCase):
         )
         self.assertEqual(race.yellow_sector_spans((), state), frozenset())
 
+    def hazard_state(self, seconds, *others, me_speed=30.0):
+        state = self.state(seconds, *others)
+        players = tuple(
+            dataclasses.replace(p, position=(0.0, 0.0), forward_speed=me_speed) if p.local else p
+            for p in state.players
+        )
+        return dataclasses.replace(state, players=players)
+
+    @staticmethod
+    def along_x(a, b):
+        return b[0] - a[0] if b[0] >= a[0] else 1000.0  # ahead on the road: further along x
+
+    def test_a_stopped_car_on_the_tarmac_a_few_seconds_ahead_is_a_hazard(self):
+        # Asked for by the user on 2026-11-11, in place of an automatic full course yellow.
+        flags = race.YellowFlags()
+        near = self.car('Stuck', speed=0.0, position=(100.0, 0.0))  # 100 units: 3.3 s at 30
+        incident = race.Incident('Stuck', 'stopped', 0)
+        state = self.hazard_state(10.0, near)
+        self.assertEqual(flags.hazard(state, (incident,), self.along_x), ('CAR STOPPED AHEAD', incident))
+        far = self.car('Stuck', speed=0.0, position=(200.0, 0.0))  # 6.7 s: not yet
+        self.assertIsNone(race.YellowFlags().hazard(self.hazard_state(10.0, far), (incident,), self.along_x))
+        behind = self.car('Stuck', speed=0.0, position=(-10.0, 0.0))
+        self.assertIsNone(
+            race.YellowFlags().hazard(self.hazard_state(10.0, behind), (incident,), self.along_x)
+        )
+        self.assertIsNone(race.YellowFlags().hazard(state, (incident,), None))  # no learnt track
+        slow = race.Incident('Stuck', 'slow', 0)
+        self.assertIsNone(race.YellowFlags().hazard(state, (slow,), self.along_x))  # slow is no hazard
+
+    def test_a_car_parked_on_the_grass_is_no_hazard_but_one_going_the_wrong_way_is(self):
+        parked = self.car('Afk', speed=0.0, grips=self.GRASS, position=(50.0, 0.0))
+        stopped = race.Incident('Afk', 'stopped', 0)
+        self.assertIsNone(
+            race.YellowFlags().hazard(self.hazard_state(10.0, parked), (stopped,), self.along_x)
+        )
+        ghost = self.car('Ghost', speed=30.0, grips=self.GRASS, position=(50.0, 0.0))
+        wrong = race.Incident('Ghost', 'wrong way', 0)
+        found = race.YellowFlags().hazard(self.hazard_state(10.0, ghost), (wrong,), self.along_x)
+        self.assertEqual(found, ('WRONG WAY AHEAD', wrong))
+
+    def test_the_nearest_hazard_and_a_warning_that_never_blinks(self):
+        flags = race.YellowFlags()
+        a = self.car('A', speed=0.0, position=(120.0, 0.0))
+        b = self.car('B', speed=0.0, position=(60.0, 0.0))
+        incidents = (race.Incident('A', 'stopped', 0), race.Incident('B', 'stopped', 0))
+        found = flags.hazard(self.hazard_state(10.0, a, b), incidents, self.along_x)
+        self.assertEqual(found[1].name, 'B')
+        gone = self.hazard_state(11.0, a, b)
+        self.assertEqual(flags.hazard(gone, (), self.along_x), found)  # kept a moment
+        self.assertIsNone(flags.hazard(self.hazard_state(12.1, a, b), (), self.along_x))
+
+    def test_the_hazard_heads_the_yellow_box_with_its_car_first(self):
+        state = self.state(10.0, me_passed=4)
+        far = race.Incident('Far away', 'stopped', 5)  # outside the player's sectors, yet ahead
+        rows = race.yellow_rows((far,), state, ('CAR STOPPED AHEAD', far))
+        self.assertEqual(rows[0].text, 'CAR STOPPED AHEAD')
+        self.assertTrue(rows[0].centred)
+        self.assertIn('Far away  stopped', rows[1].text)
+        self.assertEqual(race.yellow_rows((far,), state), [])  # without the hazard: not in its sectors
+
     def test_a_respawn_counts_for_three_seconds(self):
         flags = race.YellowFlags()
         self.drive(flags, 10.0, self.car(spawns=0))
