@@ -1828,10 +1828,21 @@ class SectorTests(unittest.TestCase):
         state = self.state([], [20.0, 30.0], others=[[[19.0, 31.0, 25.0]]])
         self.assertEqual(race.sector_colours(state), (self.GREEN, self.PURPLE, None))
 
-    def test_someone_faster_later_leaves_it_purple(self):
-        # Their fast first sector comes on their second lap, after mine was set.
+    def test_someone_faster_later_turns_it_green(self):
+        # Their fast first sector comes on their second lap, after mine was set: only one
+        # driver has the purple sector, as with the best lap (the user, 2026-11-11).
         state = self.state([], [20.0], others=[[[30.0, 30.0, 30.0]], [[30.0, 30.0, 30.0], [10.0, 1.0, 1.0]]])
+        self.assertEqual(race.sector_colours(state)[0], self.GREEN)
+
+    def test_someone_slower_later_leaves_it_purple(self):
+        state = self.state([], [20.0], others=[[[30.0, 30.0, 30.0], [25.0, 1.0, 1.0]]])
         self.assertEqual(race.sector_colours(state)[0], self.PURPLE)
+
+    def test_as_fast_counts_for_whoever_set_it_first(self):
+        earlier = self.state([], [20.0], others=[[[20.0, 30.0, 30.0]]])  # theirs ended at 20 s, mine too
+        self.assertEqual(race.sector_colours(earlier)[0], self.PURPLE)  # the same moment: not beaten
+        later = self.state([], [20.0], others=[[[30.0, 30.0, 30.0], [20.0, 1.0, 1.0]]])  # theirs at 110 s
+        self.assertEqual(race.sector_colours(later)[0], self.PURPLE)
 
     def test_the_lap_just_ended_shows_for_six_seconds(self):
         laps = [[20.0, 30.0, 25.0], [21.0, 29.0, 24.0]]

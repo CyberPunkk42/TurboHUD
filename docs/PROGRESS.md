@@ -952,3 +952,7 @@ its "Recent changes".
   a race found where the last one was, and the quick look near the last race. `TurboHUD-test-instructions.md`
   for it: Part 6 now asks for at least three races in one session and how many seconds each took to show,
   and the log to copy includes `quick look`. It replaces 2026.11.11 in `releases/`.
+- 2026-11-11: A purple sector turns green once someone else in the race goes faster in it, asked for by the
+  user: it kept the colour it had when set, so the user and another driver both showed a purple first sector.
+  Now only the fastest has it, as with the best lap (a time as fast counts for whoever set it first); green
+  stays for a personal best, dark yellow for slower. Tests.
