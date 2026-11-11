@@ -24,6 +24,7 @@ class Line:
     slot: str = ''  # the text is at the right of a slot this wide, with the tail after it
     before: str = ''  # a column lined up on the right just before `middle`, in the text's colour
     rule: str = ''  # a line above it, labelled with this (a class in the lap times)
+    centred: bool = False  # in the middle of the box, whatever the section's other lines do
 
 
 @dataclass(frozen=True)
@@ -43,6 +44,7 @@ class Row:
     slot: str = ''  # the text is at the right of a slot this wide, with the tail after it
     before: str = ''  # a column lined up on the right just before `middle`, in the text's colour
     rule: str = ''  # a line in the gap above it, labelled with this (a class in the lap times)
+    centred: bool = False  # in the middle of the box (the yellow flag's heading)
 
 
 FLAG_WIDTH = 1.5  # a flag's room before the text, in font sizes
@@ -136,6 +138,7 @@ def _content(rows, sizes):
                 row.slot,
                 row.before,
                 row.rule,
+                row.centred,
             )
         )
     return lines, baseline
@@ -360,7 +363,7 @@ RACE_SECTIONS = (
         'Yellow flag',
         (
             (
-                Row('YELLOW  -  Sector 3', 'title', '#111111'),
+                Row('YELLOW  -  Sector 3', 'title', '#111111', centred=True),
                 Row('S3  Playername1234567  respawned', 'small', '#111111'),
                 Row('S3  Playername1234567  off track', 'small', '#111111'),
                 Row('S4  Playername1234567  stopped', 'small', '#111111'),

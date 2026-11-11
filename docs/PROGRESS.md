@@ -1112,3 +1112,6 @@ its "Recent changes".
   track's sector lines as for the sector bars; where the road crosses each checkpoint line is worked out once
   per track (`gate_marks`: nearest to the line, not its middle, which can lie far off the road). Only once a
   whole lap is learnt; off with Yellow flags. Tests; drawn off screen. Not yet seen in a race.
+- 2026-11-11: The yellow flag's heading (YELLOW - Sector N) in the middle of its box, asked for by the user;
+  the drivers' lines stay on the left. A row can be centred on its own (`Row.centred`), whatever the rest of
+  the section does. Test; drawn off screen.
