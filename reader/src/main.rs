@@ -55,7 +55,7 @@ fn run() -> i32 {
         }
     };
     say(&object([("ok", Value::Bool(true)), ("ready", Value::Str(READY.into()))]));
-    let mut events = gamelog::EventLog::new(gamelog::tsu_data());
+    let mut events = gamelog::EventLog::new(gamelog::tsu_data(), process.started());
     let share = if win32::under_wine() { WINE_SEARCH_SHARE } else { 1.0 };
     let process_ref = &process;
     let mut service = Service::new(

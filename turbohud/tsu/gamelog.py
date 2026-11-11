@@ -6,12 +6,18 @@ keeps it in `log.txt`; dated copies are in `Logs/log.<date>.<time>.txt`, and a r
 none yet (seen in CrossOver: `Logs` still ended with the last run's "Event ended" four
 minutes into a new event). TurboHUD only reads them, to know when a search of the game's
 memory for an online race is worth it; it never writes to the game's folders.
+
+A TSU may also stop writing them: on a tester's Mac (seen 2026-11-11) the newest log was days
+old and held only "Log started." and "Log ended.", so TurboHUD took it that no event ever ran
+and never looked for a race joined online. So a log says something only when it was written
+since TSU started and holds an event line; else it is not known, and the search goes ahead.
 """
 
 import time
 from pathlib import Path
 
 TAIL = 64 * 1024  # the end of the log that is read: the latest lines
+SINCE_SLACK = 2.0  # seconds a log may seem older than TSU's start and still count (clock steps)
 STARTED, ENDED = b'Event started.', b'Event ended.'
 
 
@@ -28,21 +34,27 @@ def newest_log(folder):
 
 
 def running_in(text):
-    """True if the last event in the log text started and has not ended yet."""
-    started = text.rfind(STARTED)
-    return started >= 0 and started > text.rfind(ENDED)
+    """True if the last event in the log text started and has not ended yet, False if it
+    ended, None if the text names no event at all."""
+    started, ended = text.rfind(STARTED), text.rfind(ENDED)
+    if started < 0 and ended < 0:
+        return None
+    return started > ended
 
 
 class EventLog:
     """`running()`: True while TSU's log says an event runs, False when it says none
-    does, None when there is no log to go by. Looks for the newest log at most every
-    LOOK_EVERY seconds, and reads its end only when it has changed."""
+    does, None when there is no log to go by: none, one with no event in it, or one last
+    written before `since` (when TSU started, as time.time(); None where not known). Looks
+    for the newest log at most every LOOK_EVERY seconds, and reads its end only when it has
+    changed."""
 
     LOOK_EVERY = 5.0
 
-    def __init__(self, folder=None, clock=time.monotonic):
+    def __init__(self, folder=None, clock=time.monotonic, since=None):
         self.folder = folder or tsu_data()
         self._clock = clock
+        self._since = since
         self._log = None
         self._looked = None
         self._seen = None  # (path, size, mtime) last read
@@ -57,6 +69,8 @@ class EventLog:
             if self._log is None:
                 return None
             info = self._log.stat()
+            if self._since is not None and info.st_mtime < self._since - SINCE_SLACK:
+                return None  # from an earlier run: TSU has not written it since it started
             seen = (self._log, info.st_size, info.st_mtime)
             if seen != self._seen:
                 with open(self._log, 'rb') as handle:

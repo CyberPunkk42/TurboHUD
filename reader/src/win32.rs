@@ -6,6 +6,7 @@ use std::ffi::{c_void, OsString};
 use std::io;
 use std::os::windows::ffi::OsStringExt;
 use std::path::PathBuf;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use crate::memory::{readable, region, Process, Region, MEM_IMAGE, MEM_MAPPED};
 
@@ -17,6 +18,7 @@ const TH32CS_SNAPPROCESS: u32 = 0x2;
 const STILL_ACTIVE: u32 = 259;
 const INVALID_HANDLE_VALUE: Handle = -1isize as Handle;
 const ADDRESS_TOP: u64 = 1 << 47; // the end of a program's own memory
+const FILETIME_EPOCH: u64 = 11_644_473_600; // seconds from 1601 (Windows' FILETIME) to 1970
 
 #[repr(C)]
 struct ProcessEntry32W {
@@ -56,6 +58,7 @@ extern "system" {
     fn VirtualQueryEx(process: Handle, address: *const c_void, info: *mut MemoryBasicInformation, size: usize) -> usize;
     fn QueryFullProcessImageNameW(process: Handle, flags: u32, name: *mut u16, size: *mut u32) -> i32;
     fn GetExitCodeProcess(process: Handle, code: *mut u32) -> i32;
+    fn GetProcessTimes(process: Handle, created: *mut u64, exited: *mut u64, kernel: *mut u64, user: *mut u64) -> i32;
     fn K32GetMappedFileNameW(process: Handle, address: *const c_void, name: *mut u16, size: u32) -> u32;
     fn GetModuleHandleW(name: *const u16) -> Handle;
     fn GetProcAddress(module: Handle, name: *const u8) -> *const c_void;
@@ -111,6 +114,16 @@ impl WindowsProcess {
             return Err(io::Error::other(format!("cannot open process {process_id} for reading ({error})")));
         }
         Ok(WindowsProcess { handle })
+    }
+
+    /// When the program started, or None where not known.
+    pub fn started(&self) -> Option<SystemTime> {
+        let (mut created, mut exited, mut kernel, mut user) = (0u64, 0u64, 0u64, 0u64);
+        if unsafe { GetProcessTimes(self.handle, &mut created, &mut exited, &mut kernel, &mut user) } == 0 {
+            return None;
+        }
+        let since_1601 = Duration::from_nanos(created.checked_mul(100)?);
+        UNIX_EPOCH.checked_add(since_1601.checked_sub(Duration::from_secs(FILETIME_EPOCH))?)
     }
 
     /// The program's own file (a Windows path).

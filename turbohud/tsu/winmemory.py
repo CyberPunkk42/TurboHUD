@@ -39,6 +39,7 @@ MEM_COMMIT = 0x1000
 MEM_IMAGE, MEM_MAPPED, MEM_PRIVATE = 0x1000000, 0x40000, 0x20000
 PAGE_GUARD = 0x100
 STILL_ACTIVE = 259
+FILETIME_EPOCH = 11_644_473_600  # seconds from 1601 (Windows' FILETIME) to 1970 (Unix time)
 # Page protections: which allow reading, writing, running.
 READ = {0x02, 0x04, 0x08, 0x20, 0x40, 0x80}
 WRITE = {0x04, 0x08, 0x40, 0x80}
@@ -319,6 +320,7 @@ def _win32():
     ]
     k.QueryFullProcessImageNameW.argtypes = [w.HANDLE, w.DWORD, w.LPWSTR, ctypes.POINTER(w.DWORD)]
     k.GetExitCodeProcess.argtypes = [w.HANDLE, ctypes.POINTER(w.DWORD)]
+    k.GetProcessTimes.argtypes = [w.HANDLE] + [ctypes.POINTER(w.FILETIME)] * 4
     psapi.GetMappedFileNameW.argtypes = [w.HANDLE, ctypes.c_void_p, w.LPWSTR, w.DWORD]
     return k, psapi, PROCESSENTRY32W, MEMORY_BASIC_INFORMATION
 
@@ -375,6 +377,16 @@ class WindowsProcess:
         if not self._k.GetExitCodeProcess(self.handle, ctypes.byref(code)):
             return False
         return code.value == STILL_ACTIVE
+
+    def started(self):
+        """When the program started, as time.time() gives it, or None where not known."""
+        from ctypes import wintypes
+
+        times = [wintypes.FILETIME() for _ in range(4)]  # created, exited, kernel, user
+        if not self._k.GetProcessTimes(self.handle, *(ctypes.byref(t) for t in times)):
+            return None
+        created = times[0].dwHighDateTime << 32 | times[0].dwLowDateTime
+        return created / 10_000_000 - FILETIME_EPOCH if created else None
 
     def image_path(self):
         """The program's own file (a Windows path)."""
@@ -500,7 +512,7 @@ def connect(name='TSU.exe'):
             find_pointers_from=lambda value, address: paced(data(), value, search_start(address)),
         )
         il2cpp = Il2Cpp(memory, metadata, base)
-        reader = LapReader(il2cpp, event_running=EventLog(tsu_data()).running)
+        reader = LapReader(il2cpp, event_running=EventLog(tsu_data(), since=process.started()).running)
         return CachedReader(reader, cache), process
     except BaseException:
         process.close()

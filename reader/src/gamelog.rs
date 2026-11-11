@@ -3,6 +3,10 @@
 //! TSU writes "<time>: Event started." when a race (or hotlap) begins and "<time>: Event
 //! ended." when it is over, into `log.txt` in each account's folder (dated copies in
 //! `Logs/`). Only read, never written.
+//!
+//! A TSU may also stop writing them (a tester's Mac, 2026-11-11: the newest log days old, with
+//! only "Log started." and "Log ended."). So a log says something only when it was written since
+//! TSU started and names an event; else it is not known, and the search goes ahead.
 
 use std::fs::{self, File};
 use std::io::{Read, Seek, SeekFrom};
@@ -13,6 +17,7 @@ const TAIL: u64 = 64 * 1024; // the end of the log that is read: the latest line
 const STARTED: &[u8] = b"Event started.";
 const ENDED: &[u8] = b"Event ended.";
 const LOOK_EVERY: Duration = Duration::from_secs(5);
+const SINCE_SLACK: Duration = Duration::from_secs(2); // a log may seem this much older than TSU's start
 
 /// TSU's data folder on Windows (and in a CrossOver bottle), one folder per Steam account.
 pub fn tsu_data() -> PathBuf {
@@ -53,20 +58,24 @@ fn rfind(text: &[u8], word: &[u8]) -> Option<usize> {
     text.windows(word.len()).rposition(|window| window == word)
 }
 
-/// True if the last event in the log text started and has not ended yet.
-pub fn running_in(text: &[u8]) -> bool {
+/// True if the last event in the log text started and has not ended yet, false if it
+/// ended, None if the text names no event at all.
+pub fn running_in(text: &[u8]) -> Option<bool> {
     match (rfind(text, STARTED), rfind(text, ENDED)) {
-        (Some(started), Some(ended)) => started > ended,
-        (Some(_), None) => true,
-        (None, _) => false,
+        (Some(started), Some(ended)) => Some(started > ended),
+        (Some(_), None) => Some(true),
+        (None, Some(_)) => Some(false),
+        (None, None) => None,
     }
 }
 
 /// `running()`: Some(true) while TSU's log says an event runs, Some(false) when it says
-/// none does, None with no log to go by. Looks for the newest log at most every 5 s, and
-/// reads its end only when it has changed.
+/// none does, None with no log to go by: none, one with no event in it, or one last written
+/// before `since` (when TSU started; None where not known). Looks for the newest log at most
+/// every 5 s, and reads its end only when it has changed.
 pub struct EventLog {
     folder: PathBuf,
+    since: Option<SystemTime>,
     log: Option<PathBuf>,
     looked: Option<Instant>,
     seen: Option<(PathBuf, u64, Option<SystemTime>)>,
@@ -74,8 +83,8 @@ pub struct EventLog {
 }
 
 impl EventLog {
-    pub fn new(folder: PathBuf) -> EventLog {
-        EventLog { folder, log: None, looked: None, seen: None, running: None }
+    pub fn new(folder: PathBuf, since: Option<SystemTime>) -> EventLog {
+        EventLog { folder, since, log: None, looked: None, seen: None, running: None }
     }
 
     pub fn running(&mut self) -> Option<bool> {
@@ -85,13 +94,18 @@ impl EventLog {
         }
         let path = self.log.clone()?;
         let info = fs::metadata(&path).ok()?;
+        if let (Some(since), Ok(written)) = (self.since, info.modified()) {
+            if written + SINCE_SLACK < since {
+                return None; // from an earlier run: TSU has not written it since it started
+            }
+        }
         let seen = (path.clone(), info.len(), info.modified().ok());
         if self.seen.as_ref() != Some(&seen) {
             let mut file = File::open(&path).ok()?;
             file.seek(SeekFrom::Start(info.len().saturating_sub(TAIL))).ok()?;
             let mut text = Vec::new();
             file.read_to_end(&mut text).ok()?;
-            self.running = Some(running_in(&text));
+            self.running = running_in(&text);
             self.seen = Some(seen);
         }
         self.running
@@ -104,10 +118,28 @@ mod tests {
 
     #[test]
     fn the_last_event_decides() {
-        assert!(running_in(b"1: Event started.\n"));
-        assert!(!running_in(b"1: Event started.\n2: Event ended.\n"));
-        assert!(running_in(b"1: Event started.\n2: Event ended.\n3: Event started.\n"));
-        assert!(!running_in(b"nothing yet"));
+        assert_eq!(running_in(b"1: Event started.\n"), Some(true));
+        assert_eq!(running_in(b"1: Event started.\n2: Event ended.\n"), Some(false));
+        assert_eq!(running_in(b"1: Event started.\n2: Event ended.\n3: Event started.\n"), Some(true));
+        assert_eq!(running_in(b"2: Event ended.\n"), Some(false));
+    }
+
+    #[test]
+    fn a_log_without_an_event_says_nothing() {
+        assert_eq!(running_in(b"1: Log started.\n2: Log ended.\n"), None);
+    }
+
+    #[test]
+    fn a_log_from_before_tsu_started_says_nothing() {
+        let folder = temporary("stale");
+        let account = folder.join("76561197960265728");
+        fs::create_dir_all(&account).unwrap();
+        fs::write(account.join("log.txt"), "1: Event started.\n2: Event ended.\n").unwrap();
+        let later = SystemTime::now() + Duration::from_secs(60);
+        assert_eq!(EventLog::new(folder.clone(), Some(later)).running(), None);
+        let earlier = SystemTime::now() - Duration::from_secs(60);
+        assert_eq!(EventLog::new(folder.clone(), Some(earlier)).running(), Some(false));
+        fs::remove_dir_all(&folder).unwrap();
     }
 
     fn temporary(name: &str) -> PathBuf {
@@ -126,7 +158,7 @@ mod tests {
         std::thread::sleep(Duration::from_millis(20));
         fs::write(account.join("log.txt"), "1: Event started.\n2: Event ended.\n").unwrap();
         assert_eq!(newest_log(&folder), Some(account.join("log.txt")));
-        let mut log = EventLog::new(folder.clone());
+        let mut log = EventLog::new(folder.clone(), None);
         assert_eq!(log.running(), Some(false));
         fs::write(account.join("log.txt"), "1: Event started.\n2: Event ended.\n3: Event started.\n").unwrap();
         assert_eq!(log.running(), Some(true)); // the same log, changed: read again
@@ -136,8 +168,8 @@ mod tests {
     #[test]
     fn no_log_is_not_known() {
         let folder = temporary("nolog");
-        assert_eq!(EventLog::new(folder.clone()).running(), None);
-        assert_eq!(EventLog::new(folder.join("missing")).running(), None);
+        assert_eq!(EventLog::new(folder.clone(), None).running(), None);
+        assert_eq!(EventLog::new(folder.join("missing"), None).running(), None);
         fs::remove_dir_all(&folder).unwrap();
     }
 }
