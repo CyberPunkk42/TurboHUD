@@ -75,6 +75,9 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-11: Build 2026.11.11.4 for the tester (`releases/`, macOS 27, `--any-macos`, smoke test passed: the
+  Rust reader read the user's race), as 2026.11.11.3 with the yellow flag as a yellow box with dark text. The
+  test sheet names the build and describes the yellow box. It replaces 2026.11.11.3 in `releases/`.
 - 2026-11-11: The yellow flag is a yellow box with dark text, asked for by the user: sections can have a solid
   background of their own (`hud.Section.background`, drawn where the Tint would be, also in move mode, and
   taking the Tint's place in the panel); the yellow flag's is `race.YELLOW_COLOR` with `YELLOW_TEXT`

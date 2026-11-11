@@ -1,6 +1,6 @@
 # TurboHUD: test for the Mac, step by step
 
-Nov 11, 2026 · build 2026.11.11.3 · about 40 minutes
+Nov 11, 2026 · build 2026.11.11.4 · about 40 minutes
 
 Thank you for testing again. Thanks to your logs from our session, this build fixes three things in races you join online:
 
@@ -10,7 +10,7 @@ Thank you for testing again. Thanks to your logs from our session, this build fi
 
 New since then:
 
-- **Yellow flags**: when another car is off the track, slow, stopped, spun or put back on the track in your sector or the next one, a yellow **YELLOW - Sector N** shows with the drivers, and the track map rings those cars in yellow.
+- **Yellow flags**: when another car is off the track, slow, stopped, spun or put back on the track in your sector or the next one, a yellow box with **YELLOW - Sector N** and the drivers shows, and the track map rings those cars in yellow.
 - The **delta bar** glides instead of jumping, and is green or red, never white.
 - A **purple sector** turns green once someone else is faster in it.
 - The **track map** is learnt only from a clean lap (no trip over the grass); an old map with a detour mends itself after one clean lap.
@@ -28,7 +28,7 @@ TurboHUD only reads what the game shows. It changes nothing in TSU or in CrossOv
 
 You need:
 
-- [ ] The file `TurboHUD-2026.11.11.3-macos-arm64.dmg`
+- [ ] The file `TurboHUD-2026.11.11.4-macos-arm64.dmg`
 - [ ] TSU in CrossOver, as last time
 - [ ] The same way of reading TSU's FPS as last time
 - [ ] The Terminal app (in **Applications > Utilities**)
@@ -49,7 +49,7 @@ For fair FPS numbers: keep the Mac on its **power adapter**, with **Low Power Mo
 In our session TurboHUD ran straight from the disk image. Please install it, as below.
 
 1. If TurboHUD is running, quit it: press **Control + Shift + Q**.
-2. Double-click `TurboHUD-2026.11.11.3-macos-arm64.dmg`. A window opens.
+2. Double-click `TurboHUD-2026.11.11.4-macos-arm64.dmg`. A window opens.
 3. Drag **TurboHUD** onto **Applications**. If asked, choose **Replace**.
 4. Close the window. In Finder, click the eject button next to **TurboHUD** in the sidebar. **Always eject it**: TurboHUD must start from Applications, never from the disk image.
 5. **Don't open TurboHUD yet.** The first measurement is without it.
@@ -132,7 +132,7 @@ Always close move mode (**Control + Shift + L**) before you drive.
    - round at both ends
    - always **green** or **red**, never white: green while you gain on your best lap, red while you lose
    - easy to read, and moving smoothly rather than jumping
-5. **Yellow flag**: when an AI car ahead of you goes off, spins or stops, a yellow **YELLOW - Sector N** should show with its name, and the track map should ring it in yellow. It goes about 3 seconds after the car is back up to speed.
+5. **Yellow flag**: when an AI car ahead of you goes off, spins or stops, a yellow box with **YELLOW - Sector N** and its name should show, and the track map should ring it in yellow. It goes about 3 seconds after the car is back up to speed.
 
 **✏️ Write down:** Panel buttons readable? None and Undo worked? ______
 
