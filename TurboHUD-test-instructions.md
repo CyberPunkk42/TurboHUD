@@ -1,22 +1,18 @@
 # TurboHUD: test for the Mac, step by step
 
-Nov 11, 2026 · build 2026.11.11.4 · about 40 minutes
+Nov 11, 2026 · build 2026.11.11.5 · about 45 minutes
 
-Thank you for testing again. Thanks to your logs from our session, this build fixes three things in races you join online:
+Thank you for testing again. This build has everything from 2026.11.11.4 (the fixes for races joined online, yellow flags, the gliding delta bar, the tidier panel), and much more:
 
-- TurboHUD showed only the clock: your TSU had stopped writing the log TurboHUD looked at, so it thought no race was running.
-- In the third event, the HUD did not show until the event was restarted.
-- The HUD took about 10 seconds (sometimes more) to show after a race started. From the second race of a session on, it should now show within about 2 to 3 seconds.
+- **The flags are TSU's own**: the player list and lap times show the same flag pictures as the game, all the same size, instead of the Mac's emoji. TurboHUD reads them from your copy of TSU when it starts (only reading).
+- **Yellow flags, more of them**: a car going the **wrong way** shows as such; the yellow box keeps the **same size** whatever it lists, with **YELLOW - Sector N** in the middle; and the sector with the incident turns **yellow on the track map**.
+- **Hazard ahead**: when a car stopped on the track, or one going the wrong way, is a few seconds ahead of you, the yellow box says **CAR STOPPED AHEAD** or **WRONG WAY AHEAD**.
+- **Shortcut penalty**: on tracks with shortcuts TSU slows you for, an orange box says **SHORTCUT** with the seconds left, and the lap times show an orange **CUT** for any driver being slowed.
+- **Classes**: in a race where drivers use clan tags such as **[GT3]** and **[LMP]**, the lap times are grouped by class, each under a line with its name.
+- **The track map** is learnt from three clean laps (a lap through a shortcut is left out), and the TurboHUD icon's menu has **Relearn this track's map** for a map learnt wrong.
+- The app is smaller: 32 MB instead of 45.
 
-New since then:
-
-- **Yellow flags**: when another car is off the track, slow, stopped, spun or put back on the track in your sector or the next one, a yellow box with **YELLOW - Sector N** and the drivers shows, and the track map rings those cars in yellow.
-- The **delta bar** glides instead of jumping, and is green or red, never white.
-- A **purple sector** turns green once someone else is faster in it.
-- The **track map** is learnt only from a clean lap (no trip over the grass); an old map with a detour mends itself after one clean lap.
-- The **move-mode panel** is tidier: sections under Timing, Car, Race and Other, with **All** and **None** buttons beside "Show".
-
-This test checks those, and measures which of two ways of drawing TurboHUD costs TSU fewer frames. You said the stutter and FPS drops were gone: the measurements in Part 3 put numbers on that.
+This test checks those, and measures which of two ways of drawing TurboHUD costs TSU fewer frames. If you already did the measurements with 2026.11.11.4, send those too and you can skip Part 3.
 
 Go through it from top to bottom. Every step is one thing to do. Where it says **✏️ Write down**, fill in the answer on this sheet.
 
@@ -28,7 +24,7 @@ TurboHUD only reads what the game shows. It changes nothing in TSU or in CrossOv
 
 You need:
 
-- [ ] The file `TurboHUD-2026.11.11.4-macos-arm64.dmg`
+- [ ] The file `TurboHUD-2026.11.11.5-macos-arm64.dmg`
 - [ ] TSU in CrossOver, as last time
 - [ ] The same way of reading TSU's FPS as last time
 - [ ] The Terminal app (in **Applications > Utilities**)
@@ -49,7 +45,7 @@ For fair FPS numbers: keep the Mac on its **power adapter**, with **Low Power Mo
 In our session TurboHUD ran straight from the disk image. Please install it, as below.
 
 1. If TurboHUD is running, quit it: press **Control + Shift + Q**.
-2. Double-click `TurboHUD-2026.11.11.4-macos-arm64.dmg`. A window opens.
+2. Double-click `TurboHUD-2026.11.11.5-macos-arm64.dmg`. A window opens.
 3. Drag **TurboHUD** onto **Applications**. If asked, choose **Replace**.
 4. Close the window. In Finder, click the eject button next to **TurboHUD** in the sidebar. **Always eject it**: TurboHUD must start from Applications, never from the disk image.
 5. **Don't open TurboHUD yet.** The first measurement is without it.
@@ -132,13 +128,20 @@ Always close move mode (**Control + Shift + L**) before you drive.
    - round at both ends
    - always **green** or **red**, never white: green while you gain on your best lap, red while you lose
    - easy to read, and moving smoothly rather than jumping
-5. **Yellow flag**: when an AI car ahead of you goes off, spins or stops, a yellow box with **YELLOW - Sector N** and its name should show, and the track map should ring it in yellow. It goes about 3 seconds after the car is back up to speed.
+5. **Yellow flag**: when an AI car ahead of you goes off, spins or stops, a yellow box with **YELLOW - Sector N** and its name should show, and the track map should ring it in yellow and turn its sector yellow. It goes about 3 seconds after the car is back up to speed. The box should keep its size the whole time.
+6. **Flags**: look at the player list and the lap times. The flags should look like TSU's own, all the same size.
+7. If a car stops on the track just ahead of you, the yellow box should say **CAR STOPPED AHEAD**.
+8. If your track has shortcuts that TSU slows you for: take one. An orange **SHORTCUT** box should count down, and the lap times should show **CUT** next to you. (First place the box: in move mode, tick **Shortcut penalty** under RACE and drag it where you like.)
 
 **✏️ Write down:** Panel buttons readable? None and Undo worked? ______
 
 **✏️ Write down:** Everything there and updating? ______ The delta bar: ______
 
-**✏️ Write down:** Yellow flag: did it show when a car had trouble? Too often, too late, or about right? ______
+**✏️ Write down:** Yellow flag: did it show when a car had trouble? Too often, too late, or about right? Did its sector turn yellow on the map? ______
+
+**✏️ Write down:** Flags like TSU's, all the same size? ______
+
+**✏️ Write down:** CAR STOPPED AHEAD or SHORTCUT seen? Did they look right? ______
 
 ---
 
@@ -163,6 +166,10 @@ This checks the fixes. Stay in the same session for at least **three races**, as
 **✏️ Write down:** If you joined while a race was already running: did it show? ______
 
 **✏️ Write down:** Online, did the yellow flag show when other drivers went off or spun? ______
+
+If the host asks: set your clan tag in TSU to the class you're given (for example **GT3**). With two classes in the race, the lap times should be grouped by class, each under a line with its name.
+
+**✏️ Write down:** Classes in the lap times (if tried): ______
 
 Stay in the race and go to Part 7.
 
@@ -232,11 +239,14 @@ If TSU freezes: quit it with **Stop** in Steam, as last time.
 | | Panel buttons readable? None and Undo worked? | |
 | | Everything there and updating? | |
 | | The delta bar (round, green or red, readable, smooth)? | |
-| | Yellow flag offline: shows when it should? | |
+| | Yellow flag offline: shows when it should? Sector yellow on the map? | |
+| | Flags like TSU's, all the same size? | |
+| | CAR STOPPED AHEAD / SHORTCUT seen and right? | |
 | | Online race 1: did the HUD show? After how many seconds? | |
 | | Online races 2, 3 ...: after how many seconds? | |
 | | Online, joined during a race: did it show? | |
 | | Online yellow flags? | |
+| | Classes in the lap times (if tried)? | |
 | | Anything left after quitting TurboHUD? | |
 | | TSU quit normally? | |
 
@@ -270,11 +280,5 @@ If you clicked **Move to Trash**: install it again from the disk image (Part 2),
 | Only a clock, during a race | Wait a minute. If nothing changes, copy the log (Part 7) and tell us. |
 | A warning that the graphics setting is not D3DMetal | In CrossOver, set the bottle's graphics to **D3DMetal**, restart TSU, and tell us you changed it. |
 | TurboHUD won't open | Do the **Open Anyway** steps above again. |
-
-To try the old reader, quit TurboHUD, then paste this into Terminal and press **Return**:
-
-```
-TURBOHUD_PY_READER=1 /Applications/TurboHUD.app/Contents/MacOS/TurboHUD
-```
 
 **Removing TurboHUD:** quit it and move it from Applications to the Bin. Its settings and logs are in `~/Library/Application Support/TurboHUD`.

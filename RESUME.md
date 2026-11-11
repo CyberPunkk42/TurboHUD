@@ -75,6 +75,12 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-11: Build 2026.11.11.5 for the tester (`releases/`, macOS 27, `--any-macos`, smoke test passed: the Rust
+  reader read the user's race, no error; the app holds the reader and texture2ddecoder, no Windows Python;
+  32.4 MB). Everything since 2026.11.11.4. `TurboHUD-test-instructions.md` for it: what's new, Part 4 looks at
+  TSU's flags, the yellow sector on the map and the steady box, CAR STOPPED AHEAD and the Shortcut penalty box,
+  Part 6 at classes (if the host asks), Part 3 may be skipped if done with 2026.11.11.4; the help for the old
+  Python reader is gone (the app has none). The 2026.11.11.4 image is still in `releases/`, to be removed by hand.
 - 2026-11-11: TurboHUD failed at every frame with the shortcut penalty merged, reported by the user (an
   AttributeError, hundreds of times in the terminal): the app called its ShortcutPenalties `shortcuts`, a name
   the same function gives later to whether the hotkeys are registered (True), which replaced it. Renamed
