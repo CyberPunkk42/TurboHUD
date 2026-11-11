@@ -1,6 +1,6 @@
 # TurboHUD: test for the Mac, step by step
 
-Nov 11, 2026 · build 2026.11.11.7 · about 45 minutes
+Nov 11, 2026 · build 2026.11.11.8 · about 50 minutes
 
 Thank you for testing again. This build has everything from 2026.11.11.4 (the fixes for races joined online, yellow flags, the gliding delta bar, the tidier panel), and much more:
 
@@ -11,6 +11,15 @@ Thank you for testing again. This build has everything from 2026.11.11.4 (the fi
 - **Classes**: in a race where drivers use clan tags such as **[GT3]** and **[LMP]**, the lap times are grouped by class, each under a line with its name.
 - **The track map** is learnt from three clean laps (a lap through a shortcut is left out), and the TurboHUD icon's menu has **Relearn this track's map** for a map learnt wrong.
 - The app is smaller: 32 MB instead of 45.
+
+New since 2026.11.11.7:
+
+- **Your own yellow flag**: when **you** go off, spin or stop, your own HUD shows the yellow box too, and your dot on the track map gets a yellow ring.
+- **Your dot on the track map** is a little smaller than the others and always on top, so you can still see it when a car is right next to you.
+- **A car driving backwards**: the yellow sector on the map now follows the car, instead of staying where it turned round.
+- **The radar** no longer zooms far out: it shows about six car lengths ahead and behind, so the cars stay big. A car further away shows as a small arrow at the top or bottom edge.
+- **Classes on the radar**: in a race with classes, cars of another class than yours are coloured (blue, green, purple or pink), with red or yellow round them when close.
+- **Clan tags in the lap times**: in a race without classes, each driver's clan tag shows in its own column after the name. The TurboHUD icon's menu has **Clan tags in the lap times** to turn it off.
 
 This test checks those, and measures which of two ways of drawing TurboHUD costs TSU fewer frames. If you already did the measurements with 2026.11.11.4, send those too and you can skip Part 3.
 
@@ -24,7 +33,7 @@ TurboHUD only reads what the game shows. It changes nothing in TSU or in CrossOv
 
 You need:
 
-- [ ] The file `TurboHUD-2026.11.11.7-macos-arm64.dmg`
+- [ ] The file `TurboHUD-2026.11.11.8-macos-arm64.dmg`
 - [ ] TSU in CrossOver, as last time
 - [ ] The same way of reading TSU's FPS as last time
 - [ ] The Terminal app (in **Applications > Utilities**)
@@ -45,7 +54,7 @@ For fair FPS numbers: keep the Mac on its **power adapter**, with **Low Power Mo
 In our session TurboHUD ran straight from the disk image. Please install it, as below.
 
 1. If TurboHUD is running, quit it: press **Control + Shift + Q**.
-2. Double-click `TurboHUD-2026.11.11.7-macos-arm64.dmg`. A window opens.
+2. Double-click `TurboHUD-2026.11.11.8-macos-arm64.dmg`. A window opens.
 3. Drag **TurboHUD** onto **Applications**. If asked, choose **Replace**.
 4. Close the window. In Finder, click the eject button next to **TurboHUD** in the sidebar. **Always eject it**: TurboHUD must start from Applications, never from the disk image.
 5. **Don't open TurboHUD yet.** The first measurement is without it.
@@ -133,6 +142,10 @@ Always close move mode (**Control + Shift + L**) before you drive.
 7. If a car stops on the track just ahead of you, the yellow box should say **CAR STOPPED AHEAD**.
 8. If your track has shortcuts that TSU slows you for: take one. An orange **SHORTCUT** box should count down, and the lap times should show **CUT** next to you. (First place the box: in move mode, tick **Penalties** under RACE and drag it where you like.)
 9. In one race against AI, hold the throttle while the red lights are on (a false start). The orange box should say **JUMP START** while you hold it, and go 1.5 seconds after you let go or the lights go out.
+10. **Your own yellow flag**: drive off the track with all four wheels onto the grass for a second (or spin). The yellow box should show **your** name, and your dot on the track map should get a yellow ring. There should be **no** CAR STOPPED AHEAD for your own car.
+11. **Your dot**: when you are right behind or beside a car, can you still see your own dot (the white ring) on the track map?
+12. **Driving backwards**: turn round and drive back a little into the sector before. Your yellow sector on the map should move back with you.
+13. **The radar**: are the cars big enough to read at a glance? When a car is a bit further behind or ahead, does a small arrow show at the bottom or top edge?
 
 **✏️ Write down:** Panel buttons readable? None and Undo worked? ______
 
@@ -143,6 +156,10 @@ Always close move mode (**Control + Shift + L**) before you drive.
 **✏️ Write down:** Flags like TSU's, all the same size? ______
 
 **✏️ Write down:** CAR STOPPED AHEAD, SHORTCUT or JUMP START seen? Did they look right? ______
+
+**✏️ Write down:** Your own yellow flag (box and ring)? Your dot visible next to a car? The sector following you backwards? ______
+
+**✏️ Write down:** The radar: cars big enough? Arrows at the edge seen, and clear? ______
 
 ---
 
@@ -170,7 +187,11 @@ This checks the fixes. Stay in the same session for at least **three races**, as
 
 If the host asks: set your clan tag in TSU to the class you're given (for example **GT3**). With two classes in the race, the lap times should be grouped by class, each under a line with its name.
 
-**✏️ Write down:** Classes in the lap times (if tried): ______
+**✏️ Write down:** Classes in the lap times (if tried): ______ Cars of another class coloured on the radar? ______
+
+In a race without classes where drivers have clan tags: the lap times should show each tag in its own column after the name.
+
+**✏️ Write down:** Clan tags in the lap times: shown, and readable? ______
 
 Stay in the race and go to Part 7.
 
@@ -243,11 +264,14 @@ If TSU freezes: quit it with **Stop** in Steam, as last time.
 | | Yellow flag offline: shows when it should? Sector yellow on the map? | |
 | | Flags like TSU's, all the same size? | |
 | | CAR STOPPED AHEAD / SHORTCUT / JUMP START seen and right? | |
+| | Own yellow flag, own dot, sector following a car backwards? | |
+| | Radar: cars big enough, arrows at the edge clear? | |
 | | Online race 1: did the HUD show? After how many seconds? | |
 | | Online races 2, 3 ...: after how many seconds? | |
 | | Online, joined during a race: did it show? | |
 | | Online yellow flags? | |
-| | Classes in the lap times (if tried)? | |
+| | Classes in the lap times and on the radar (if tried)? | |
+| | Clan tags in the lap times? | |
 | | Anything left after quitting TurboHUD? | |
 | | TSU quit normally? | |
 
