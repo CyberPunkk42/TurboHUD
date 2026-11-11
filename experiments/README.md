@@ -462,3 +462,16 @@ never in the repository). Close TurboHUD first; Ctrl+C ends it.
   edges or beyond is still to see.
 - Still to record: a race against AI with the local car off the track, stopped and spun; then online
   as a client, where the other cars' fields may never be filled in (only the server runs them).
+
+### Online as a client (2026-11-11, the user's Mac, 3 min, one other driver)
+A session hosted by someone else, the other car a human on their own computer (the user's word); both
+cars' positions came the client way (TSU's recorder, on its 1/1024 grid). For that other car the
+client had, live: the four wheel surfaces (1,331 wheel readings on tarmac, layer 13, grip 1.0; 38 on
+layer 18, grip 0.5 with dust and extra tire wear; 38 on layer 17, grip 0.93, likely kerbs; a few on
+layers 0 with grip 0, likely a wheel in the air, and 22 and 24 with grip 1.0), `m_forwardSpeed` (19.7
+to 61.3), `m_sliding` (0 to 0.96), and `allWheelsG`, `frontWheelsG`, `backWheelsG` (0.04 to 1.7; 0
+for the local car when in the air, it seems). The local car (one respawn, some reversing) had
+`VehicleState.spawnCount` 0 to 1, `spawnTick` set and `reversing` going on and off; the other car did
+neither, so whether those come through online for others is not known yet. `hitPoints` stayed 500 for
+both (no damage in the event?). So a yellow flag can go by each car's wheel surfaces (all four off
+the tarmac), speed (slow, stopped, backwards) and sliding (spun), online too.

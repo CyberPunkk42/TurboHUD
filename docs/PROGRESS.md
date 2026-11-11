@@ -961,3 +961,7 @@ its "Recent changes".
   each car's four wheel surfaces (`TS.WheelUpdater.m_surfaceMaterial*`, each a `TS.TSMaterialProperties`
   with grip, braking, dust ...) are there for the other car too, offline, so all four wheels off the tarmac
   can be told for every car there. Online as a client is still to record (`experiments/README.md`).
+- 2026-11-11: Recorded online as a client with `experiments/tsu_race_recorder.py` (a session hosted by
+  someone else, one other human driver): the client has the other car's four wheel surfaces, its speed
+  and how much it slides, live. So yellow flags can tell off the track (all four wheels off the tarmac),
+  slow or stopped, and spun for every car online too (`experiments/README.md`).

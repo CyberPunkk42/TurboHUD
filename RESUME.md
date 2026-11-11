@@ -75,6 +75,10 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-11: Recorded online as a client with `experiments/tsu_race_recorder.py` (a session hosted by
+  someone else, one other human driver): the client has the other car's four wheel surfaces, its speed
+  and how much it slides, live. So yellow flags can tell off the track (all four wheels off the tarmac),
+  slow or stopped, and spun for every car online too (`experiments/README.md`).
 - 2026-11-11: `experiments/tsu_race_recorder.py`, for yellow flags, asked for by the user: records every car
   of a race through the reader in the bottle (only reading) to a file outside the repository. A first look:
   each car's four wheel surfaces (`TS.WheelUpdater.m_surfaceMaterial*`, each a `TS.TSMaterialProperties`
