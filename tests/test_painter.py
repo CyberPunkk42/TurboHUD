@@ -717,6 +717,55 @@ class YellowFlagLookTests(unittest.TestCase):
             window.grab().toImage().pixelColor(window.width() // 2, 10).alpha(), 0
         )  # no flag, no box
 
+    def test_the_box_keeps_its_size_and_the_text_too_whatever_is_listed(self):
+        # Reported by the user on 2026-11-11: the box grew and shrank with each incident.
+        from turbohud.core import race
+        from turbohud.core.hud import RACE_SECTIONS, drawn_scale, tight_height
+        from turbohud.core.settings import Theme
+        from turbohud.hud.painter import text_ink, text_width
+        from turbohud.overlay.window import SectionWindow
+
+        class Native:
+            def raise_window(self, window):
+                return 'test'
+
+        section = next(s for s in RACE_SECTIONS if s.name == 'yellowflag')
+        window = SectionWindow(Native(), Theme(), section)
+        self.addCleanup(window.close)
+        window.resize(*window.base)
+        window.set_locked(True)
+
+        def yellow_box(names, kind):
+            rows = race.yellow_rows(tuple(race.Incident(n, kind, 0) for n in names), self._state())
+            window.show_content(rows)
+            image = window.grab().toImage()
+            spots = [
+                (x, y)
+                for x in range(image.width())
+                for y in range(image.height())
+                if image.pixelColor(x, y).alpha() > 200
+                and image.pixelColor(x, y).blue() < 80
+                and image.pixelColor(x, y).red() > 220
+            ]
+            xs, ys = [x for x, _y in spots], [y for _x, y in spots]
+            scale = drawn_scale(
+                section,
+                (window.width(), window.height()),
+                rows,
+                tight_height(section, 1.0, text_ink),
+                1.0,
+                text_ink,
+                text_width,
+            )
+            return (min(xs), min(ys), max(xs), max(ys)), scale
+
+        one, one_scale = yellow_box(['A'], 'slow')
+        three, three_scale = yellow_box(['Someone', 'Somebody else', 'Third driver'], 'respawned')
+        self.assertEqual(one, three)
+        self.assertGreater(one[2] - one[0], window.width() - 4)  # the whole box, as move mode sized it
+        self.assertGreater(one[3] - one[1], window.height() - 4)
+        self.assertEqual(one_scale, three_scale)  # the text keeps its size
+
     def _state(self):
         from turbohud.core import race
 

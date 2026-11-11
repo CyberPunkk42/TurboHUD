@@ -1102,3 +1102,7 @@ its "Recent changes".
   `CGRequestScreenCaptureAccess` and a tray message saying where to allow it), and waits for the tool aside,
   logging `screenshot saved: <path>` or `screenshot not saved (<the tool's words>)`. Started from the source,
   the permission belongs to the terminal app. Tests.
+- 2026-11-11: The yellow flag's box keeps its size, reported by the user: it was drawn only as large as its
+  text, so it grew and shrank with each incident listed. A section with a background of its own now fills
+  its whole window with it (`_paint_backdrop`), the size given in move mode; the text keeps its size in it,
+  as it is worked out from the section's sample rows. Test (one incident and three: the same box and text size).

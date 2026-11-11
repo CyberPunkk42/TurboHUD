@@ -75,6 +75,10 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-11: The yellow flag's box keeps its size, reported by the user: it was drawn only as large as its
+  text, so it grew and shrank with each incident listed. A section with a background of its own now fills
+  its whole window with it (`_paint_backdrop`), the size given in move mode; the text keeps its size in it,
+  as it is worked out from the section's sample rows. Test (one incident and three: the same box and text size).
 - 2026-11-11: Screenshots that were not saved, reported by the user: Ctrl+Shift+S started macOS's
   `screencapture` twice, but no file came, and the tool's errors were thrown away. Most likely the Screen
   Recording permission: now TurboHUD asks macOS first (`CGPreflightScreenCaptureAccess`; when not allowed,

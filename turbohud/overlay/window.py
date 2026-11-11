@@ -377,7 +377,15 @@ class SectionWindow(QWidget):
         """The light tint, only as large as the text (and pedal bars): half the margin
         round it, moved `down` with the text and kept inside the window. A section with a
         right-hand column (the player list) is as wide as its window, where that column
-        is drawn. `color` ('#rrggbb'): a solid box of that colour instead (Section.background)."""
+        is drawn. `color` ('#rrggbb'): a solid box of that colour instead (Section.background),
+        as large as the section's window, whatever its text: a box that followed the text
+        changed its size with each incident (the yellow flag, reported by the user on
+        2026-11-11). Its size is the one given it in move mode, and the text keeps its size in it."""
+        if color:
+            painter.setPen(Qt.NoPen)
+            painter.setBrush(QColor(color))
+            painter.drawRoundedRect(QRectF(self.rect()), 6, 6)
+            return
         # Digits as zeros: a tint that follows them would flicker as a number runs.
         width, height = content_size(steady_rows(rows), scale, text_width)
         pad = round(MARGIN * scale / 2)
