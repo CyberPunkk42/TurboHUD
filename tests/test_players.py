@@ -1318,13 +1318,15 @@ class JumpStartTests(ShortcutTests):
     def jumper(self, name, on, local=False):
         return dataclasses.replace(self.driver(name, False, local=local), jump_start=on)
 
-    def test_shown_for_five_seconds_from_the_last_sight_of_it(self):
+    def test_shown_while_tsu_flags_it_then_a_second_and_a_half_more(self):
+        # The user (2026-11-11): while the throttle is held on the red lights, then 1.5 s.
         penalties = race.ShortcutPenalties()
         me = self.jumper('Me', True, local=True)
-        self.assertEqual(penalties.jump_starts(self.state(9.2, me)), {'Me'})
+        for seconds in (5.0, 7.0, 9.2):  # held for seconds: shown all along
+            self.assertEqual(penalties.jump_starts(self.state(seconds, me)), {'Me'})
         later = self.jumper('Me', False, local=True)
-        self.assertEqual(penalties.jump_starts(self.state(13.0, later)), {'Me'})  # TSU's flag lasts 0.5 s
-        self.assertEqual(penalties.jump_starts(self.state(14.3, later)), frozenset())
+        self.assertEqual(penalties.jump_starts(self.state(10.6, later)), {'Me'})
+        self.assertEqual(penalties.jump_starts(self.state(10.8, later)), frozenset())
 
     def test_the_box_says_jump_start_and_the_lap_times_jump(self):
         me, other = self.jumper('Me', True, local=True), self.jumper('Other', True)

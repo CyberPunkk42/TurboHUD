@@ -2511,7 +2511,9 @@ SHORTCUT_COLOR = '#ff8c1a'  # the box (hud's Section.background) and CUT in the 
 SHORTCUT_TEXT = '#111111'  # dark text on the orange
 
 
-JUMP_START_SHOWN = 5.0  # seconds JUMP START stays: TSU's flag was on for only half a second
+# JUMP START shows while TSU's false-start flag is on (the player holds the throttle on the red lights, or as they
+# go out, and TSU holds the car), then this many seconds more (asked for by the user on 2026-11-11).
+JUMP_START_SHOWN = 1.5
 
 
 class ShortcutPenalties:
