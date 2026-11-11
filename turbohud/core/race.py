@@ -2828,7 +2828,7 @@ def yellow_rows(incidents, state):
     first = near[0]
     title = 'YELLOW'
     where = f'  -  Sector {first.sector + 1}' if first.sector is not None else ''
-    rows = [Row(title + where, 'title', YELLOW_TEXT)]
+    rows = [Row(title + where, 'title', YELLOW_TEXT, centred=True)]  # the heading in the middle (the user)
     for incident in near[:YELLOW_ROWS]:
         sector = f'S{incident.sector + 1}  ' if incident.sector is not None else ''
         rows.append(Row(f'{sector}{incident.name[:MAX_NAME_SHOWN]}  {incident.kind}', 'small', YELLOW_TEXT))

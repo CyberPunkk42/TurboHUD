@@ -766,6 +766,38 @@ class YellowFlagLookTests(unittest.TestCase):
         self.assertGreater(one[3] - one[1], window.height() - 4)
         self.assertEqual(one_scale, three_scale)  # the text keeps its size
 
+    def test_the_heading_is_in_the_middle_and_the_drivers_on_the_left(self):
+        # Asked for by the user on 2026-11-11.
+        from turbohud.core import race
+        from turbohud.core.hud import RACE_SECTIONS
+        from turbohud.core.settings import Theme
+        from turbohud.overlay.window import SectionWindow
+
+        class Native:
+            def raise_window(self, window):
+                return 'test'
+
+        section = next(s for s in RACE_SECTIONS if s.name == 'yellowflag')
+        window = SectionWindow(Native(), Theme(), section)
+        self.addCleanup(window.close)
+        window.resize(*window.base)
+        window.set_locked(True)
+        rows = race.yellow_rows((race.Incident('Ab', 'slow', 0),), self._state())
+        self.assertEqual([row.centred for row in rows], [True, False])
+        window.show_content(rows)
+        image = window.grab().toImage()
+        dark = [
+            (x, y)
+            for x in range(image.width())
+            for y in range(image.height())
+            if image.pixelColor(x, y).alpha() > 200 and max(image.pixelColor(x, y).getRgb()[:3]) < 60
+        ]
+        middle_y = (min(y for _x, y in dark) + max(y for _x, y in dark)) / 2
+        heading = [x for x, y in dark if y < middle_y]
+        driver = [x for x, y in dark if y > middle_y]
+        self.assertAlmostEqual((min(heading) + max(heading)) / 2, image.width() / 2, delta=6)
+        self.assertLess(min(driver), image.width() / 6)  # the driver's line starts on the left
+
     def _state(self):
         from turbohud.core import race
 

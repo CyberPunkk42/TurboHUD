@@ -330,7 +330,7 @@ def draw_hud(painter, lines, theme, scale=None, left=0, width=None, centre=False
         middle_end = middle_right(lines, width, margin, steady_advance)
         before_end = before_right(lines, middle_end, steady_advance)
     for line in lines:
-        text_x = centred_x(line, width, margin) if centre else x
+        text_x = centred_x(line, width, margin) if (centre or line.centred) and width is not None else x
         if line.rule:
             right = left + width - margin if width is not None else None
             draw_rule(painter, x, right, line, colors['accent'], outline)

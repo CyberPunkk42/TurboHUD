@@ -75,6 +75,9 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-11: The yellow flag's heading (YELLOW - Sector N) in the middle of its box, asked for by the user;
+  the drivers' lines stay on the left. A row can be centred on its own (`Row.centred`), whatever the rest of
+  the section does. Test; drawn off screen.
 - 2026-11-11: A sector under a yellow flag turns yellow on the track map, asked for by the user: each
   sector with an incident (any kind) has its stretch of the learnt road drawn yellow over the usual road, all
   round the track (`yellow_sector_spans` in race.py, `TrackMap.yellow_stretches`). The sectors are the
