@@ -1038,3 +1038,15 @@ its "Recent changes".
   about 100 points a lap) and saved with `laps`. One lap a car while there are three or more cars, so one
   driver who cuts every lap is outvoted; alone or with one other car, more laps of the same car count. A track
   saved from a single lap still shows and is learnt again this way. Tests. Not yet seen in a race.
+- 2026-11-11: TSU's own flags in the player list and lap times, asked for by the user (the emoji flags
+  depend on the system, and Windows shows none): `turbohud/tsu/gameflags.py` finds TSU's `_Data` folder
+  (Steam's libraries; on the Mac inside the CrossOver bottles), reads the 221 flag textures by TS.Flag's
+  names from `resources.assets` and `sharedassets0.assets` (only reading; a reader of its own for Unity
+  2021.3's files without type trees, another version is left alone) and unpacks the crunched DXT with
+  `texture2ddecoder` (MIT, new in `requirements.txt`, 0.2 MB; UnityPy would have added about 27 MB). They are
+  kept 48 px high as PNGs in TurboHUD's folder (`flags/`, 0.9 MB) with the game files' sizes and times, and
+  read again only after they change; at start in a background thread, 0.6 s on the user's Mac. Drawn in a
+  box 0.7 x 1.2 font sizes, centred and level with the text, with a thin edge; emoji or code where none.
+  The game's flags are never part of TurboHUD. Also found in a race (only reading): the clan tag is
+  `TS.PlayerProfile.teamTag` ('FTR', without brackets). Tests with a fake game file; read from the real
+  game on the Mac and drawn off screen. Not yet seen in the app, on Linux or on Windows.
