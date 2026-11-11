@@ -98,10 +98,41 @@ class SteadySizeTests(unittest.TestCase):
         self.assertEqual(hud.widest_rows(self.SECTIONS['delta'], [], 1.0, self.proportional), [])
 
     def test_every_column_counts_as_steady(self):
-        row = hud.Row('1', 'small', tail='2', middle='3', right='4', before='5')
+        row = hud.Row('1', 'small', tail='2', middle='3', right='4', before='5', tag='T6')
         steady = hud.steady_rows([row])[0]
-        self.assertEqual(steady.before, '0')
+        self.assertEqual((steady.before, steady.tag), ('0', 'T0'))
         self.assertEqual((steady.text, steady.tail, steady.middle, steady.right), ('0', '0', '0', '0'))
+
+
+class TagColumnTests(unittest.TestCase):
+    """The clan tag column in the lap times (asked for by the user on 2026-11-11)."""
+
+    @staticmethod
+    def measure(text, size):
+        return len(text) * size
+
+    def lines(self, *rows):
+        return hud._content(list(rows), hud.Sizes.for_scale(1.0))[0]
+
+    def test_it_starts_a_gap_before_the_widest_lap_column_and_lines_up_on_the_left(self):
+        lines = self.lines(
+            hud.Row('A', 'small', middle='1:23', right='0:12', before='L12', tag='FTR'),
+            hud.Row('B', 'small', middle='1:23', right='0:12', before='L3', tag='ABCDE'),
+            hud.Row('C', 'small', middle='1:23', right='0:12', before='L3'),
+        )
+        size = lines[0].size
+        gap = hud.COLUMN_GAP * size
+        self.assertEqual(hud.tag_left(lines, 400, self.measure), 400 - 3 * size - gap - 5 * size)
+        self.assertIsNone(hud.tag_left(self.lines(hud.Row('A', 'small', before='L1')), 400, self.measure))
+
+    def test_it_counts_towards_the_width(self):
+        plain = self.lines(hud.Row('A', 'small', middle='1:23', right='0:12', before='L12'))
+        tagged = self.lines(hud.Row('A', 'small', middle='1:23', right='0:12', before='L12', tag='FTR'))
+        size = plain[0].size
+        self.assertEqual(
+            hud.lines_width(tagged, self.measure) - hud.lines_width(plain, self.measure),
+            3 * size + hud.COLUMN_GAP * size,
+        )
 
 
 class BeforeColumnTests(unittest.TestCase):

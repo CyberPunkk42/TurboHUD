@@ -1181,3 +1181,9 @@ its "Recent changes".
   incidents (off track, slow, stopped, spun, wrong way, respawned) count like everyone else's, so its own HUD shows
   the box with its name, the map rings it and turns its sector yellow. Not in the pits, as for every car. The
   hazard warning (CAR STOPPED AHEAD, WRONG WAY AHEAD) leaves the local car out. Tests. Not yet seen in a race.
+- 2026-11-11: Clan tags in the lap times, asked for by the user: outside a multi-class race (where the tags name the
+  classes), each driver's clan tag shows in a column of its own after the name, lined up on the left, cut to 5
+  characters (`MAX_TAG_SHOWN`); a driver without one shows nothing there. A new column in the layout (`Row.tag`,
+  `tag_left`), and an option, Clan tags in the lap times, in the menu and Settings (on by default, `clan_tags`). The
+  box keeps its size: with tags the text gets a little smaller where it would not fit. Tests; drawn off screen;
+  TurboHUD started from source for 6 s, no error. Not yet seen in a race.

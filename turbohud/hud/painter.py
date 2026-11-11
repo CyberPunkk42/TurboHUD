@@ -15,7 +15,7 @@ from PySide6.QtGui import (
     QPen,
 )
 
-from turbohud.core.hud import FLAG_WIDTH, MARGIN, before_right, blend, middle_right, steady_text
+from turbohud.core.hud import FLAG_WIDTH, MARGIN, before_right, blend, middle_right, steady_text, tag_left
 
 # On Linux the desktop's default font may be a monospace or icon font; prefer a plain
 # sans-serif one. Qt uses the first that is installed. Windows and macOS keep their
@@ -321,7 +321,7 @@ def draw_hud(painter, lines, theme, scale=None, left=0, width=None, centre=False
     outline = _rgba(theme.outline_color)
     margin = round(MARGIN * (theme.scale if scale is None else scale))
     x = left + margin
-    middle_end = before_end = None
+    middle_end = before_end = tag_start = None
     if width is not None:
         # With digits as zeros, so that the columns stay put as a timer runs.
         def steady_advance(text, size):
@@ -329,6 +329,7 @@ def draw_hud(painter, lines, theme, scale=None, left=0, width=None, centre=False
 
         middle_end = middle_right(lines, width, margin, steady_advance)
         before_end = before_right(lines, middle_end, steady_advance)
+        tag_start = tag_left(lines, before_end, steady_advance)
     for line in lines:
         text_x = centred_x(line, width, margin) if (centre or line.centred) and width is not None else x
         if line.rule:
@@ -364,6 +365,10 @@ def draw_hud(painter, lines, theme, scale=None, left=0, width=None, centre=False
                 line.size,
                 _pick(colors, line.middle_color),
                 outline,
+            )
+        if line.tag and tag_start is not None:
+            outlined_text(
+                painter, tag_start, line.baseline, line.tag, line.size, _pick(colors, line.color), outline
             )
         if line.before and before_end is not None:
             outlined_text(
