@@ -278,6 +278,28 @@ def draw_flag(painter, x, baseline, code, size, outline):
         outlined_text(painter, x, baseline, code, max(1, round(size * 0.55)), QColor('white'), outline)
 
 
+RULE_LABEL = 0.62  # a class line's label, in font sizes of the row below it
+RULE_MIDDLE = 1.06  # the line this many font sizes above the row's baseline: amid the gap above it
+
+
+def draw_rule(painter, x, right, line, color, outline):
+    """The line above a row that starts a class in the lap times: its label, then a thin
+    line to `right` (the box's right margin), in the gap between the rows."""
+    size = max(6, round(line.size * RULE_LABEL))
+    middle = line.baseline - RULE_MIDDLE * line.size
+    outlined_text(painter, x, middle + 0.36 * size, line.rule, size, color, outline)
+    start = x + text_advance(line.rule, size) + 0.3 * line.size
+    end = right if right is not None else start + 6 * line.size
+    if end <= start:
+        return
+    pen_color = QColor(color)
+    pen_color.setAlpha(190)
+    painter.save()
+    painter.setPen(QPen(pen_color, max(1.0, line.size / 13)))
+    painter.drawLine(QPointF(start, middle), QPointF(end, middle))
+    painter.restore()
+
+
 def centred_x(line, width, margin):
     """Where a line starts in the middle of a box `width` wide, between its margins."""
     steady = text_advance(steady_text((line.slot or line.text) + line.tail), line.size)
@@ -309,6 +331,9 @@ def draw_hud(painter, lines, theme, scale=None, left=0, width=None, centre=False
         before_end = before_right(lines, middle_end, steady_advance)
     for line in lines:
         text_x = centred_x(line, width, margin) if centre else x
+        if line.rule:
+            right = left + width - margin if width is not None else None
+            draw_rule(painter, x, right, line, colors['accent'], outline)
         if line.flag:
             draw_flag(painter, x, line.baseline, line.flag, line.size, outline)
             text_x = x + FLAG_WIDTH * line.size
