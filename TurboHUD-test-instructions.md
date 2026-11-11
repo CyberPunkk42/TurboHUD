@@ -1,6 +1,6 @@
 # TurboHUD: test for the Mac, step by step
 
-Nov 11, 2026 · build 2026.11.11.8 · about 50 minutes
+Nov 11, 2026 · build 2026.11.11.9 · about 50 minutes
 
 Thank you for testing again. This build has everything from 2026.11.11.4 (the fixes for races joined online, yellow flags, the gliding delta bar, the tidier panel), and much more:
 
@@ -33,7 +33,7 @@ TurboHUD only reads what the game shows. It changes nothing in TSU or in CrossOv
 
 You need:
 
-- [ ] The file `TurboHUD-2026.11.11.8-macos-arm64.dmg`
+- [ ] The file `TurboHUD-2026.11.11.9-macos-arm64.dmg`
 - [ ] TSU in CrossOver, as last time
 - [ ] The same way of reading TSU's FPS as last time
 - [ ] The Terminal app (in **Applications > Utilities**)
@@ -54,7 +54,7 @@ For fair FPS numbers: keep the Mac on its **power adapter**, with **Low Power Mo
 In our session TurboHUD ran straight from the disk image. Please install it, as below.
 
 1. If TurboHUD is running, quit it: press **Control + Shift + Q**.
-2. Double-click `TurboHUD-2026.11.11.8-macos-arm64.dmg`. A window opens.
+2. Double-click `TurboHUD-2026.11.11.9-macos-arm64.dmg`. A window opens.
 3. Drag **TurboHUD** onto **Applications**. If asked, choose **Replace**.
 4. Close the window. In Finder, click the eject button next to **TurboHUD** in the sidebar. **Always eject it**: TurboHUD must start from Applications, never from the disk image.
 5. **Don't open TurboHUD yet.** The first measurement is without it.

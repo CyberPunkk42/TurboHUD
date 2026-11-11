@@ -76,6 +76,9 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-11: Build 2026.11.11.9 for the tester (`releases/`, macOS 27, `--any-macos`, smoke test passed with
+  TurboHUD closed; 32.4 MB), asked for by the user: the same app as 2026.11.11.8 (only docs changed since), under a
+  new number. The test sheet names it. The 2026.11.11.8 image is still in `releases/`.
 - 2026-11-11: A private GitHub repository for the Mac and the Windows PC, asked for by the user (remote `github`,
   `https://github.com/CyberPunkk42/TurboHUD.git`). Before the first push every file, path and commit of the history was
   checked for personal data: the files had only placeholders, but 299 commits had the user's real name as author
