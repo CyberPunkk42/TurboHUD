@@ -20,7 +20,7 @@
   the race tests (offline with 19 AI, Fullscreen, hosting online, spectating) were confirmed
   by the user on 2026-11-08. While locked, on the Mac, all sections are drawn in one window
   per screen (2026-11-09), for the frames; seen over TSU on 2026-11-10, with no gain showing yet. On Windows it
-  reads the race through the Rust reader started beside TSU (built 2026-11-11, not yet run on Windows). Start from the source with
+  reads the race through the Rust reader started beside TSU (first run on 2026-11-11: an online race found once a hang in the search was fixed). Start from the source with
   `run_turbohud.sh` / `run_turbohud.cmd`.
 - Layout, in the move-mode panel: a text section's box fits closely round its text, three
   presets (Ctrl+Shift+1, 2, 3 load them; Linux: `--preset`), groups that move and resize
@@ -76,6 +76,16 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-11: The online race search never ended on Windows, found on the user's first Windows run (TSU's own build
+  on Windows, the Rust reader beside it): with a race running, the search stopped at a stale pointer to the
+  controller's class, and its event state led to memory whose "parents" went round in a circle, so reading its fields
+  never ended. TurboHUD hung in that search (4 minutes and on) and showed only the clock. A class's fields and parents
+  are now bounded (`FIELDS_MOST`, `PARENTS_MOST` in `turbohud/core/il2cpp.py`): memory past them is not a class, and
+  the search goes on to the next hit. Checked against the user's race: the search then found the race (9 players,
+  the user driving) after about 24 s. Without a race, the 6 hits were such stale pointers too ("no race"). Tests (they
+  hang without the fix). Also seen: Ctrl+Shift+L was taken by AMD Adrenalin (error 1409) until the user unbound it
+  there; TSU's Windows log names sessions, not events, so TurboHUD searches without it. 9 tests fail on Windows on
+  `main` already (Unix sockets, symlinks, fonts), none touched here.
 - 2026-11-11: A private GitHub repository for the Mac and the Windows PC, asked for by the user (remote `github`,
   `https://github.com/CyberPunkk42/TurboHUD.git`). Before the first push every file, path and commit of the history was
   checked for personal data: the files had only placeholders, but 299 commits had the user's real name as author

@@ -528,6 +528,38 @@ class ReaderTests(unittest.TestCase):
         reader._next_search = 0.0
         self.assertEqual(reader.read().laps_completed, 1)
 
+    def test_a_class_whose_parents_go_round_is_not_a_class(self):
+        reader = build([10_000], laps_completed=0, clock=20_000, limit=0)
+        g, runtime = reader.game, reader.il
+        looped = g.klass('TS', 'Looped', [('m_a', 0x10, False)])
+        g.q(looped + il.CLASS_PARENT, looped)  # stale memory: it never reaches System.Object
+        with self.assertRaises(il.NotFound):
+            runtime.fields(looped)
+        self.assertFalse(runtime._set_up(looped))
+
+    def test_a_class_whose_fields_go_on_without_end_is_not_a_class(self):
+        reader = build([10_000], laps_completed=0, clock=20_000, limit=0)
+        g, runtime = reader.game, reader.il
+        endless = g.klass('TS', 'Endless', [(f'm_{i}', 0x10 + i, False) for i in range(80)])
+        with mock.patch.object(il, 'FIELDS_MOST', 64), self.assertRaises(il.NotFound):
+            runtime.fields(endless)
+
+    def test_an_online_race_is_found_past_a_stale_hit_that_leads_to_no_class(self):
+        # Seen on Windows (2026-11-11): a stale pointer to the controller's class, whose event
+        # state led to memory with parents that went round, kept the search going for good.
+        reader = build(
+            [10_000, 944_595], laps_completed=1, clock=1_000_000, limit=0, name='Host', online=True
+        )
+        g, runtime = reader.game, reader.il
+        klass = runtime.memory.u64(g.client_controller)
+        looped = g.klass('TS', 'Looped', [('m_a', 0x10, False)])
+        g.q(looped + il.CLASS_PARENT, looped)
+        stale, garbage = 0x100, 0x200  # below the real controller: the search meets it first
+        g.q(stale, klass)
+        g.q(stale + runtime.offset(g.client_controller, 'm_eventState'), garbage)
+        g.q(garbage, looped)
+        self.assertEqual(reader.read().laps_completed, 1)
+
     def test_unknown_class_is_reported(self):
         reader = build([10_000], laps_completed=0, clock=20_000, limit=0)
         with self.assertRaises(il.NotFound):
