@@ -1237,5 +1237,6 @@ its "Recent changes".
   on Windows (`%APPDATA%\TurboHUD\recordings`), writes each event's type, and twice a second the changed fields of
   the event's state, controller, logic and settings and of the mode objects they lead to, also while the race cannot
   be read. Tried on the user's PC in an online Battle event (`TS.BattleEventMode`, level 6): capture time, capturing
-  player and team, players alive and rounds are there (`experiments/README.md`). Tests. Built on
+  player and team, players alive and rounds are there (`experiments/README.md`). The file is saved every 5 s, as a
+  recorder stopped from outside left an empty file (a race event, 22:34 to 22:35). Tests. Built on
   `fix/windows-race-search`, which it needs on Windows.

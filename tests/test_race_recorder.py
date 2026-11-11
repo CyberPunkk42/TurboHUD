@@ -1,7 +1,9 @@
 import contextlib
+import gzip
 import io
 import json
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -60,6 +62,30 @@ class EventTests(unittest.TestCase):
         self.assertIn('event.settings', {r['role'] for r in first})
         self.recorder.event_fields(1.5, 20_000)  # nothing moved
         self.assertEqual(len([r for r in records(self.out) if r['kind'] == 'fields']), len(first))
+
+
+class SavingTests(unittest.TestCase):
+    def test_a_recording_stopped_from_outside_keeps_what_was_saved(self):
+        reader = build([10_000], laps_completed=0, clock=20_000, limit=0)
+        now = [0.0]
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / 'race.jsonl.gz'
+            out = gzip.open(path, 'wt', encoding='utf-8')
+            rec = recorder.Recorder(_Live(reader), out, clock=lambda: now[0])
+            rec.write(kind='start', t=0.0)
+            now[0] = recorder.SAVE_EVERY  # the next line brings the file up to date
+            rec.write(kind='race', t=5.0)
+            killed = path.read_bytes()  # as a kill would leave it: never closed
+            out.close()
+            path.write_bytes(killed)
+            self.assertEqual([r['kind'] for r in recorder.read_records(path)], ['start', 'race'])
+
+    def test_a_closed_recording_reads_in_full(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / 'race.jsonl.gz'
+            with gzip.open(path, 'wt', encoding='utf-8') as out:
+                out.write('{"kind":"start"}\n{"kind":"race"}\n')
+            self.assertEqual(len(recorder.read_records(path)), 2)
 
 
 if __name__ == '__main__':

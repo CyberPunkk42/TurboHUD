@@ -459,6 +459,8 @@ state, controller, logic and settings, then twice a second the fields of those o
 ones they point to with a mode's name: score, team, flag, hill, zone, ball, goal, round) that changed,
 as `player: -1`. While the race cannot be read (an arena mode may have no laps), the event is still
 recorded.
+The file is brought up to date every 5 s (`SAVE_EVERY`), so a recorder stopped from outside keeps all
+but its last seconds (on 2026-11-11 a killed one left an empty file); `read_records` reads such a file.
 
 ### First look at an arena event (2026-11-11, Windows, online, 1.4 min)
 - A Battle event: `TS.BattleEventMode`, level type 6, logic `TS.BattleLogic` (as seen on the Mac for a

@@ -41,6 +41,7 @@ import re
 import struct
 import sys
 import time
+import zlib
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -49,6 +50,7 @@ from turbohud.core.il2cpp import SIMPLE_TYPES, TYPE_VALUETYPE, NotFound, ReadErr
 
 RACE_EVERY = 0.1  # seconds between race reads
 FIELDS_EVERY = 0.5  # seconds between looks at the raw fields
+SAVE_EVERY = 5.0  # seconds between bringing the file up to date: at most this much is lost on a kill
 REFERENCE_TYPES = (0x12, 0x15, 0x1C)  # class, generic instance, object
 TYPE_STRING = 0x0E
 DEPTH = 2  # steps from a car's own objects that are followed, by interesting names
@@ -120,7 +122,9 @@ class FieldReader:
 
 
 class Recorder:
-    def __init__(self, live, out):
+    def __init__(self, live, out, clock=time.monotonic):
+        self.clock = clock
+        self.saved = clock()  # when the file was last brought up to date on disk
         self.live = live  # the race reader (winmemory.CachedReader around a LapReader)
         self.reader = live.reader
         self.il = self.reader.il
@@ -133,6 +137,11 @@ class Recorder:
 
     def write(self, **record):
         self.out.write(json.dumps(record, separators=(',', ':')) + '\n')
+        if self.clock() - self.saved >= SAVE_EVERY:
+            # The compressor keeps what it has until the file is closed: a recorder that is
+            # stopped from outside (seen 2026-11-11, on Windows) would leave an empty file.
+            self.out.flush()
+            self.saved = self.clock()
 
     def race(self, now):
         state = self.live.read()
@@ -281,6 +290,20 @@ class Recorder:
                 cls=class_name,
                 changed=changed,
             )
+
+
+def read_records(path):
+    """The records of a recording, also of one cut off by a kill (no gzip ending): as far as
+    it was brought up to date."""
+    data = zlib.decompressobj(16 + zlib.MAX_WBITS).decompress(Path(path).read_bytes())
+    lines = data.decode('utf-8', 'replace').split('\n')
+    found = []
+    for line in lines:
+        try:
+            found.append(json.loads(line))
+        except ValueError:
+            continue  # the last line, cut off mid-way
+    return found
 
 
 def connect(platform=sys.platform):
