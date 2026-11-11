@@ -164,7 +164,9 @@ starting TurboHUD again.
   drivers, and the track map rings those cars in yellow and turns their sector's road yellow (once
   it has learnt the track). It goes 3 seconds after the car is
   back on the track and up to speed; not for cars in the pits. **Yellow flags** in the
-  TurboHUD icon's menu or under **Settings…** turns them off (the section and the rings).
+  TurboHUD icon's menu or under **Settings…** turns them off (the section and the rings). Placed in the
+  same spot as the blue flag, both stay visible when both are out: the one that came second goes right
+  next to the first (the blue flag below, the yellow box above), and neither moves while it shows.
 - **Settings…** (TurboHUD icon's menu, or the move-mode panel) picks the text,
   highlight and outline colours, makes all sections bigger or smaller at once, and holds
   the options for the whole HUD: mph, the tint behind all sections, the radar's

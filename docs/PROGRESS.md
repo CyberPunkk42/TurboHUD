@@ -1120,3 +1120,10 @@ its "Recent changes".
   `screenshot_folder` and `turbohud/screenshot.py` are gone; Ctrl+Shift+S is TSU's again. A settings file
   that still names `screenshot_folder` loads as before (the key is ignored, and gone at the next save). For screenshots: macOS's
   Cmd+Shift+3 or 4.
+- 2026-11-11: The blue and yellow flags stack when both are out in the same spot, asked for by the user:
+  `turbohud/core/flagstack.py` keeps the flag that came first at its own place and puts the second right
+  next to it (blue below the yellow box, yellow above the blue flag; the other side at a screen edge). A
+  flag on the screen never moves; one moved away goes back once it has gone, unseen. Only while locked;
+  move mode and saving use each flag's own place. The yellow flag system itself was confirmed in a race by
+  the user the same day (heading centred, steady box, the sector yellow on the map). Tests for the rules;
+  not yet seen in a race with both flags out.
