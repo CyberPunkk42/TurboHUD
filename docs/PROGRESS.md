@@ -1156,3 +1156,8 @@ its "Recent changes".
   TSU's flags, the yellow sector on the map and the steady box, CAR STOPPED AHEAD and the Shortcut penalty box,
   Part 6 at classes (if the host asks), Part 3 may be skipped if done with 2026.11.11.4; the help for the old
   Python reader is gone (the app has none). The 2026.11.11.4 image is still in `releases/`, to be removed by hand.
+- 2026-11-11: JUMP START, asked for by the user: TSU's false-start penalty (`VehicleState.startPenaltyOn`, seen
+  for half a second on the user's car at a start in a recording) shows in the orange penalty box, renamed
+  Penalties, for 5 s from when it was last seen (`JUMP_START_SHOWN`), and as an orange JUMP in the lap times
+  for any driver TSU flags. A shortcut countdown goes first, though none comes at a start. Tests; the per-frame
+  code run against the user's live race (the flag read for 20 cars, no error). Not yet seen with a false start.

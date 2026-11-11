@@ -1310,3 +1310,28 @@ class ShortcutTests(unittest.TestCase):
         self.assertEqual((cut.right, cut.right_color), ('CUT 2.4s', race.SHORTCUT_COLOR))
         plain = next(row for row in table if 'Me' in row.text)
         self.assertNotIn('CUT', plain.right)
+
+
+class JumpStartTests(ShortcutTests):
+    """TSU's false-start penalty (asked for by the user on 2026-11-11): JUMP START."""
+
+    def jumper(self, name, on, local=False):
+        return dataclasses.replace(self.driver(name, False, local=local), jump_start=on)
+
+    def test_shown_for_five_seconds_from_the_last_sight_of_it(self):
+        penalties = race.ShortcutPenalties()
+        me = self.jumper('Me', True, local=True)
+        self.assertEqual(penalties.jump_starts(self.state(9.2, me)), {'Me'})
+        later = self.jumper('Me', False, local=True)
+        self.assertEqual(penalties.jump_starts(self.state(13.0, later)), {'Me'})  # TSU's flag lasts 0.5 s
+        self.assertEqual(penalties.jump_starts(self.state(14.3, later)), frozenset())
+
+    def test_the_box_says_jump_start_and_the_lap_times_jump(self):
+        me, other = self.jumper('Me', True, local=True), self.jumper('Other', True)
+        state = self.state(9.2, me, other)
+        self.assertEqual(race.shortcut_rows(state, {}, {'Me'})[0].text, 'JUMP START')
+        self.assertEqual(race.shortcut_rows(state, {}, {'Other'}), [])
+        self.assertEqual(race.shortcut_rows(state, {'Me': 2.0}, {'Me'})[0].text, 'SHORTCUT  2.0 s')  # first
+        table = race.lap_times_rows([me, other], clock=60_000, jumped={'Other'})
+        row = next(r for r in table if 'Other' in r.text)
+        self.assertEqual((row.right, row.right_color), ('JUMP', race.SHORTCUT_COLOR))

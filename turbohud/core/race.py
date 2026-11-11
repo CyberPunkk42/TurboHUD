@@ -468,9 +468,8 @@ class PlayerState:
     forward_speed: float | None = None  # game units a second along the car; below 0 backwards
     wheel_grips: tuple | None = None  # the grip of the surface under each of its four wheels (0: in the air)
     spawns: int | None = None  # how often it was put back on the track (a respawn)
-    shortcut: bool = (
-        False  # TSU slows it now for a shortcut (CarStateUpdater.m_shortuctMaxSpeedWithoutLimitedGas)
-    )
+    shortcut: bool = False  # TSU slows it now for a shortcut (its updater's speed cap is set)
+    jump_start: bool = False  # TSU's false-start penalty is on for it (VehicleState.startPenaltyOn)
     tag: str = ''  # the clan tag (TS.PlayerProfile.teamTag: 'FTR' for [FTR]); it may name a class
     car: str = ''  # the car's name (TS.VehicleProperties.name): the class of a driver without a tag
 
@@ -1304,7 +1303,7 @@ class LapReader:
         in_pit, position, velocity, forward, draft_drag = False, None, None, None, None
         forward_speed = wheel_grips = spawns = None
         car = ''
-        shortcut = False
+        shortcut = jump_start = False
         try:
             vehicle = self._ref('player', player, 'm_vehicle')
         except NotFound:
@@ -1322,6 +1321,8 @@ class LapReader:
                 state = self._ref('vehicle', vehicle, 'm_state')
                 in_pit = in_pit or bool(memory.u8(state + self._offset('vstate', state, 'inPitArea')))
                 spawns = self._number('vstate', state, 'spawnCount')
+                # Seen 2026-11-11 for half a second on the player's car at a start.
+                jump_start = bool(memory.u8(state + self._offset('vstate', state, 'startPenaltyOn')))
             except (NotFound, ReadError):
                 pass
             if updater is not None:
@@ -1365,6 +1366,7 @@ class LapReader:
             tag=tag,
             car=car,
             shortcut=shortcut,
+            jump_start=jump_start,
         )
 
     def _wheels(self, updater):
@@ -1911,10 +1913,11 @@ def race_sections(
         order = standings.order(state.players, now) if standings is not None else None
         sections['players'] = players_rows(state.players, order, state.clock, state.gates)
         cuts = shortcuts.left(state) if shortcuts is not None else None
+        jumped = shortcuts.jump_starts(state) if shortcuts is not None else frozenset()
         sections['laptimes'] = lap_times_rows(
-            state.players, order, clock_now(snapshot, now), class_tags, cuts
+            state.players, order, clock_now(snapshot, now), class_tags, cuts, jumped
         )
-        rows = shortcut_rows(state, cuts or {})
+        rows = shortcut_rows(state, cuts or {}, jumped)
         if rows:
             sections['shortcut'] = rows
         opacity = blue_flag_opacity(
@@ -2508,11 +2511,25 @@ SHORTCUT_COLOR = '#ff8c1a'  # the box (hud's Section.background) and CUT in the 
 SHORTCUT_TEXT = '#111111'  # dark text on the orange
 
 
+JUMP_START_SHOWN = 5.0  # seconds JUMP START stays: TSU's flag was on for only half a second
+
+
 class ShortcutPenalties:
-    """Follows when each car's shortcut slowdown began, to count down what is left."""
+    """Follows when each car's shortcut slowdown began, to count down what is left, and
+    which cars TSU gave a false-start penalty (asked for by the user on 2026-11-11)."""
 
     def __init__(self):
         self._since = {}  # name -> race clock (seconds) when its slowdown began
+        self._jumped = {}  # name -> race clock (seconds) when its false-start flag was last seen
+
+    def jump_starts(self, state):
+        """The cars whose false-start penalty TSU has on, or had in the last JUMP_START_SHOWN s."""
+        now = state.clock / UNITS_PER_SECOND
+        for player in state.players:
+            if player.jump_start:
+                self._jumped[player.name] = now
+        self._jumped = {n: t for n, t in self._jumped.items() if 0 <= now - t < JUMP_START_SHOWN}
+        return frozenset(self._jumped)
 
     def left(self, state):
         """{name: seconds left, or None where not known} for the cars TSU slows now."""
@@ -2527,11 +2544,14 @@ class ShortcutPenalties:
         return found
 
 
-def shortcut_rows(state, left):
-    """The player's own shortcut penalty: SHORTCUT and the seconds left, or [] without one."""
+def shortcut_rows(state, left, jumped=frozenset()):
+    """The player's own penalty: SHORTCUT and the seconds left, else JUMP START (a name in
+    `jumped`), or [] without one."""
     me = next((p for p in state.players if p.local), None)
-    if me is None or me.name not in left:
+    if me is None:
         return []
+    if me.name not in left:
+        return [Row('JUMP START', 'title', SHORTCUT_TEXT, centred=True)] if me.name in jumped else []
     seconds = left[me.name]
     text = 'SHORTCUT' + (f'  {seconds:.1f} s' if seconds is not None else '')
     return [Row(text, 'title', SHORTCUT_TEXT, centred=True)]
@@ -2588,7 +2608,7 @@ def by_class(order, classes):
     return grouped, places
 
 
-def lap_times_rows(players, order=None, clock=0, class_tags=(), cuts=None):
+def lap_times_rows(players, order=None, clock=0, class_tags=(), cuts=None, jumped=frozenset()):
     """The lap times list: a heading, then each driver in race order with flag and name,
     their best lap and the running time of their current lap ('Fin' once finished) at
     race `clock`. The race's fastest lap is purple, as in F1. Up to MAX_LAP_TIME_ROWS drivers.
@@ -2641,6 +2661,8 @@ def lap_times_rows(players, order=None, clock=0, class_tags=(), cuts=None):
         if cuts and player.name in cuts:
             left = cuts[player.name]
             cut_text = f'CUT {left:.1f}s' if left is not None else 'CUT'
+        elif player.name in jumped:
+            cut_text = 'JUMP'  # TSU's false-start penalty (see ShortcutPenalties.jump_starts)
         rows.append(
             Row(
                 f'{position}. {name}',

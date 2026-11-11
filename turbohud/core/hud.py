@@ -373,7 +373,7 @@ RACE_SECTIONS = (
     ),
     Section(
         'shortcut',
-        'Shortcut penalty',
+        'Penalties',
         ((Row('SHORTCUT  0.0 s', 'title', '#111111', centred=True),),),
         background='#ff8c1a',
     ),

@@ -75,6 +75,11 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-11: JUMP START, asked for by the user: TSU's false-start penalty (`VehicleState.startPenaltyOn`, seen
+  for half a second on the user's car at a start in a recording) shows in the orange penalty box, renamed
+  Penalties, for 5 s from when it was last seen (`JUMP_START_SHOWN`), and as an orange JUMP in the lap times
+  for any driver TSU flags. A shortcut countdown goes first, though none comes at a start. Tests; the per-frame
+  code run against the user's live race (the flag read for 20 cars, no error). Not yet seen with a false start.
 - 2026-11-11: Build 2026.11.11.5 for the tester (`releases/`, macOS 27, `--any-macos`, smoke test passed: the Rust
   reader read the user's race, no error; the app holds the reader and texture2ddecoder, no Windows Python;
   32.4 MB). Everything since 2026.11.11.4. `TurboHUD-test-instructions.md` for it: what's new, Part 4 looks at
