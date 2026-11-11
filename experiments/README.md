@@ -449,7 +449,7 @@ never in the repository). Close TurboHUD first; Ctrl+C ends it.
     .buildtools/venv/bin/python -B experiments/tsu_race_recorder.py [--minutes 15]
 
 On Windows (2026-11-11) it reads TSU straight, as TurboHUD's Python reader does, and writes to
-`%APPDATA%\TurboHUDecordings`:
+`%APPDATA%\TurboHUD\recordings`:
 
     .buildtoolsenv\Scripts\python.exe -B experiments	su_race_recorder.py [--minutes 15]
 
