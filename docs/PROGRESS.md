@@ -1134,3 +1134,13 @@ its "Recent changes".
   up to 5 s ahead on the road at the player's speed (`YellowFlags.hazard`, `HAZARD_*`; the distance along the
   learnt road, `TrackMap.road_ahead`). It stays at least 2 s, so it never blinks. Only the player's own HUD;
   off with Yellow flags. No new reads of the game. Tests; not yet seen in a race.
+- 2026-11-11: Shortcut penalties, asked for by the user: TSU slows a car that takes a shortcut its track
+  defines ("Shortcut detected!"). Found in a race recorded with cuts (only reading): a car is slowed while
+  `CarStateUpdater.m_shortuctMaxSpeedWithoutLimitedGas` (TSU's spelling) is a speed cap (about 28) instead
+  of no limit, for every car (the AI's too); the length is `EventState.shortcutSlowdownUpdater.m_slowdownTicks`
+  (150 there) at 50 ticks a second (measured). A new section, Shortcut penalty (orange box, dark text:
+  SHORTCUT 2.4 s, counting down from when it began; `ShortcutPenalties`, `shortcut_rows`), and CUT 2.4s in
+  orange in the lap times in place of the lap. The move-mode panel's spacing is a little tighter to keep it
+  under 800 px with the new row (788 off screen). Also seen: `VehicleState.startPenaltyOn` for a false start.
+  Tests; read from the user's race (3.0 s, a slowed AI car seen). Not yet seen in the HUD; online as a client
+  not yet checked.

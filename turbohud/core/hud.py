@@ -371,6 +371,12 @@ RACE_SECTIONS = (
         ),
         background='#ffd400',
     ),
+    Section(
+        'shortcut',
+        'Shortcut penalty',
+        ((Row('SHORTCUT  0.0 s', 'title', '#111111', centred=True),),),
+        background='#ff8c1a',
+    ),
     Section('blueflag', 'Blue flag', (), bar=(480, 24), drawing='flag'),
     Section('deltabar', 'Delta bar', (), bar=(360, 36), drawing='delta'),
     Section('radar', 'Proximity radar', (), bar=(160, 160), drawing='radar'),
@@ -381,7 +387,7 @@ RACE_SECTIONS = (
 PANEL_CATEGORIES = (
     ('Timing', ('lap', 'current', 'delta', 'deltabar', 'times', 'laptimes')),
     ('Car', ('fuel', 'fuelfinish', 'tires', 'health', 'draft', 'speed')),
-    ('Race', ('players', 'trackmap', 'radar', 'blueflag', 'yellowflag')),
+    ('Race', ('players', 'trackmap', 'radar', 'blueflag', 'yellowflag', 'shortcut')),
     ('Other', ('localtime', 'clock')),
 )
 

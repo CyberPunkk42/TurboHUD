@@ -782,8 +782,8 @@ class MovePanel(QWidget):
         self.setAttribute(Qt.WA_ShowWithoutActivating)
         self.setStyleSheet('QLabel, QCheckBox { color: white; }')
         column = QVBoxLayout(self)
-        column.setContentsMargins(14, 12, 14, 12)
-        column.setSpacing(6)
+        column.setContentsMargins(14, 8, 14, 8)
+        column.setSpacing(3)  # tight: the panel is held under 800 px, with a row per section
         column.addWidget(QLabel('<b>TurboHUD - move mode</b>'))
         for line in help_lines(shortcuts, commands):
             column.addWidget(QLabel(line))

@@ -212,6 +212,7 @@ class TextCanCentreTests(unittest.TestCase):
                 'draft',
                 'localtime',
                 'yellowflag',
+                'shortcut',
             },
         )
 
@@ -351,7 +352,7 @@ class NewSectionsWithOthersOnAnotherMonitorTests(unittest.TestCase):
 
 
 class FirstLaunchTests(unittest.TestCase):
-    SIZES: ClassVar[dict] = {s.name: (300, 60) for s in hud.RACE_SECTIONS}
+    SIZES: ClassVar[dict] = {s.name: (300, 55) for s in hud.RACE_SECTIONS}  # all in one column of 1000 px
 
     def test_one_column_at_the_left_centred_in_1080_without_overlap(self):
         places = hud.first_launch(hud.RACE_SECTIONS, self.SIZES)
@@ -482,6 +483,7 @@ class SectionTests(unittest.TestCase):
                 'players',
                 'laptimes',
                 'yellowflag',
+                'shortcut',
                 'blueflag',
                 'deltabar',
                 'radar',
