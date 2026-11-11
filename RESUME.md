@@ -75,6 +75,10 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-11: Build 2026.11.11.7 for the tester (`releases/`, macOS 27, `--any-macos`, 32.4 MB), as 2026.11.11.6
+  with JUMP START shown while TSU flags it, then 1.5 s. Built without `--smoke`, as the user's TurboHUD was running
+  (the smoke test would only have switched that one to move mode): to start once with TurboHUD closed. The test
+  sheet names it. The 2026.11.11.4 to .6 images are still in `releases/`, to be removed by hand.
 - 2026-11-11: JUMP START shows while TSU's false-start flag is on, then 1.5 s (`JUMP_START_SHOWN`, from 5 s), asked
   for by the user: the flag is on while the throttle is held on the red lights, and as they go out (TSU holds the
   car). The test sheet (build 2026.11.11.6 has the 5 s) and README say so. Test.
