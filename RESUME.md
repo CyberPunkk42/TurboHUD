@@ -75,6 +75,9 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-12: A wet race is marked in the track's name, as the user said: (WET), (RW), (QW) or (W), in round
+  brackets and in any case (`WET_MARKERS`); a bare WET no longer counts (a track called Wet Hills stays dry). A wet
+  race has one compound, so every car on a blue W stays right. Tests.
 - 2026-11-12: Wet tires, asked for by the user: on a track whose name has the word WET (any case, as a word:
   `Spa WET`, `Monza_wet`, `Wet-Ring`, not `Wetlands`) every car's tire ring is a blue W, whatever its compound, in
   the lap times and the player list. The track's name is read once an event from `EventState.m_level`

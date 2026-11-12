@@ -1349,3 +1349,6 @@ its "Recent changes".
   the lap times and the player list. The track's name is read once an event from `EventState.m_level`
   (`TS.Level`) `.m_properties` (`TS.LevelProperties`) `.name`, found in the game's metadata (`LapState.track`).
   Tests. Seen offscreen; the name's path not yet read in the game.
+- 2026-11-12: A wet race is marked in the track's name, as the user said: (WET), (RW), (QW) or (W), in round
+  brackets and in any case (`WET_MARKERS`); a bare WET no longer counts (a track called Wet Hills stays dry). A wet
+  race has one compound, so every car on a blue W stays right. Tests.

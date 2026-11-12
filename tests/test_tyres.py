@@ -44,12 +44,12 @@ class CompoundMarkTests(unittest.TestCase):
 
 
 class WetTests(unittest.TestCase):
-    """A track whose name has the word WET: every car on a blue W (asked for by the user on 2026-11-12)."""
+    """A track whose name marks a wet race: every car on a blue W (asked for by the user on 2026-11-12)."""
 
-    def test_the_word_wet_in_any_case(self):
-        for name in ('Spa WET', 'Monza_wet', 'Wet-Ring', 'Nordschleife (Wet)', 'WET'):
+    def test_a_wet_marker_in_brackets_in_any_case(self):
+        for name in ('Spa (WET)', 'Monza (RW)', 'Imola (QW)', 'Suzuka (W)', 'Spa (wet)', 'Spa ( Rw )'):
             self.assertTrue(race.is_wet(name), name)
-        for name in ('Wetlands', 'Sweetwater', 'Spa', '', None):
+        for name in ('Spa WET', 'Wet Hills', 'Spa (Dry)', 'Spa (WETTER)', 'Spa (W2)', 'Spa', '', None):
             self.assertFalse(race.is_wet(name), name)
 
     def test_every_car_on_a_blue_w(self):

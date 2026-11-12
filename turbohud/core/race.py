@@ -2781,16 +2781,17 @@ COMPOUND_MARKS = {
     5: (('X', '#ff6fb5'), ('U', '#9b59d0'), ('S', SOFT), ('M', MEDIUM), ('H', HARD)),
 }
 SOFTEST_FIRST = True  # compound index 0 is the softest (to be checked in the game)
-# On a wet track (its name has the word WET, asked for by the user on 2026-11-12) every car's
-# ring is a blue W, whatever its compound.
+# A wet race has one compound, and its track's name says so with one of these in round
+# brackets, in any case (asked for by the user on 2026-11-12): every car's ring is then a blue W.
 WET_MARK = ('W', '#2f8fff')
-_WET_WORD = re.compile(r'(?<![a-z])wet(?![a-z])', re.IGNORECASE)
+WET_MARKERS = ('WET', 'RW', 'QW', 'W')
+_WET_MARKER = re.compile(r'\(\s*(?:' + '|'.join(WET_MARKERS) + r')\s*\)', re.IGNORECASE)
 
 
 def is_wet(track):
-    """Whether the track's name has the word WET in it, in any case: 'Spa WET', 'Monza_wet',
-    'Wet-Ring'; not 'Wetlands'."""
-    return bool(track) and _WET_WORD.search(track) is not None
+    """Whether the track's name marks a wet race: (WET), (RW), (QW) or (W), in any case, such
+    as 'Spa (WET)' or 'Monza (rw)'; not a bare 'Wet Hills'."""
+    return bool(track) and _WET_MARKER.search(track) is not None
 
 
 def compound_mark(index, count):

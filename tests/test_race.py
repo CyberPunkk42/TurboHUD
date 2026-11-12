@@ -1723,7 +1723,7 @@ class CarTests(unittest.TestCase):
             )
             return reader.read().track
 
-        self.assertEqual(read('Spa WET'), 'Spa WET')
+        self.assertEqual(read('Spa (WET)'), 'Spa (WET)')
         self.assertEqual(read(None), '')  # not there: no name, the race still read
 
     def test_reader_reads_each_cars_position_for_the_radar(self):
