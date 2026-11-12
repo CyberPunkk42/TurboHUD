@@ -107,7 +107,7 @@ class RowsTests(unittest.TestCase):
         self.assertEqual([r.text for r in rows], ['', '', '', '1. Ahead', '2. Me'])
         self.assertEqual(
             (rows[3].flag, rows[3].tail, rows[3].middle, rows[3].middle_color),
-            ('DE', '  PIT', '-0.200', 'behind'),
+            ('DE', '  PIT', '-1.000', 'behind'),  # a checkpoint ahead, at my 10 s a checkpoint (2026-11-12)
         )
         self.assertEqual((rows[4].color, rows[4].middle), ('accent', ''))
 
@@ -124,7 +124,7 @@ class RowsTests(unittest.TestCase):
 
     def test_long_names_are_cut(self):
         rows = race.players_rows([player('A' * 30, [lap(0)], local=True)])
-        self.assertEqual(len(rows[race.RELATIVE_AHEAD].text), len('1. ') + race.MAX_NAME_SHOWN)
+        self.assertEqual(len(rows[race.ME_ROW].text), len('1. ') + race.MAX_NAME_SHOWN)
 
 
 SECOND = race.UNITS_PER_SECOND
@@ -217,23 +217,23 @@ class PitStopTests(unittest.TestCase):
 
     def test_the_player_list_shows_the_timers_next_to_pit(self):
         car = player('Me', [lap(0)], local=True, in_pit=True)
-        self.assertEqual(race.players_rows([car])[race.RELATIVE_AHEAD].tail, '  PIT')
+        self.assertEqual(race.players_rows([car])[race.ME_ROW].tail, '  PIT')
         rolling = dataclasses.replace(car, pit_seconds=8.44)
-        self.assertEqual(race.players_rows([rolling])[race.RELATIVE_AHEAD].tail, '  PIT 8.4s')
+        self.assertEqual(race.players_rows([rolling])[race.ME_ROW].tail, '  PIT 8.4s')
         standing = dataclasses.replace(rolling, pit_seconds=24.5, pit_stopped=12.034)
-        self.assertEqual(race.players_rows([standing])[race.RELATIVE_AHEAD].tail, '  PIT 24.5s (12.03s)')
+        self.assertEqual(race.players_rows([standing])[race.ME_ROW].tail, '  PIT 24.5s (12.03s)')
         out = dataclasses.replace(standing, in_pit=False)
-        self.assertEqual(race.players_rows([out])[race.RELATIVE_AHEAD].tail, '  PIT 24.5s (12.03s)')
+        self.assertEqual(race.players_rows([out])[race.ME_ROW].tail, '  PIT 24.5s (12.03s)')
 
     def test_a_passing_hold_up_gets_no_bracket(self):
         car = dataclasses.replace(
             player('Me', [lap(0)], local=True, in_pit=True), pit_seconds=8.0, pit_stopped=0.1
         )
-        self.assertEqual(race.players_rows([car])[race.RELATIVE_AHEAD].tail, '  PIT 8.0s')
+        self.assertEqual(race.players_rows([car])[race.ME_ROW].tail, '  PIT 8.0s')
 
     def test_the_bracket_takes_its_room_from_a_long_name(self):
         car = dataclasses.replace(player('A' * 30, [lap(0)], local=True), pit_seconds=24.5, pit_stopped=12.0)
-        row = race.players_rows([car])[race.RELATIVE_AHEAD]
+        row = race.players_rows([car])[race.ME_ROW]
         room = len('1. ') + race.MAX_NAME_SHOWN + len(race.PIT_TAIL_ROOM)
         self.assertEqual(len(row.text + row.tail), room)
 
