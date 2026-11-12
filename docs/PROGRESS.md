@@ -1222,3 +1222,8 @@ its "Recent changes".
   checked commit by commit; a backup of the old history outside the project). This clone's `user.name` is now set,
   the hook's local terms list the real name, the email and the Mac's computer names, and AGENTS.md says what may be
   pushed where.
+- 2026-11-12: The move-mode panel is the same size on Linux as on the Mac: its text is held at
+  13 px (`PANEL_FONT_PX`) where the system's is larger. Linux desktops use about 15 px (Adwaita
+  Sans 11 pt) and give buttons and lists that font on their own, so the panel was 866 px tall
+  and failed its under-800 test; now 771 px. Set in the panel's style sheet, which reaches those
+  widgets; Windows' smaller text is unchanged. A test copies Linux's fonts on every system.

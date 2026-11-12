@@ -16,7 +16,7 @@ import time
 from dataclasses import replace
 
 from PySide6.QtCore import QPointF, QRect, QRectF, Qt, Signal
-from PySide6.QtGui import QColor, QImage, QPainter, QPainterPath, QPen, QPolygonF
+from PySide6.QtGui import QColor, QFontInfo, QImage, QPainter, QPainterPath, QPen, QPolygonF
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -90,6 +90,9 @@ PANEL_SMALL_BUTTON = 32  # its one-character buttons (centre, match a group, del
 PANEL_WORD_BUTTON = 54
 PANEL_HEADING = '#9fb8d8'  # the panel's small headings: the columns and the kinds of section
 PANEL_EMPTY = '#5d7799'  # the dot where a section has no such option
+# The panel's text is at most this many pixels: the Mac's own size. Linux desktops use about
+# 15 px (Adwaita Sans 11 pt), which made the panel 866 px tall with a row per section.
+PANEL_FONT_PX = 13
 RADAR_ARROW = 1.2  # a car past the radar's edge: an arrow this many times a car's width each side
 RADAR_ARROW_LEAST = 7.0  # ... and at least this many pixels
 RADAR_ARROW_FADE = 0.6  # its opacity falls by this much from beside the edge to the warning time
@@ -862,7 +865,7 @@ class MovePanel(QWidget):
         self.setWindowTitle('TurboHUD - move mode')
         self.setAttribute(Qt.WA_TranslucentBackground)
         self.setAttribute(Qt.WA_ShowWithoutActivating)
-        self.setStyleSheet('QLabel, QCheckBox { color: white; }')
+        self.setStyleSheet('QLabel, QCheckBox { color: white; }' + self._font_cap())
         column = QVBoxLayout(self)
         column.setContentsMargins(14, 8, 14, 8)
         column.setSpacing(3)  # tight: the panel is held under 800 px, with a row per section
@@ -910,6 +913,14 @@ class MovePanel(QWidget):
         grid.setColumnStretch(6, 1)
         column.addLayout(grid)
         self._finish(column, sections, shortcuts, saved_presets)
+
+    def _font_cap(self):
+        """A style rule holding the text at PANEL_FONT_PX where the system's is larger, so the
+        panel is the same on Linux as on the Mac. In the style sheet, as Linux gives buttons and
+        lists their own font, which a font set on the panel does not reach."""
+        if QFontInfo(self.font()).pixelSize() > PANEL_FONT_PX:
+            return f' * {{ font-size: {PANEL_FONT_PX}px; }}'
+        return ''
 
     @staticmethod
     def _heading(text, tip):
