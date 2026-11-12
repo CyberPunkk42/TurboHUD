@@ -1222,6 +1222,9 @@ its "Recent changes".
   checked commit by commit; a backup of the old history outside the project). This clone's `user.name` is now set,
   the hook's local terms list the real name, the email and the Mac's computer names, and AGENTS.md says what may be
   pushed where.
+- 2026-11-11: Build 2026.11.11.9 for the tester (`releases/`, macOS 27, `--any-macos`, smoke test passed with
+  TurboHUD closed; 32.4 MB), asked for by the user: the same app as 2026.11.11.8 (only docs changed since), under a
+  new number. The test sheet names it. The 2026.11.11.8 image is still in `releases/`.
 - 2026-11-11: The online race search never ended on Windows, found on the user's first Windows run (TSU's own build
   on Windows, the Rust reader beside it): with a race running, the search stopped at a stale pointer to the
   controller's class, and its event state led to memory whose "parents" went round in a circle, so reading its fields

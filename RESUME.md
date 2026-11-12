@@ -151,6 +151,9 @@
   hang without the fix). Also seen: Ctrl+Shift+L was taken by AMD Adrenalin (error 1409) until the user unbound it
   there; TSU's Windows log names sessions, not events, so TurboHUD searches without it. 9 tests fail on Windows on
   `main` already (Unix sockets, symlinks, fonts), none touched here.
+- 2026-11-11: Build 2026.11.11.9 for the tester (`releases/`, macOS 27, `--any-macos`, smoke test passed with
+  TurboHUD closed; 32.4 MB), asked for by the user: the same app as 2026.11.11.8 (only docs changed since), under a
+  new number. The test sheet names it. The 2026.11.11.8 image is still in `releases/`.
 - 2026-11-11: A private GitHub repository for the Mac and the Windows PC, asked for by the user (remote `github`,
   `https://github.com/CyberPunkk42/TurboHUD.git`). Before the first push every file, path and commit of the history was
   checked for personal data: the files had only placeholders, but 299 commits had the user's real name as author
