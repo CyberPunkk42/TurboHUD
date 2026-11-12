@@ -1426,5 +1426,5 @@ its "Recent changes".
   the tests. The zip's reader is the one built from `main` (unchanged since .2, checked byte for byte). The zip and
   the Python modules packed in `TurboHUD.exe` checked for the privacy terms, none; the app starts and says its
   version. Built without the smoke test, as the user's TurboHUD 2026.11.12.4 was running (the test would have
-  spoken to it): to be run with TurboHUD closed. It replaces 2026.11.12.4; the older builds are still in
+  spoken to it); run afterwards with TurboHUD closed: passed. It replaces 2026.11.12.4; the older builds are still in
   `releases/`, to be removed by hand.
