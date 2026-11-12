@@ -1392,3 +1392,11 @@ its "Recent changes".
   1.2 ms (6.1). Not the same pixels: in 18 texts at five sizes, 1x and 2x, 0.32% of them differ by more than 8 of
   255, at most 50 (the smallest size at 1x); looked the same at real size and zoomed, shown to the user. Glyph
   images are kept up to 16 MiB. Applies on every system. Tests.
+- 2026-11-12: Build 2026.11.12.5 for the tester (`releases/TurboHUD-2026.11.12.5-macos-arm64.dmg`, 32.5 MB, macOS 27,
+  `--any-macos`, built with `.buildtools/build-venv`), asked for by the user: `main` with the fixes for his stutter
+  with .4 (less measuring in the lap times and the player list, the Mac's one window drawing only what changed,
+  running times and gaps from kept glyph images). Smoke test passed with TurboHUD closed; the image, its 199 files
+  and the 174 Python modules packed in the app (32 of TurboHUD's) checked for the privacy terms, none. The test
+  sheet names it, says what is new, asks when TSU stutters (driving, or between races) and copies the log's
+  `HUD frames` lines. Tests: 994 of 995 pass; `test_the_panel_stays_compact_with_linux_sized_text` fails on the
+  Mac, as on `main` before. The .4 image is still in `releases/`.
