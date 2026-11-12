@@ -64,8 +64,8 @@
   three races in a row in 0.4 s (2026-11-10).
 - The tester has stutter again with build 2026.11.12.4 on macOS (2026-11-12). His log: drawing 20 to 24% of the
   time, most of it new texts; since `fix/lap-list-frame-cost` changing numbers are drawn from kept glyphs (about 20
-  times quicker). Next: the user tries it in a race, then build 2026.11.12.5 for him and compare his `HUD frames`
-  drawing share (backlog item 0).
+  times quicker). Build 2026.11.12.5 has them: next, his log's `HUD frames` drawing share (was 20 to 24%) and
+  whether TSU stutters while driving or between races (backlog item 0).
 1. Windows: the overlay over TSU (windowed, Fullscreen, Fullscreen Exclusive), and the live data
    through the Rust reader (built 2026-11-11, not yet run there).
    Also a trial of all of TurboHUD inside the CrossOver bottle (backlog item 1b,
@@ -85,6 +85,14 @@
   the map and no CAR STOPPED AHEAD. Only going faster than 29 km/h again starts the count anew (rolling or being
   pushed does not); the pits and the grid do not count. The log says when a car becomes idle and races again.
   Tests.
+- 2026-11-12: Build 2026.11.12.5 for the tester (`releases/TurboHUD-2026.11.12.5-macos-arm64.dmg`, 32.5 MB, macOS 27,
+  `--any-macos`, built with `.buildtools/build-venv`), asked for by the user: `main` with the fixes for his stutter
+  with .4 (less measuring in the lap times and the player list, the Mac's one window drawing only what changed,
+  running times and gaps from kept glyph images). Smoke test passed with TurboHUD closed; the image, its 199 files
+  and the 174 Python modules packed in the app (32 of TurboHUD's) checked for the privacy terms, none. The test
+  sheet names it, says what is new, asks when TSU stutters (driving, or between races) and copies the log's
+  `HUD frames` lines. Tests: 994 of 995 pass; `test_the_panel_stays_compact_with_linux_sized_text` fails on the
+  Mac, as on `main` before. The .4 image is still in `releases/`.
 - 2026-11-12: Running times and gaps are drawn from kept glyph images, asked for by the user after the tester's log
   showed drawing at 20 to 24% of the time: each new one was filled anew, about 0.9 ms at 2x (0.6 ms the outline),
   17 a frame in the lap times and the player list. Now Qt still shapes the text (spacing, even digits, the colon

@@ -1,6 +1,6 @@
 # TurboHUD: test for the Mac, step by step
 
-Nov 12, 2026 · build 2026.11.12.4 · about 55 minutes
+Nov 12, 2026 · build 2026.11.12.5 · about 55 minutes
 
 Thank you for testing again. This build has everything from 2026.11.11.4 (the fixes for races joined online, yellow flags, the gliding delta bar, the tidier panel), and much more:
 
@@ -29,6 +29,10 @@ New since 2026.11.11.9:
 - **The lap times' columns are options**: the settings window turns the flag, lap number, tire, best lap and current lap columns on and off.
 - **The radar's arrows** at the top and bottom edge are bigger and clearer.
 
+New since 2026.11.12.4:
+
+- **Smoother**: TurboHUD draws its running times and gaps about 20 times faster, and redraws only the parts of the screen that changed. This is for the stutter you saw with 2026.11.12.4. The numbers look the same.
+
 This test checks those, and measures which of two ways of drawing TurboHUD costs TSU fewer frames. If you already did the measurements with 2026.11.11.4, send those too and you can skip Part 3.
 
 Go through it from top to bottom. Every step is one thing to do. Where it says **✏️ Write down**, fill in the answer on this sheet.
@@ -41,7 +45,7 @@ TurboHUD only reads what the game shows. It changes nothing in TSU or in CrossOv
 
 You need:
 
-- [ ] The file `TurboHUD-2026.11.12.4-macos-arm64.dmg`
+- [ ] The file `TurboHUD-2026.11.12.5-macos-arm64.dmg`
 - [ ] TSU in CrossOver, as last time
 - [ ] The same way of reading TSU's FPS as last time
 - [ ] The Terminal app (in **Applications > Utilities**)
@@ -62,7 +66,7 @@ For fair FPS numbers: keep the Mac on its **power adapter**, with **Low Power Mo
 In our session TurboHUD ran straight from the disk image. Please install it, as below.
 
 1. If TurboHUD is running, quit it: press **Control + Shift + Q**.
-2. Double-click `TurboHUD-2026.11.12.4-macos-arm64.dmg`. A window opens.
+2. Double-click `TurboHUD-2026.11.12.5-macos-arm64.dmg`. A window opens.
 3. Drag **TurboHUD** onto **Applications**. If asked, choose **Replace**.
 4. Close the window. In Finder, click the eject button next to **TurboHUD** in the sidebar. **Always eject it**: TurboHUD must start from Applications, never from the disk image.
 5. **Don't open TurboHUD yet.** The first measurement is without it.
@@ -203,6 +207,8 @@ This checks the fixes. Stay in the same session for at least **three races**, as
 
 **✏️ Write down:** Online, did the yellow flag show when other drivers went off or spun? ______
 
+**✏️ Write down:** Did TSU stutter? If yes: **while driving**, or **between races / at the start** of a race? ______
+
 If the host asks: set your clan tag in TSU to the class you're given (for example **GT3**). With two classes in the race, the lap times should be grouped by class, each under a line with its name.
 
 **✏️ Write down:** Classes in the lap times (if tried): ______ Cars of another class coloured on the radar? ______
@@ -229,6 +235,7 @@ echo "--- running from"; pgrep -fl 'MacOS/TurboHUD'
 echo "--- reader"; grep -E 'reading TSU through|canvas' "$T/turbohud.log" | head -5
 echo "--- race"; grep -E "TSU:|TSU's log|search|quick look|watching|event type|track map|connection dropped" "$T/turbohud.log" | tail -40
 echo "--- reads"; grep -E 'race reads|race pages' "$T/turbohud.log" | tail -10
+echo "--- frames"; grep 'HUD frames' "$T/turbohud.log" | tail -15
 echo "--- reader errors"; tail -20 "$T/bottle_reader.log" 2>/dev/null
 ```
 
@@ -291,6 +298,7 @@ If TSU freezes: quit it with **Stop** in Steam, as last time.
 | | Online races 2, 3 ...: after how many seconds? | |
 | | Online, joined during a race: did it show? | |
 | | Online yellow flags? | |
+| | Online stutter: while driving, or between races / at the start? | |
 | | Classes in the lap times (in colour) and on the radar (if tried)? | |
 | | Clan tags in the lap times? | |
 | | Anything left after quitting TurboHUD? | |
