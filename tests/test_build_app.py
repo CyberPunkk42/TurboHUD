@@ -10,6 +10,7 @@ import tempfile
 import unittest
 import zipfile
 from pathlib import Path
+from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'tools'))
@@ -206,8 +207,14 @@ class AppArgsTests(unittest.TestCase):
 
     @unittest.skipIf(importlib.util.find_spec('PySide6'), 'checks the message shown without Qt')
     def test_without_qt_points_to_the_start_scripts(self):
-        with contextlib.redirect_stderr(io.StringIO()) as err:
+        # As if no TurboHUD runs: main() first asks a running one over the real command
+        # socket, and a test run once switched the player's TurboHUD to move mode mid-race.
+        with (
+            mock.patch('turbohud.control.send', return_value=None) as send,
+            contextlib.redirect_stderr(io.StringIO()) as err,
+        ):
             self.assertEqual(app.main(['--seconds', '1']), 2)
+        send.assert_called_once_with('ping')
         self.assertIn('run_turbohud', err.getvalue())
 
 

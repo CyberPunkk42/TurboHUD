@@ -1227,3 +1227,8 @@ its "Recent changes".
   Sans 11 pt) and give buttons and lists that font on their own, so the panel was 866 px tall
   and failed its under-800 test; now 771 px. Set in the panel's style sheet, which reaches those
   widgets; Windows' smaller text is unchanged. A test copies Linux's fonts on every system.
+- 2026-11-12: Fixed: running the tests while TurboHUD runs switched it to move mode
+  (it happened mid-race on 2026-11-03). One test, run only without Qt, calls the app's
+  start, which first asks a running TurboHUD over the real command socket and then
+  sends it "move". The test now answers that question itself (none running). The fix
+  was made on Linux on 2026-11-04 and lost in the move to GitHub; brought back.
