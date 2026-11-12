@@ -4,6 +4,7 @@ import sys
 import time
 import unittest
 from pathlib import Path
+from typing import ClassVar
 from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -420,7 +421,11 @@ def build(
             g.q(updater + 0x90, event_settings)
         if surfaces is not None:  # (grip, layer) under each of the four wheels; None: in the air
             wheels = g.alloc_obj(
-                g.klass('TS', 'WheelUpdater', [(name, 0x10 + 8 * i, False) for i, name in enumerate(race.WHEEL_SURFACES)])
+                g.klass(
+                    'TS',
+                    'WheelUpdater',
+                    [(name, 0x10 + 8 * i, False) for i, name in enumerate(race.WHEEL_SURFACES)],
+                )
             )
             material_class = g.klass(
                 'TS', 'TSMaterialProperties', [('m_layer', 0x10, False, 0x08), ('grip', 0x1C, False, 0x0C)]
@@ -2264,10 +2269,10 @@ class YellowFlagTests(unittest.TestCase):
             self.assertEqual(self.drive(flags, 12.0, self.car(grips=grips)), (), grips)
 
     # As read on the user's circuit (2026-11-11): grip and Unity layer of each surface.
-    PLASTIC = {'grips': (0.8999,) * 4, 'wheel_layers': (24,) * 4}  # the wide plastic kerbs
-    TERRAIN = {'grips': (0.5,) * 4, 'wheel_layers': (18,) * 4}  # the grass beside the track
-    CONCRETE = {'grips': (1.0,) * 4, 'wheel_layers': (22,) * 4}  # the run-off, used as track
-    CURB = {'grips': (0.8,) * 4, 'wheel_layers': (17,) * 4}
+    PLASTIC: ClassVar[dict] = {'grips': (0.8999,) * 4, 'wheel_layers': (24,) * 4}  # the wide plastic kerbs
+    TERRAIN: ClassVar[dict] = {'grips': (0.5,) * 4, 'wheel_layers': (18,) * 4}  # the grass beside the track
+    CONCRETE: ClassVar[dict] = {'grips': (1.0,) * 4, 'wheel_layers': (22,) * 4}  # the run-off, used as track
+    CURB: ClassVar[dict] = {'grips': (0.8,) * 4, 'wheel_layers': (17,) * 4}
 
     def test_plastic_kerbs_curbs_and_concrete_are_track_by_their_layer(self):
         # Reported by the user: the wide plastic kerbs (grip 0.9, just under the old limit) raised
@@ -2280,10 +2285,15 @@ class YellowFlagTests(unittest.TestCase):
     def test_terrain_is_off_the_track_by_its_layer(self):
         flags = race.YellowFlags()
         self.drive(flags, 10.0, self.car(**self.TERRAIN))
-        self.assertEqual(self.kinds(self.drive(flags, 10.6, self.car(**self.TERRAIN))), [('Other', 'off track')])
+        self.assertEqual(
+            self.kinds(self.drive(flags, 10.6, self.car(**self.TERRAIN))), [('Other', 'off track')]
+        )
 
     def test_a_wheel_on_plastic_or_in_the_air_keeps_a_car_on_the_terrain_on_the_track(self):
-        for grips, layers in (((0.8999, 0.5, 0.5, 0.5), (24, 18, 18, 18)), ((0.0, 0.5, 0.5, 0.5), (None, 18, 18, 18))):
+        for grips, layers in (
+            ((0.8999, 0.5, 0.5, 0.5), (24, 18, 18, 18)),
+            ((0.0, 0.5, 0.5, 0.5), (None, 18, 18, 18)),
+        ):
             flags = race.YellowFlags()
             self.drive(flags, 10.0, self.car(grips=grips, wheel_layers=layers))
             self.assertEqual(self.drive(flags, 12.0, self.car(grips=grips, wheel_layers=layers)), ())
@@ -2345,7 +2355,12 @@ class YellowFlagTests(unittest.TestCase):
     def test_the_reader_gives_each_wheels_grip_and_layer(self):
         plastic, terrain = (0.8999, 24), (0.5, 18)
         reader = build(
-            [10_000], laps_completed=0, clock=20_000, limit=0, car=(5.0, 7.0), surfaces=(plastic, plastic, terrain, None)
+            [10_000],
+            laps_completed=0,
+            clock=20_000,
+            limit=0,
+            car=(5.0, 7.0),
+            surfaces=(plastic, plastic, terrain, None),
         )
         me = next(p for p in reader.read().players if p.local)
         self.assertEqual([round(g, 4) for g in me.wheel_grips], [0.8999, 0.8999, 0.5, 0.0])

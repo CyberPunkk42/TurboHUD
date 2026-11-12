@@ -79,6 +79,13 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+  - 2026-11-13: Ruff clean again, asked for by the user: the 8 lint errors fixed (`ClassVar` on the yellow-flag
+    tests' surface dicts, two `noqa` comments that did nothing removed, the recorder test's gzip file opened in a
+    `with`, the "still no race" log check in `tsu/client.py` made one condition) and the 5 unformatted files
+    formatted; long lines with trailing comments got their comment on a line of its own instead. No behavior
+    change. `ruff check` and `ruff format --check` pass. Tests on Windows (`.buildtools\venv`): 1017 of 1023 pass;
+    the 6 that fail need macOS/Linux (`os.getuid`, `fcntl`, `AF_UNIX`) or the symlink privilege, and fail on `main`
+    too.
 - 2026-11-12: Build 2026.11.12.7 for the tester (`releases/TurboHUD-2026.11.12.7-macos-arm64.dmg`, 31.7 MB, macOS 27,
   `--any-macos`, built with `.buildtools/build-venv`), asked for by the user: `main` with what came since .6: the
   lighter race reads (other cars' slow state once a second), the player list in track order with the leader on

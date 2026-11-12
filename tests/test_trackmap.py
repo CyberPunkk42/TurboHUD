@@ -207,7 +207,8 @@ class LearntTrackTests(unittest.TestCase):
         self.assertTrue(trackmap.off_the_track((0.5,) * 4, (18,) * 4))  # terrain
         self.assertFalse(trackmap.off_the_track((1.0,) * 4, (22,) * 4))  # concrete: may be a track's own
         self.assertFalse(trackmap.off_the_track((0.75,) * 4, (15,) * 4))  # dirt: a rallycross track
-        self.assertFalse(trackmap.off_the_track((0.0, 0.5, 0.5, 0.5), (None, 18, 18, 18)))  # a wheel in the air
+        # A wheel in the air:
+        self.assertFalse(trackmap.off_the_track((0.0, 0.5, 0.5, 0.5), (None, 18, 18, 18)))
         self.assertTrue(trackmap.off_the_track((0.8999,) * 4))  # no layers: by grip, as before
         self.assertFalse(trackmap.off_the_track(None))
 

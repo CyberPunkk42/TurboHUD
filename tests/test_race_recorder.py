@@ -10,8 +10,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'experiments'))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-import tsu_race_recorder as recorder  # noqa: E402
-from test_race import build  # noqa: E402
+import tsu_race_recorder as recorder
+from test_race import build
 
 
 class _Live:
@@ -38,7 +38,9 @@ class FolderTests(unittest.TestCase):
 
 class EventTests(unittest.TestCase):
     def setUp(self):
-        self.reader = build([10_000], laps_completed=0, clock=20_000, limit=0, event_type=('BattleEventMode', 6))
+        self.reader = build(
+            [10_000], laps_completed=0, clock=20_000, limit=0, event_type=('BattleEventMode', 6)
+        )
         self.reader.read()
         self.out = io.StringIO()
         self.recorder = recorder.Recorder(_Live(self.reader), self.out)
@@ -70,13 +72,12 @@ class SavingTests(unittest.TestCase):
         now = [0.0]
         with tempfile.TemporaryDirectory() as folder:
             path = Path(folder) / 'race.jsonl.gz'
-            out = gzip.open(path, 'wt', encoding='utf-8')
-            rec = recorder.Recorder(_Live(reader), out, clock=lambda: now[0])
-            rec.write(kind='start', t=0.0)
-            now[0] = recorder.SAVE_EVERY  # the next line brings the file up to date
-            rec.write(kind='race', t=5.0)
-            killed = path.read_bytes()  # as a kill would leave it: never closed
-            out.close()
+            with gzip.open(path, 'wt', encoding='utf-8') as out:
+                rec = recorder.Recorder(_Live(reader), out, clock=lambda: now[0])
+                rec.write(kind='start', t=0.0)
+                now[0] = recorder.SAVE_EVERY  # the next line brings the file up to date
+                rec.write(kind='race', t=5.0)
+                killed = path.read_bytes()  # as a kill would leave it: never closed
             path.write_bytes(killed)
             self.assertEqual([r['kind'] for r in recorder.read_records(path)], ['start', 'race'])
 

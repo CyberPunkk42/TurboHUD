@@ -193,13 +193,16 @@ class LiveRace:
                 self._times.flush()  # the race's last numbers, before what follows it
             log.info('TSU: %s%s', snapshot.status, f' ({snapshot.detail})' if snapshot.detail else '')
             self._detail_logged = (snapshot.detail, now)
-        elif snapshot.status != RACING and snapshot.detail != self._detail_logged[0]:
-            # Still no race, for another reason: worth a line, as a race found but not read
-            # (seen 2026-11-11) looked like waiting all along. Not more often than this, as a
-            # reason can come and go with each read.
-            if self._detail_logged[1] is None or now - self._detail_logged[1] >= DETAIL_LOG_EVERY:
-                log.info('TSU: still %s (%s)', snapshot.status, snapshot.detail)
-                self._detail_logged = (snapshot.detail, now)
+        # Still no race, for another reason: worth a line, as a race found but not read
+        # (seen 2026-11-11) looked like waiting all along. Not more often than this, as a
+        # reason can come and go with each read.
+        elif (
+            snapshot.status != RACING
+            and snapshot.detail != self._detail_logged[0]
+            and (self._detail_logged[1] is None or now - self._detail_logged[1] >= DETAIL_LOG_EVERY)
+        ):
+            log.info('TSU: still %s (%s)', snapshot.status, snapshot.detail)
+            self._detail_logged = (snapshot.detail, now)
 
     def _drop(self):
         if self._conn is not None:
