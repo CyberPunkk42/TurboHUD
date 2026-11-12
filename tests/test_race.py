@@ -2890,8 +2890,8 @@ class WatchingTests(unittest.TestCase):
         first, second = self.players()
         me = dataclasses.replace(second, local=True)
         rows = race.players_rows((first, me), None, 11_000)
-        self.assertEqual(rows[1].right, '')
-        self.assertEqual(rows[0].right_color, 'behind')
+        self.assertEqual(rows[race.RELATIVE_AHEAD].middle, '')  # me, in the middle row
+        self.assertEqual(rows[race.RELATIVE_AHEAD - 1].middle_color, 'behind')
 
 
 if __name__ == '__main__':

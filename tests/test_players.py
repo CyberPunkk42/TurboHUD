@@ -103,12 +103,13 @@ class RowsTests(unittest.TestCase):
         me = player('Me', [lap(0), lap(40_000, count=3)], local=True)
         ahead = player('Ahead', [lap(0), lap(38_000)], in_pit=True)
         rows = race.players_rows([me, ahead])
-        self.assertEqual([r.text for r in rows], ['1. Ahead', '2. Me'])
+        # The cars around me on the track, me always in the middle row (2026-11-12).
+        self.assertEqual([r.text for r in rows], ['', '', '', '1. Ahead', '2. Me'])
         self.assertEqual(
-            (rows[0].flag, rows[0].tail, rows[0].right, rows[0].right_color),
+            (rows[3].flag, rows[3].tail, rows[3].middle, rows[3].middle_color),
             ('DE', '  PIT', '-0.200', 'behind'),
         )
-        self.assertEqual((rows[1].color, rows[1].right), ('accent', ''))
+        self.assertEqual((rows[4].color, rows[4].middle), ('accent', ''))
 
     def test_many_players_show_the_leader_and_those_around_me(self):
         players = [
@@ -123,7 +124,7 @@ class RowsTests(unittest.TestCase):
 
     def test_long_names_are_cut(self):
         rows = race.players_rows([player('A' * 30, [lap(0)], local=True)])
-        self.assertEqual(len(rows[0].text), len('1. ') + race.MAX_NAME_SHOWN)
+        self.assertEqual(len(rows[race.RELATIVE_AHEAD].text), len('1. ') + race.MAX_NAME_SHOWN)
 
 
 SECOND = race.UNITS_PER_SECOND
@@ -216,23 +217,23 @@ class PitStopTests(unittest.TestCase):
 
     def test_the_player_list_shows_the_timers_next_to_pit(self):
         car = player('Me', [lap(0)], local=True, in_pit=True)
-        self.assertEqual(race.players_rows([car])[0].tail, '  PIT')
+        self.assertEqual(race.players_rows([car])[race.RELATIVE_AHEAD].tail, '  PIT')
         rolling = dataclasses.replace(car, pit_seconds=8.44)
-        self.assertEqual(race.players_rows([rolling])[0].tail, '  PIT 8.4s')
+        self.assertEqual(race.players_rows([rolling])[race.RELATIVE_AHEAD].tail, '  PIT 8.4s')
         standing = dataclasses.replace(rolling, pit_seconds=24.5, pit_stopped=12.034)
-        self.assertEqual(race.players_rows([standing])[0].tail, '  PIT 24.5s (12.03s)')
+        self.assertEqual(race.players_rows([standing])[race.RELATIVE_AHEAD].tail, '  PIT 24.5s (12.03s)')
         out = dataclasses.replace(standing, in_pit=False)
-        self.assertEqual(race.players_rows([out])[0].tail, '  PIT 24.5s (12.03s)')
+        self.assertEqual(race.players_rows([out])[race.RELATIVE_AHEAD].tail, '  PIT 24.5s (12.03s)')
 
     def test_a_passing_hold_up_gets_no_bracket(self):
         car = dataclasses.replace(
             player('Me', [lap(0)], local=True, in_pit=True), pit_seconds=8.0, pit_stopped=0.1
         )
-        self.assertEqual(race.players_rows([car])[0].tail, '  PIT 8.0s')
+        self.assertEqual(race.players_rows([car])[race.RELATIVE_AHEAD].tail, '  PIT 8.0s')
 
     def test_the_bracket_takes_its_room_from_a_long_name(self):
         car = dataclasses.replace(player('A' * 30, [lap(0)], local=True), pit_seconds=24.5, pit_stopped=12.0)
-        row = race.players_rows([car])[0]
+        row = race.players_rows([car])[race.RELATIVE_AHEAD]
         room = len('1. ') + race.MAX_NAME_SHOWN + len(race.PIT_TAIL_ROOM)
         self.assertEqual(len(row.text + row.tail), room)
 
@@ -1240,7 +1241,7 @@ class LapTimesTests(unittest.TestCase):
         ]
         rows = race.lap_times_rows(players, clock=50_000)
         self.assertEqual(len(rows), 1 + race.MAX_LAP_TIME_ROWS)
-        self.assertEqual(rows[1].text, '1. P0')
+        self.assertEqual(rows[1].text, race.numbered(1, 'P0', 25))  # lined up to 25
         self.assertIn('19. P18', [r.text for r in rows])
 
 
@@ -1263,10 +1264,10 @@ class ClanTagColumnTests(unittest.TestCase):
         drivers = [self.driver('A', 'GT3', 0), self.driver('B', 'LMP', 100), self.driver('C', 'FTR', 200)]
         rows = race.lap_times_rows(drivers, clock=50_000, class_tags=('GT3', 'LMP'), clan_tags=True)
         self.assertEqual(
-            [(r.tag, r.tag_color) for r in rows[1:]], [('GT3', '#2586CC'), ('LMP', '#805AD5'), ('FTR', '')]
-        )
+            [(r.tag, r.tag_color) for r in rows[1:]], [('LMP', '#805AD5'), ('GT3', '#2586CC'), ('FTR', '')]
+        )  # the classes in the class list's order: LMP before GT3 (2026-11-12)
         rows = race.lap_times_rows(drivers, clock=50_000, class_tags=('GT3', 'LMP'))  # clan tags off
-        self.assertEqual([r.tag for r in rows[1:]], ['GT3', 'LMP', ''])
+        self.assertEqual([r.tag for r in rows[1:]], ['LMP', 'GT3', ''])
         rows = race.lap_times_rows(drivers, clock=50_000, class_tags=(), clan_tags=True)  # classes off
         self.assertEqual([(r.tag, r.tag_color) for r in rows[1:]], [('GT3', ''), ('LMP', ''), ('FTR', '')])
 

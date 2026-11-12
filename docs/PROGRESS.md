@@ -1334,3 +1334,13 @@ its "Recent changes".
 - 2026-11-12: Class codes shortened, asked for by the user: LMDH is now LDH, LMP1 to LMP3 are LM1 to LM3, GTLM is
   GLM, and HYPER is gone (HYP stays the Hypercar). A driver tagged with an old long form is no longer of a class.
   The class sheet lists the new codes on its own. 125 codes. Tests.
+- 2026-11-12: The player list shows the cars around the player on the track, asked for by the user: 4 in front and 3
+  behind, the player always in the middle row (blank rows above where fewer are in front), whatever lap each is on,
+  with the gap on the track (`track_gap`: the whole laps between two cars taken out, then the live gap as before),
+  so a leader sees the backmarkers ahead. Before any gap (on the grid) the race order fills in; finished cars drop
+  out. Each row: the race position (lined up with a figure space, also in the lap times), flag, name (orange a lap
+  or more up in the race, blue a lap or more down), PIT, the class and place in it in the class colour (`GT3 P2`;
+  else the clan tag), the tire ring and the gap. A spectator keeps the race order with gaps to the leader. The lap
+  times' classes now come in the class list's order from the start (LMP above GT3 above GT4, Other last), not by
+  whose leader is ahead. The tire ring is a font size wide (it reached below the box at 1.25). Tests. Seen offscreen;
+  not yet in a race.

@@ -320,7 +320,7 @@ def draw_tyre(painter, right, line, outline):
     `right`, centred on the line's text."""
     size = line.size
     radius = (TYRE_WIDTH * size - TYRE_RING * size) / 2
-    centre = QPointF(right - TYRE_WIDTH * size / 2, line.baseline - 0.36 * size)
+    centre = QPointF(right - TYRE_WIDTH * size / 2, line.baseline - cap_height(size) / 2)
     color = QColor(line.tyre_color or '#ffffff')
     painter.save()
     painter.setRenderHint(QPainter.Antialiasing)
@@ -330,7 +330,7 @@ def draw_tyre(painter, right, line, outline):
     painter.restore()
     letter = max(6, round(size * TYRE_LETTER))
     x = centre.x() - text_advance(line.tyre, letter) / 2
-    outlined_text(painter, x, centre.y() + 0.36 * letter, line.tyre, letter, color, outline)
+    outlined_text(painter, x, centre.y() + cap_height(letter) / 2, line.tyre, letter, color, outline)
 
 
 def centred_x(line, width, margin):
