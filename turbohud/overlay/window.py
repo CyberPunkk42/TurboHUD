@@ -866,7 +866,9 @@ class MovePanel(QWidget):
 
     focusable = True  # it takes clicks on its tick boxes and buttons
 
-    def __init__(self, native, sections, shortcuts, commands=False, saved_presets=()):
+    def __init__(
+        self, native, sections, shortcuts, commands=False, saved_presets=(), lock_key='Ctrl+Shift+L'
+    ):
         super().__init__(None, window_flags())
         self.native = native
         self.setWindowTitle('TurboHUD - move mode')
@@ -877,7 +879,7 @@ class MovePanel(QWidget):
         column.setContentsMargins(14, 8, 14, 8)
         column.setSpacing(3)  # tight: the panel is held under 800 px, with a row per section
         column.addWidget(QLabel('<b>TurboHUD - move mode</b>'))
-        for line in help_lines(shortcuts, commands):
+        for line in help_lines(shortcuts, commands, lock_key):
             column.addWidget(QLabel(line))
         self.boxes = {}
         self.groups = {}

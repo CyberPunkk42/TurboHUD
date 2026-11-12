@@ -38,6 +38,10 @@ NAME = 'TurboHUD'
 ICON = ROOT / 'assets' / 'tsu_turbo_hud_00.png'  # PyInstaller turns it into .ico / .icns with Pillow
 BUNDLE_ID = 'local.turbohud.TurboHUD'  # holds nothing personal: it goes out with the app
 MAC_READ_ME = ROOT / 'tools' / 'mac_read_me.txt'
+# The players' guide, in every download next to the app (asked for by the user on 2026-11-12); a
+# .txt opens with a double-click everywhere, and its Markdown reads as plain text.
+QUICK_START = ROOT / 'QUICK_START.md'
+QUICK_START_NAME = 'Quick Start.txt'
 MAC_NEWEST_MINIMUM = (15, 0)  # the build stops if the app would need a newer macOS than this
 MACH_O_MAGIC = {
     b'\xcf\xfa\xed\xfe',  # 64-bit
@@ -183,6 +187,7 @@ def pack_dmg(app, archive, minimum):
         subprocess.run(['ditto', str(app), str(stage / app.name)], check=True)  # keeps links and signature
         (stage / 'Applications').symlink_to('/Applications')
         (stage / 'Read Me First.txt').write_text(read_me, encoding='utf-8')
+        (stage / QUICK_START_NAME).write_bytes(QUICK_START.read_bytes())
         subprocess.run(
             ['hdiutil', 'create', '-quiet', '-volname', NAME, '-srcfolder', str(stage), '-ov']
             + ['-format', 'UDZO', str(archive)],
@@ -198,11 +203,13 @@ def pack(dist, archive, system=sys.platform, minimum=(0, 0)):
     elif archive.name.endswith('.tar.gz'):
         with tarfile.open(archive, 'w:gz') as tar:
             tar.add(dist / NAME, arcname=NAME)
+            tar.add(QUICK_START, arcname=f'{NAME}/{QUICK_START_NAME}')
     else:
         folder = dist / NAME
         with zipfile.ZipFile(archive, 'w', zipfile.ZIP_DEFLATED) as zip_file:
             for path in sorted(folder.rglob('*')):
                 zip_file.write(path, Path(NAME) / path.relative_to(folder))
+            zip_file.write(QUICK_START, Path(NAME) / QUICK_START_NAME)
     digest = hashlib.sha256(archive.read_bytes()).hexdigest()
     archive.with_name(archive.name + '.sha256').write_text(f'{digest}  {archive.name}\n', encoding='utf-8')
     return digest

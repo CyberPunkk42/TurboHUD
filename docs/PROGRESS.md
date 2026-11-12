@@ -1470,3 +1470,12 @@ its "Recent changes".
   column is headed Last, a finished driver shows its last lap too (before, Fin), and a driver with no lap done '-';
   CUT, JUMP and PIT still take its place. The column's option reads "Lap times: last lap" (its key stays
   `current`, so saved settings keep it). Tests.
+- 2026-11-12: A quick start guide and a second move-mode key, asked for by the user (AMD Software takes
+  Ctrl+Shift+L, and Windows then refuses it to TurboHUD: error 1409). `QUICK_START.md`, one page for players: install,
+  first start, placing the HUD, settings, every keyboard shortcut, the AMD clash and what to do, and what is good to
+  know; every download carries it as `Quick Start.txt` (Windows zip and Linux archive next to the app, Mac image next
+  to the read-me), and the README points to it. On Windows **Ctrl+Shift+F12** now also switches move mode (not
+  Ctrl+Alt+L, as first suggested: that is AltGr+L, which types a letter on Polish keyboards, so chatting in the game
+  would switch move mode); where Ctrl+Shift+L is taken, the log, the icon's tooltip and the move-mode panel's hint
+  name Ctrl+Shift+F12. Tests (registration with Ctrl+Shift+L taken, the note, the guide in each archive). Both keys
+  were free on the Windows PC; not yet tried with AMD Software holding Ctrl+Shift+L.

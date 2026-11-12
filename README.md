@@ -13,6 +13,10 @@ the same HUD needs no setup (see [Live race data on macOS](#live-race-data-on-ma
 Windows it reads the race the same way, with a small read-only reader started beside TSU (Windows
 lets a program read another of the same user): built, not yet tried on a Windows PC.
 
+New here? [QUICK_START.md](QUICK_START.md) is a one-page guide: install, first start, placing
+the HUD, all keyboard shortcuts, and what to do when AMD Software takes Ctrl+Shift+L. Every
+download has it as `Quick Start.txt`.
+
 ## Install and first start
 
 Nothing else needs to be installed: Python and Qt are inside the download. TurboHUD is
@@ -228,6 +232,8 @@ starting TurboHUD again.
   shorter makes its text bigger or smaller; making it wider gives the text room (text
   only shrinks when the box is too narrow for it). A panel lets you show or hide each section, and **Lock** (or
   Ctrl+Shift+L again) ends move mode. On the Mac, clicking back into the game also locks.
+  On Windows **Ctrl+Shift+F12** does the same, for when another program has Ctrl+Shift+L
+  (AMD Software does): the icon's tooltip then says so.
 - **Groups**: sections with the same group in the panel move together, and resizing one at
   its corner resizes the others by the same factors. **Same text size and width: Group A**
   (or B, C, D) gives the group's text sections the largest text size among them and one

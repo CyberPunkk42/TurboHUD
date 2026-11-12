@@ -133,6 +133,7 @@ class Native:
             self.hypr.focus(self.previous)
 
     def register_hotkeys(self, on_hotkey):
+        self.lock_keys = []
         return False
 
     def unregister_hotkeys(self):
