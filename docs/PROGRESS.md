@@ -1352,3 +1352,12 @@ its "Recent changes".
 - 2026-11-12: A wet race is marked in the track's name, as the user said: (WET), (RW), (QW) or (W), in round
   brackets and in any case (`WET_MARKERS`); a bare WET no longer counts (a track called Wet Hills stays dry). A wet
   race has one compound, so every car on a blue W stays right. Tests.
+- 2026-11-12: Build 2026.11.12.4 for the tester (`releases/TurboHUD-2026.11.12.4-macos-arm64.dmg`, 32.5 MB, macOS 27,
+  `--any-macos`, built with `.buildtools/build-venv`), asked for by the user: `main` with today's features from
+  GitHub (the player list around the player, tire compounds and the wet W, car classes in colour and the class
+  sheet, the lap times' columns as options, the bigger radar arrows). Numbered .4 after today's three Windows builds.
+  Smoke test passed with TurboHUD closed; every file in the image and the 174 Python modules packed in the app
+  checked for the privacy terms, none. The test sheet names it and its Part 4 has points 14 to 17 for the new
+  features. Tests: 986 of 987 pass; `test_the_panel_stays_compact_with_linux_sized_text` fails on the Mac (817 px,
+  under 800 wanted), as on `main` before today's pull, so not from this build. The 2026.11.11.8 and .9 images are
+  still in `releases/`.
