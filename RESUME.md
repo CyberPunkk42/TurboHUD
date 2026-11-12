@@ -64,7 +64,7 @@
   three races in a row in 0.4 s (2026-11-10).
 - The tester has stutter again with build 2026.11.12.4 on macOS (2026-11-12). His log: drawing 20 to 24% of the
   time, most of it new texts; since `fix/lap-list-frame-cost` changing numbers are drawn from kept glyphs (about 20
-  times quicker). Build 2026.11.12.6 has them (and the yellow flag fix for a car left standing): next, his log's `HUD frames` drawing share (was 20 to 24%) and
+  times quicker). Build 2026.11.12.7 has them, the yellow flag fix and the lighter race reads: next, his log's `HUD frames` drawing share (was 20 to 24%) and
   whether TSU stutters while driving or between races (backlog item 0).
 1. Windows: the overlay over TSU (windowed, Fullscreen, Fullscreen Exclusive), and the live data
    through the Rust reader (built 2026-11-11, not yet run there).
@@ -79,6 +79,14 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-12: Build 2026.11.12.7 for the tester (`releases/TurboHUD-2026.11.12.7-macos-arm64.dmg`, 31.7 MB, macOS 27,
+  `--any-macos`, built with `.buildtools/build-venv`), asked for by the user: `main` with what came since .6: the
+  lighter race reads (other cars' slow state once a second), the player list in track order with the leader on
+  top, the lap times' Last column, the steady lists, full tint and gliding delta number, SC and PC classes,
+  replays, and `Quick Start.txt` in the image. Smoke test passed with TurboHUD closed; the image, its 200 files
+  and the 174 Python modules packed in the app checked for the privacy terms, none. The test sheet names it, lists
+  what is new and has checks 18 to 20 (the Last column, steady lists, a replay). Tests on `main`: 1028 of 1029
+  pass; `test_the_panel_stays_compact_with_linux_sized_text` fails on the Mac, as before.
 - 2026-11-12: Lighter race reads, from a tester's log (macOS, build 2026.11.12.6, stutter mostly while racing):
   his HUD drew steadily, but each race read grew during the evening from 23 to about 82 reads of TSU's memory
   (3 to 13 ms), ten a second through CrossOver's Wine, which TSU needs too. Now other cars' slowly changing state
