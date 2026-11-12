@@ -1318,3 +1318,6 @@ its "Recent changes".
   fading only to 75 % (from 40 %) the further off the car is; a 2 px dark outline (from 1 px); and a car not yet
   counting has a light grey arrow (`#d3d9e2`, from the darker grey of its car). The shape is worked out in
   `race.radar_arrow`, so it is tested. Seen offscreen side by side with the old; not yet in a race.
+- 2026-11-12: Class codes shortened, asked for by the user: LMDH is now LDH, LMP1 to LMP3 are LM1 to LM3, GTLM is
+  GLM, and HYPER is gone (HYP stays the Hypercar). A driver tagged with an old long form is no longer of a class.
+  The class sheet lists the new codes on its own. 125 codes. Tests.

@@ -53,7 +53,13 @@ class RegistryTests(unittest.TestCase):
         self.assertEqual(reg.car_class('GT8').name, 'Toyota GT86')
         self.assertEqual(reg.car_class('MIN').category, reg.ONE_MAKE)
         self.assertEqual(reg.car_class('911').category, reg.ONE_MAKE)
-        self.assertEqual(reg.car_class('LMP2').category, reg.PROTOTYPE)  # kept from before
+        self.assertEqual(reg.car_class('LM2').category, reg.PROTOTYPE)  # LMP2 before
+        self.assertEqual(reg.car_class('LDH').name, 'LMDh Prototype')
+        self.assertEqual(reg.car_class('GLM').category, reg.GT)
+
+    def test_the_long_forms_are_no_class_any_more(self):
+        for gone in ('HYPER', 'LMDH', 'LMP1', 'LMP2', 'LMP3', 'GTLM'):
+            self.assertNotIn(gone, reg.BY_TAG)
         self.assertNotIn('ABC', reg.BY_TAG)
         self.assertEqual(reg.car_class('ABC').category, reg.CUSTOM)  # only from the settings file's list
 

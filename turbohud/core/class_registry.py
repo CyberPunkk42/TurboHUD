@@ -44,21 +44,21 @@ def _classes(category, *pairs):
 
 
 # In this order within a category, a class keeps the category's colour before the ones after
-# it (GT3 before GT4). The codes up to LMP3 and from LMDH to SILV in each list were the
-# class tags before the categories (2026-11-11); TSU's 5 characters fit them all.
+# it (GT3 before GT4). Besides the user's list, the class tags from before the categories
+# (2026-11-11), the long ones shortened by the user on 2026-11-12: LMDH as LDH, LMP1 to LMP3 as
+# LM1 to LM3, GTLM as GLM; HYPER dropped (HYP stays). PRO, AM, PROAM and SILV are still as before.
 CLASSES = (
     *_classes(
         PROTOTYPE,
         ('HYP', 'Hypercar'),
-        ('HYPER', 'Hypercar'),
         ('LMH', 'Le Mans Hypercar'),
         ('LMD', 'LMDh Prototype'),
-        ('LMDH', 'LMDh Prototype'),
+        ('LDH', 'LMDh Prototype'),
         ('GTP', 'Grand Touring Prototype'),
         ('LMP', 'Le Mans Prototype'),
-        ('LMP1', 'Le Mans Prototype 1'),
-        ('LMP2', 'Le Mans Prototype 2'),
-        ('LMP3', 'Le Mans Prototype 3'),
+        ('LM1', 'Le Mans Prototype 1'),
+        ('LM2', 'Le Mans Prototype 2'),
+        ('LM3', 'Le Mans Prototype 3'),
         ('P1', 'Prototype 1'),
         ('P2', 'Prototype 2'),
         ('P3', 'Prototype 3'),
@@ -75,7 +75,7 @@ CLASSES = (
         ('GT4', 'Grand Touring 4'),
         ('GT5', 'Grand Touring 5'),
         ('GTE', 'GT Endurance'),
-        ('GTLM', 'GT Le Mans'),
+        ('GLM', 'GT Le Mans'),
         ('GTD', 'GT Daytona'),
         ('GTC', 'GT Cup'),
         ('GTX', 'GT Experimental'),
