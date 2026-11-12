@@ -50,6 +50,24 @@ class SettingsWindowTests(unittest.TestCase):
         self.assertFalse(window.options['sector_bars'].isChecked())
         window.set_option('radar_cone', True)  # not listed: nothing happens
 
+    def test_the_class_sheet_opens_beside_it_and_lists_every_class(self):
+        from PySide6.QtWidgets import QLabel, QPushButton
+
+        from turbohud.core.class_registry import CLASSES
+
+        window = self.window()
+        button = next(b for b in window.findChildren(QPushButton) if b.text() == 'Car classes...')
+        button.click()
+        sheet = window.class_sheet
+        self.assertTrue(sheet.isVisible())
+        text = ''.join(label.text() for label in sheet.findChildren(QLabel))
+        self.assertTrue(all(f'<b>{c.code}</b>' in text for c in CLASSES))
+        self.assertIn('#2586CC', text)  # GT's colour
+        button.click()
+        self.assertIs(window.class_sheet, sheet)  # the same one again
+        sheet.close_window()
+        self.assertFalse(sheet.isVisible())
+
     def test_without_options_there_are_none(self):
         self.assertEqual(self.window().options, {})
 
@@ -145,3 +163,12 @@ class SettingsWindowTests(unittest.TestCase):
             if button.text() in ('Bigger', 'Smaller'):
                 button.click()
         self.assertEqual(sorted(round(f, 3) for f in got), [0.909, 1.1])
+
+
+class ColumnTests(unittest.TestCase):
+    def test_the_sheet_has_every_category_once_and_in_order(self):
+        from turbohud.core.class_registry import CATEGORIES, sheet_columns
+
+        columns = sheet_columns()
+        self.assertLessEqual(len(columns), 5)
+        self.assertEqual([category for groups in columns for category, _classes in groups], list(CATEGORIES))
