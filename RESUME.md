@@ -75,6 +75,11 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-12: Windows build 2026.11.12.3 to share, asked for by the user: `releases/TurboHUD-2026.11.12.3-windows-x64.zip`
+  (42.1 MB), as 2026.11.12.2 with this morning's fixes from GitHub, chiefly the flags found where Steam is installed
+  outside Program Files. The zip's reader is the one built from `main` (unchanged since .2, checked byte for byte).
+  Smoke test passed with TurboHUD closed; the zip and the Python modules packed in `TurboHUD.exe` checked for the
+  privacy terms, none. It replaces 2026.11.12.2; both older builds are still in `releases/`, to be removed by hand.
 - 2026-11-12: Windows finds TSU's flags where Steam is installed outside Program Files. A tester
   on Windows 10 saw the country codes (DE) instead of flags: TurboHUD looked for Steam only under
   Program Files. It now reads Steam's folder from the registry first (`SteamPath`, then the

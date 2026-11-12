@@ -1288,3 +1288,8 @@ its "Recent changes".
   Program Files. It now reads Steam's folder from the registry first (`SteamPath`, then the
   installer's `InstallPath`), then Program Files, each listed once. Where TSU is still not found,
   the log's `flags:` line names the Steam libraries searched. Tests; not yet run on Windows.
+- 2026-11-12: Windows build 2026.11.12.3 to share, asked for by the user: `releases/TurboHUD-2026.11.12.3-windows-x64.zip`
+  (42.1 MB), as 2026.11.12.2 with this morning's fixes from GitHub, chiefly the flags found where Steam is installed
+  outside Program Files. The zip's reader is the one built from `main` (unchanged since .2, checked byte for byte).
+  Smoke test passed with TurboHUD closed; the zip and the Python modules packed in `TurboHUD.exe` checked for the
+  privacy terms, none. It replaces 2026.11.12.2; both older builds are still in `releases/`, to be removed by hand.
