@@ -1406,3 +1406,10 @@ its "Recent changes".
   the map and no CAR STOPPED AHEAD. Only going faster than 29 km/h again starts the count anew (rolling or being
   pushed does not); the pits and the grid do not count. The log says when a car becomes idle and races again.
   Tests.
+- 2026-11-12: Build 2026.11.12.6 for the tester (`releases/TurboHUD-2026.11.12.6-macos-arm64.dmg`, 32.5 MB, macOS 27,
+  `--any-macos`, built with `.buildtools/build-venv`), asked for by the user: `main` with the stutter fixes of .5 and
+  the yellow flag for a car left standing (no flag after a minute under 29 km/h). It replaces .5.
+  Smoke test passed with TurboHUD closed; the image, its 199 files and the 174 Python modules packed in the app
+  checked for the privacy terms, none, and the packed race module checked to hold the yellow flag fix. The test
+  sheet names it, lists the yellow flag change and asks about it online. Tests: 999 of 1000 pass on `main`;
+  `test_the_panel_stays_compact_with_linux_sized_text` fails on the Mac, as before.

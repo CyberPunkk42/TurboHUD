@@ -64,7 +64,7 @@
   three races in a row in 0.4 s (2026-11-10).
 - The tester has stutter again with build 2026.11.12.4 on macOS (2026-11-12). His log: drawing 20 to 24% of the
   time, most of it new texts; since `fix/lap-list-frame-cost` changing numbers are drawn from kept glyphs (about 20
-  times quicker). Build 2026.11.12.5 has them: next, his log's `HUD frames` drawing share (was 20 to 24%) and
+  times quicker). Build 2026.11.12.6 has them (and the yellow flag fix for a car left standing): next, his log's `HUD frames` drawing share (was 20 to 24%) and
   whether TSU stutters while driving or between races (backlog item 0).
 1. Windows: the overlay over TSU (windowed, Fullscreen, Fullscreen Exclusive), and the live data
    through the Rust reader (built 2026-11-11, not yet run there).
@@ -79,6 +79,13 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-12: Build 2026.11.12.6 for the tester (`releases/TurboHUD-2026.11.12.6-macos-arm64.dmg`, 32.5 MB, macOS 27,
+  `--any-macos`, built with `.buildtools/build-venv`), asked for by the user: `main` with the stutter fixes of .5 and
+  the yellow flag for a car left standing (no flag after a minute under 29 km/h). It replaces .5.
+  Smoke test passed with TurboHUD closed; the image, its 199 files and the 174 Python modules packed in the app
+  checked for the privacy terms, none, and the packed race module checked to hold the yellow flag fix. The test
+  sheet names it, lists the yellow flag change and asks about it online. Tests: 999 of 1000 pass on `main`;
+  `test_the_panel_stays_compact_with_linux_sized_text` fails on the Mac, as before.
 - 2026-11-12: A car left standing gets no yellow flag after a minute, asked for by the user: in an online race
   a driver stopped on the track and left, and the flag stayed out for the rest of the race. A car slower than
   29 km/h (`YELLOW_SLOW`, either way) for `YELLOW_IDLE_AFTER` (60 s) is idle: no incident, so no flag, no ring on

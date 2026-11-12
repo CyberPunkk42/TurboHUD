@@ -1,6 +1,6 @@
 # TurboHUD: test for the Mac, step by step
 
-Nov 12, 2026 · build 2026.11.12.5 · about 55 minutes
+Nov 12, 2026 · build 2026.11.12.6 · about 55 minutes
 
 Thank you for testing again. This build has everything from 2026.11.11.4 (the fixes for races joined online, yellow flags, the gliding delta bar, the tidier panel), and much more:
 
@@ -29,9 +29,10 @@ New since 2026.11.11.9:
 - **The lap times' columns are options**: the settings window turns the flag, lap number, tire, best lap and current lap columns on and off.
 - **The radar's arrows** at the top and bottom edge are bigger and clearer.
 
-New since 2026.11.12.4:
+New since 2026.11.12.4 (this build is 2026.11.12.6):
 
 - **Smoother**: TurboHUD draws its running times and gaps about 20 times faster, and redraws only the parts of the screen that changed. This is for the stutter you saw with 2026.11.12.4. The numbers look the same.
+- **A car left standing**: a car that stays slower than 29 km/h for over a minute (its driver left, or walked away) no longer keeps the yellow flag out. It counts again once it drives faster than 29 km/h.
 
 This test checks those, and measures which of two ways of drawing TurboHUD costs TSU fewer frames. If you already did the measurements with 2026.11.11.4, send those too and you can skip Part 3.
 
@@ -45,7 +46,7 @@ TurboHUD only reads what the game shows. It changes nothing in TSU or in CrossOv
 
 You need:
 
-- [ ] The file `TurboHUD-2026.11.12.5-macos-arm64.dmg`
+- [ ] The file `TurboHUD-2026.11.12.6-macos-arm64.dmg`
 - [ ] TSU in CrossOver, as last time
 - [ ] The same way of reading TSU's FPS as last time
 - [ ] The Terminal app (in **Applications > Utilities**)
@@ -66,7 +67,7 @@ For fair FPS numbers: keep the Mac on its **power adapter**, with **Low Power Mo
 In our session TurboHUD ran straight from the disk image. Please install it, as below.
 
 1. If TurboHUD is running, quit it: press **Control + Shift + Q**.
-2. Double-click `TurboHUD-2026.11.12.5-macos-arm64.dmg`. A window opens.
+2. Double-click `TurboHUD-2026.11.12.6-macos-arm64.dmg`. A window opens.
 3. Drag **TurboHUD** onto **Applications**. If asked, choose **Replace**.
 4. Close the window. In Finder, click the eject button next to **TurboHUD** in the sidebar. **Always eject it**: TurboHUD must start from Applications, never from the disk image.
 5. **Don't open TurboHUD yet.** The first measurement is without it.
@@ -207,6 +208,8 @@ This checks the fixes. Stay in the same session for at least **three races**, as
 
 **✏️ Write down:** Online, did the yellow flag show when other drivers went off or spun? ______
 
+**✏️ Write down:** If a driver stopped on the track and left: did the yellow flag go away after about a minute? ______
+
 **✏️ Write down:** Did TSU stutter? If yes: **while driving**, or **between races / at the start** of a race? ______
 
 If the host asks: set your clan tag in TSU to the class you're given (for example **GT3**). With two classes in the race, the lap times should be grouped by class, each under a line with its name.
@@ -298,6 +301,7 @@ If TSU freezes: quit it with **Stop** in Steam, as last time.
 | | Online races 2, 3 ...: after how many seconds? | |
 | | Online, joined during a race: did it show? | |
 | | Online yellow flags? | |
+| | A car left standing: flag gone after a minute? | |
 | | Online stutter: while driving, or between races / at the start? | |
 | | Classes in the lap times (in colour) and on the radar (if tried)? | |
 | | Clan tags in the lap times? | |
