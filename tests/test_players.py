@@ -352,16 +352,26 @@ class DeltaBarTests(unittest.TestCase):
         view, _bar = self.run_bar((10.0, 0.5))
         self.assertEqual((view.fill, view.text), (-0.5, '+0.50'))
 
-    def test_the_fill_glides_while_the_number_is_exact(self):
-        # Asked for by the user on 2026-11-11: a smooth bar rather than one that jumps.
+    def test_the_fill_and_the_number_glide(self):
+        # Asked for by the user on 2026-11-11: a smooth bar rather than one that jumps; on
+        # 2026-11-12 the number too, which jumped at each read (more so in replays).
         bar = race.DeltaBar()
         feed(bar, 10, 1, lambda t: 0.0)
         view = bar.update(Lapping(round(11.05 * SEC), round(-0.5 * SEC)))  # half a second ahead at once
-        self.assertEqual(view.text, '\u22120.50')  # the number at once
+        shown = float(view.text.replace('−', '-'))
+        self.assertLess(shown, 0.0)
+        self.assertGreater(shown, -0.5)  # the number on its way, not there at once
         self.assertGreater(view.fill, 0.0)
         self.assertLess(view.fill, 0.5)  # the bar on its way
-        view = feed(bar, 11.1, 0.2, lambda t: -0.5)
-        self.assertGreater(view.fill, 0.45)  # nearly there 0.25 s on
+        view = feed(bar, 11.1, 0.4, lambda t: -0.5)
+        self.assertGreater(view.fill, 0.49)
+        self.assertEqual(view.text, '−0.50')  # there about 0.4 s on
+
+    def test_a_jumpy_delta_reads_calmly(self):
+        bar = race.DeltaBar()
+        jumpy = feed(bar, 10, 2, lambda t: -0.3 + (0.1 if round(t * 20) % 2 else -0.1))
+        shown = float(jumpy.text.replace('−', '-'))
+        self.assertAlmostEqual(shown, -0.3, delta=0.06)  # +-0.1 at each read: the number moves far less
 
     def test_a_steady_change_is_followed_closely(self):
         bar = race.DeltaBar()

@@ -196,6 +196,8 @@ CLASSES = (
         ('AM', 'Am'),
         ('PROAM', 'Pro-Am'),
         ('SILV', 'Silver'),
+        ('SC', 'Safety Car'),
+        ('PC', 'Pace Car'),
     ),
 )
 MAX_CLASS_TAG = 5  # characters: TSU's limit for a clan tag

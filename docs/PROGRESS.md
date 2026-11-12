@@ -1440,3 +1440,13 @@ its "Recent changes".
   when another driver is followed); with none, the spectator's view. The HUD stays while the replay is paused
   (`m_paused`); a replay standing unpaused for 10 s counts as closed, and is not taken again while it stands. The
   tooltip says "replay". Tests (a replay in the fake game). Not yet seen in a replay; backlog item 7.
+- 2026-11-12: Feedback from the user's first replay test, fixed: (1) the lap times and the player list no longer change
+  width or shift their columns as the content changes (a CUT, JUMP or PIT timer, a longer gap or tag): their text
+  size is worked out from their usual content and the rows together, each column as wide as the wider of the two
+  (`widest_rows`, before the wider of the two whole lists), and the columns are placed with room for the usual
+  content too (`draw_hud(reserve=...)`); the lap times' usual content now has CUT 00.0s and a 5-letter tag, the
+  player list's PROAM P20. (2) The player list's tint covers the whole section (with its gaps in the middle column
+  it stopped short of the right edge). (3) SC (Safety Car) and PC (Pace Car) are classes (custom category); such
+  cars stay in the lists, as the user chose. (4) The delta bar's number glides like its fill (DELTA_TEXT_EASE, most
+  of the way in about 0.3 s): it jumped at each read, more so in replays; the colour stays the trend, as the user
+  wanted. Tests.
