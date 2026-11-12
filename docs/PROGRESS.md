@@ -1494,6 +1494,13 @@ its "Recent changes".
   so the full read fetches its extra pages in one go and the quick reads do not fetch them. A PIT, wreck or
   respawn of another car shows up to a second later. Tests. Not yet measured in a race (TSU was not running);
   backlog item 0.
+- 2026-11-12: Windows build 2026.11.12.7 to share, asked for by the user: `releases/TurboHUD-2026.11.12.7-windows-x64.zip`
+  (42.2 MB), from `main` with what came since .6: the player list in track order with the leader on top and 3 cars
+  each side, the lap times' last lap, Ctrl+Shift+F12 for move mode, the quick start (in the zip as
+  `Quick Start.txt`), and the lighter race reads. The zip's reader is the one built from `main` (unchanged since
+  .2, checked byte for byte). Smoke test passed with TurboHUD closed; the zip and the Python modules packed in
+  `TurboHUD.exe` checked for the privacy terms, none. It replaces 2026.11.12.6, still in `releases/`, to be
+  removed by hand.
 - 2026-11-12: Build 2026.11.12.7 for the tester (`releases/TurboHUD-2026.11.12.7-macos-arm64.dmg`, 31.7 MB, macOS 27,
   `--any-macos`, built with `.buildtools/build-venv`), asked for by the user: `main` with what came since .6: the
   lighter race reads (other cars' slow state once a second), the player list in track order with the leader on
