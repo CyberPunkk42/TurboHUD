@@ -79,6 +79,16 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-12: Feedback from the user's first replay test, fixed: (1) the lap times and the player list no longer change
+  width or shift their columns as the content changes (a CUT, JUMP or PIT timer, a longer gap or tag): their text
+  size is worked out from their usual content and the rows together, each column as wide as the wider of the two
+  (`widest_rows`, before the wider of the two whole lists), and the columns are placed with room for the usual
+  content too (`draw_hud(reserve=...)`); the lap times' usual content now has CUT 00.0s and a 5-letter tag, the
+  player list's PROAM P20. (2) The player list's tint covers the whole section (with its gaps in the middle column
+  it stopped short of the right edge). (3) SC (Safety Car) and PC (Pace Car) are classes (custom category); such
+  cars stay in the lists, as the user chose. (4) The delta bar's number glides like its fill (DELTA_TEXT_EASE, most
+  of the way in about 0.3 s): it jumped at each read, more so in replays; the colour stays the trend, as the user
+  wanted. Tests.
 - 2026-11-12: Windows build 2026.11.12.5 to share, asked for by the user: `releases/TurboHUD-2026.11.12.5-windows-x64.zip`
   (42.2 MB), from `main` with what came since .4: the stutter fixes (the lap times and player list at their old
   cost, running times from kept glyph images), the yellow flag fix for a car left standing, and the font fix for

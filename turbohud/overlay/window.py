@@ -367,7 +367,9 @@ class SectionWindow(QWidget):
         if self.section.background and rows:
             # On a solid box the text needs no dark edge: on the yellow flag it smudged the letters.
             theme = dataclasses.replace(theme, outline_color='#00000000')
-        draw_hud(painter, hud_lines(rows, scale), theme, scale, left, self.width() - left, centre)
+        # The usual content's columns are made room for too, so they stay put (draw_hud).
+        reserve = hud_lines(steady_rows(self.section.samples[0]), scale) if self.rows else ()
+        draw_hud(painter, hud_lines(rows, scale), theme, scale, left, self.width() - left, centre, reserve)
         if self.section.level and rows:
             sample = SECTORS_SAMPLE if self.section.sectors else LEVEL_SAMPLE
             level = self.level or (None if self.locked else sample)
@@ -403,7 +405,7 @@ class SectionWindow(QWidget):
         if self.section.level:
             height += level_space(scale) + pad // 2  # the level bar, with a little room below
             width = self.width()  # the level bar spans the section
-        if any(row.right for row in rows):
+        if any(row.right or row.middle for row in rows):  # columns at the right edge (the player list)
             width = self.width()
         else:
             width = min(width + (bars or 0), self.width())

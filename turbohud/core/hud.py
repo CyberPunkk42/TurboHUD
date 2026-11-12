@@ -395,7 +395,7 @@ RACE_SECTIONS = (
                     tail='  PIT 00.0s',
                     flag='DE',
                     middle='+00.000',
-                    tag='GT3 P20',
+                    tag='PROAM P20',  # the longest class and its place
                     tyre='M',
                 )
                 for n in range(10, 10 + 8)
@@ -414,8 +414,8 @@ RACE_SECTIONS = (
                     before='L99',
                     flag='DE',
                     middle='PIT 00.0s',
-                    right='(00.00s)',
-                    tag='GT3',
+                    right='CUT 00.0s',  # the widest there: wider than (00.00s), JUMP and 0:00.0
+                    tag='PROAM',  # a clan tag or class has up to 5 letters
                     tyre='M',
                 )
                 for n in range(10, 10 + LAP_TIME_ROWS)
@@ -689,9 +689,10 @@ def widest_rows(section, rows, scale, measure):
     as zeros. Without any `rows`, nothing."""
     if not rows:
         return []
-    rows, usual = steady_rows(rows), steady_rows(section.samples[0])
-    wider = content_size(usual, scale, measure)[0] > content_size(rows, scale, measure)[0]
-    return usual if wider else rows
+    # Together, so each column is as wide as the wider of the two: before, the wider of the
+    # two whole lists, and a CUT or PIT made the lap times wider than their usual content
+    # though the names were shorter: the text shrank and grew back (reported 2026-11-12).
+    return steady_rows(section.samples[0]) + steady_rows(rows)
 
 
 def drawn_scale(section, size, rows, normal_height, scale, ink, measure):

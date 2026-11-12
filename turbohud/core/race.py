@@ -1777,6 +1777,9 @@ DELTA_COLOUR_EASE = 0.15  # the fade between green and red: most of the way in a
 # The fill glides towards the delta instead of jumping at each read (asked for by the user on
 # 2026-11-11): most of the way in about 0.2 s, trailing a steady change by under 0.1 s.
 DELTA_FILL_EASE = 0.08
+# The bar's number eases too (asked for by the user on 2026-11-12: it jumped at each read, more
+# so in replays): most of the way in about 0.3 s, so a jumpy delta reads calmly.
+DELTA_TEXT_EASE = 0.1
 
 
 @dataclass(frozen=True)
@@ -1804,6 +1807,7 @@ class DeltaBar:
         self._against = None  # the race clock since when the rate has pointed the other way
         self._trend = 0.0  # the colour shown, easing towards the side
         self._fill = None  # the fill shown, gliding towards the delta
+        self._shown = None  # the number shown (0.1 ms), gliding towards the delta
 
     def update(self, state):
         """The view for the race `state`; at most once a read does it work anything out."""
@@ -1812,7 +1816,7 @@ class DeltaBar:
         delta = state.delta_to_best
         if state.laps_completed != self._lap or delta is None:
             self._history.clear()
-            self._side = self._against = self._fill = None
+            self._side = self._against = self._fill = self._shown = None
         last_clock = self._clock if self._history else None
         self._lap, self._clock, self._view = state.laps_completed, state.clock, None
         if delta is None:
@@ -1840,12 +1844,13 @@ class DeltaBar:
             elapsed = (state.clock - last_clock) / UNITS_PER_SECOND
             self._trend += (self._side - self._trend) * (1 - math.exp(-elapsed / DELTA_COLOUR_EASE))
             self._fill += (target - self._fill) * (1 - math.exp(-elapsed / DELTA_FILL_EASE))
+            self._shown += (delta - self._shown) * (1 - math.exp(-elapsed / DELTA_TEXT_EASE))
         else:
-            self._fill = target  # a lap's start: where the delta is, at once
+            self._fill, self._shown = target, delta  # a lap's start: where the delta is, at once
         self._view = DeltaBarView(
             self._fill,
             self._trend,
-            format_delta(delta, DELTA_PLACES).replace('-', '\u2212'),
+            format_delta(round(self._shown), DELTA_PLACES).replace('-', '\u2212'),
         )
         return self._view
 
