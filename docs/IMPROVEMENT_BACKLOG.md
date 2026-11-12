@@ -77,6 +77,8 @@ presets with their shortcuts, groups, the Centre buttons, Centre text and Undo. 
   in front during a race.
 - Linux: `--preset`, and moving and resizing through Hyprland (followers take their size when
   a resize ends), and Undo there.
+  The move-mode panel's text is held at 13 px there since 2026-11-12 (771 px tall, was 866):
+  check it reads well over TSU.
 - Windows has run none of this (its shortcut code has only ever run on a build machine).
 
 ## 5. Builds and release

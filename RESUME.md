@@ -76,6 +76,11 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-12: The move-mode panel is the same size on Linux as on the Mac: its text is held at
+  13 px (`PANEL_FONT_PX`) where the system's is larger. Linux desktops use about 15 px (Adwaita
+  Sans 11 pt) and give buttons and lists that font on their own, so the panel was 866 px tall
+  and failed its under-800 test; now 771 px. Set in the panel's style sheet, which reaches those
+  widgets; Windows' smaller text is unchanged. A test copies Linux's fonts on every system.
 - 2026-11-11: A private GitHub repository for the Mac and the Windows PC, asked for by the user (remote `github`,
   `https://github.com/CyberPunkk42/TurboHUD.git`). Before the first push every file, path and commit of the history was
   checked for personal data: the files had only placeholders, but 299 commits had the user's real name as author
