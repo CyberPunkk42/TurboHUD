@@ -1392,3 +1392,9 @@ its "Recent changes".
   1.2 ms (6.1). Not the same pixels: in 18 texts at five sizes, 1x and 2x, 0.32% of them differ by more than 8 of
   255, at most 50 (the smallest size at 1x); looked the same at real size and zoomed, shown to the user. Glyph
   images are kept up to 16 MiB. Applies on every system. Tests.
+- 2026-11-12: A car left standing gets no yellow flag after a minute, asked for by the user: in an online race
+  a driver stopped on the track and left, and the flag stayed out for the rest of the race. A car slower than
+  29 km/h (`YELLOW_SLOW`, either way) for `YELLOW_IDLE_AFTER` (60 s) is idle: no incident, so no flag, no ring on
+  the map and no CAR STOPPED AHEAD. Only going faster than 29 km/h again starts the count anew (rolling or being
+  pushed does not); the pits and the grid do not count. The log says when a car becomes idle and races again.
+  Tests.
