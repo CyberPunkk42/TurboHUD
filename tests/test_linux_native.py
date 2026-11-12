@@ -46,6 +46,10 @@ class LinuxNativeTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
+        if sys.platform == 'win32':  # offscreen finds no fonts there without this
+            os.environ.setdefault(
+                'QT_QPA_FONTDIR', os.path.join(os.environ.get('WINDIR', r'C:\Windows'), 'Fonts')
+            )
         from PySide6.QtWidgets import QApplication
 
         cls.app = QApplication.instance() or QApplication([])

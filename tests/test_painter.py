@@ -12,6 +12,10 @@ class TextPathTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
+        if sys.platform == 'win32':  # offscreen finds no fonts there without this
+            os.environ.setdefault(
+                'QT_QPA_FONTDIR', os.path.join(os.environ.get('WINDIR', r'C:\Windows'), 'Fonts')
+            )
         from PySide6.QtWidgets import QApplication
 
         cls.app = QApplication.instance() or QApplication([])
@@ -75,6 +79,10 @@ class TextImageTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
+        if sys.platform == 'win32':  # offscreen finds no fonts there without this
+            os.environ.setdefault(
+                'QT_QPA_FONTDIR', os.path.join(os.environ.get('WINDIR', r'C:\Windows'), 'Fonts')
+            )
         from PySide6.QtWidgets import QApplication
 
         cls.app = QApplication.instance() or QApplication([])
@@ -111,6 +119,10 @@ class ComposedTextTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
+        if sys.platform == 'win32':  # offscreen finds no fonts there without this
+            os.environ.setdefault(
+                'QT_QPA_FONTDIR', os.path.join(os.environ.get('WINDIR', r'C:\Windows'), 'Fonts')
+            )
         from PySide6.QtWidgets import QApplication
 
         cls.app = QApplication.instance() or QApplication([])
@@ -157,6 +169,21 @@ class ComposedTextTests(unittest.TestCase):
                     self.assertLess(max(differences), 80, (text, size, ratio))
                     off = sum(d > 8 for d in differences)
                     self.assertLess(off, len(differences) * 0.05, (text, size, ratio))
+
+    def test_without_fonts_a_number_is_filled_whole(self):
+        # Qt's offscreen platform on Windows has no fonts unless given a folder, and its fallback
+        # font's glyphs crashed Python when composed (2026-11-12): such texts are filled instead.
+        from unittest import mock
+
+        from turbohud.hud import painter
+
+        with (
+            mock.patch.object(painter, 'have_fonts', return_value=False),
+            mock.patch.object(painter, 'composed_image', side_effect=AssertionError('composed')),
+        ):
+            image, _left, _top = painter.text_image('9:87.654', 19, 0xFFFFFFFF, 0xC8000000, 1.0)
+        self.assertGreater(image.width(), 0)
+        self.assertTrue(painter.have_fonts())  # these tests give Qt the system's fonts
 
     def test_glyphs_are_kept_so_a_new_number_fills_nothing(self):
         from turbohud.hud import painter
@@ -233,6 +260,10 @@ class RedrawTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
+        if sys.platform == 'win32':  # offscreen finds no fonts there without this
+            os.environ.setdefault(
+                'QT_QPA_FONTDIR', os.path.join(os.environ.get('WINDIR', r'C:\Windows'), 'Fonts')
+            )
         from PySide6.QtWidgets import QApplication
 
         cls.app = QApplication.instance() or QApplication([])
@@ -855,6 +886,10 @@ class YellowFlagLookTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
+        if sys.platform == 'win32':  # offscreen finds no fonts there without this
+            os.environ.setdefault(
+                'QT_QPA_FONTDIR', os.path.join(os.environ.get('WINDIR', r'C:\Windows'), 'Fonts')
+            )
         from PySide6.QtWidgets import QApplication
 
         cls.app = QApplication.instance() or QApplication([])
@@ -989,6 +1024,10 @@ class MovePanelPresetTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
+        if sys.platform == 'win32':  # offscreen finds no fonts there without this
+            os.environ.setdefault(
+                'QT_QPA_FONTDIR', os.path.join(os.environ.get('WINDIR', r'C:\Windows'), 'Fonts')
+            )
         from PySide6.QtWidgets import QApplication
 
         cls.app = QApplication.instance() or QApplication([])
@@ -1285,6 +1324,10 @@ class CanvasTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
+        if sys.platform == 'win32':  # offscreen finds no fonts there without this
+            os.environ.setdefault(
+                'QT_QPA_FONTDIR', os.path.join(os.environ.get('WINDIR', r'C:\Windows'), 'Fonts')
+            )
         from PySide6.QtWidgets import QApplication
 
         cls.app = QApplication.instance() or QApplication([])
