@@ -79,6 +79,13 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-12: Windows build 2026.11.12.6 to share, asked for by the user: `releases/TurboHUD-2026.11.12.6-windows-x64.zip`
+  (42.2 MB), from `main` with what came since .5: TurboHUD in TSU's replays, and the fixes from the user's first
+  replay test (steady lap times and player list, the player list's full tint, SC and PC classes, the delta's number
+  eased). The zip's reader is the one built from `main` (unchanged since .2, checked byte for byte). The zip and the
+  Python modules packed in `TurboHUD.exe` checked for the privacy terms, none; the app starts and says its version.
+  Built without the smoke test, as the user's TurboHUD from source was running: to be run with TurboHUD closed.
+  It replaces 2026.11.12.5, still in `releases/`, to be removed by hand.
 - 2026-11-12: Feedback from the user's first replay test, fixed: (1) the lap times and the player list no longer change
   width or shift their columns as the content changes (a CUT, JUMP or PIT timer, a longer gap or tag): their text
   size is worked out from their usual content and the rows together, each column as wide as the wider of the two
