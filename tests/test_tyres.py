@@ -133,7 +133,7 @@ class ColumnTests(unittest.TestCase):
         full = self.rows(s.LAP_COLUMNS)
         rows = self.rows(('flag', 'lap', 'tyre', 'current'))
         self.assertEqual([(r.middle, r.right) for r in rows], [(r.right, '') for r in full])
-        self.assertEqual(rows[0].middle, 'Lap')  # the heading too
+        self.assertEqual(rows[0].middle, 'Last')  # the heading too
         bare = self.rows(('flag',))
         self.assertEqual({(r.middle, r.right, r.before, r.tyre) for r in bare}, {('', '', '', '')})
 

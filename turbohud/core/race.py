@@ -3154,7 +3154,7 @@ def lap_times_rows(
     wet=False,
 ):
     """The lap times list: a heading, then each driver in race order with flag and name,
-    their best lap and the running time of their current lap ('Fin' once finished) at
+    their best lap and their last lap (asked for by the user on 2026-11-12; before, the running one) at
     race `clock`. The race's fastest lap is purple, as in F1. Up to MAX_LAP_TIME_ROWS drivers.
 
     In a multi-class race (car_classes, from the clan tags in `class_tags`) the drivers
@@ -3171,7 +3171,7 @@ def lap_times_rows(
 
     `columns`: those of LAP_COLUMNS shown (asked for by the user on 2026-11-12): the flag, the
     lap number, the tire compound (compound_mark, of an event with `compounds`), the best lap
-    and the current lap (or CUT, PIT); without the best lap, the current lap takes its place."""
+    and the last lap (or CUT, PIT); without the best lap, the last lap takes its place."""
     order = list(ranked(players) if order is None else order)
     classes = car_classes(order, class_tags)
     places = None
@@ -3195,7 +3195,7 @@ def lap_times_rows(
             'accent',
             middle='Best',
             middle_color='accent',
-            right='Lap',
+            right='Last',
             right_color='accent',
         )
     ]
@@ -3210,11 +3210,12 @@ def lap_times_rows(
         rule = _class_name(group) if group is not None and group != last_class else ''
         last_class = group
         best = bests[id(player)]
-        running = player_current_lap(player, clock)
+        laps_done = player_lap_times(player)
         timed = player.pit_seconds is not None and not player.finished
         plain_pit = player.in_pit and not player.finished and not timed
         bracket = _pit_bracket(player) if timed else ''
-        time_now = 'Fin' if player.finished else format_tenths(running) if running is not None else '-'
+        # The last lap, not the running one (asked for by the user on 2026-11-12).
+        time_now = format_time(laps_done[-1]) if laps_done else '-'
         cut_text = ''
         if cuts and player.name in cuts:
             left = cuts[player.name]

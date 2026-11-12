@@ -248,7 +248,7 @@ class LapTimesPitAndLapTests(unittest.TestCase):
 
     def test_a_finished_driver_shows_the_laps_it_drove(self):
         car = player('Me', [lap(0), lap(40_000), lap(80_000)], laps=2, local=True, finished=True)
-        self.assertEqual((self.row(car).before, self.row(car).right), ('L2', 'Fin'))
+        self.assertEqual((self.row(car).before, self.row(car).right), ('L2', '0:04.000'))  # its last lap
 
     def test_the_timers_stand_in_the_columns_while_they_show(self):
         car = dataclasses.replace(
@@ -258,10 +258,10 @@ class LapTimesPitAndLapTests(unittest.TestCase):
         self.assertEqual((row.middle, row.middle_color), ('PIT 24.5s', 'lift'))
         self.assertEqual((row.right, row.right_color), ('(12.03s)', 'lift'))
 
-    def test_before_it_stands_the_running_time_stays(self):
+    def test_before_it_stands_the_last_lap_stays(self):
         car = dataclasses.replace(player('Me', [lap(0)], laps=0, local=True, in_pit=True), pit_seconds=3.0)
         row = self.row(car)
-        self.assertEqual((row.middle, row.right, row.right_color), ('PIT 3.0s', '0:05.0', 'text'))
+        self.assertEqual((row.middle, row.right, row.right_color), ('PIT 3.0s', '-', 'text'))  # no lap yet
 
     def test_plain_pit_after_a_long_stand(self):
         row = self.row(player('Me', [lap(0)], laps=0, local=True, in_pit=True))
@@ -269,7 +269,7 @@ class LapTimesPitAndLapTests(unittest.TestCase):
 
     def test_otherwise_as_ever(self):
         row = self.row(player('Me', [lap(0)], laps=0, local=True))
-        self.assertEqual((row.right, row.right_color), ('0:05.0', 'text'))
+        self.assertEqual((row.right, row.right_color), ('-', 'text'))  # no lap done yet
 
 
 SEC = race.UNITS_PER_SECOND
@@ -1228,17 +1228,18 @@ class LapTimesTests(unittest.TestCase):
         self.assertIsNone(race.player_current_lap(done, 60_000))
         self.assertIsNone(race.player_current_lap(player('Grid', []), 1_000))
 
-    def test_rows_show_best_and_running_lap_in_race_order(self):
+    def test_rows_show_best_and_last_lap_in_race_order(self):
         me = player('Me', [lap(0), lap(42_000), lap(80_000, count=2)], laps=2, local=True)
         ahead = player('Ahead', [lap(0), lap(39_000), lap(78_000, count=3)], laps=2)
         # A 3-lap race: Done is in (laps of 3.0, 3.0 and 2.9 s); the others are on their last lap.
         done = player('Done', [lap(0), lap(30_000), lap(60_000), lap(89_000, count=1)], laps=3, finished=True)
         fresh = player('Fresh', [lap(0, count=2)], laps=0)
         rows = race.lap_times_rows([me, fresh, ahead, done], clock=90_000)
-        self.assertEqual((rows[0].text, rows[0].middle, rows[0].right), ('Driver', 'Best', 'Lap'))
+        self.assertEqual((rows[0].text, rows[0].middle, rows[0].right), ('Driver', 'Best', 'Last'))
         self.assertEqual([r.text for r in rows[1:]], ['1. Done', '2. Ahead', '3. Me', '4. Fresh'])
         self.assertEqual([r.middle for r in rows[1:]], ['0:02.900', '0:03.900', '0:03.800', '-'])
-        self.assertEqual([r.right for r in rows[1:]], ['Fin', '0:01.2', '0:01.0', '0:09.0'])
+        # The last lap, not the running one (asked for by the user on 2026-11-12).
+        self.assertEqual([r.right for r in rows[1:]], ['0:02.900', '0:03.900', '0:03.800', '-'])
         # The race's fastest lap is purple, as in F1; my name in the accent colour.
         self.assertEqual(
             [r.middle_color for r in rows[1:]], [race.SESSION_BEST_COLOR, 'text', 'text', 'text']

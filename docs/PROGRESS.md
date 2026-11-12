@@ -1466,3 +1466,7 @@ its "Recent changes".
   else the race's best lap), so a stopped car keeps a sensible gap. Also asked for by the user: the race's leader on
   top with the race gap (empty where it is the player or shown below), then 3 cars ahead and 3 behind (4 and 3
   before; the player stays in the 5th row, `ME_ROW`). Tests. Not yet seen in a race.
+- 2026-11-12: The lap times show each driver's last lap instead of the running one, asked for by the user: the
+  column is headed Last, a finished driver shows its last lap too (before, Fin), and a driver with no lap done '-';
+  CUT, JUMP and PIT still take its place. The column's option reads "Lap times: last lap" (its key stays
+  `current`, so saved settings keep it). Tests.
