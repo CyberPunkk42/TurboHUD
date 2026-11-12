@@ -26,6 +26,7 @@ import functools
 import itertools
 import logging
 import math
+import re
 import struct
 import sys
 import time
@@ -86,6 +87,7 @@ class LapState:
     on_a_track: bool = True  # a race mode (a circuit, or A to B): False in arena modes, without a map
     shortcut_seconds: float = 0.0  # how long TSU slows a car for a shortcut here (0: not known, or off)
     compounds: int | None = None  # the event's tire compounds (tireCompoundCount); None: not read
+    track: str = ''  # the track's name (EventState.m_level.m_properties.name); '' where not read
 
     @property
     def lap_times(self):
@@ -544,6 +546,7 @@ class LapReader:
         self._tags = {}  # profile object -> (its clan tag, when read): see _kept_text
         self._shortcut_for, self._shortcut_length = None, 0.0  # see _shortcut_seconds
         self._compounds_for, self._compounds = None, None  # see _read_compounds
+        self._track_for, self._track = None, ''  # see _track_name
         self._cars = {}  # vehicle object -> (its car's name, when read)
         self._gates = None  # checkpoint lines, ((x1, z1), (x2, z2)) each
         self._sector_lines = ()  # the checkpoints of type Sector (TS.CheckpointType), read with the lines
@@ -991,6 +994,7 @@ class LapReader:
             on_a_track=self._on_a_track(),
             shortcut_seconds=self._shortcut_seconds(state_object),
             compounds=self._compounds,
+            track=self._track_name(state_object),
         )
         live = state.live_fuel_trend(self._fuel_marks, self._fuel_history)
         if live is not None:
@@ -999,6 +1003,20 @@ class LapReader:
             share = self._count_draft(state)
             state = dataclasses.replace(state, car=dataclasses.replace(state.car, draft_last_lap=share))
         return state
+
+    def _track_name(self, state):
+        """The track's name: EventState.m_level (TS.Level) .m_properties (TS.LevelProperties)
+        .name, found in the game's metadata on 2026-11-12. Read once an event; '' where missing."""
+        if self._track_for is not state:
+            self._track_for, self._track = state, ''
+            try:
+                level = self._ref('state', state, 'm_level')
+                properties = self._ref('level', level, 'm_properties')
+                where = properties + self._offset('level properties', properties, 'name')
+                self._track = self._string(self.il.memory.u64(where))
+            except (NotFound, OSError):
+                pass
+        return self._track
 
     def _shortcut_seconds(self, state):
         """How long TSU slows a car for a shortcut in this event: EventState's
@@ -1060,6 +1078,7 @@ class LapReader:
             players=players,
             spectating=True,
             compounds=self._compounds,
+            track=self._track_name(state),
             on_a_track=self._on_a_track(),
         )
 
@@ -1972,6 +1991,7 @@ def race_sections(
             class_tags=class_tags,
             clan_tags=clan_tags,
             compounds=state.compounds,
+            wet=is_wet(state.track),
         )
         cuts = shortcuts.left(state) if shortcuts is not None else None
         jumped = shortcuts.jump_starts(state) if shortcuts is not None else frozenset()
@@ -1985,6 +2005,7 @@ def race_sections(
             clan_tags,
             columns,
             state.compounds,
+            is_wet(state.track),
         )
         rows = shortcut_rows(state, cuts or {}, jumped)
         if rows:
@@ -2041,6 +2062,7 @@ def _watching_sections(
             clan_tags=clan_tags,
             columns=columns,
             compounds=state.compounds,
+            wet=is_wet(state.track),
         )
         if track_map is not None and state.on_a_track:
             shown = track_map.update(state, order)
@@ -2583,6 +2605,7 @@ def players_rows(
     class_tags=(),
     clan_tags=True,
     compounds=None,
+    wet=False,
 ):
     """The player list. Racing (asked for by the user on 2026-11-12): the cars around the local
     one on the track (relative_players), it always in the middle row, each with its race
@@ -2627,7 +2650,7 @@ def players_rows(
                 middle=gap_text(found),
                 middle_color=gap_color,
                 **tag,
-                **_tyre_column(player, compounds),
+                **_tyre_column(player, compounds, wet),
             )
         )
     return rows
@@ -2758,6 +2781,17 @@ COMPOUND_MARKS = {
     5: (('X', '#ff6fb5'), ('U', '#9b59d0'), ('S', SOFT), ('M', MEDIUM), ('H', HARD)),
 }
 SOFTEST_FIRST = True  # compound index 0 is the softest (to be checked in the game)
+# A wet race has one compound, and its track's name says so with one of these in round
+# brackets, in any case (asked for by the user on 2026-11-12): every car's ring is then a blue W.
+WET_MARK = ('W', '#2f8fff')
+WET_MARKERS = ('WET', 'RW', 'QW', 'W')
+_WET_MARKER = re.compile(r'\(\s*(?:' + '|'.join(WET_MARKERS) + r')\s*\)', re.IGNORECASE)
+
+
+def is_wet(track):
+    """Whether the track's name marks a wet race: (WET), (RW), (QW) or (W), in any case, such
+    as 'Spa (WET)' or 'Monza (rw)'; not a bare 'Wet Hills'."""
+    return bool(track) and _WET_MARKER.search(track) is not None
 
 
 def compound_mark(index, count):
@@ -2850,6 +2884,7 @@ def lap_times_rows(
     clan_tags=False,
     columns=LAP_COLUMNS,
     compounds=None,
+    wet=False,
 ):
     """The lap times list: a heading, then each driver in race order with flag and name,
     their best lap and the running time of their current lap ('Fin' once finished) at
@@ -2939,15 +2974,16 @@ def lap_times_rows(
                 rule=rule,
                 rule_color=colors.get(group, '') if rule else '',
                 **_tag_column(player, group, colors, clan_tags),
-                **_tyre_column(player, compounds),
+                **_tyre_column(player, compounds, wet),
             )
         )
     return [_only_columns(row, columns) for row in rows]
 
 
-def _tyre_column(player, compounds):
-    """The tire column's letter and colour for `player` (compound_mark); nothing if unknown."""
-    mark = compound_mark(player.compound, compounds)
+def _tyre_column(player, compounds, wet=False):
+    """The tire column's letter and colour for `player` (compound_mark; WET_MARK on a wet
+    track); nothing if unknown."""
+    mark = WET_MARK if wet else compound_mark(player.compound, compounds)
     return {'tyre': mark[0], 'tyre_color': mark[1]} if mark else {}
 
 

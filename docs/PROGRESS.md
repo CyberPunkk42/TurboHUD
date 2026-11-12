@@ -1344,3 +1344,11 @@ its "Recent changes".
   times' classes now come in the class list's order from the start (LMP above GT3 above GT4, Other last), not by
   whose leader is ahead. The tire ring is a font size wide (it reached below the box at 1.25). Tests. Seen offscreen;
   not yet in a race.
+- 2026-11-12: Wet tires, asked for by the user: on a track whose name has the word WET (any case, as a word:
+  `Spa WET`, `Monza_wet`, `Wet-Ring`, not `Wetlands`) every car's tire ring is a blue W, whatever its compound, in
+  the lap times and the player list. The track's name is read once an event from `EventState.m_level`
+  (`TS.Level`) `.m_properties` (`TS.LevelProperties`) `.name`, found in the game's metadata (`LapState.track`).
+  Tests. Seen offscreen; the name's path not yet read in the game.
+- 2026-11-12: A wet race is marked in the track's name, as the user said: (WET), (RW), (QW) or (W), in round
+  brackets and in any case (`WET_MARKERS`); a bare WET no longer counts (a track called Wet Hills stays dry). A wet
+  race has one compound, so every car on a blue W stays right. Tests.
