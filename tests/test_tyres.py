@@ -95,6 +95,23 @@ class TyreColumnTests(unittest.TestCase):
         self.assertEqual(hud.before_right(without, middle_end, measure), tyre_end)  # no room kept
         self.assertGreater(hud.lines_width(lines, measure), hud.lines_width(without, measure))
 
+    def test_the_lap_number_s_place_is_the_same_with_the_tire_column_s_end_given(self):
+        # draw_hud works tyre_right out once and hands it on, so the middle column is
+        # measured once a frame, not twice (2026-11-12).
+        measured = []
+
+        def measure(text, size):
+            measured.append(text)
+            return len(text) * size / 2
+
+        lines = hud.hud_lines(self.rows())
+        middle_end = hud.middle_right(lines, 400, 14, measure)
+        tyre_end = hud.tyre_right(lines, middle_end, measure)
+        measured.clear()
+        given = hud.before_right(lines, middle_end, measure, tyre_end)
+        self.assertEqual(measured, [])
+        self.assertEqual(given, hud.before_right(lines, middle_end, measure))
+
 
 class ColumnTests(unittest.TestCase):
     def rows(self, columns):

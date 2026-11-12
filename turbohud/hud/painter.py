@@ -13,6 +13,7 @@ from PySide6.QtGui import (
     QPainterPath,
     QPainterPathStroker,
     QPen,
+    QTextLayout,
 )
 
 from turbohud.core.hud import (
@@ -54,9 +55,18 @@ def hud_font(size):
     return font
 
 
+@lru_cache(maxsize=32)
+def _metrics(size):
+    return QFontMetricsF(hud_font(size))
+
+
+@lru_cache(maxsize=4096)
 def text_advance(text, size):
-    """How far the pen moves for `text`, spaces included (where the next text starts)."""
-    return QFontMetricsF(hud_font(size)).horizontalAdvance(text)
+    """How far the pen moves for `text`, spaces included (where the next text starts).
+    Kept: the lap times and the player list measure each column's texts every frame, and
+    the same texts come back (with digits as zeros, the steady ones are a handful); asking
+    Qt each time was the largest part of drawing them (2026-11-12)."""
+    return _metrics(size).horizontalAdvance(text)
 
 
 @lru_cache(maxsize=512)
@@ -113,6 +123,17 @@ def text_image(text, size, color, outline, ratio):
     if found is not None:
         _images.move_to_end(key)
         return found
+    found = composed_image(text, size, color, outline, ratio) if composable(text) else None
+    found = found or _filled_image(text, size, color, outline, ratio)
+    _images[key] = found
+    _images_size += found[0].sizeInBytes()
+    while _images_size > IMAGES_LIMIT and len(_images) > 1:
+        _images_size -= _images.popitem(last=False)[1][0].sizeInBytes()
+    return found
+
+
+def _filled_image(text, size, color, outline, ratio):
+    """text_image's (image, left, top), filled from the text's shapes: the names and labels."""
     shape, edge = text_path(text, size), outline_path(text, size)
     box = shape.boundingRect().united(edge.boundingRect())
     left, top = math.floor(box.left() * ratio) / ratio, math.floor(box.top() * ratio) / ratio
@@ -127,11 +148,141 @@ def text_image(text, size, color, outline, ratio):
     painter.fillPath(edge, QColor.fromRgba(outline))
     painter.fillPath(shape, QColor.fromRgba(color))
     painter.end()
-    found = _images[key] = (image, left, top)
-    _images_size += image.sizeInBytes()
-    while _images_size > IMAGES_LIMIT and len(_images) > 1:
-        _images_size -= _images.popitem(last=False)[1][0].sizeInBytes()
+    return image, left, top
+
+
+# Running times and gaps change every frame, and each new one took about 0.9 ms to fill at 2x
+# (0.6 ms of it the outline): 17 a frame in the lap times and the player list, about 12 ms a
+# frame in the tester's log (2026-11-12). Such texts are put together from images of their
+# glyphs, each filled once: about 0.05 ms. Qt still shapes the text (its spacing, even digits,
+# the colon raised between digits), and a glyph is placed to 1/GLYPH_PHASES of a device pixel,
+# so only a few edge pixels differ, by a little (at most 28 of 255 in a check of 45 texts).
+COMPOSED_CHARACTERS = frozenset('0123456789:.,+-−()%/ sLPITCUJMFinkmh')  # times, gaps, timers, speeds
+GLYPH_PHASES = 64  # places kept for a glyph within a device pixel
+PIECES_LIMIT = 16 * 1024 * 1024  # bytes of glyph images kept
+_pieces = OrderedDict()  # (font, glyph, size, ratio, phase, outline?) -> (image, left, top) or None
+_pieces_size = 0
+
+
+def composable(text):
+    """Whether `text` is drawn from glyph images (composed_image): a changing number."""
+    return bool(text) and COMPOSED_CHARACTERS.issuperset(text)
+
+
+def _font_key(raw):
+    return raw.familyName(), raw.styleName(), raw.weight(), raw.pixelSize()
+
+
+_glyph_shapes = {}  # (_font_key, glyph, size) -> (shape, outline)
+
+
+def _glyph_paths(font, raw_font, glyph, size):
+    """(shape, outline) of one glyph, as text_path and outline_path make them for text.
+    `font` is _font_key(raw_font). Kept: a few hundred at most (digits and signs per size)."""
+    found = _glyph_shapes.get((font, glyph, size))
+    if found is not None:
+        return found
+    path = raw_font.pathForGlyph(glyph)
+    path.setFillRule(Qt.WindingFill)
+    shape = path.simplified()
+    stroker = QPainterPathStroker()
+    stroker.setWidth(outline_width(size))
+    stroker.setCapStyle(Qt.RoundCap)
+    stroker.setJoinStyle(Qt.RoundJoin)
+    found = _glyph_shapes[(font, glyph, size)] = (shape, stroker.createStroke(shape))
     return found
+
+
+def _glyph_piece(raw_font, glyph, size, ratio, phase, edge):
+    """(image, left, top) of a glyph's outline (`edge`) or its letter, white, `phase` of
+    GLYPH_PHASES right of a whole device pixel; None for an empty glyph (a space)."""
+    global _pieces_size
+    font = _font_key(raw_font)
+    key = (font, glyph, size, ratio, phase, edge)
+    if key in _pieces:
+        _pieces.move_to_end(key)
+        return _pieces[key]
+    shape, outline = _glyph_paths(font, raw_font, glyph, size)
+    path = outline if edge else shape
+    shift = phase / GLYPH_PHASES / ratio
+    box = path.boundingRect().translated(shift, 0)
+    found = None
+    if not box.isEmpty():
+        left, top = math.floor(box.left() * ratio) / ratio, math.floor(box.top() * ratio) / ratio
+        image = QImage(
+            max(1, math.ceil((box.right() - left) * ratio)),
+            max(1, math.ceil((box.bottom() - top) * ratio)),
+            QImage.Format_ARGB32_Premultiplied,
+        )
+        image.setDevicePixelRatio(ratio)
+        image.fill(0)
+        painter = QPainter(image)
+        painter.setRenderHint(QPainter.Antialiasing)
+        painter.translate(shift - left, -top)
+        painter.fillPath(path, QColor(Qt.white))
+        painter.end()
+        found = (image, left, top)
+        _pieces_size += image.sizeInBytes()
+    _pieces[key] = found
+    while _pieces_size > PIECES_LIMIT and len(_pieces) > 1:
+        dropped = _pieces.popitem(last=False)[1]
+        if dropped is not None:
+            _pieces_size -= dropped[0].sizeInBytes()
+    return found
+
+
+def _shaped(text, size):
+    """[(raw font, glyph, x, y)] of `text` as Qt lays it out, from its start on the baseline."""
+    layout = QTextLayout(text, hud_font(size))
+    layout.beginLayout()
+    line = layout.createLine()
+    layout.endLayout()
+    ascent = line.ascent()
+    glyphs = []
+    for run in layout.glyphRuns():
+        raw_font = run.rawFont()
+        for glyph, at in zip(run.glyphIndexes(), run.positions()):
+            glyphs.append((raw_font, glyph, at.x(), at.y() - ascent))
+    return glyphs
+
+
+def composed_image(text, size, color, outline, ratio):
+    """text_image's (image, left, top), put together from glyph images: the outlines first,
+    as one shape given the outline's colour (overlapping outlines do not darken), then the
+    letters. None where Qt gives no glyphs."""
+    parts = {True: [], False: []}
+    for raw_font, glyph, x, y in _shaped(text, size):
+        whole = math.floor(x * ratio)
+        phase = min(round((x * ratio - whole) * GLYPH_PHASES), GLYPH_PHASES - 1)
+        for edge in (True, False):
+            found = _glyph_piece(raw_font, glyph, size, ratio, phase, edge)
+            if found is not None:
+                image, left, top = found
+                parts[edge].append((image, whole / ratio + left, y + top))
+    every = parts[True] + parts[False]
+    if not every:
+        return None
+    left = min(x for _image, x, _top in every)
+    top = min(y for _image, _x, y in every)
+    right = max(x + image.width() / ratio for image, x, _top in every)
+    bottom = max(y + image.height() / ratio for image, _x, y in every)
+    width, height = max(1, round((right - left) * ratio)), max(1, round((bottom - top) * ratio))
+    layers = []
+    for edge, rgba in ((True, outline), (False, color)):
+        layer = QImage(width, height, QImage.Format_ARGB32_Premultiplied)
+        layer.setDevicePixelRatio(ratio)
+        layer.fill(0)
+        painter = QPainter(layer)
+        for image, x, y in parts[edge]:
+            painter.drawImage(QPointF(x - left, y - top), image)
+        painter.setCompositionMode(QPainter.CompositionMode_SourceIn)  # the white takes the colour
+        painter.fillRect(layer.rect(), QColor.fromRgba(rgba))
+        painter.end()
+        layers.append(layer)
+    painter = QPainter(layers[0])
+    painter.drawImage(0, 0, layers[1])
+    painter.end()
+    return layers[0], left, top
 
 
 def outlined_text(painter, x, y, text, size, color, outline):
@@ -142,11 +293,13 @@ def outlined_text(painter, x, y, text, size, color, outline):
     painter.drawImage(QPointF(round((x + left) * ratio) / ratio, round((y + top) * ratio) / ratio), image)
 
 
+@lru_cache(maxsize=256)
 def cap_height(size):
     """How tall a capital letter or digit of the HUD's font is, in pixels."""
-    return QFontMetricsF(hud_font(size)).capHeight()
+    return _metrics(size).capHeight()
 
 
+@lru_cache(maxsize=4096)
 def text_ink(text, size):
     """How far a line of HUD text reaches (above, below) its baseline, with its outline."""
     box = text_path(text, size).boundingRect()
@@ -154,6 +307,7 @@ def text_ink(text, size):
     return -box.top() + outline, box.bottom() + outline
 
 
+@lru_cache(maxsize=4096)
 def text_width(text, size):
     """How wide a line of HUD text is, in pixels, with its outline."""
     return text_path(text, size).boundingRect().right() + outline_width(size)
@@ -361,8 +515,8 @@ def draw_hud(painter, lines, theme, scale=None, left=0, width=None, centre=False
             return text_advance(steady_text(text), size)
 
         middle_end = middle_right(lines, width, margin, steady_advance)
-        before_end = before_right(lines, middle_end, steady_advance)
         tyre_end = tyre_right(lines, middle_end, steady_advance)
+        before_end = before_right(lines, middle_end, steady_advance, tyre_end)
         tag_start = tag_left(lines, before_end, steady_advance)
     for line in lines:
         text_x = centred_x(line, width, margin) if (centre or line.centred) and width is not None else x

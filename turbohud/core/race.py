@@ -2570,11 +2570,21 @@ def track_gap(player, me, clock=None, gates=()):
     if lap:
         laps = math.floor((len(player.passed) - len(me.passed) + lap / 2) / lap)
         if laps > 0:
-            player = dataclasses.replace(player, checkpoints=player.checkpoints[laps:])
+            player = _without_laps(player, laps)
         elif laps < 0:
-            me = dataclasses.replace(me, checkpoints=me.checkpoints[-laps:])
+            me = _without_laps(me, -laps)
     found = gap(player, me, clock, gates)
     return found if found is not None and found[0] == 'time' else None
+
+
+def _without_laps(player, laps):
+    """`player` without its first `laps` laps, for track_gap. Its `passed` is cut from the
+    one already worked out rather than built again from every lap: done for each car a lap
+    or more away, every frame, that grew with the race (2026-11-12)."""
+    shorter = dataclasses.replace(player, checkpoints=player.checkpoints[laps:])
+    cut = sum(len(times) for times in player.checkpoints[:laps])
+    shorter.__dict__['passed'] = player.passed[cut:]  # what the cached_property would keep
+    return shorter
 
 
 def relative_players(players, me, order=None, clock=None, gates=()):

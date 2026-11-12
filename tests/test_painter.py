@@ -37,6 +37,23 @@ class TextPathTests(unittest.TestCase):
         # The outline reaches a little beyond the letters on every side.
         self.assertTrue(outline.boundingRect().contains(text_path('0:44', 40).boundingRect()))
 
+    def test_measures_are_kept_and_the_same_as_qt_s(self):
+        # The lap times and the player list measure their columns every frame: asking Qt
+        # each time took most of their drawing (2026-11-12).
+        from PySide6.QtGui import QFontMetricsF
+
+        from turbohud.hud.painter import cap_height, hud_font, text_advance, text_ink, text_path, text_width
+
+        metrics = QFontMetricsF(hud_font(17))
+        self.assertEqual(text_advance('+00.000', 17), metrics.horizontalAdvance('+00.000'))
+        self.assertEqual(cap_height(17), metrics.capHeight())
+        box = text_path('L12', 17).boundingRect()
+        self.assertEqual(text_width('L12', 17), box.right() + 17 / 7)
+        self.assertAlmostEqual(text_ink('L12', 17)[0], -box.top() + 17 / 14)
+        hits = text_advance.cache_info().hits
+        text_advance('+00.000', 17)
+        self.assertEqual(text_advance.cache_info().hits, hits + 1)
+
 
 @unittest.skipUnless(importlib.util.find_spec('PySide6'), 'needs Qt')
 class OutlineTests(unittest.TestCase):
@@ -84,6 +101,85 @@ class TextImageTests(unittest.TestCase):
             painter._images_size, sum(entry[0].sizeInBytes() for entry in painter._images.values())
         )
         self.assertIsNot(painter.text_image('oldest', 60, 0xFFFFFFFF, 0xC8000000, 2.0), first)
+
+
+@unittest.skipUnless(importlib.util.find_spec('PySide6'), 'needs Qt')
+class ComposedTextTests(unittest.TestCase):
+    """Running times and gaps put together from glyph images, each filled once (the tester's
+    stutter, 2026-11-12: about 0.9 ms a new text at 2x, 17 new texts a frame)."""
+
+    @classmethod
+    def setUpClass(cls):
+        os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
+        from PySide6.QtWidgets import QApplication
+
+        cls.app = QApplication.instance() or QApplication([])
+
+    @staticmethod
+    def placed(found, ratio):
+        """{device pixel from the text's start: (r, g, b, a)}, as outlined_text places the image."""
+        image, left, top = found
+        x0, y0 = round(left * ratio), round(top * ratio)
+        pixels = {}
+        for y in range(image.height()):
+            for x in range(image.width()):
+                color = image.pixelColor(x, y)
+                if color.alpha():
+                    pixels[(x0 + x, y0 + y)] = color.getRgb()
+        return pixels
+
+    def differences(self, text, size, ratio):
+        from turbohud.hud.painter import _filled_image, composed_image
+
+        filled = self.placed(_filled_image(text, size, 0xFFFFFFFF, 0xC8000000, ratio), ratio)
+        composed = self.placed(composed_image(text, size, 0xFFFFFFFF, 0xC8000000, ratio), ratio)
+        blank = (0, 0, 0, 0)
+        return [
+            max(abs(a - b) for a, b in zip(filled.get(at, blank), composed.get(at, blank)))
+            for at in set(filled) | set(composed)
+        ]
+
+    def test_numbers_are_composed_and_names_are_filled(self):
+        from turbohud.hud.painter import composable
+
+        for text in ('1:23.456', '+0.123', '−0.250', '(12.03s)', 'PIT 24.5s', 'CUT 3.0s', 'L12', '+2 L'):
+            self.assertTrue(composable(text), text)
+        for text in ('Driver01', 'Lap 12/30', 'GT3 P12', ''):
+            self.assertFalse(composable(text), text)
+
+    def test_a_composed_number_looks_as_a_filled_one(self):
+        # The same places and shapes: only a few edge pixels a little lighter or darker. A
+        # colon on its own sits lower than between digits; drawn so, it was off by 255.
+        for ratio in (1.0, 2.0):
+            for text in ('1:23.456', '+0.123', '(23.45s)', 'PIT 12.3s', '−0.250'):
+                for size in (13, 20):
+                    differences = self.differences(text, size, ratio)
+                    self.assertLess(max(differences), 80, (text, size, ratio))
+                    off = sum(d > 8 for d in differences)
+                    self.assertLess(off, len(differences) * 0.05, (text, size, ratio))
+
+    def test_glyphs_are_kept_so_a_new_number_fills_nothing(self):
+        from turbohud.hud import painter
+
+        painter.text_image('0:12.345', 17, 0xFFFFFFFF, 0xC8000000, 2.0)
+        kept = len(painter._pieces)
+        for number in range(30):
+            painter.text_image(f'0:12.{number:03d}', 17, 0xFFFFFFFF, 0xC8000000, 2.0)
+        # Only glyphs at places within a device pixel not seen yet: far fewer than 30 texts' worth.
+        self.assertLess(len(painter._pieces) - kept, 30)
+
+    def test_glyph_images_cannot_fill_the_memory(self):
+        from turbohud.hud import painter
+
+        limit = painter.PIECES_LIMIT
+        self.addCleanup(setattr, painter, 'PIECES_LIMIT', limit)
+        painter.PIECES_LIMIT = 100 * 1024
+        for size in range(30, 60):
+            painter.composed_image('0123456789', size, 0xFFFFFFFF, 0xC8000000, 2.0)
+        self.assertLessEqual(painter._pieces_size, 100 * 1024 + 60 * 1024)
+        self.assertEqual(
+            painter._pieces_size, sum(found[0].sizeInBytes() for found in painter._pieces.values() if found)
+        )
 
     def test_it_holds_the_whole_text_and_its_outline_for_the_screen(self):
         from turbohud.hud.painter import outline_path, text_image
@@ -1264,3 +1360,43 @@ class CanvasTests(unittest.TestCase):
         self.assertTrue(one_window_wanted(self.native, {}))
         self.assertFalse(one_window_wanted(self.native, {'TURBOHUD_ONE_WINDOW': '0'}))
         self.assertFalse(one_window_wanted(object(), {}))  # Linux and Windows: not yet
+
+    def test_only_the_changed_sections_are_drawn_again_not_those_between_them(self):
+        # Two sections far apart changed: the one between them, inside the rectangle round
+        # both, stays as it is (the tester's layout drew most of the screen each frame, 2026-11-12).
+        from PySide6.QtCore import QPoint, QRect
+        from PySide6.QtGui import QImage, QRegion
+        from PySide6.QtWidgets import QWidget
+
+        from turbohud.core.hud import RACE_SECTIONS
+        from turbohud.core.race import DeltaBarView
+        from turbohud.core.settings import Theme
+        from turbohud.overlay.window import HudCanvases, SectionWindow
+
+        section = next(s for s in RACE_SECTIONS if s.name == 'deltabar')
+        bars = []
+        for y in (0, 280, 560):
+            bar = SectionWindow(self.native, Theme(), section)
+            self.addCleanup(bar.close)
+            bar.setGeometry(100 + y, y, 200, 40)
+            bars.append(bar)
+        canvases = HudCanvases(self.native, [(0, 0, 900, 600)], bars)
+        canvas = canvases.canvases[0]
+        self.addCleanup(canvas.close)
+        drawn = []
+        for bar in bars:
+            bar.canvas = canvases
+            bar.show_on_top()
+            bar.show_content([], delta_view=DeltaBarView(0.5, -1.0, ''))
+            bar.draw = lambda painter, bar=bar, draw=bar.draw: (drawn.append(bar), draw(painter))
+        top, middle, bottom = bars
+        changed = QRegion()
+        for bar in (top, bottom):
+            changed = changed.united(QRect(bar.x() - 2, bar.y() - 2, bar.width() + 4, bar.height() + 4))
+        image = QImage(900, 600, QImage.Format_ARGB32_Premultiplied)
+        image.fill(0)
+        canvas.render(image, QPoint(), changed, QWidget.RenderFlag(0))
+        self.assertEqual(drawn, [top, bottom])
+        colors = [image.pixelColor(x, top.y() + 20) for x in range(top.x(), top.x() + top.width())]
+        self.assertTrue(any(c.alpha() == 255 and c.green() > c.red() for c in colors))  # green: drawn
+        self.assertEqual(image.pixelColor(middle.x() + 20, middle.y() + 20).alpha(), 0)  # not drawn again

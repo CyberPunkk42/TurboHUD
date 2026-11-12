@@ -62,6 +62,10 @@
   2026.11.10 went to the tester with new instructions (the same comparison, and the Rust reader). Race reads merge pages further apart since 2026-11-10 (31
   to 49 reads of the game a read and 16 to 22 ms, from 84 to 88 and 26 to 29 ms). Online, the search from the last race found
   three races in a row in 0.4 s (2026-11-10).
+- The tester has stutter again with build 2026.11.12.4 on macOS (2026-11-12). His log: drawing 20 to 24% of the
+  time, most of it new texts; since `fix/lap-list-frame-cost` changing numbers are drawn from kept glyphs (about 20
+  times quicker). Next: the user tries it in a race, then build 2026.11.12.5 for him and compare his `HUD frames`
+  drawing share (backlog item 0).
 1. Windows: the overlay over TSU (windowed, Fullscreen, Fullscreen Exclusive), and the live data
    through the Rust reader (built 2026-11-11, not yet run there).
    Also a trial of all of TurboHUD inside the CrossOver bottle (backlog item 1b,
@@ -75,6 +79,31 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-12: Running times and gaps are drawn from kept glyph images, asked for by the user after the tester's log
+  showed drawing at 20 to 24% of the time: each new one was filled anew, about 0.9 ms at 2x (0.6 ms the outline),
+  17 a frame in the lap times and the player list. Now Qt still shapes the text (spacing, even digits, the colon
+  raised between digits) and each glyph's outline and letter is filled once, placed to 1/64 of a device pixel
+  (`composed_image`, for texts of `COMPOSED_CHARACTERS`; names and labels as before): 0.06 ms a new text, and in a
+  benchmark at 2x with the race clock running the player list took 0.7 ms a frame (5.7 before) and the lap times
+  1.2 ms (6.1). Not the same pixels: in 18 texts at five sizes, 1x and 2x, 0.32% of them differ by more than 8 of
+  255, at most 50 (the smallest size at 1x); looked the same at real size and zoomed, shown to the user. Glyph
+  images are kept up to 16 MiB. Applies on every system. Tests.
+- 2026-11-12: On the Mac, the one window over the screen draws again only the sections that changed, asked for by
+  the user after the tester's log (his build 2026.11.12.4, four online races): it drew the rectangle round all of
+  them (`event.rect()`), which with his lap times on the left and player list on the right was most of the screen,
+  every section in it drawn again each frame; now `event.region()`. 0.3 ms a frame less in a benchmark of his
+  layout at 2x. His log: reads of 4 ms, frames 53 ms apart, content 2 to 4% and drawing 20 to 24% of the time,
+  about the same with the lap times hidden. Most of that drawing is new texts: each running time or gap that
+  changes is filled anew, about 0.9 ms at 2x (0.6 ms of it the outline), 7 a frame in the player list and 10 in
+  the lap times, about 12 ms a frame. Next: numbers from kept characters (backlog item 0). Tests.
+- 2026-11-12: The lap times and the player list cost less to draw, asked for by the user after the tester's stutter
+  with build 2026.11.12.4 on macOS; they look the same. A benchmark (20 cars with classes and tires, both sections
+  built and painted) took 1.5 to 1.8 ms a frame on `main`, twice the 0.8 to 0.9 ms of the day before, and now 0.8
+  to 1.2 ms: text widths are kept (`text_advance`, with `cap_height`, `text_ink` and `text_width`, were asked of Qt
+  each time), the middle column is measured once a frame (`before_right` takes `tyre_right`'s answer), and a car a
+  lap or more away keeps its passes cut, not rebuilt (`_without_laps`). The rows and the pictures of both sections,
+  at 1x and 2x, dry and wet, in 36 races, are the same as before, pixel for pixel. Not yet known whether this was the
+  tester's stutter (backlog item 0). Tests.
 - 2026-11-12: Build 2026.11.12.4 for the tester (`releases/TurboHUD-2026.11.12.4-macos-arm64.dmg`, 32.5 MB, macOS 27,
   `--any-macos`, built with `.buildtools/build-venv`), asked for by the user: `main` with today's features from
   GitHub (the player list around the player, tire compounds and the wet W, car classes in colour and the class

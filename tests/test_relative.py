@@ -39,6 +39,16 @@ class TrackGapTests(unittest.TestCase):
         self.assertEqual(race.gap(fast, me), ('laps', -1))
         self.assertEqual(race.track_gap(fast, me), ('time', 15_000))
 
+    def test_a_car_without_its_first_laps_keeps_the_rest_of_its_passes(self):
+        # Cut from the passes already worked out, not built again from every lap: done for
+        # each car a lap or more away every frame, it grew with the race (2026-11-12).
+        fast = car('Fast', 40_000, 23)
+        _ = fast.passed  # worked out, as the race order does first
+        for laps in (1, 2, 5):
+            shorter = race._without_laps(fast, laps)
+            self.assertEqual(shorter.checkpoints, fast.checkpoints[laps:])
+            self.assertEqual(shorter.passed, tuple(t for lap in fast.checkpoints[laps:] for t in lap))
+
 
 class RelativeTests(unittest.TestCase):
     def field(self, ahead=6, behind=6):
