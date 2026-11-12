@@ -75,6 +75,11 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-12: The proximity radar's arrows, for a car past its edge, are bigger and clearer, asked for by the
+  user: 2 car widths each side and as long (from 1.2), at least 12 px (from 7) and at most a quarter of the radar;
+  fading only to 75 % (from 40 %) the further off the car is; a 2 px dark outline (from 1 px); and a car not yet
+  counting has a light grey arrow (`#d3d9e2`, from the darker grey of its car). The shape is worked out in
+  `race.radar_arrow`, so it is tested. Seen offscreen side by side with the old; not yet in a race.
 - 2026-11-12: Car classes in colour, asked for by the user: a registry of the classes a clan tag can name
   (`turbohud/core/class_registry.py`): the 115 codes the user listed in 8 categories, each with its colour (Prototype
   purple, GT blue, Formula red ...), and the 11 codes from before that list lacks, in the closest category; matched

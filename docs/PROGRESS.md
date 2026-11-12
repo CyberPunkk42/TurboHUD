@@ -1313,3 +1313,8 @@ its "Recent changes".
   user: a class sheet (`turbohud/overlay/class_sheet.py`), opened by Car classes... in the settings window, lists
   every code and name in its category's colour. Tests (the user's cases A to I). Seen offscreen with Windows'
   fonts; not yet in a race.
+- 2026-11-12: The proximity radar's arrows, for a car past its edge, are bigger and clearer, asked for by the
+  user: 2 car widths each side and as long (from 1.2), at least 12 px (from 7) and at most a quarter of the radar;
+  fading only to 75 % (from 40 %) the further off the car is; a 2 px dark outline (from 1 px); and a car not yet
+  counting has a light grey arrow (`#d3d9e2`, from the darker grey of its car). The shape is worked out in
+  `race.radar_arrow`, so it is tested. Seen offscreen side by side with the old; not yet in a race.

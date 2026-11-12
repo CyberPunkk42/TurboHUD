@@ -50,7 +50,7 @@ from turbohud.core.hud import (
     text_can_centre,
     tight_height,
 )
-from turbohud.core.race import RADAR_FULL, Blip, DeltaBarView, RadarView, radar_car_size
+from turbohud.core.race import RADAR_FULL, Blip, DeltaBarView, RadarView, radar_arrow, radar_car_size
 from turbohud.core.settings import GROUPS, PRESETS
 from turbohud.core.trackmap import MapDot, TrackMapView, map_transform, outline_from_path, road_width
 from turbohud.hud.painter import (
@@ -93,9 +93,7 @@ PANEL_EMPTY = '#5d7799'  # the dot where a section has no such option
 # The panel's text is at most this many pixels: the Mac's own size. Linux desktops use about
 # 15 px (Adwaita Sans 11 pt), which made the panel 866 px tall with a row per section.
 PANEL_FONT_PX = 13
-RADAR_ARROW = 1.2  # a car past the radar's edge: an arrow this many times a car's width each side
-RADAR_ARROW_LEAST = 7.0  # ... and at least this many pixels
-RADAR_ARROW_FADE = 0.6  # its opacity falls by this much from beside the edge to the warning time
+RADAR_ARROW_PEN = (0, 0, 0, 220), 2.0  # the outline of an arrow at the radar's edge (radar_arrow)
 RADAR_CLASS_WARNING = 2.5  # a car of another class: the width of its red or yellow warning outline
 RADAR_CAR_AT = 0.5  # the local car's height in the radar, from the top: the middle
 CONE_STEPS = 8  # points along a slipstream cone's far edge
@@ -104,6 +102,7 @@ RADAR_EDGE = (120, 130, 150, 200)
 RADAR_LINES = (120, 130, 150, 90)
 RADAR_ME = '#f2f2f2'
 RADAR_OTHER = '#8c95a3'  # a car near but not counting (far to the side, or further away)
+RADAR_ARROW_OTHER = '#d3d9e2'  # such a car's arrow at the edge: lighter, to be seen (2026-11-12)
 # In move mode: one car beside, one closing in behind, one ahead.
 RADAR_SAMPLE = (
     Blip(-1.0, 3.0, 0.0, 0.0),
@@ -518,21 +517,21 @@ class SectionWindow(QWidget):
         def edge(blip, color):
             """A car past the top (ahead) or bottom (behind) edge: an arrow pointing its way,
             fainter the further off it is."""
-            up = blip.ahead > 0
-            size = max(w * RADAR_ARROW, RADAR_ARROW_LEAST)
-            x = min(max(centre.x() + blip.side * per_unit, box.left() + size), box.right() - size)
-            tip = box.top() + 3 if up else box.bottom() - 3
-            base = tip + size if up else tip - size
-            fade = 1.0 - RADAR_ARROW_FADE * min(
-                (blip.seconds if blip.seconds is not None else view.within) / max(view.within, 0.01), 1.0
+            points, opacity = radar_arrow(
+                centre.x() + blip.side * per_unit,
+                blip.ahead > 0,
+                (box.left(), box.top(), box.right(), box.bottom()),
+                w,
+                blip.seconds,
+                view.within,
             )
             painter.save()
-            painter.setOpacity(painter.opacity() * fade)
-            painter.setPen(QPen(QColor(0, 0, 0, 160), 1))
+            painter.setOpacity(painter.opacity() * opacity)
+            pen = QPen(QColor(*RADAR_ARROW_PEN[0]), RADAR_ARROW_PEN[1])
+            pen.setJoinStyle(Qt.RoundJoin)
+            painter.setPen(pen)
             painter.setBrush(QColor(color))
-            painter.drawPolygon(
-                QPolygonF([QPointF(x, tip), QPointF(x - size, base), QPointF(x + size, base)])
-            )
+            painter.drawPolygon(QPolygonF([QPointF(*point) for point in points]))
             painter.restore()
 
         for blip in view.blips:
@@ -567,7 +566,8 @@ class SectionWindow(QWidget):
         painter.setClipping(False)
         for blip in view.blips:  # beyond the radar's reach (RADAR_VIEW_MAX): an arrow at its edge
             if abs(blip.ahead) > view.view:
-                edge(blip, blip.class_color or blip_color(blip))  # another class: its colour
+                color = blip.class_color or blip_color(blip)  # another class: its colour
+                edge(blip, RADAR_ARROW_OTHER if color == RADAR_OTHER else color)
         painter.setOpacity(1.0)
         if not self.locked:
             painter.setPen(QPen(QColor(*BORDER), 2))
