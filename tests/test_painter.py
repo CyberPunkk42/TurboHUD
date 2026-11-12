@@ -1281,3 +1281,43 @@ class CanvasTests(unittest.TestCase):
         self.assertTrue(one_window_wanted(self.native, {}))
         self.assertFalse(one_window_wanted(self.native, {'TURBOHUD_ONE_WINDOW': '0'}))
         self.assertFalse(one_window_wanted(object(), {}))  # Linux and Windows: not yet
+
+    def test_only_the_changed_sections_are_drawn_again_not_those_between_them(self):
+        # Two sections far apart changed: the one between them, inside the rectangle round
+        # both, stays as it is (the tester's layout drew most of the screen each frame, 2026-11-12).
+        from PySide6.QtCore import QPoint, QRect
+        from PySide6.QtGui import QImage, QRegion
+        from PySide6.QtWidgets import QWidget
+
+        from turbohud.core.hud import RACE_SECTIONS
+        from turbohud.core.race import DeltaBarView
+        from turbohud.core.settings import Theme
+        from turbohud.overlay.window import HudCanvases, SectionWindow
+
+        section = next(s for s in RACE_SECTIONS if s.name == 'deltabar')
+        bars = []
+        for y in (0, 280, 560):
+            bar = SectionWindow(self.native, Theme(), section)
+            self.addCleanup(bar.close)
+            bar.setGeometry(100 + y, y, 200, 40)
+            bars.append(bar)
+        canvases = HudCanvases(self.native, [(0, 0, 900, 600)], bars)
+        canvas = canvases.canvases[0]
+        self.addCleanup(canvas.close)
+        drawn = []
+        for bar in bars:
+            bar.canvas = canvases
+            bar.show_on_top()
+            bar.show_content([], delta_view=DeltaBarView(0.5, -1.0, ''))
+            bar.draw = lambda painter, bar=bar, draw=bar.draw: (drawn.append(bar), draw(painter))
+        top, middle, bottom = bars
+        changed = QRegion()
+        for bar in (top, bottom):
+            changed = changed.united(QRect(bar.x() - 2, bar.y() - 2, bar.width() + 4, bar.height() + 4))
+        image = QImage(900, 600, QImage.Format_ARGB32_Premultiplied)
+        image.fill(0)
+        canvas.render(image, QPoint(), changed, QWidget.RenderFlag(0))
+        self.assertEqual(drawn, [top, bottom])
+        colors = [image.pixelColor(x, top.y() + 20) for x in range(top.x(), top.x() + top.width())]
+        self.assertTrue(any(c.alpha() == 255 and c.green() > c.red() for c in colors))  # green: drawn
+        self.assertEqual(image.pixelColor(middle.x() + 20, middle.y() + 20).alpha(), 0)  # not drawn again

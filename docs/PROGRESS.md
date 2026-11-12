@@ -1375,3 +1375,11 @@ its "Recent changes".
   lap or more away keeps its passes cut, not rebuilt (`_without_laps`). The rows and the pictures of both sections,
   at 1x and 2x, dry and wet, in 36 races, are the same as before, pixel for pixel. Not yet known whether this was the
   tester's stutter (backlog item 0). Tests.
+- 2026-11-12: On the Mac, the one window over the screen draws again only the sections that changed, asked for by
+  the user after the tester's log (his build 2026.11.12.4, four online races): it drew the rectangle round all of
+  them (`event.rect()`), which with his lap times on the left and player list on the right was most of the screen,
+  every section in it drawn again each frame; now `event.region()`. 0.3 ms a frame less in a benchmark of his
+  layout at 2x. His log: reads of 4 ms, frames 53 ms apart, content 2 to 4% and drawing 20 to 24% of the time,
+  about the same with the lap times hidden. Most of that drawing is new texts: each running time or gap that
+  changes is filled anew, about 0.9 ms at 2x (0.6 ms of it the outline), 7 a frame in the player list and 10 in
+  the lap times, about 12 ms a frame. Next: numbers from kept characters (backlog item 0). Tests.

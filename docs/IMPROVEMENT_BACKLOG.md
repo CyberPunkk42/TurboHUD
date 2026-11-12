@@ -5,12 +5,15 @@ last stopped: `docs/CONTINUE_HERE.md`.
 
 ## 0. The tester's stutter with build 2026.11.12.4 (macOS)
 Reported 2026-11-12, after the day's features (class colours, tire column, the player list around the player).
-Done: the lap times and the player list cost what they did before (`fix/lap-list-frame-cost`, the same look). Left:
-his `turbohud.log` from a race that stuttered (copied before TurboHUD starts again, as it is written anew each
-start), whose `HUD frames` lines say whether the frames are slow. If they are not, look at the canvas: a frame
-redraws one rectangle round every changed section (`HudCanvas.paintEvent` takes `event.rect()`), which with the
-lap times at the top and the player list at the bottom is most of the screen, at 2x on a Retina screen. Then a
-new build for him.
+His log (four online races): reads of 4 ms, frames 53 ms apart, content 2 to 4% and drawing 20 to 24% of the
+time (16 to 19% on 2026-11-10), about the same with the lap times hidden; no CrossOver graphics warning.
+Done (`fix/lap-list-frame-cost`, the same look): the lap times and the player list measure less, and the Mac's
+one window draws again only the sections that changed. Left, the most of the drawing: new texts. Each running
+time or gap that changes is filled anew, about 0.9 ms at 2x, 0.6 ms of it the outline (a pen or a simplified
+outline is no quicker); 7 a frame in the player list and 10 in the lap times, about 12 ms a frame. Next: numbers
+built from kept characters (a few microseconds), not the same pixels where outlines touch, so shown to the user
+side by side first. Then a build for him, and ask whether the stutter is while driving or between races (the
+search from the last race reads for 8 to 11 s).
 
 ## 1. Windows: the overlay, then live data
 Over TSU on Windows, in windowed, Fullscreen and Fullscreen Exclusive: the built app

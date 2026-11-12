@@ -62,10 +62,9 @@
   2026.11.10 went to the tester with new instructions (the same comparison, and the Rust reader). Race reads merge pages further apart since 2026-11-10 (31
   to 49 reads of the game a read and 16 to 22 ms, from 84 to 88 and 26 to 29 ms). Online, the search from the last race found
   three races in a row in 0.4 s (2026-11-10).
-- The tester has stutter again with build 2026.11.12.4 on macOS (2026-11-12). The lap times and the player list
-  cost about what they did before since `fix/lap-list-frame-cost`, but that may not be all: get his `turbohud.log` from a
-  race that stuttered (copied before TurboHUD starts again; its `HUD frames` lines) and build him a new one
-  (backlog item 0).
+- The tester has stutter again with build 2026.11.12.4 on macOS (2026-11-12). His log: drawing 20 to 24% of the
+  time, most of it new texts (each changing running time and gap, about 0.9 ms at 2x). Next: draw changing numbers
+  from kept characters, shown to the user side by side first, then a build for him (backlog item 0).
 1. Windows: the overlay over TSU (windowed, Fullscreen, Fullscreen Exclusive), and the live data
    through the Rust reader (built 2026-11-11, not yet run there).
    Also a trial of all of TurboHUD inside the CrossOver bottle (backlog item 1b,
@@ -79,6 +78,14 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-12: On the Mac, the one window over the screen draws again only the sections that changed, asked for by
+  the user after the tester's log (his build 2026.11.12.4, four online races): it drew the rectangle round all of
+  them (`event.rect()`), which with his lap times on the left and player list on the right was most of the screen,
+  every section in it drawn again each frame; now `event.region()`. 0.3 ms a frame less in a benchmark of his
+  layout at 2x. His log: reads of 4 ms, frames 53 ms apart, content 2 to 4% and drawing 20 to 24% of the time,
+  about the same with the lap times hidden. Most of that drawing is new texts: each running time or gap that
+  changes is filled anew, about 0.9 ms at 2x (0.6 ms of it the outline), 7 a frame in the player list and 10 in
+  the lap times, about 12 ms a frame. Next: numbers from kept characters (backlog item 0). Tests.
 - 2026-11-12: The lap times and the player list cost less to draw, asked for by the user after the tester's stutter
   with build 2026.11.12.4 on macOS; they look the same. A benchmark (20 cars with classes and tires, both sections
   built and painted) took 1.5 to 1.8 ms a frame on `main`, twice the 0.8 to 0.9 ms of the day before, and now 0.8

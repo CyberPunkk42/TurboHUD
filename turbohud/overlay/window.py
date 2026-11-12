@@ -798,15 +798,20 @@ class HudCanvas(QWidget):
     def paintEvent(self, event):
         began = time.perf_counter()
         painter = QPainter(self)
-        area = event.rect()
+        # Only the changed sections' own rectangles, not the one rectangle round them all
+        # (event.rect()): with the lap times on one side of the screen and the player list on
+        # the other, that was most of the screen, every section in it drawn again each frame
+        # (the tester's stutter, 2026-11-12: drawing 20 to 24% of the time).
+        area = event.region()
         painter.setCompositionMode(QPainter.CompositionMode_Clear)  # what was there goes
-        painter.fillRect(area, Qt.transparent)
+        for rect in area:
+            painter.fillRect(rect, Qt.transparent)
         painter.setCompositionMode(QPainter.CompositionMode_SourceOver)
         for window in self.windows:
             if not window.wanted:
                 continue
             place = QRect(window.x() - self.x(), window.y() - self.y(), window.width(), window.height())
-            if not place.intersects(area):
+            if not area.intersects(place):
                 continue
             painter.save()
             painter.translate(place.topLeft())
