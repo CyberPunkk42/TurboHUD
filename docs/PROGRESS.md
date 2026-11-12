@@ -1420,3 +1420,11 @@ its "Recent changes".
   Windows the Qt tests give offscreen the system's fonts (`QT_QPA_FONTDIR`). With that, the three painter and
   settings window tests that always failed on Windows (fonts) pass: 6 fail there now, all Unix-only (sockets, the
   controller, a build name). A test for the fallback.
+- 2026-11-12: Windows build 2026.11.12.5 to share, asked for by the user: `releases/TurboHUD-2026.11.12.5-windows-x64.zip`
+  (42.2 MB), from `main` with what came since .4: the stutter fixes (the lap times and player list at their old
+  cost, running times from kept glyph images), the yellow flag fix for a car left standing, and the font fix for
+  the tests. The zip's reader is the one built from `main` (unchanged since .2, checked byte for byte). The zip and
+  the Python modules packed in `TurboHUD.exe` checked for the privacy terms, none; the app starts and says its
+  version. Built without the smoke test, as the user's TurboHUD 2026.11.12.4 was running (the test would have
+  spoken to it): to be run with TurboHUD closed. It replaces 2026.11.12.4; the older builds are still in
+  `releases/`, to be removed by hand.
