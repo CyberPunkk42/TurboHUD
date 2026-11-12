@@ -79,6 +79,8 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-12: `user_logs/` is ignored, asked for by the user: testers' logs put there to look at stay on the PC
+  (they hold player names and paths), never on GitHub.
 - 2026-11-12: The quick start, after the user's review: a short "What it shows" part, every section in a line or
   two under the move-mode panel's headings (Timing, Car, Race, Other); and the AMD part says it plainly: AMD Software
   occupies Ctrl+Shift+L, so remove that binding in AMD Software (Settings, Hotkeys), restart TurboHUD, then use
