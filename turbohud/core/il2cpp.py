@@ -74,6 +74,7 @@ class Memory:
         searcher=None,
         find_pointers_from=None,
         find_pointers_near=None,
+        find_pointers_any=None,
     ):
         self.read = read
         self._regions = regions
@@ -91,6 +92,9 @@ class Memory:
         # (value, address) -> as find_pointers_from, but only a stretch around `address`:
         # a quick look, cheap enough to make often (Windows and CrossOver); None: none.
         self.find_pointers_near = find_pointers_near
+        # (values, address or None) -> (address, value) for any of several values in one
+        # pass, from about `address` on and round (Windows); None: one value a pass.
+        self.find_pointers_any = find_pointers_any
 
     @property
     def regions(self):

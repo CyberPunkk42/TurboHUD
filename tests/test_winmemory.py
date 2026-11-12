@@ -284,6 +284,20 @@ class SearchTests(unittest.TestCase):
         hits = list(wm.search(memory.read, [(0x100000, 0x110000)], self.VALUE, chunk=4096))
         self.assertEqual(hits, [0x100010, 0x100800])
 
+    def test_several_values_in_one_pass(self):
+        # The online race and a replay looked for together (2026-11-12): each read serves both.
+        memory = self.memory_with(0x10, 0x800)
+        other = 0x1122334455667788
+        memory.data[0x400:0x408] = struct.pack('<Q', other)
+        memory.data[0x1000:0x1008] = struct.pack('<Q', other)
+        hits = list(wm.search(memory.read, [(0x100000, 0x110000)], (self.VALUE, other), chunk=4096))
+        self.assertEqual(
+            hits, [(0x100010, self.VALUE), (0x100400, other), (0x100800, self.VALUE), (0x101000, other)]
+        )
+        reads = len(memory.calls)
+        list(wm.search(memory.read, [(0x100000, 0x110000)], self.VALUE, chunk=4096))
+        self.assertEqual(len(memory.calls) - reads, reads)  # as many reads as for one value
+
     def test_finds_a_value_across_two_pieces_once(self):
         memory = self.memory_with(4096 - 4)
         hits = list(wm.search(memory.read, [(0x100000, 0x110000)], self.VALUE, align=4, chunk=4096))

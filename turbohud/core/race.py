@@ -88,6 +88,8 @@ class LapState:
     shortcut_seconds: float = 0.0  # how long TSU slows a car for a shortcut here (0: not known, or off)
     compounds: int | None = None  # the event's tire compounds (tireCompoundCount); None: not read
     track: str = ''  # the track's name (EventState.m_level.m_properties.name); '' where not read
+    replay: bool = False  # a replay plays: "you" is the driver its camera follows
+    paused: bool = False  # the replay stands paused: the HUD stays though the clock stands
 
     @property
     def lap_times(self):
@@ -447,6 +449,7 @@ CLIENT_SEARCH_QUICK_FOR = 60.0
 QUICK_LOOK_EVERY = 2.0
 CLIENT_SPECTATE_EVERY = 30.0  # the same while the race last watched has its clock standing
 SPECTATE_STILL = 5.0  # seconds a watched race's clock may stand before it counts as over
+REPLAY_STILL = 10.0  # seconds a replay's clock may stand, not paused, before it counts as closed
 CLIENT_LOG_EVERY = 2.0  # seconds between looks at TSU's log while it says no event runs
 QUANTIZED_ZERO, QUANTIZED_SCALE = 1 << 20, 1024  # TS.QuantizedVehicleState positions
 RECORDER_STALE = 10_000  # race clock (1 s) without a new recorder tick: it does not run
@@ -529,6 +532,11 @@ class LapReader:
         self._player_indices = []
         self._recorder_tick, self._recorder_moved = None, 0
         self._client_class = None  # TS.ClientEventController, once looked up
+        self._replay_class = None  # TS.EventRecordingPlayer, once looked up (False: not in the game)
+        self._replay = None  # the replay playing (a TS.EventRecordingPlayer), once found
+        self._followed = None  # the TS.EventPlayer its camera follows: the HUD's "you"
+        self._replay_clock, self._replay_moved = None, 0.0  # its race clock, and when it last moved
+        self._let_go = None  # (replay player, its clock) of a replay taken as closed: not taken again so
         self._controller = None  # the online race's event controller, once found
         self._spectated = None  # a controller whose race the player only watches
         self._found_at = None  # where the last race read or watched was: the next search begins there
@@ -568,9 +576,107 @@ class LapReader:
         except NotFound as error:
             if 'm_activeServer is null' not in str(error):
                 raise
-            state = self._online_event_state(error)
-            self._listener = self._online_controller
+            state = self._replay_event_state() or self._online_event_state(error)
+            if self._replay is None:
+                self._listener = self._online_controller
             return state
+
+    def _replay_class_found(self):
+        """TS.EventRecordingPlayer, the game's replay player, or None where the game has none."""
+        if self._replay_class is None:
+            try:
+                self._replay_class = self.il.find_class('TS', 'EventRecordingPlayer') or False
+            except NotFound:
+                self._replay_class = False
+        return self._replay_class or None
+
+    def _replay_race(self, player):
+        """(event state, controller) of a replay player (asked for by the user on 2026-11-12):
+        TS.EventRecordingPlayer.m_eventRunner (TS.EventRunner) .m_state and .m_eventController
+        (a TS.EventRecordingController), found in a replay on the user's PC. Raises NotFound or
+        OSError where it plays no race (a replay player of an earlier replay, or one closing)."""
+        il, memory = self.il, self.il.memory
+        if memory.u64(player) != self._replay_class:
+            raise NotFound('no replay player there')
+        if memory.u8(player + self._offset('replay', player, 'm_exiting')):
+            raise NotFound('the replay is closing')
+        runner = self._ref('replay', player, 'm_eventRunner')
+        state = self._ref('runner', runner, 'm_state')
+        controller = self._ref('runner', runner, 'm_eventController')
+        if not il.list_items(self._ref('state', state, 'players')):
+            raise NotFound('no players')
+        return state, controller
+
+    def _replay_event_state(self):
+        """The replay's event state, while the replay found plays (or stands paused); None
+        without one. Its camera's driver becomes the HUD's "you" (_followed). A replay whose
+        clock stands for REPLAY_STILL without a pause counts as closed: the reader looks for
+        races again."""
+        if self._replay is None:
+            return None
+        memory = self.il.memory
+        try:
+            state, controller = self._replay_race(self._replay)
+            times = state + self._offset('state', state, 'times')
+            clock = memory.i32(times + TIMES_NOW)
+        except (NotFound, OSError) as gone:
+            log.info('the replay is gone (%s)', gone)
+            self._replay = self._followed = None
+            self._next_search = 0.0
+            return None
+        now = self._clock()
+        if clock != self._replay_clock or self.replay_paused():
+            self._replay_clock, self._replay_moved = clock, now
+        elif now - self._replay_moved > REPLAY_STILL:
+            log.info('the replay stands: taken as closed')
+            self._let_go = (self._replay, clock)
+            self._replay = self._followed = None
+            self._next_search = 0.0
+            return None
+        self._listener = controller
+        followed = self._followed_driver()
+        if followed != self._followed:
+            log.info(
+                'replay: the camera follows player %s',
+                'none' if followed is None else self._index_of(state, followed),
+            )
+            self._followed = followed
+        return state
+
+    def _clock_of(self, state):
+        """An event state's race clock."""
+        return self.il.memory.i32(state + self._offset('state', state, 'times') + TIMES_NOW)
+
+    def _index_of(self, state, player):
+        """`player`'s place in the event state's list, for the log."""
+        try:
+            return self.il.list_items(self._ref('state', state, 'players')).index(player)
+        except (ValueError, NotFound, OSError):
+            return '?'
+
+    def _followed_driver(self):
+        """The TS.EventPlayer the replay's main camera follows: m_eventRunner.m_raceCameras
+        .m_cameras[0] (TS.RaceCamera) .m_targetChooser.m_target, seen to change as the user
+        switched drivers in a replay (2026-11-12); None where it cannot be read."""
+        il = self.il
+        try:
+            runner = self._ref('replay', self._replay, 'm_eventRunner')
+            cameras = self._ref('runner', runner, 'm_raceCameras')
+            camera = next(c for c in il.list_items(self._ref('cameras', cameras, 'm_cameras')) if c)
+            chooser = self._ref('camera', camera, 'm_targetChooser')
+            return self._ref('chooser', chooser, 'm_target')
+        except (NotFound, OSError, StopIteration):
+            return None
+
+    def replay_paused(self):
+        """Whether a replay plays and stands paused (TS.EventRecordingPlayer.m_paused): the
+        HUD then stays, where a standing clock otherwise hides it (menus, lobbies)."""
+        if self._replay is None:
+            return False
+        try:
+            return bool(self.il.memory.u8(self._replay + self._offset('replay', self._replay, 'm_paused')))
+        except (NotFound, OSError):
+            return False
 
     @property
     def _online_controller(self):
@@ -740,12 +846,22 @@ class LapReader:
         last = self._found_at if memory.find_pointers_from is not None else None
         log.info('searching for the online race%s', '' if last is None else ', from where the last one was')
         try:
-            for candidate in (
-                find(self._client_class)
-                if last is None
-                else memory.find_pointers_from(self._client_class, last)
-            ):
+            for candidate, kind in self._search_hits(find, last):
                 hits += 1
+                if kind != self._client_class:
+                    try:
+                        replay_state = self._replay_race(candidate)[0]
+                        if self._let_go == (candidate, self._clock_of(replay_state)):
+                            continue  # the replay taken as closed, still standing where it was
+                    except (NotFound, OSError):
+                        continue  # the replay player of an earlier replay
+                    self._replay, self._replay_clock, self._replay_moved = candidate, None, self._clock()
+                    self._spectated = None
+                    result = 'replay found'
+                    state = self._replay_event_state()
+                    if state is None:
+                        raise error
+                    return state
                 try:
                     state, driving = self._race_of(candidate)
                 except (NotFound, OSError):
@@ -783,7 +899,7 @@ class LapReader:
                 self._search_wait = CLIENT_SEARCH_EVERY if quick else min(wait * 2, CLIENT_SEARCH_MOST)
             else:
                 self._empty_since = None
-                if result.startswith('race found'):
+                if result.startswith(('race found', 'replay found')):
                     self._search_wait = CLIENT_SEARCH_EVERY
             log.info('search: %s, after %.1f s and %d hits', result, ended - started, hits)
         if not watchable:
@@ -804,6 +920,25 @@ class LapReader:
         )
         self._found_at = self._spectated
         return state
+
+    def _search_hits(self, find, last):
+        """(address, class) of the objects a search finds: online race controllers and, where
+        the game has them, replay players (TS.EventRecordingPlayer). On Windows both in one
+        pass through the game's memory; elsewhere the replay players in a second pass, only
+        reached when the first gives no race. From about `last` on, where given."""
+        memory = self.il.memory
+        replay = self._replay_class_found()
+        if replay is not None and memory.find_pointers_any is not None:
+            yield from memory.find_pointers_any((self._client_class, replay), last)
+            return
+        hits = (
+            find(self._client_class) if last is None else memory.find_pointers_from(self._client_class, last)
+        )
+        for hit in hits:
+            yield hit, self._client_class
+        if replay is not None:
+            for hit in find(replay):
+                yield hit, replay
 
     def _quick_look(self):
         """Between searches: the event state of a race the player drives in, found near
@@ -924,6 +1059,12 @@ class LapReader:
         return struct.unpack(f'<{size}I', self.il.memory.read(array + ARRAY_DATA, 4 * size))
 
     def read(self):
+        state = self._read_race()
+        if self._replay is None:
+            return state
+        return dataclasses.replace(state, replay=True, paused=self.replay_paused())
+
+    def _read_race(self):
         il, memory = self.il, self.il.memory
         state = self.event_state()
         if state != self._state:
@@ -938,7 +1079,13 @@ class LapReader:
             self._fuel_history, self._wear_history, self._fuel_marks, self._types = {}, {}, {}, {}
             self._player = None
             self.event_type = self._event_type()
-        if self._player is None:
+        if self._replay is not None:
+            if self._player != self._followed:
+                # Another driver followed: the per-lap fuel, tires and draft were the last one's.
+                self._fuel_history, self._wear_history, self._fuel_marks = {}, {}, {}
+                self._draft_time, self._draft_clock = {}, None
+            self._player = self._followed
+        elif self._player is None:
             self._player = self._local_in(state)  # looked for anew: a spectator may join
         player = self._player
         if player is None:
@@ -1233,13 +1380,19 @@ class LapReader:
         (value - 2**20) / 1024 (checked online: cars crossing a checkpoint line were
         0.8 from it on average). Empty when the recorder does not run (its tick stands
         still for RECORDER_STALE) or has no states."""
-        if self._online_controller is None:
+        if self._online_controller is None and self._replay is None:
             return {}
         memory = self.il.memory
         try:
-            recorder = self._ref('client', self._online_controller, 'm_eventRecorder')
-            tick = memory.i32(recorder + self._offset('recorder', recorder, 'm_stateTick'))
-            states = self._ref('recorder', recorder, 'm_lastQuantizedVehicleStates')
+            if self._replay is not None:
+                # A replay keeps them the same way, in its TS.EventRecording (seen 2026-11-12).
+                recording = self._ref('replay', self._replay, 'm_recording')
+                tick = memory.i32(recording + self._offset('recording', recording, 'm_currentTick'))
+                states = self._ref('recording', recording, 'm_lastQuantizedVehicleStates')
+            else:
+                recorder = self._ref('client', self._online_controller, 'm_eventRecorder')
+                tick = memory.i32(recorder + self._offset('recorder', recorder, 'm_stateTick'))
+                states = self._ref('recorder', recorder, 'm_lastQuantizedVehicleStates')
             count = memory.u64(states + ARRAY_LENGTH)
             if not 0 < count <= 256:
                 return {}
@@ -1308,6 +1461,8 @@ class LapReader:
     def _player_state(self, player):
         il, memory = self.il, self.il.memory
         local = memory.i32(player + self._offset('player', player, 'm_localHumanIndex')) >= 0
+        if self._replay is not None:
+            local = player == self._followed  # in a replay "you" is the driver followed
         name, flag, tag = '', 0, ''
         try:
             profile = il.ref(self._ref('player', player, 'm_playerInfo'), 'm_profile')
@@ -1902,6 +2057,8 @@ def on_grid(snapshot, now=None):
     it has started."""
     if snapshot.status != RACING or snapshot.state is None or snapshot.state.clock <= 0:
         return False
+    if snapshot.state.paused:
+        return True  # a replay paused: the HUD stays (asked for by the user on 2026-11-12)
     return now is None or now - snapshot.moved_at < STILL_SECONDS
 
 
@@ -1913,6 +2070,8 @@ def status_text(snapshot, platform=sys.platform):
             return f'waiting: {snapshot.detail or "TSU is not running in CrossOver"}'
         return 'waiting for TSU (start it with the launch option)'
     if on_grid(snapshot, time.monotonic()):
+        if snapshot.state.replay:
+            return 'replay, paused' if snapshot.state.paused else 'replay'
         return 'spectating' if snapshot.state.spectating else 'racing'
     if snapshot.status in (STARTING, RACING):
         return 'race being set up'

@@ -79,6 +79,18 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-12: TurboHUD in TSU's replays, asked for by the user. Found in a replay on the Windows PC: a replay has no
+  active server; its race is under `TS.EventRecordingPlayer` (`m_eventRunner`, a `TS.EventRunner`, with `m_state`, the
+  usual event state with every driver's laps, `m_eventController`, a `TS.EventRecordingController`, and
+  `m_raceCameras`), its cars' positions in `m_recording.m_lastQuantizedVehicleStates` as an online client's, every
+  car's fuel, tire wear, health, compound and wheels as in a race, and the driver its camera follows in
+  `m_raceCameras.m_cameras[0].m_targetChooser.m_target` (it changed as the user switched drivers). The search for an
+  online race now also looks for replay players, on Windows in the same pass (`winmemory.search` takes several
+  values: as many reads as for one); elsewhere a second pass when no race is found. A replay found is read on without
+  a search; the followed driver is "you", so every section works around them (per-lap fuel and tires start afresh
+  when another driver is followed); with none, the spectator's view. The HUD stays while the replay is paused
+  (`m_paused`); a replay standing unpaused for 10 s counts as closed, and is not taken again while it stands. The
+  tooltip says "replay". Tests (a replay in the fake game). Not yet seen in a replay; backlog item 7.
 - 2026-11-12: Windows build 2026.11.12.5 to share, asked for by the user: `releases/TurboHUD-2026.11.12.5-windows-x64.zip`
   (42.2 MB), from `main` with what came since .4: the stutter fixes (the lap times and player list at their old
   cost, running times from kept glyph images), the yellow flag fix for a car left standing, and the font fix for
