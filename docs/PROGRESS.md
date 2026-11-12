@@ -1450,3 +1450,10 @@ its "Recent changes".
   cars stay in the lists, as the user chose. (4) The delta bar's number glides like its fill (DELTA_TEXT_EASE, most
   of the way in about 0.3 s): it jumped at each read, more so in replays; the colour stays the trend, as the user
   wanted. Tests.
+- 2026-11-12: Windows build 2026.11.12.6 to share, asked for by the user: `releases/TurboHUD-2026.11.12.6-windows-x64.zip`
+  (42.2 MB), from `main` with what came since .5: TurboHUD in TSU's replays, and the fixes from the user's first
+  replay test (steady lap times and player list, the player list's full tint, SC and PC classes, the delta's number
+  eased). The zip's reader is the one built from `main` (unchanged since .2, checked byte for byte). The zip and the
+  Python modules packed in `TurboHUD.exe` checked for the privacy terms, none; the app starts and says its version.
+  Built without the smoke test, as the user's TurboHUD from source was running: to be run with TurboHUD closed.
+  It replaces 2026.11.12.5, still in `releases/`, to be removed by hand.
