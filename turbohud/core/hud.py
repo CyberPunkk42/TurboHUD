@@ -28,6 +28,8 @@ class Line:
     tag: str = ''  # a column lined up on the left just before `before` (a clan tag in the lap times)
     tag_color: str = ''  # the tag's own colour ('#rrggbb' or a theme name); '' for the text's
     rule_color: str = ''  # the rule's own colour; '' for the accent
+    tyre: str = ''  # a tire compound's letter, in a ring, just before `middle` (the lap times)
+    tyre_color: str = ''  # its ring's colour, '#rrggbb'
 
 
 @dataclass(frozen=True)
@@ -51,9 +53,12 @@ class Row:
     tag: str = ''  # a column lined up on the left just before `before` (a clan tag in the lap times)
     tag_color: str = ''  # the tag's own colour ('#rrggbb' or a theme name); '' for the text's
     rule_color: str = ''  # the rule's own colour; '' for the accent
+    tyre: str = ''  # a tire compound's letter, in a ring, just before `middle` (the lap times)
+    tyre_color: str = ''  # its ring's colour, '#rrggbb'
 
 
 FLAG_WIDTH = 1.5  # a flag's room before the text, in font sizes
+TYRE_WIDTH = 1.25  # a tire compound's ring, in font sizes
 COLUMN_GAP = 1.0  # least room between the text and the right column, in font sizes
 
 
@@ -148,6 +153,8 @@ def _content(rows, sizes):
                 row.tag,
                 row.tag_color,
                 row.rule_color,
+                row.tyre,
+                row.tyre_color,
             )
         )
     return lines, baseline
@@ -173,6 +180,8 @@ def line_width(line, measure):
         width += COLUMN_GAP * line.size + measure(line.tag, line.size)
     if line.before:
         width += COLUMN_GAP * line.size + measure(line.before, line.size)
+    if line.tyre:
+        width += (COLUMN_GAP + TYRE_WIDTH) * line.size
     if line.middle:
         width += COLUMN_GAP * line.size + measure(line.middle, line.size)
     if line.right:
@@ -188,10 +197,12 @@ def lines_width(lines, measure):
     gap = max(COLUMN_GAP * line.size for line in lines)
     before = max((measure(line.before, line.size) for line in lines if line.before), default=None)
     tag = max((measure(line.tag, line.size) for line in lines if line.tag), default=None)
+    tyre = tyre_width(lines)
     return (
         max(_left_width(line, measure) for line in lines)
         + (tag + gap if tag is not None else 0)
         + (before + gap if before is not None else 0)
+        + (tyre + gap if tyre is not None else 0)
         + gap
         + max((measure(line.middle, line.size) for line in lines if line.middle), default=0)
         + gap
@@ -207,12 +218,27 @@ def middle_right(lines, width, margin, measure):
     return width - margin - right - gap
 
 
-def before_right(lines, middle_end, measure):
-    """Where the `before` column ends (it is right-aligned there): before the widest
-    middle column, whose right edge is at `middle_end`, with a gap."""
+def tyre_width(lines):
+    """How wide the tire column is (the largest ring); None without one."""
+    return max((TYRE_WIDTH * line.size for line in lines if line.tyre), default=None)
+
+
+def tyre_right(lines, middle_end, measure):
+    """Where the tire column ends: before the widest middle column, whose right edge is at
+    `middle_end`, with a gap."""
     middle = max((measure(line.middle, line.size) for line in lines if line.middle), default=0)
     gap = max((COLUMN_GAP * line.size for line in lines if line.middle), default=0)
     return middle_end - middle - gap
+
+
+def before_right(lines, middle_end, measure):
+    """Where the `before` column ends (it is right-aligned there): before the tire column, if
+    any, else before the widest middle column, whose right edge is at `middle_end`, with a gap."""
+    end = tyre_right(lines, middle_end, measure)
+    tyre = tyre_width(lines)
+    if tyre is None:
+        return end
+    return end - tyre - max(COLUMN_GAP * line.size for line in lines)
 
 
 def tag_left(lines, before_end, measure):

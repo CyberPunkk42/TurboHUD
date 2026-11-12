@@ -29,7 +29,7 @@ class FakeGame:
         self.instance_type = self.alloc_heap(16)
         self.put(self.instance_type + il.TYPE_ATTRS, struct.pack('<H', 0))
         self.typed = {}
-        for code in (0x02, 0x08, 0x0C, 0x11, 0x12):  # bool, int, float, value type (an enum), class
+        for code in (0x02, 0x05, 0x08, 0x0C, 0x11, 0x12):  # bool, byte, int, float, enum, class
             record = self.alloc_heap(16)
             self.put(record + il.TYPE_ATTRS, struct.pack('<HB', 0, code))
             self.typed[code] = record
@@ -129,6 +129,7 @@ def build(
     event_type=None,
     gate_types=None,
     surfaces=None,
+    compounds=None,
 ):
     """A fake race; `car` is the car's (x, z) and `gates` the checkpoint lines, both
     optional like in a game without them."""
@@ -335,10 +336,20 @@ def build(
                     ('m_draftingViscosityFactor', 0x7C, False, 0x0C),
                     ('m_draftingDownforceFactor', 0x80, False, 0x0C),
                     ('wheels', 0x88, False),
+                    ('m_eventSettings', 0x90, False),
                 ],
             )
         )
         g.q(updater + 0x88, 0)  # no wheels object unless surfaces are given
+        g.q(updater + 0x90, 0)  # no event settings unless the compounds are given
+        if compounds is not None:  # the event's number of tire compounds
+            event_settings = g.alloc_obj(g.klass('TS', 'EventSettings', [('tireWear', 0x10, False)]))
+            tire_settings = g.alloc_obj(
+                g.klass('TS', 'TireWearSettings', [('tireCompoundCount', 0x10, False, 0x05)])
+            )
+            g.put(tire_settings + 0x10, bytes([compounds]))
+            g.q(event_settings + 0x10, tire_settings)
+            g.q(updater + 0x90, event_settings)
         if surfaces is not None:  # (grip, layer) under each of the four wheels; None: in the air
             wheels = g.alloc_obj(
                 g.klass('TS', 'WheelUpdater', [(name, 0x10 + 8 * i, False) for i, name in enumerate(race.WHEEL_SURFACES)])
@@ -1669,7 +1680,30 @@ class CarTests(unittest.TestCase):
         self.assertEqual(change(0), 0.0)
         self.assertEqual(change(600), 0.25)
         self.assertEqual(change(2400), 1.0)
-        self.assertEqual(change(2401), 0.0)  # another compound's bits: not a measure of progress
+        # The compound is in the lowest 2 bits (2026-11-12): compound 1 changes as compound 0.
+        self.assertEqual(change(601), 0.25)
+        self.assertEqual(change(2401), 1.0)
+        self.assertEqual(change(2404), 0.0)  # past the end: not a measure of progress
+
+    def test_reader_reads_each_cars_tire_compound_and_the_events_count(self):
+        def read(ticks, compounds=None):
+            reader = build(
+                [10_000],
+                laps_completed=0,
+                clock=20_000,
+                limit=0,
+                name='A',
+                car=(1.0, 2.0),
+                tire_ticks=ticks,
+                compounds=compounds,
+            )
+            state = reader.read()
+            return next(p for p in state.players if p.local).compound, state.compounds
+
+        self.assertEqual(read(0), (0, None))  # no event settings: the count is not known
+        self.assertEqual(read(2, compounds=3), (2, 3))
+        self.assertEqual(read(4 * 300 + 1, compounds=2), (1, 2))  # in a tire change
+        self.assertEqual(read(1, compounds=9), (1, None))  # more than TSU allows: not a count
 
     def test_reader_reads_each_cars_position_for_the_radar(self):
         reader = build(
