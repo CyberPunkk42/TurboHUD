@@ -21,12 +21,14 @@ but never import from or write into that folder.
 
 ## Where things are
 - This folder is a Git repository (branch `main`) next to `../LiveryStudio`. Since
-  2026-11-11 it is kept in step with a **private** GitHub repository, the remote `github`
+  2026-11-11 it is kept in step with a **private** GitHub repository
   (`https://github.com/CyberPunkk42/TurboHUD.git`), so the Mac and the Windows PC can both
-  pull and push. Push only to `github`, only `main` after the user merged into it and
-  branches the user asks for; never force-push, never make the repository public (the
-  user decides that), never use `gh`. `origin` is an old local bundle
-  (`../TurboHUD.bundle`): never push to it.
+  pull and push. The remote's name differs by clone: on the Mac it is `github` and
+  `origin` is an old local bundle (`../TurboHUD.bundle`); the Windows PC's clone came
+  from GitHub, so there it is `origin`. Check with `git remote -v` and push only to the
+  remote whose URL is that GitHub address, never to the bundle; only `main` after the
+  user merged into it and branches the user asks for; never force-push, never make the
+  repository public (the user decides that), never use `gh`.
 - Every commit's author and committer is `CyberPunkk42`
   `<203462244+CyberPunkk42@users.noreply.github.com>` (set in this clone's `user.name` and
   `user.email`; set them the same in every clone). Never the user's real name or a personal

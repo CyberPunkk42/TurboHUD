@@ -28,8 +28,8 @@
   Centre text, and Undo. Checked by hand on the Mac.
 - Builds: `tools/build_app.py` (PyInstaller) makes a Windows ZIP and a Mac disk image (each with the
   Rust reader; the Mac one 32.5 MB, no Windows Python since 2026-11-11) and a Linux `.tar.gz`, run locally on each system.
-  The repository is kept in step with a private GitHub repository (remote `github`, since
-  2026-11-11), so the Windows PC can pull it; `.github/workflows/build.yml` runs only for a
+  The repository is kept in step with a private GitHub repository (since 2026-11-11; remote
+  `github` on the Mac, `origin` on the Windows PC), so the Windows PC can pull it; `.github/workflows/build.yml` runs only for a
   release tag, a pull request or by hand.
 - The overlay probe (`experiments/overlay_probe.py`, see `experiments/README.md`) answered
   whether a see-through, click-through, always-on-top window can sit over TSU:
@@ -75,6 +75,9 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-12: AGENTS.md names the GitHub remote by its address, asked for by the user: the Windows PC's clone came
+  from GitHub, so its GitHub remote is `origin`, where AGENTS.md said `github` and that `origin` is the old bundle
+  (true only on the Mac). Agents now check `git remote -v` and push only to the GitHub address.
 - 2026-11-12: `releases/` is ignored as a whole, asked for by the user: the built archives and their checksums
   were ignored by name, but an unpacked build there showed up as untracked. Nothing in it was tracked.
 - 2026-11-12: Windows build 2026.11.12.3 to share, asked for by the user: `releases/TurboHUD-2026.11.12.3-windows-x64.zip`

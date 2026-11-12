@@ -1295,3 +1295,6 @@ its "Recent changes".
   privacy terms, none. It replaces 2026.11.12.2; both older builds are still in `releases/`, to be removed by hand.
 - 2026-11-12: `releases/` is ignored as a whole, asked for by the user: the built archives and their checksums
   were ignored by name, but an unpacked build there showed up as untracked. Nothing in it was tracked.
+- 2026-11-12: AGENTS.md names the GitHub remote by its address, asked for by the user: the Windows PC's clone came
+  from GitHub, so its GitHub remote is `origin`, where AGENTS.md said `github` and that `origin` is the old bundle
+  (true only on the Mac). Agents now check `git remote -v` and push only to the GitHub address.
