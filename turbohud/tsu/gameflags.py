@@ -221,9 +221,31 @@ def game_textures(data_folder, wanted):
     return found
 
 
-def steam_libraries(platform=sys.platform, home=None, environ=None):
+# Where Windows records Steam's folder: the user's key (written by Steam at each start), then
+# the installer's. Steam may be anywhere (D:\Steam), not only under Program Files.
+STEAM_REGISTRY = (
+    ('HKEY_CURRENT_USER', r'Software\Valve\Steam', 'SteamPath'),
+    ('HKEY_LOCAL_MACHINE', r'SOFTWARE\WOW6432Node\Valve\Steam', 'InstallPath'),
+    ('HKEY_LOCAL_MACHINE', r'SOFTWARE\Valve\Steam', 'InstallPath'),
+)
+
+
+def read_registry(hive, key, name):
+    """A text value from the Windows registry, or None (not there, or not on Windows)."""
+    try:
+        import winreg
+
+        with winreg.OpenKey(getattr(winreg, hive), key) as handle:
+            value, _kind = winreg.QueryValueEx(handle, name)
+    except (ImportError, OSError):
+        return None
+    return value if isinstance(value, str) and value else None
+
+
+def steam_libraries(platform=sys.platform, home=None, environ=None, registry=read_registry):
     """Steam's library folders where TSU may be: Steam's own folder and those its
-    libraryfolders.vdf names (on the Mac, inside each CrossOver bottle, drive C only)."""
+    libraryfolders.vdf names (on the Mac, inside each CrossOver bottle, drive C only; on
+    Windows, Steam's folder from the registry first, then under Program Files)."""
     home = Path.home() if home is None else Path(home)
     environ = os.environ if environ is None else environ
     roots = []
@@ -236,6 +258,10 @@ def steam_libraries(platform=sys.platform, home=None, environ=None):
             for program_files in ('Program Files (x86)', 'Program Files'):
                 roots.append((bottle / 'drive_c' / program_files / 'Steam', bottle / 'drive_c'))
     elif platform == 'win32':
+        for hive, key, name in STEAM_REGISTRY:
+            value = registry(hive, key, name)
+            if value:
+                roots.append((Path(value), None))
         for key in ('PROGRAMFILES(X86)', 'PROGRAMFILES'):
             if environ.get(key):
                 roots.append((Path(environ[key]) / 'Steam', None))
@@ -248,8 +274,8 @@ def steam_libraries(platform=sys.platform, home=None, environ=None):
             roots.append((home / root, None))
     libraries = []
     for root, drive_c in roots:
-        if not root.is_dir():
-            continue
+        if root in libraries or not root.is_dir():
+            continue  # the registry and Program Files often name the same folder
         libraries.append(root)
         try:
             vdf = (root / 'steamapps' / 'libraryfolders.vdf').read_text(encoding='utf-8', errors='replace')
@@ -268,9 +294,9 @@ def steam_libraries(platform=sys.platform, home=None, environ=None):
     return libraries
 
 
-def game_data_folder(platform=sys.platform, home=None, environ=None):
+def game_data_folder(platform=sys.platform, home=None, environ=None, registry=read_registry):
     """TSU's `<name>_Data` folder (with resources.assets), or None where it is not found."""
-    for library in steam_libraries(platform, home, environ):
+    for library in steam_libraries(platform, home, environ, registry):
         game = library / 'steamapps' / 'common' / GAME_FOLDER
         try:
             folders = sorted(game.glob('*_Data'))
@@ -330,7 +356,10 @@ def prepare_flags(settings_folder, data_folder=None):
     folder = Path(settings_folder) / FLAGS_FOLDER
     data_folder = data_folder or game_data_folder()
     if data_folder is None:
-        log.info('flags: TSU not found, the emoji flags stay')
+        log.info(
+            'flags: TSU not found in the Steam libraries %s, the emoji flags stay',
+            [str(library) for library in steam_libraries()],
+        )
         return folder if (folder / STAMP_FILE).exists() else None
     try:
         current = stamp(data_folder)

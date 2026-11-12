@@ -1232,3 +1232,8 @@ its "Recent changes".
   start, which first asks a running TurboHUD over the real command socket and then
   sends it "move". The test now answers that question itself (none running). The fix
   was made on Linux on 2026-11-04 and lost in the move to GitHub; brought back.
+- 2026-11-12: Windows finds TSU's flags where Steam is installed outside Program Files. A tester
+  on Windows 10 saw the country codes (DE) instead of flags: TurboHUD looked for Steam only under
+  Program Files. It now reads Steam's folder from the registry first (`SteamPath`, then the
+  installer's `InstallPath`), then Program Files, each listed once. Where TSU is still not found,
+  the log's `flags:` line names the Steam libraries searched. Tests; not yet run on Windows.

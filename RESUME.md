@@ -74,6 +74,11 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-12: Windows finds TSU's flags where Steam is installed outside Program Files. A tester
+  on Windows 10 saw the country codes (DE) instead of flags: TurboHUD looked for Steam only under
+  Program Files. It now reads Steam's folder from the registry first (`SteamPath`, then the
+  installer's `InstallPath`), then Program Files, each listed once. Where TSU is still not found,
+  the log's `flags:` line names the Steam libraries searched. Tests; not yet run on Windows.
 - 2026-11-12: Fixed: running the tests while TurboHUD runs switched it to move mode
   (it happened mid-race on 2026-11-03). One test, run only without Qt, calls the app's
   start, which first asks a running TurboHUD over the real command socket and then
