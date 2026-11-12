@@ -90,6 +90,11 @@
   Sans 11 pt) and give buttons and lists that font on their own, so the panel was 866 px tall
   and failed its under-800 test; now 771 px. Set in the panel's style sheet, which reaches those
   widgets; Windows' smaller text is unchanged. A test copies Linux's fonts on every system.
+- 2026-11-12: Windows build 2026.11.12.2 to share, asked for by the user: `releases/TurboHUD-2026.11.12.2-windows-x64.zip`
+  (42.1 MB), as 2026.11.12 with the race search reading with 4 threads (the zip's reader is the one built from
+  `main` by `tools/get_rust.sh`, checked byte for byte). Smoke test passed with TurboHUD closed (started as
+  2026.11.12.2, quit cleanly); the zip checked for the privacy terms, none. It replaces 2026.11.12, still in
+  `releases/`, to be removed by hand.
 - 2026-11-12: A faster race search on Windows, asked for by the user (could Rust do better?): measured on the user's
   PC, a whole search of TSU's 4.3 GB took 18.8 s through the Rust reader, and as long in Python, as the time is
   Windows copying another program's memory (`ReadProcessMemory`), not the scan (comparing words as numbers changed
