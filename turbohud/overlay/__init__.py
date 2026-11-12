@@ -13,6 +13,11 @@ import sys
 HOTKEY_LOCK = 1
 HOTKEY_QUIT = 2
 HOTKEY_PRESETS = {3: 1, 4: 2, 5: 3}  # hotkey number -> the layout preset it loads
+# Move mode's second key, on Windows: AMD Software takes Ctrl+Shift+L (reported by the user on
+# 2026-11-12, and seen on 2026-11-11 as error 1409). Not Ctrl+Alt+L: that is AltGr+L, which types
+# a letter on some keyboards (Polish l with a stroke), and a game's chat would switch move mode.
+HOTKEY_LOCK_BACKUP = 6
+LOCK_KEY, LOCK_KEY_BACKUP = 'Ctrl+Shift+L', 'Ctrl+Shift+F12'
 
 
 def choose_platform(environ=None, platform=sys.platform):

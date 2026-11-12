@@ -156,6 +156,7 @@ class Native:
         # Both, whatever the first gives. Only these two say whether there are shortcuts:
         # without one, move mode needs another way; a preset still loads from the panel.
         lock, quit_ = register(KEY_L, HOTKEY_LOCK), register(KEY_Q, HOTKEY_QUIT)
+        self.lock_keys = ['Ctrl+Shift+L'] if lock else []
         for number, preset in HOTKEY_PRESETS.items():
             register(KEYS_PRESET[preset], number)
         return status == 0 and lock and quit_

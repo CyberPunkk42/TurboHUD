@@ -97,7 +97,8 @@ not been tried yet; with Homebrew's, the app needs macOS 27 (`--any-macos`). A D
 certificate and notarisation would remove the Open Anyway step.
 Bundled apps from `tools/build_app.py` with the probe and clear launch-option steps for
 Linux; an AppImage instead of the `.tar.gz`. Before the repository goes public for the
-TSU community: the privacy check (pre-push hook), a licence, a README for players.
+TSU community: the privacy check (pre-push hook), a licence, a README for players (begun: the
+one-page `QUICK_START.md`, in every download as `Quick Start.txt`, since 2026-11-12).
 
 ## 5. Linux: other desktops
 Commands for the running TurboHUD (`run_turbohud.sh --toggle` and so on) are done, and

@@ -6,12 +6,20 @@ from ctypes import wintypes
 
 from PySide6.QtCore import QAbstractNativeEventFilter, QCoreApplication
 
-from turbohud.overlay import HOTKEY_LOCK, HOTKEY_PRESETS, HOTKEY_QUIT
+from turbohud.overlay import (
+    HOTKEY_LOCK,
+    HOTKEY_LOCK_BACKUP,
+    HOTKEY_PRESETS,
+    HOTKEY_QUIT,
+    LOCK_KEY,
+    LOCK_KEY_BACKUP,
+)
 
 MOD_CONTROL = 0x2
 MOD_SHIFT = 0x4
 MOD_NOREPEAT = 0x4000
 VK_L = 0x4C
+VK_F12 = 0x7B
 VK_Q = 0x51
 VK_ZERO = 0x30  # the keys 1, 2 and 3 follow it
 WM_HOTKEY = 0x0312
@@ -64,11 +72,23 @@ class Native:
         self.filter = _HotkeyFilter(on_hotkey)
         QCoreApplication.instance().installNativeEventFilter(self.filter)
         modifiers = MOD_CONTROL | MOD_SHIFT | MOD_NOREPEAT
-        ok = True
-        for key, number in ((VK_L, HOTKEY_LOCK), (VK_Q, HOTKEY_QUIT)):
-            if not user32.RegisterHotKey(None, number, modifiers, key):
-                log.warning('hotkey %d not available (error %d)', number, ctypes.get_last_error())
-                ok = False
+
+        def register(key, number):
+            if user32.RegisterHotKey(None, number, modifiers, key):
+                return True
+            log.warning('hotkey %d not available (error %d)', number, ctypes.get_last_error())
+            return False
+
+        # Move mode on either key: the second is there when another program has the first.
+        self.lock_keys = [
+            name
+            for name, key, number in (
+                (LOCK_KEY, VK_L, HOTKEY_LOCK),
+                (LOCK_KEY_BACKUP, VK_F12, HOTKEY_LOCK_BACKUP),
+            )
+            if register(key, number)
+        ]
+        ok = bool(self.lock_keys) and register(VK_Q, HOTKEY_QUIT)
         # Not in `ok`: without them, a preset still loads from the panel.
         for number, preset in HOTKEY_PRESETS.items():
             if not user32.RegisterHotKey(None, number, modifiers, VK_ZERO + preset):
@@ -76,5 +96,5 @@ class Native:
         return ok
 
     def unregister_hotkeys(self):
-        for number in (HOTKEY_LOCK, HOTKEY_QUIT, *HOTKEY_PRESETS):
+        for number in (HOTKEY_LOCK, HOTKEY_LOCK_BACKUP, HOTKEY_QUIT, *HOTKEY_PRESETS):
             user32.UnregisterHotKey(None, number)

@@ -101,6 +101,11 @@ class NamingTests(unittest.TestCase):
             found = [path.name for path in build_app.mac_programs(app)]
         self.assertEqual(found, ['library.dylib', 'universal'])
 
+    def test_the_quick_start_has_every_shortcut(self):
+        text = build_app.QUICK_START.read_text(encoding='utf-8')
+        for keys in ('Ctrl+Shift+L', 'Ctrl+Shift+F12', 'Ctrl+Shift+1', 'Ctrl+Shift+Q', 'AMD Software'):
+            self.assertIn(keys, text)
+
     def test_the_read_me_says_what_to_do(self):
         text = build_app.MAC_READ_ME.read_text(encoding='utf-8')
         self.assertIn('{minimum}', text)
@@ -133,7 +138,7 @@ class NamingTests(unittest.TestCase):
             try:
                 self.assertEqual(
                     sorted(path.name for path in mount.iterdir() if not path.name.startswith('.')),
-                    ['Applications', 'Read Me First.txt', 'TurboHUD.app'],
+                    ['Applications', 'Quick Start.txt', 'Read Me First.txt', 'TurboHUD.app'],
                 )
                 self.assertEqual(os.readlink(mount / 'Applications'), '/Applications')
                 read_me = (mount / 'Read Me First.txt').read_text(encoding='utf-8')
@@ -173,8 +178,11 @@ class PackTests(unittest.TestCase):
             build_app.pack(self.make_dist(folder), archive, system='win32')
             with zipfile.ZipFile(archive) as zip_file:
                 self.assertEqual(sorted(zip_file.namelist()), [
-                    'TurboHUD/TurboHUD.exe', 'TurboHUD/_internal/', 'TurboHUD/_internal/lib.dll',
+                    'TurboHUD/Quick Start.txt', 'TurboHUD/TurboHUD.exe', 'TurboHUD/_internal/',
+                    'TurboHUD/_internal/lib.dll',
                 ])  # fmt: skip
+                guide = zip_file.read('TurboHUD/Quick Start.txt')
+                self.assertEqual(guide, build_app.QUICK_START.read_bytes())
             self.check_digest(archive)
 
     def test_tar_holds_the_app_folder(self):
@@ -183,6 +191,7 @@ class PackTests(unittest.TestCase):
             build_app.pack(self.make_dist(folder), archive, system='linux')
             with tarfile.open(archive) as tar:
                 self.assertIn('TurboHUD/_internal/lib.dll', tar.getnames())
+                self.assertIn('TurboHUD/Quick Start.txt', tar.getnames())
             self.check_digest(archive)
 
 

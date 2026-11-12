@@ -155,6 +155,14 @@ def one_window_wanted(native, environ=os.environ):
     return bool(getattr(native, 'one_window', False)) and environ.get('TURBOHUD_ONE_WINDOW', '1') != '0'
 
 
+def taken_note(lock_keys, lock_key='Ctrl+Shift+L'):
+    """What the tooltip and the log say where another program has Ctrl+Shift+L (AMD Software
+    does) and the second key works instead; None where Ctrl+Shift+L works or neither does."""
+    if not lock_keys or lock_key in lock_keys:
+        return None
+    return f'{lock_key} is taken by another program (AMD Software?): {lock_keys[0]} switches move mode'
+
+
 def tray_text(status, warning=None):
     """The tray icon's tooltip: what TurboHUD is doing, and a warning if there is one."""
     return f'TurboHUD - {status}' + (f'\n{warning}' if warning else '')
@@ -266,8 +274,10 @@ def run(args, folder):
     from turbohud.hud.painter import text_ink, text_width, use_game_flags
     from turbohud.overlay import (
         HOTKEY_LOCK,
+        HOTKEY_LOCK_BACKUP,
         HOTKEY_PRESETS,
         HOTKEY_QUIT,
+        LOCK_KEY,
         choose_platform,
         native_for,
     )
@@ -1031,8 +1041,8 @@ def run(args, folder):
 
     def on_hotkey(number):
         # Leave the system's callback first, then act.
-        if number == HOTKEY_LOCK:
-            log.info('Ctrl+Shift+L pressed')
+        if number in (HOTKEY_LOCK, HOTKEY_LOCK_BACKUP):
+            log.info('%s pressed', LOCK_KEY if number == HOTKEY_LOCK else 'the second move-mode key')
             QTimer.singleShot(0, lambda: set_locked(not locked))
         elif number == HOTKEY_QUIT:
             log.info('Ctrl+Shift+Q pressed')
@@ -1043,7 +1053,14 @@ def run(args, folder):
             QTimer.singleShot(0, lambda: load_preset(preset))
 
     shortcuts = native.register_hotkeys(on_hotkey)
-    log.info('Ctrl+Shift+L and Ctrl+Shift+Q registered' if shortcuts else 'no system-wide shortcuts')
+    lock_keys = getattr(native, 'lock_keys', [])
+    log.info(
+        'shortcuts: %s' % (', '.join([*lock_keys, 'Ctrl+Shift+Q']) if shortcuts else 'none, system-wide')
+    )
+    shortcut_note = taken_note(lock_keys)
+    if shortcut_note:
+        log.warning(shortcut_note)
+        tray.setToolTip(tray_text('starting', shortcut_note))
 
     def on_command(command):
         """A command from the command line (turbohud.control): 'ok' or an error text."""
@@ -1074,6 +1091,7 @@ def run(args, folder):
         shortcuts,
         commands,
         tuple(settings.presets),
+        lock_keys[0] if lock_keys else LOCK_KEY,
     )
     panel.preset_save_requested.connect(save_preset)
     panel.preset_load_requested.connect(load_preset)
@@ -1153,7 +1171,7 @@ def run(args, folder):
             relearn_available()  # a race may start or end while the panel is open
         together = flags_combined(current)
         if live is not None:
-            text = tray_text(status_text(live.snapshot()), live.warning())
+            text = tray_text(status_text(live.snapshot()), live.warning() or shortcut_note)
             if text != shown_status:
                 tray.setToolTip(text)
                 shown_status = text
