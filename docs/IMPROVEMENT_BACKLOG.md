@@ -9,7 +9,7 @@ His log (four online races): reads of 4 ms, frames 53 ms apart, content 2 to 4% 
 time (16 to 19% on 2026-11-10), about the same with the lap times hidden; no CrossOver graphics warning.
 Done (`fix/lap-list-frame-cost`): the lap times and the player list measure less, the Mac's one window draws
 again only the sections that changed, and running times and gaps come from kept glyph images (0.06 ms a new text,
-from about 0.9 ms at 2x; a few edge pixels differ a little). In build 2026.11.12.5 for the tester. Left:
+from about 0.9 ms at 2x; a few edge pixels differ a little). In build 2026.11.12.6 for the tester. Left:
 his log's drawing share (was 20 to 24%), and ask whether the stutter is while
 driving or between races (the search from the last race reads for 8 to 11 s).
 
