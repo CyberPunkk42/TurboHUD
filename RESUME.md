@@ -79,6 +79,14 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-12: Windows build 2026.11.12.5 to share, asked for by the user: `releases/TurboHUD-2026.11.12.5-windows-x64.zip`
+  (42.2 MB), from `main` with what came since .4: the stutter fixes (the lap times and player list at their old
+  cost, running times from kept glyph images), the yellow flag fix for a car left standing, and the font fix for
+  the tests. The zip's reader is the one built from `main` (unchanged since .2, checked byte for byte). The zip and
+  the Python modules packed in `TurboHUD.exe` checked for the privacy terms, none; the app starts and says its
+  version. Built without the smoke test, as the user's TurboHUD 2026.11.12.4 was running (the test would have
+  spoken to it); run afterwards with TurboHUD closed: passed. It replaces 2026.11.12.4; the older builds are still in
+  `releases/`, to be removed by hand.
 - 2026-11-12: The tests crashed Python on Windows after the glyph images came in (fix/lap-list-frame-cost): Qt's
   offscreen platform there has no fonts, and asking its fallback font's glyphs their font's name crashed (segmentation
   fault, also with the layout alive). The real Windows platform drew the running times fine every time. Now texts
