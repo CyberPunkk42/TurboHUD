@@ -1483,3 +1483,5 @@ its "Recent changes".
   two under the move-mode panel's headings (Timing, Car, Race, Other); and the AMD part says it plainly: AMD Software
   occupies Ctrl+Shift+L, so remove that binding in AMD Software (Settings, Hotkeys), restart TurboHUD, then use
   Ctrl+Shift+L; until then Ctrl+Shift+F12 or the icon's Move mode.
+- 2026-11-12: `user_logs/` is ignored, asked for by the user: testers' logs put there to look at stay on the PC
+  (they hold player names and paths), never on GitHub.
