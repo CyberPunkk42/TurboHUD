@@ -1268,3 +1268,18 @@ its "Recent changes".
   changes: one piece at a time, paced. `tools/get_rust.sh` now also sets up Rust and llvm-mingw on Windows (Git
   Bash; llvm-mingw's Windows zip pinned by GitHub's SHA256), the same Rust 1.99.1 and target as on the Mac. Rust
   tests (40, one reading the test's own memory with 4 threads). Not yet seen: whether TSU stutters during the 6 s.
+- 2026-11-12: The move-mode panel is the same size on Linux as on the Mac: its text is held at
+  13 px (`PANEL_FONT_PX`) where the system's is larger. Linux desktops use about 15 px (Adwaita
+  Sans 11 pt) and give buttons and lists that font on their own, so the panel was 866 px tall
+  and failed its under-800 test; now 771 px. Set in the panel's style sheet, which reaches those
+  widgets; Windows' smaller text is unchanged. A test copies Linux's fonts on every system.
+- 2026-11-12: Fixed: running the tests while TurboHUD runs switched it to move mode
+  (it happened mid-race on 2026-11-03). One test, run only without Qt, calls the app's
+  start, which first asks a running TurboHUD over the real command socket and then
+  sends it "move". The test now answers that question itself (none running). The fix
+  was made on Linux on 2026-11-04 and lost in the move to GitHub; brought back.
+- 2026-11-12: Windows finds TSU's flags where Steam is installed outside Program Files. A tester
+  on Windows 10 saw the country codes (DE) instead of flags: TurboHUD looked for Steam only under
+  Program Files. It now reads Steam's folder from the registry first (`SteamPath`, then the
+  installer's `InstallPath`), then Program Files, each listed once. Where TSU is still not found,
+  the log's `flags:` line names the Steam libraries searched. Tests; not yet run on Windows.

@@ -147,6 +147,43 @@ class FindingTests(unittest.TestCase):
         self.assertEqual(libraries, [steam, games])  # D: is outside the bottle's drive_c
         self.assertEqual(gameflags.game_data_folder('darwin', self.home, {}), data)
 
+    def test_windows_finds_steam_where_the_registry_says(self):
+        # Steam outside Program Files (a tester on Windows 10, 2026-11-12, saw no flags).
+        steam = self.home / 'Steam'
+        other = self.home / 'SteamLibrary'
+        (steam / 'steamapps').mkdir(parents=True)
+        (steam / 'steamapps' / 'libraryfolders.vdf').write_text(
+            f'"libraryfolders"\n{{\n "0" {{ "path" "{steam}" }}\n "1" {{ "path" "{other}" }}\n}}\n'
+        )
+        data = other / 'steamapps' / 'common' / gameflags.GAME_FOLDER / 'TSU_Data'
+        data.mkdir(parents=True)
+        (data / 'resources.assets').write_bytes(b'')
+        asked = []
+
+        def registry(hive, key, name):
+            asked.append((hive, key, name))
+            return str(steam) if name == 'SteamPath' else None
+
+        self.assertIsNone(gameflags.game_data_folder('win32', self.home, {}, lambda *_: None))
+        self.assertEqual(gameflags.steam_libraries('win32', self.home, {}, registry), [steam, other])
+        self.assertEqual(asked, list(gameflags.STEAM_REGISTRY))
+        self.assertEqual(gameflags.game_data_folder('win32', self.home, {}, registry), data)
+
+    def test_windows_lists_steam_once_when_the_registry_and_program_files_agree(self):
+        program_files = self.home / 'Program Files (x86)'
+        (program_files / 'Steam').mkdir(parents=True)
+        libraries = gameflags.steam_libraries(
+            'win32',
+            self.home,
+            {'PROGRAMFILES(X86)': str(program_files)},
+            lambda *_: str(program_files / 'Steam'),
+        )
+        self.assertEqual(libraries, [program_files / 'Steam'])
+
+    def test_the_registry_is_only_read_on_windows(self):
+        if sys.platform != 'win32':
+            self.assertIsNone(gameflags.read_registry(*gameflags.STEAM_REGISTRY[0]))
+
     def test_linux_and_nothing_found(self):
         self.assertIsNone(gameflags.game_data_folder('linux', self.home, {}))
         data = self.home / '.local/share/Steam/steamapps/common' / gameflags.GAME_FOLDER / 'TSU_Data'

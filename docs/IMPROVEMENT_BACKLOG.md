@@ -3,14 +3,7 @@
 Open items, most valuable first. Finished items move to `docs/PROGRESS.md`. Where the work
 last stopped: `docs/CONTINUE_HERE.md`.
 
-## 1. Tests must not reach a running TurboHUD
-Running the tests while TurboHUD runs (found 2026-11-03, mid-race) switched the real
-one to move mode: a test starts the app's main path, which finds the running copy
-through the command socket in `$XDG_RUNTIME_DIR` and sends it "move". Until fixed, run
-the tests with `XDG_RUNTIME_DIR` set to an empty private folder. Fix: give that test
-its own runtime folder (or a fake `send`).
-
-## 2. Windows: the overlay, then live data
+## 1. Windows: the overlay, then live data
 Over TSU on Windows, in windowed, Fullscreen and Fullscreen Exclusive: the built app
 (`tools/build_app.py`), the Qt probe (`experiments/run_qt_overlay_probe.cmd`) and the
 original probe. Add the results to `experiments/README.md`. Check the shortcuts
@@ -29,14 +22,14 @@ The race search reads with 4 threads on Windows since 2026-11-12 (about 6 s for 
 listen for stutter in those seconds at the start of an online race.
 What is built and what is left on Windows: `docs/WINDOWS_AND_CROSSOVER.md`.
 
-## 2b. CrossOver: all of TurboHUD inside the bottle (a trial)
+## 1b. CrossOver: all of TurboHUD inside the bottle (a trial)
 Asked for by the user (2026-11-09): try TurboHUD as a Windows app inside TSU's bottle instead of a
 native Mac app with a reader in the bottle. Analysis and plan: `docs/WINDOWS_AND_CROSSOVER.md`. A
 window from inside CrossOver never shows over TSU's Fullscreen (tested 2026-10-23), so at best a
 second mode for windowed TSU. Next: the Qt overlay probe in the bottle (plan step 1), then FPS
-against the native app with TSU windowed. Needs item 2's live data in-process for the real app.
+against the native app with TSU windowed. Needs item 1's live data in-process for the real app.
 
-## 3. macOS: live data in CrossOver
+## 2. macOS: live data in CrossOver
 Answered 2026-11-04 (`experiments/README.md`, "Memory inside the CrossOver bottle"):
 macOS refuses `task_for_pid` on CrossOver's signed Wine loader, but a Windows program
 inside the bottle can read TSU with `ReadProcessMemory`, and TurboHUD's lookup by name
@@ -76,16 +69,18 @@ hit). The Mac app now does this by itself (`turbohud/tsu/bottle.py`, the Rust re
 - The spectator HUD: seen in public sessions on 2026-11-08 ("Spectating", the map; no map in an
   arena mode). Still to see: joining as a driver from spectating.
 
-## 4. Layout: what is left to check
+## 3. Layout: what is left to check
 The user went through it all by hand on the Mac on 2026-11-05 and it worked: the tight boxes,
 presets with their shortcuts, groups, the Centre buttons, Centre text and Undo. Still to see:
 - Confirmed on 2026-11-08: the lap times list with 20 drivers, and the preset shortcuts with TSU
   in front during a race.
 - Linux: `--preset`, and moving and resizing through Hyprland (followers take their size when
   a resize ends), and Undo there.
+  The move-mode panel's text is held at 13 px there since 2026-11-12 (771 px tall, was 866):
+  check it reads well over TSU.
 - Windows has run none of this (its shortcut code has only ever run on a build machine).
 
-## 5. Builds and release
+## 4. Builds and release
 The Mac app for a tester (2026-11-06): build with `sh tools/get_mac_python.sh`, then
 `.buildtools/mac-build-venv/bin/python tools/build_app.py --version YYYY.MM.DD --smoke`. That Python has
 not been tried yet; with Homebrew's, the app needs macOS 27 (`--any-macos`). A Developer ID
@@ -94,14 +89,14 @@ Bundled apps from `tools/build_app.py` with the probe and clear launch-option st
 Linux; an AppImage instead of the `.tar.gz`. Before the repository goes public for the
 TSU community: the privacy check (pre-push hook), a licence, a README for players.
 
-## 6. Linux: other desktops
+## 5. Linux: other desktops
 Commands for the running TurboHUD (`run_turbohud.sh --toggle` and so on) are done, and
 on Wayland desktops other than Hyprland TurboHUD runs through XWayland, where staying on
 top should work. Still to try on KDE and GNOME: on top over the game, clicks going
 through. If XWayland is not enough there, the layer-shell extension (KDE, Sway; not
 GNOME) would need a library outside PySide6.
 
-## 7. Track map: only in races and special events
+## 6. Track map: only in races and special events
 Asked for by the user (2026-11-08), built the same day: the map shows, and a track is learnt, only in
 TS.RaceEventMode (regular races; special events from A to B are expected to be the same mode). The arena
 modes (Battle, Collector, Hill, Soccer, Sumo, Tag) have none. Seen: a capture event is
@@ -113,7 +108,7 @@ Since 2026-11-11 `experiments/tsu_race_recorder.py` records each event's mode an
 Windows): record Sumo, King of the Hill, Soccer, Tag and a special event, for the event type and what an
 arena HUD could show (Battle's capture and rounds: `experiments/README.md`).
 
-## 7b. Track map: check in races
+## 6b. Track map: check in races
 The user saw it work in a race (2026-11-03), and the track is now learnt from the cars
 (checked live in an AI event; the user confirmed it works). Still to check: the track's shape (tight
 hairpins, tracks that cross themselves, point-to-point tracks), the road's width, the

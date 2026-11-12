@@ -62,21 +62,34 @@
   2026.11.10 went to the tester with new instructions (the same comparison, and the Rust reader). Race reads merge pages further apart since 2026-11-10 (31
   to 49 reads of the game a read and 16 to 22 ms, from 84 to 88 and 26 to 29 ms). Online, the search from the last race found
   three races in a row in 0.4 s (2026-11-10).
-0. Tests: keep them from reaching a running TurboHUD (until then run them with
-   `XDG_RUNTIME_DIR` set to an empty private folder).
 1. Windows: the overlay over TSU (windowed, Fullscreen, Fullscreen Exclusive), and the live data
    through the Rust reader (built 2026-11-11, not yet run there).
-   Also a trial of all of TurboHUD inside the CrossOver bottle (backlog item 2b,
+   Also a trial of all of TurboHUD inside the CrossOver bottle (backlog item 1b,
    `docs/WINDOWS_AND_CROSSOVER.md`): first the Qt probe in the bottle.
 2. macOS: live data is connected; check it in races (offline and online), over
    Fullscreen, and listen for stutter while the race is searched for.
 3. Layout: checked by hand on the Mac; what is left is in races, on Linux and on Windows
-   (backlog item 4).
+   (backlog item 3).
 4. Builds and release: bundled apps with the probe, an AppImage; before the repository
    goes public, the privacy check, a licence and a README for players.
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-12: Windows finds TSU's flags where Steam is installed outside Program Files. A tester
+  on Windows 10 saw the country codes (DE) instead of flags: TurboHUD looked for Steam only under
+  Program Files. It now reads Steam's folder from the registry first (`SteamPath`, then the
+  installer's `InstallPath`), then Program Files, each listed once. Where TSU is still not found,
+  the log's `flags:` line names the Steam libraries searched. Tests; not yet run on Windows.
+- 2026-11-12: Fixed: running the tests while TurboHUD runs switched it to move mode
+  (it happened mid-race on 2026-11-03). One test, run only without Qt, calls the app's
+  start, which first asks a running TurboHUD over the real command socket and then
+  sends it "move". The test now answers that question itself (none running). The fix
+  was made on Linux on 2026-11-04 and lost in the move to GitHub; brought back.
+- 2026-11-12: The move-mode panel is the same size on Linux as on the Mac: its text is held at
+  13 px (`PANEL_FONT_PX`) where the system's is larger. Linux desktops use about 15 px (Adwaita
+  Sans 11 pt) and give buttons and lists that font on their own, so the panel was 866 px tall
+  and failed its under-800 test; now 771 px. Set in the panel's style sheet, which reaches those
+  widgets; Windows' smaller text is unchanged. A test copies Linux's fonts on every system.
 - 2026-11-12: A faster race search on Windows, asked for by the user (could Rust do better?): measured on the user's
   PC, a whole search of TSU's 4.3 GB took 18.8 s through the Rust reader, and as long in Python, as the time is
   Windows copying another program's memory (`ReadProcessMemory`), not the scan (comparing words as numbers changed

@@ -1152,6 +1152,27 @@ class MovePanelPresetTests(unittest.TestCase):
         self.assertLess(panel.width(), 600)
         self.assertFalse(hasattr(panel, 'mph'))  # the options for the whole HUD are in the settings
 
+    def test_the_panel_stays_compact_with_linux_sized_text(self):
+        # Linux desktops use about 15 px text, also given to buttons and lists on their own,
+        # which made the panel 866 px tall (2026-11-12). Its text is held at the Mac's 13 px.
+        from PySide6.QtGui import QFontInfo
+        from PySide6.QtWidgets import QApplication, QComboBox, QPushButton
+
+        from turbohud.overlay.window import PANEL_FONT_PX
+
+        before = QApplication.font()
+        self.addCleanup(QApplication.setFont, before)
+        large = QApplication.font()
+        large.setPixelSize(15)
+        QApplication.setFont(large)
+        for kind in ('QPushButton', 'QComboBox', 'QCheckBox'):
+            self.addCleanup(QApplication.setFont, QApplication.font(kind), kind)
+            QApplication.setFont(large, kind)
+        panel = self.panel()
+        self.assertLess(panel.height(), 800)
+        for widget in (*panel.findChildren(QPushButton), *panel.findChildren(QComboBox)):
+            self.assertLessEqual(QFontInfo(widget.font()).pixelSize(), PANEL_FONT_PX)
+
     def test_load_names_its_shortcut_where_there_are_shortcuts(self):
         self.assertIn('Ctrl+Shift+2', self.button(self.panel(), 2, 'Load').toolTip())
 
