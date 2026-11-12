@@ -651,6 +651,37 @@ def moving(name, position, velocity, local=False):
     return race.PlayerState(name, GERMANY, 1, (lap(0),), False, False, local, position, velocity, (0.0, 1.0))
 
 
+class RadarArrowTests(unittest.TestCase):
+    """A car past the radar's edge: a bigger, clearer arrow (asked for by the user on 2026-11-12)."""
+
+    BOX = (0.0, 0.0, 200.0, 300.0)
+
+    def test_an_arrow_points_the_cars_way_and_is_twice_a_car_wide_each_side(self):
+        (tip, left, right), _opacity = race.radar_arrow(100, True, self.BOX, 10, None, 2.0)
+        self.assertEqual(tip, (100, race.RADAR_ARROW_INSET))
+        self.assertEqual((left, right), ((80, 23), (120, 23)))  # 20 px each side and long
+        (tip, left, _right), _opacity = race.radar_arrow(100, False, self.BOX, 10, None, 2.0)
+        self.assertEqual(tip, (100, 300 - race.RADAR_ARROW_INSET))
+        self.assertLess(left[1], tip[1])  # behind: pointing down
+
+    def test_never_too_small_nor_too_big_and_kept_inside(self):
+        (_tip, left, right), _ = race.radar_arrow(100, True, self.BOX, 1, None, 2.0)
+        self.assertEqual(right[0] - left[0], 2 * race.RADAR_ARROW_LEAST)
+        (_tip, left, right), _ = race.radar_arrow(100, True, (0, 0, 80, 300), 30, None, 2.0)
+        self.assertEqual(right[0] - left[0], 2 * 80 * race.RADAR_ARROW_MOST)  # a small radar
+        (_tip, left, _right), _ = race.radar_arrow(-50, True, self.BOX, 10, None, 2.0)
+        self.assertEqual(left[0], 0)  # far to the side: at the edge, wholly inside
+
+    def test_fainter_further_off_but_never_faint(self):
+        near = race.radar_arrow(100, True, self.BOX, 10, 0.0, 2.0)[1]
+        far = race.radar_arrow(100, True, self.BOX, 10, 5.0, 2.0)[1]
+        unknown = race.radar_arrow(100, True, self.BOX, 10, None, 2.0)[1]
+        self.assertEqual(near, 1.0)
+        self.assertEqual(far, 1.0 - race.RADAR_ARROW_FADE)
+        self.assertEqual(unknown, far)
+        self.assertGreaterEqual(far, 0.75)
+
+
 class RadarClassTests(unittest.TestCase):
     """Asked for by the user on 2026-11-11: in a multi-class race, cars of another class show on
     the radar in their class's colour."""

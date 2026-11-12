@@ -3125,6 +3125,31 @@ def radar_view(speed, within=RADAR_FROM):
     return min(radar_reach(speed, within), RADAR_VIEW_MAX)
 
 
+# A car past the radar's edge is an arrow there (asked for bigger and clearer by the user on
+# 2026-11-12: before, 1.2 car widths each side, at least 7 px, fading by 0.6).
+RADAR_ARROW = 2.0  # this many times a car's width each side of its tip, and as long
+RADAR_ARROW_LEAST = 12.0  # ... and at least this many pixels
+RADAR_ARROW_MOST = 0.25  # ... and at most this share of the radar's width or height
+RADAR_ARROW_FADE = 0.25  # its opacity falls by this much from beside the edge to the warning time
+RADAR_ARROW_INSET = 3.0  # pixels between its tip and the radar's edge
+
+
+def radar_arrow(x, up, box, car_width, seconds, within):
+    """((tip, left corner, right corner), opacity) of the arrow for a car past the top (`up`,
+    ahead) or bottom edge of a radar `box` (left, top, right, bottom), at `x` across, kept
+    inside the box. Fainter the further off the car is: `seconds` away (None: unknown, as far
+    as the warning time) against the warning time `within`."""
+    left, top, right, bottom = box
+    size = max(car_width * RADAR_ARROW, RADAR_ARROW_LEAST)
+    size = min(size, (right - left) * RADAR_ARROW_MOST, (bottom - top) * RADAR_ARROW_MOST)
+    x = min(max(x, left + size), right - size)
+    tip = top + RADAR_ARROW_INSET if up else bottom - RADAR_ARROW_INSET
+    base = tip + size if up else tip - size
+    off = (seconds if seconds is not None else within) / max(within, 0.01)
+    opacity = 1.0 - RADAR_ARROW_FADE * min(max(off, 0.0), 1.0)
+    return ((x, tip), (x - size, base), (x + size, base)), opacity
+
+
 def radar_car_size(per_unit, box):
     """(width, length) of a car on a radar `box` wide with `per_unit` pixels to the game's
     unit: larger than life, to see it at a glance, and never so small that a radar zoomed
