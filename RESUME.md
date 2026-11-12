@@ -79,6 +79,12 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-12: A car left standing gets no yellow flag after a minute, asked for by the user: in an online race
+  a driver stopped on the track and left, and the flag stayed out for the rest of the race. A car slower than
+  29 km/h (`YELLOW_SLOW`, either way) for `YELLOW_IDLE_AFTER` (60 s) is idle: no incident, so no flag, no ring on
+  the map and no CAR STOPPED AHEAD. Only going faster than 29 km/h again starts the count anew (rolling or being
+  pushed does not); the pits and the grid do not count. The log says when a car becomes idle and races again.
+  Tests.
 - 2026-11-12: Running times and gaps are drawn from kept glyph images, asked for by the user after the tester's log
   showed drawing at 20 to 24% of the time: each new one was filled anew, about 0.9 ms at 2x (0.6 ms the outline),
   17 a frame in the lap times and the player list. Now Qt still shapes the text (spacing, even digits, the colon

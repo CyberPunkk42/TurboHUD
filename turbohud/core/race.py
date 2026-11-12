@@ -3112,6 +3112,10 @@ YELLOW_WRONG_WAY = 0.5  # moving this share of its speed or more against the rac
 YELLOW_WRONG_WAY_FOR = 1.5  # ... faster than YELLOW_SLOW, this many seconds: driving the wrong way
 YELLOW_RESPAWN_FOR = 3.0  # seconds a car put back on the track counts as an incident
 YELLOW_CLEAR_AFTER = 3.0  # seconds the flag stays once the car is back on the track and up to speed
+# A car slower than YELLOW_SLOW this many seconds is idle: its driver left the race or walked
+# away, and it gets no flag. Seen by the user on 2026-11-12: a car left on the track kept the
+# yellow flag out for the rest of the race. It counts again once faster than YELLOW_SLOW.
+YELLOW_IDLE_AFTER = 60.0
 # Hazard ahead (asked for by the user on 2026-11-11, instead of an automatic full course yellow,
 # which a car left by a player who quit or lost the connection would set off for everyone): only
 # this player's HUD warns, while a stopped car on the tarmac, or one going the wrong way, is a few
@@ -3164,8 +3168,9 @@ class YellowFlags:
     the race, asked for by the user on 2026-11-11; only once the track map knows the track, see
     update), spun (going backwards along the car), put back on the track, all four wheels on
     the grass (trackmap.off_the_track), or slow, each once it has held a moment; an incident ends YELLOW_CLEAR_AFTER seconds after the car is
-    back on the track and up to speed. Not for a car in the pits, one that finished, or before it has passed
-    its first checkpoint (the grid). Times go by the race clock."""
+    back on the track and up to speed. Not for a car in the pits, one that finished, before it has passed
+    its first checkpoint (the grid), or an idle one (slower than YELLOW_SLOW for YELLOW_IDLE_AFTER, until
+    it is faster again). Times go by the race clock."""
 
     HOLD: typing.ClassVar[dict] = {
         'wrecked': YELLOW_WRECKED_FOR,
@@ -3263,8 +3268,13 @@ class YellowFlags:
         car['spawns'] = spawns
         if player.in_pit or player.finished or len(player.passed) < 2:
             car['since'].clear()
+            car['slow_since'] = None  # a long stop in the pits or the countdown is not idle
             return None
         speed, grips = player.forward_speed, player.wheel_grips
+        if self._idle(car, player.name, speed, now):
+            car['since'].clear()
+            car['respawn_until'] = None
+            return None
         holds = {
             'wrecked': player.wrecked,
             'stopped': speed is not None and abs(speed) < YELLOW_STOPPED,
@@ -3290,6 +3300,23 @@ class YellowFlags:
             elif kind in since and now - since[kind] >= self.HOLD[kind]:
                 return kind
         return None
+
+    @staticmethod
+    def _idle(car, name, speed, now):
+        """Whether the car has been slower than YELLOW_SLOW (either way) for YELLOW_IDLE_AFTER
+        seconds. Only going faster than that starts the count again: a car rolled a few
+        metres, or nudged by another, stays idle. A speed not read changes nothing."""
+        if speed is not None:
+            if abs(speed) >= YELLOW_SLOW:
+                car['slow_since'] = None
+            elif car.get('slow_since') is None or car['slow_since'] > now:  # or a new race's clock
+                car['slow_since'] = now
+        since = car.get('slow_since')
+        idle = since is not None and now - since >= YELLOW_IDLE_AFTER
+        if idle != car.get('idle', False):
+            car['idle'] = idle
+            log.info('yellow flags: %s %s', name, 'idle, no flag' if idle else 'racing again')
+        return idle
 
     @staticmethod
     def _wrong_way(player, look):

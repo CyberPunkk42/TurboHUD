@@ -2231,6 +2231,54 @@ class YellowFlagTests(unittest.TestCase):
             self.drive(flags, 10.0, self.car(grips=grips, wheel_layers=layers))
             self.assertEqual(self.drive(flags, 12.0, self.car(grips=grips, wheel_layers=layers)), ())
 
+    def stand(self, flags, start, end, step=5.0, **car):
+        """Drive the clock from `start` to `end` with the car as given; the last incidents."""
+        found, seconds = (), start
+        while seconds <= end:
+            found = self.drive(flags, seconds, self.car(**car))
+            seconds += step
+        return self.kinds(found)
+
+    def test_a_car_left_standing_has_no_flag_after_a_minute(self):
+        # Seen by the user on 2026-11-12: a driver stopped on the track and left the race, and
+        # the yellow flag stayed out for the rest of it.
+        flags = race.YellowFlags()
+        self.assertEqual(self.stand(flags, 10.0, 15.0, speed=0.0), [('Other', 'stopped')])
+        self.assertEqual(self.stand(flags, 20.0, 65.0, speed=0.0), [('Other', 'stopped')])  # 55 s: still out
+        self.assertEqual(self.stand(flags, 70.0, 80.0, speed=0.0), [])  # over a minute: idle
+
+    def test_an_idle_car_stays_without_a_flag_until_faster_than_29_kmh(self):
+        flags = race.YellowFlags()
+        self.stand(flags, 10.0, 80.0, speed=0.0)
+        slow = race.YELLOW_SLOW - 0.5  # rolling along, just under 29 km/h
+        self.assertEqual(self.stand(flags, 85.0, 100.0, speed=slow), [])
+        self.assertEqual(self.stand(flags, 105.0, 120.0, speed=0.0), [])  # stopped again: still idle
+        self.assertEqual(self.stand(flags, 125.0, 130.0, speed=race.YELLOW_SLOW + 1), [])  # back racing
+        stopped = self.stand(flags, 135.0, 140.0, speed=0.0)
+        self.assertEqual(stopped, [('Other', 'stopped')])  # a new stop: flagged
+
+    def test_backwards_faster_than_29_kmh_counts_as_racing_again(self):
+        flags = race.YellowFlags()
+        self.stand(flags, 10.0, 80.0, speed=0.0)
+        backwards = -(race.YELLOW_SLOW + 1)
+        self.assertEqual(self.stand(flags, 85.0, 86.0, step=0.5, speed=backwards), [('Other', 'spun')])
+
+    def test_a_long_pit_stop_or_the_grid_does_not_make_a_car_idle(self):
+        flags = race.YellowFlags()
+        self.stand(flags, 10.0, 100.0, speed=0.0, in_pit=True)
+        self.assertEqual(self.stand(flags, 105.0, 110.0, speed=0.0), [('Other', 'stopped')])
+        flags = race.YellowFlags()
+        on_grid = race.PlayerState('Other', 0, 0, ((0,),), forward_speed=0.0, wheel_grips=self.TARMAC)
+        for seconds in range(10, 101, 5):  # only the start line passed: the countdown
+            self.drive(flags, float(seconds), on_grid)
+        self.assertEqual(self.stand(flags, 105.0, 110.0, speed=0.0), [('Other', 'stopped')])
+
+    def test_a_speed_not_read_keeps_the_count(self):
+        flags = race.YellowFlags()
+        self.stand(flags, 10.0, 40.0, speed=0.0)
+        self.stand(flags, 45.0, 60.0, speed=None)
+        self.assertEqual(self.stand(flags, 65.0, 75.0, speed=0.0), [])  # idle since 10 s
+
     def test_a_car_stopped_on_plastic_stands_on_the_road(self):
         self.assertTrue(race.on_tarmac(self.car(speed=0.0, **self.PLASTIC)))
         self.assertFalse(race.on_tarmac(self.car(speed=0.0, **self.TERRAIN)))
