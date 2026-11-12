@@ -3020,6 +3020,72 @@ class WatchingTests(unittest.TestCase):
         self.assertEqual(rows[race.ME_ROW - 1].middle_color, 'behind')
 
 
+class LighterReadTests(unittest.TestCase):
+    """Other cars' slow state once a second, the player's car every read (a tester's TSU in
+    CrossOver stuttered as the reads grew, 2026-11-12)."""
+
+    def counted(self, local_index=0):
+        now = [0.0]
+        reader = build(
+            [10_000, 944_595],
+            laps_completed=1,
+            clock=1_000_000,
+            limit=0,
+            name='A',
+            car=(1.0, 2.0),
+            local_index=local_index,
+            clock_fn=lambda: now[0],
+        )
+        calls = []
+        slow = reader._slow_state
+
+        def counting(vehicle, updater):
+            calls.append(now[0])
+            return slow(vehicle, updater)
+
+        reader._slow_state = counting
+        return reader, now, calls
+
+    def read(self, reader):
+        reader.plan_read()
+        return reader.read()
+
+    def test_other_cars_once_a_second(self):
+        reader, now, calls = self.counted(local_index=-1)  # watched: the car is someone else's
+        self.read(reader)
+        for step in range(1, 10):
+            now[0] = step * 0.1
+            self.read(reader)
+        self.assertEqual(len(calls), 1)  # the first read only
+        now[0] = race.FULL_READ_EVERY
+        self.read(reader)
+        self.assertEqual(len(calls), 2)
+
+    def test_kept_between_full_reads(self):
+        reader, now, _calls = self.counted(local_index=-1)
+        first = self.read(reader).players
+        now[0] = 0.1
+        again = self.read(reader).players
+        self.assertEqual(
+            [(p.in_pit, p.spawns, p.compound, p.wheel_grips) for p in first],
+            [(p.in_pit, p.spawns, p.compound, p.wheel_grips) for p in again],
+        )
+
+    def test_the_players_own_car_every_read(self):
+        reader, now, calls = self.counted()
+        for step in range(5):
+            now[0] = step * 0.1
+            self.read(reader)
+        self.assertEqual(len(calls), 5)
+
+    def test_a_read_without_a_plan_is_full(self):
+        reader, now, calls = self.counted(local_index=-1)
+        reader.read()
+        now[0] = 0.1
+        reader.read()
+        self.assertEqual(len(calls), 2)
+
+
 class ReplayTests(unittest.TestCase):
     """TurboHUD in TSU's replays (asked for by the user on 2026-11-12): the race under the replay
     player, the driver its camera follows as "you", and the HUD kept while it stands paused."""

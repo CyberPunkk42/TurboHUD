@@ -450,6 +450,11 @@ QUICK_LOOK_EVERY = 2.0
 CLIENT_SPECTATE_EVERY = 30.0  # the same while the race last watched has its clock standing
 SPECTATE_STILL = 5.0  # seconds a watched race's clock may stand before it counts as over
 REPLAY_STILL = 10.0  # seconds a replay's clock may stand, not paused, before it counts as closed
+# Other cars' slowly changing state (pit area, hit points, respawns, tire compound, the surfaces under
+# their wheels) is read once a second, not at every read: a tester's TSU in CrossOver stuttered as
+# the reads grew to about 80 of the game's memory each, ten a second (2026-11-12). The player's own
+# car, positions, speeds and laps are read every time.
+FULL_READ_EVERY = 1.0
 CLIENT_LOG_EVERY = 2.0  # seconds between looks at TSU's log while it says no event runs
 QUANTIZED_ZERO, QUANTIZED_SCALE = 1 << 20, 1024  # TS.QuantizedVehicleState positions
 RECORDER_STALE = 10_000  # race clock (1 s) without a new recorder tick: it does not run
@@ -537,6 +542,10 @@ class LapReader:
         self._followed = None  # the TS.EventPlayer its camera follows: the HUD's "you"
         self._replay_clock, self._replay_moved = None, 0.0  # its race clock, and when it last moved
         self._let_go = None  # (replay player, its clock) of a replay taken as closed: not taken again so
+        self._planned = None  # whether the coming read is a full one (plan_read)
+        self._last_full = None  # when the last full read was planned
+        self._full = True  # whether this read reads every car's slow state (FULL_READ_EVERY)
+        self._kept_slow = {}  # a player (TS.EventPlayer) -> its slow state from the last full read
         self._controller = None  # the online race's event controller, once found
         self._spectated = None  # a controller whose race the player only watches
         self._found_at = None  # where the last race read or watched was: the next search begins there
@@ -1058,7 +1067,19 @@ class LapReader:
             return ()
         return struct.unpack(f'<{size}I', self.il.memory.read(array + ARRAY_DATA, 4 * size))
 
+    def plan_read(self):
+        """'full' or 'quick': what the coming read reads, for the page cache to fetch the right
+        pages (turbohud.tsu.winmemory.CachedReader). A full read about every FULL_READ_EVERY."""
+        now = self._clock()
+        full = self._last_full is None or now - self._last_full >= FULL_READ_EVERY
+        if full:
+            self._last_full = now
+        self._planned = full
+        return 'full' if full else 'quick'
+
     def read(self):
+        self._full = True if self._planned is None else self._planned  # unplanned: a full read
+        self._planned = None
         state = self._read_race()
         if self._replay is None:
             return state
@@ -1078,6 +1099,7 @@ class LapReader:
             self._grips = {}
             self._fuel_history, self._wear_history, self._fuel_marks, self._types = {}, {}, {}, {}
             self._player = None
+            self._kept_slow, self._full = {}, True
             self.event_type = self._event_type()
         if self._replay is not None:
             if self._player != self._followed:
@@ -1504,25 +1526,12 @@ class LapReader:
                 in_pit = bool(memory.u8(updater + self._offset('updater', updater, 'inPit')))
             except (NotFound, ReadError):
                 pass
-            try:
-                # The whole pit area, from its entrance to its exit, not only the pit box.
-                state = self._ref('vehicle', vehicle, 'm_state')
-                in_pit = in_pit or bool(memory.u8(state + self._offset('vstate', state, 'inPitArea')))
-                try:
-                    # Without damage the hit points stay at the most: never wrecked.
-                    most = self._number('vstate', state, 'maxHitPoints')
-                    wrecked = most > 0 and self._number('vstate', state, 'hitPoints') <= 0
-                except (NotFound, ReadError):
-                    pass
-                try:
-                    compound = self._number('vstate', state, 'tireCompoundAndChangeTicks') & COMPOUND_MASK
-                except (NotFound, ReadError):
-                    pass
-                spawns = self._number('vstate', state, 'spawnCount')
-                # Seen 2026-11-11 for half a second on the player's car at a start.
-                jump_start = bool(memory.u8(state + self._offset('vstate', state, 'startPenaltyOn')))
-            except (NotFound, ReadError):
-                pass
+            # The slow state: every read for the player's own car, else once a second (FULL_READ_EVERY).
+            slow = self._kept_slow.get(player)
+            if self._full or local or slow is None:
+                slow = self._kept_slow[player] = self._slow_state(vehicle, updater)
+            area, wrecked, compound, spawns, jump_start, wheel_grips, wheel_layers = slow
+            in_pit = in_pit or area
             if updater is not None:
                 velocity, forward = (
                     self._flat(updater, 'm_oldVelocity3d'),
@@ -1532,7 +1541,7 @@ class LapReader:
                     draft_drag = self._number('updater', updater, 'm_draftingViscosityFactor')
                 except (NotFound, ReadError):
                     pass
-                forward_speed, wheel_grips, wheel_layers = self._wheels(updater)
+                forward_speed = self._wheels(updater, surfaces=False)[0]
                 self._read_compounds(updater)
                 try:
                     # Found 2026-11-11 (a race recorded with shortcuts taken): no limit (the
@@ -1586,7 +1595,36 @@ class LapReader:
             return
         self._compounds = count if 0 < count <= MAX_COMPOUNDS else None
 
-    def _wheels(self, updater):
+    def _slow_state(self, vehicle, updater):
+        """(in the pit area, wrecked, tire compound, respawns, jump start, wheel grips, wheel
+        layers) of a car: what changes slowly, read once a second for the other cars."""
+        memory = self.il.memory
+        area = wrecked = jump_start = False
+        compound = spawns = grips = layers = None
+        try:
+            # The whole pit area, from its entrance to its exit, not only the pit box.
+            state = self._ref('vehicle', vehicle, 'm_state')
+            area = bool(memory.u8(state + self._offset('vstate', state, 'inPitArea')))
+            try:
+                # Without damage the hit points stay at the most: never wrecked.
+                most = self._number('vstate', state, 'maxHitPoints')
+                wrecked = most > 0 and self._number('vstate', state, 'hitPoints') <= 0
+            except (NotFound, ReadError):
+                pass
+            try:
+                compound = self._number('vstate', state, 'tireCompoundAndChangeTicks') & COMPOUND_MASK
+            except (NotFound, ReadError):
+                pass
+            spawns = self._number('vstate', state, 'spawnCount')
+            # Seen 2026-11-11 for half a second on the player's car at a start.
+            jump_start = bool(memory.u8(state + self._offset('vstate', state, 'startPenaltyOn')))
+        except (NotFound, ReadError):
+            pass
+        if updater is not None:
+            grips, layers = self._wheels(updater)[1:]
+        return area, wrecked, compound, spawns, jump_start, grips, layers
+
+    def _wheels(self, updater, surfaces=True):
         """(speed along the car, the grip under each of its four wheels, those surfaces'
         layers) from a car's TS.CarStateUpdater, for the yellow flags; None for what is
         missing. Each wheel's surface is a TS.TSMaterialProperties shared by every car on it,
@@ -1598,6 +1636,8 @@ class LapReader:
             speed = self._number('updater', updater, 'm_forwardSpeed')
         except (NotFound, ReadError):
             pass
+        if not surfaces:
+            return speed, None, None
         try:
             wheels = self._ref('updater', updater, 'wheels')
             found = []

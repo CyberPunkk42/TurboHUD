@@ -148,7 +148,9 @@ class PageCache:
 
     With `fetch_many` (page numbers -> {page number: bytes}), `prefetch()` after `clear()`
     asks for the pages the read before used, in one go; pages new to this read are still
-    read one at a time."""
+    read one at a time. `clear(kind)` names the kind of read coming ('quick', 'full'): each
+    kind prefetches the pages the last read of its kind used, so a full read once a second
+    neither fetches its extra pages one by one nor makes the quick reads after it fetch them."""
 
     def __init__(self, read, page=PAGE, largest=4 * PAGE, fetch_many=None):
         self._read = read
@@ -157,20 +159,24 @@ class PageCache:
         self._fetch_many = fetch_many
         self._pages = {}
         self._used = set()  # pages served since the last clear()
-        self._last = set()  # pages the read before used
+        self._kind = None  # the kind of read now (clear)
+        self._last = {}  # kind of read -> the pages the last read of that kind used
         self.reads = 0  # reads passed on, for measuring
 
-    def clear(self):
-        self._last = self._used
+    def clear(self, kind=None):
+        if self._used:
+            self._last[self._kind] = self._used
+        self._kind = kind
         self._used = set()
         self._pages.clear()
 
     def prefetch(self):
-        """Fetch the pages the read before used, in one go (with `fetch_many`)."""
-        if self._fetch_many is None or not self._last:
+        """Fetch the pages the last read of this kind used, in one go (with `fetch_many`)."""
+        last = self._last.get(self._kind)
+        if self._fetch_many is None or not last:
             return
         self.reads += 1
-        self._pages.update(self._fetch_many(sorted(self._last)))
+        self._pages.update(self._fetch_many(sorted(last)))
 
     def read(self, address, size):
         if size > self._largest:
@@ -477,7 +483,8 @@ class CachedReader:
         self.last_read = None
 
     def read(self):
-        self.cache.clear()
+        plan = getattr(self.reader, 'plan_read', None)
+        self.cache.clear(plan() if plan else None)  # 'quick' or 'full' (LapReader.plan_read)
         trips = self.cache.reads
         spent = self._in_game() if self._in_game else None
         calls = self._game_reads() if self._game_reads else None
