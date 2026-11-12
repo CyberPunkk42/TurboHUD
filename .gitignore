@@ -12,12 +12,8 @@ samples/*
 
 # Build outputs
 build/
-releases/*.zip
-releases/*.zip.sha256
-releases/*.dmg
-releases/*.dmg.sha256
-releases/*.tar.gz
-releases/*.tar.gz.sha256
+# The built apps, their checksums and any unpacked copy of one
+releases/
 turbohud/_build.py
 
 # Development tools environment (Ruff formatter, Rust, llvm-mingw); never shipped

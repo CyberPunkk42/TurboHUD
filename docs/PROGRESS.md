@@ -1293,3 +1293,5 @@ its "Recent changes".
   outside Program Files. The zip's reader is the one built from `main` (unchanged since .2, checked byte for byte).
   Smoke test passed with TurboHUD closed; the zip and the Python modules packed in `TurboHUD.exe` checked for the
   privacy terms, none. It replaces 2026.11.12.2; both older builds are still in `releases/`, to be removed by hand.
+- 2026-11-12: `releases/` is ignored as a whole, asked for by the user: the built archives and their checksums
+  were ignored by name, but an unpacked build there showed up as untracked. Nothing in it was tracked.

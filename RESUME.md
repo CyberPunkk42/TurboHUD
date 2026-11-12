@@ -75,6 +75,8 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-12: `releases/` is ignored as a whole, asked for by the user: the built archives and their checksums
+  were ignored by name, but an unpacked build there showed up as untracked. Nothing in it was tracked.
 - 2026-11-12: Windows build 2026.11.12.3 to share, asked for by the user: `releases/TurboHUD-2026.11.12.3-windows-x64.zip`
   (42.1 MB), as 2026.11.12.2 with this morning's fixes from GitHub, chiefly the flags found where Steam is installed
   outside Program Files. The zip's reader is the one built from `main` (unchanged since .2, checked byte for byte).
