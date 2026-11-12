@@ -334,7 +334,7 @@ def draw_hud(painter, lines, theme, scale=None, left=0, width=None, centre=False
         text_x = centred_x(line, width, margin) if (centre or line.centred) and width is not None else x
         if line.rule:
             right = left + width - margin if width is not None else None
-            draw_rule(painter, x, right, line, colors['accent'], outline)
+            draw_rule(painter, x, right, line, _pick(colors, line.rule_color or 'accent'), outline)
         if line.flag:
             draw_flag(painter, x, line.baseline, line.flag, line.size, outline)
             text_x = x + FLAG_WIDTH * line.size
@@ -367,9 +367,8 @@ def draw_hud(painter, lines, theme, scale=None, left=0, width=None, centre=False
                 outline,
             )
         if line.tag and tag_start is not None:
-            outlined_text(
-                painter, tag_start, line.baseline, line.tag, line.size, _pick(colors, line.color), outline
-            )
+            tag_color = _pick(colors, line.tag_color or line.color)
+            outlined_text(painter, tag_start, line.baseline, line.tag, line.size, tag_color, outline)
         if line.before and before_end is not None:
             outlined_text(
                 painter,

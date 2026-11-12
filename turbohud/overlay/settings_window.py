@@ -22,6 +22,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from turbohud.core.hud import beside
 from turbohud.core.settings import BLUE_SECONDS, RADAR_SECONDS, READS_PER_SECOND, Theme
 
 log = logging.getLogger(__name__)
@@ -109,7 +110,9 @@ class SettingsWindow(QWidget):
         change says its key through option_changed."""
         super().__init__(None, flags)
         self.native = native
+        self.flags = flags
         self.theme = theme
+        self.class_sheet = None  # made when first opened (open_class_sheet)
         self.setWindowTitle('TurboHUD - settings')
         self.setAttribute(Qt.WA_TranslucentBackground)
         self.setAttribute(Qt.WA_ShowWithoutActivating)
@@ -167,7 +170,11 @@ class SettingsWindow(QWidget):
         reset, close = QPushButton('Reset colours'), QPushButton('Close')
         reset.clicked.connect(self.reset)
         close.clicked.connect(self.close_window)
+        classes = QPushButton('Car classes...')
+        classes.setToolTip('Every car class a clan tag can name, in its colour')
+        classes.clicked.connect(self.open_class_sheet)
         row.addWidget(reset)
+        row.addWidget(classes)
         row.addStretch()
         row.addWidget(close)
         column.addLayout(row)
@@ -237,6 +244,18 @@ class SettingsWindow(QWidget):
             for button in buttons:
                 button.chosen = button.color.lower() == current
                 button.update()
+
+    def open_class_sheet(self):
+        """The class sheet beside this window: on its right, or on its left where the screen
+        ends; it stays open until closed."""
+        from turbohud.overlay.class_sheet import ClassSheet
+
+        if self.class_sheet is None:
+            self.class_sheet = ClassSheet(self.native, self.flags)
+        sheet = self.class_sheet
+        anchor = self.frameGeometry().getRect()
+        screen = self.screen().availableGeometry().getRect() if self.screen() is not None else anchor
+        sheet.show_at(*beside((sheet.width(), sheet.height()), anchor, screen))
 
     def mousePressEvent(self, event):
         # Dragged by its background, out of the way of a section if need be.

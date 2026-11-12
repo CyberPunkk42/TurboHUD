@@ -26,6 +26,8 @@ class Line:
     rule: str = ''  # a line above it, labelled with this (a class in the lap times)
     centred: bool = False  # in the middle of the box, whatever the section's other lines do
     tag: str = ''  # a column lined up on the left just before `before` (a clan tag in the lap times)
+    tag_color: str = ''  # the tag's own colour ('#rrggbb' or a theme name); '' for the text's
+    rule_color: str = ''  # the rule's own colour; '' for the accent
 
 
 @dataclass(frozen=True)
@@ -47,6 +49,8 @@ class Row:
     rule: str = ''  # a line in the gap above it, labelled with this (a class in the lap times)
     centred: bool = False  # in the middle of the box (the yellow flag's heading)
     tag: str = ''  # a column lined up on the left just before `before` (a clan tag in the lap times)
+    tag_color: str = ''  # the tag's own colour ('#rrggbb' or a theme name); '' for the text's
+    rule_color: str = ''  # the rule's own colour; '' for the accent
 
 
 FLAG_WIDTH = 1.5  # a flag's room before the text, in font sizes
@@ -142,6 +146,8 @@ def _content(rows, sizes):
                 row.rule,
                 row.centred,
                 row.tag,
+                row.tag_color,
+                row.rule_color,
             )
         )
     return lines, baseline

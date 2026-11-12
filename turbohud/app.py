@@ -556,7 +556,8 @@ def run(args, folder):
                     settings.classes,
                     (
                         'In a race with two or more classes, named by the drivers\' clan tags ([GT3], [LMP], ...):'
-                        ' the lap times by class, each below a line with its name'
+                        " the lap times by class, each below a line with its name, and each driver's class"
+                        ' in its colour after the name'
                     ),
                 )
             )
@@ -565,7 +566,10 @@ def run(args, folder):
                     'clan_tags',
                     'Clan tags in the lap times',
                     settings.clan_tags,
-                    "Each driver's clan tag in a column after the name (not in a race with classes, where they name the classes)",
+                    (
+                        "Each driver's clan tag in a column after the name (in a race with classes: for the"
+                        ' drivers of no class)'
+                    ),
                 )
             )
         return listed

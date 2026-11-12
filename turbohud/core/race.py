@@ -32,10 +32,10 @@ import time
 import typing
 from dataclasses import dataclass
 
+from turbohud.core.class_registry import class_colors, class_tag, paler, shown_code
 from turbohud.core.flags import flag_code, flag_text
 from turbohud.core.hud import Row, Sectors, blend, clock, local_time_rows
 from turbohud.core.il2cpp import ARRAY_DATA, ARRAY_LENGTH, LIST_ITEMS, SIMPLE_TYPES, NotFound, ReadError
-from turbohud.core.settings import class_tag
 from turbohud.core.trackmap import OFF_TRACK_LAYERS, off_the_track
 
 log = logging.getLogger(__name__)
@@ -2660,12 +2660,19 @@ def lap_times_rows(
     fastest lap purple within the class. `cuts` (ShortcutPenalties.left): CUT and the seconds
     left in orange, in the lap's place, for a driver TSU slows for a shortcut. With `clan_tags`,
     outside a multi-class race, each driver's clan tag in a column after the name (asked for
-    by the user on 2026-11-11), cut to MAX_TAG_SHOWN."""
+    by the user on 2026-11-11), cut to MAX_TAG_SHOWN.
+
+    In a multi-class race each class has its colour (class_colors, asked for by the user on
+    2026-11-12): its line, and the tag column, which then shows each driver's class: their
+    own clan tag, or paler the class their car gives them (car_classes). A driver of no class
+    keeps their clan tag there, with `clan_tags`, in the text's colour."""
     order = list(ranked(players) if order is None else order)
     classes = car_classes(order, class_tags)
     places = None
+    colors = {}
     if classes:
         order, places = by_class(order, classes)
+        colors = class_colors(set(classes.values()) - {OTHER_CLASS})
     shown = shown_players(players, MAX_LAP_TIME_ROWS, order)
     bests = {id(player): min(player_lap_times(player), default=None) for player in order}
     fastest = {}
@@ -2693,7 +2700,7 @@ def lap_times_rows(
         group = classes.get(id(player))
         if places is not None:
             position = places[id(player)]
-        rule = group if group is not None and group != last_class else ''
+        rule = _class_name(group) if group is not None and group != last_class else ''
         last_class = group
         best = bests[id(player)]
         running = player_current_lap(player, clock)
@@ -2725,10 +2732,27 @@ def lap_times_rows(
                 right=cut_text if cut_text else 'PIT' if plain_pit else bracket or time_now,
                 right_color=SHORTCUT_COLOR if cut_text else 'lift' if plain_pit or bracket else 'text',
                 rule=rule,
-                tag=(player.tag or '')[:MAX_TAG_SHOWN] if clan_tags and not classes else '',
+                rule_color=colors.get(group, '') if rule else '',
+                **_tag_column(player, group, colors, clan_tags),
             )
         )
     return rows
+
+
+def _class_name(group):
+    """A class's label in the lap times: its code as the registry writes it ('GrT')."""
+    return group if group == OTHER_CLASS else shown_code(group)
+
+
+def _tag_column(player, group, colors, clan_tags):
+    """The tag column's text and colour for `player` of class `group` (None outside a
+    multi-class race): see lap_times_rows."""
+    own = (player.tag or '').strip()
+    if group is None or group == OTHER_CLASS:
+        return {'tag': own[:MAX_TAG_SHOWN] if clan_tags else ''}
+    if class_tag(own) == group:
+        return {'tag': own[:MAX_TAG_SHOWN], 'tag_color': colors[group]}
+    return {'tag': shown_code(group), 'tag_color': paler(colors[group])}
 
 
 def player_lap_number(player):

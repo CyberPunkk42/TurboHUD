@@ -1227,12 +1227,17 @@ class ClanTagColumnTests(unittest.TestCase):
         rows = race.lap_times_rows(drivers, clock=50_000)
         self.assertEqual([r.tag for r in rows[1:]], ['', '', ''])
 
-    def test_not_in_a_multi_class_race_where_the_tags_name_the_classes(self):
-        drivers = [self.driver('A', 'GT3', 0), self.driver('B', 'LMP', 100)]
+    def test_in_a_multi_class_race_the_column_shows_the_classes_in_colour(self):
+        # Since 2026-11-12 (before, the column was empty there): see test_class_registry.
+        drivers = [self.driver('A', 'GT3', 0), self.driver('B', 'LMP', 100), self.driver('C', 'FTR', 200)]
         rows = race.lap_times_rows(drivers, clock=50_000, class_tags=('GT3', 'LMP'), clan_tags=True)
-        self.assertEqual({r.tag for r in rows}, {''})
+        self.assertEqual(
+            [(r.tag, r.tag_color) for r in rows[1:]], [('GT3', '#2586CC'), ('LMP', '#805AD5'), ('FTR', '')]
+        )
+        rows = race.lap_times_rows(drivers, clock=50_000, class_tags=('GT3', 'LMP'))  # clan tags off
+        self.assertEqual([r.tag for r in rows[1:]], ['GT3', 'LMP', ''])
         rows = race.lap_times_rows(drivers, clock=50_000, class_tags=(), clan_tags=True)  # classes off
-        self.assertEqual([r.tag for r in rows[1:]], ['GT3', 'LMP'])
+        self.assertEqual([(r.tag, r.tag_color) for r in rows[1:]], [('GT3', ''), ('LMP', ''), ('FTR', '')])
 
 
 class ClassTests(unittest.TestCase):

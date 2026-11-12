@@ -1301,3 +1301,15 @@ its "Recent changes".
 - 2026-11-12: AGENTS.md names the GitHub remote by its address, asked for by the user: the Windows PC's clone came
   from GitHub, so its GitHub remote is `origin`, where AGENTS.md said `github` and that `origin` is the old bundle
   (true only on the Mac). Agents now check `git remote -v` and push only to the GitHub address.
+- 2026-11-12: Car classes in colour, asked for by the user: a registry of the classes a clan tag can name
+  (`turbohud/core/class_registry.py`): the 115 codes the user listed in 8 categories, each with its colour (Prototype
+  purple, GT blue, Formula red ...), and the 11 codes from before that list lacks, in the closest category; matched
+  without brackets and in any case (`[GrT]`, `grt`). In a multi-class race the lap times keep their grouping, and
+  each class's line and the tag column (empty there before) show the class in its colour: the driver's own tag, or
+  paler the class their car gives them; a driver of no class keeps their clan tag, plain. Two classes of one
+  category (GT3 and GT4): the one first in the registry keeps the colour, the other takes the next category's free
+  colour (`class_colors`, the user's choice). The radar keeps its own class colours. A settings file saved with the
+  old 28-code list reads the registry; the list is saved only when it is the user's own. Also, asked for by the
+  user: a class sheet (`turbohud/overlay/class_sheet.py`), opened by Car classes... in the settings window, lists
+  every code and name in its category's colour. Tests (the user's cases A to I). Seen offscreen with Windows'
+  fonts; not yet in a race.

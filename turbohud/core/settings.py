@@ -12,6 +12,8 @@ import sys
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 
+from turbohud.core.class_registry import CLASS_TAGS, MAX_CLASS_TAG, class_tag
+
 APP_NAME = 'TurboHUD'
 SETTINGS_FILE = 'settings.json'
 LOG_FILE = 'turbohud.log'
@@ -58,20 +60,15 @@ class SectionPlace:
     tint: bool = False  # a light tint behind its text while locked; for the track map, its dark square
 
 
-# Clan tags that name a car class, for a multi-class race (asked for by the user on 2026-11-11:
-# drivers enter [GT3] or [LMP] as their clan tag). TSU allows 5 characters. Other tags, such as
-# a team's, are no class. The list can be changed in the settings file (`class_tags`).
-CLASS_TAGS = (
+# The clan tags that name a car class, for a multi-class race: turbohud.core.class_registry.
+# The settings file can have its own list (`class_tags`); it is saved only when it differs.
+# Before the categories (2026-11-12) every settings file was saved with this list: such a file
+# reads as the registry's.
+OLD_CLASS_TAGS = (
     'LMP', 'LMP1', 'LMP2', 'LMP3', 'LMH', 'LMDH', 'HYPER', 'GTP', 'DPI',
     'GT1', 'GT2', 'GT3', 'GT4', 'GTE', 'GTLM', 'GTD', 'GTC', 'GTS', 'TCR', 'CUP',
     'F1', 'F2', 'F3', 'F4', 'PRO', 'AM', 'PROAM', 'SILV',
 )  # fmt: skip
-MAX_CLASS_TAG = 8  # characters; longer is no tag TSU allows
-
-
-def class_tag(text):
-    """A clan tag as a class name is compared: without brackets or spaces, in capitals."""
-    return text.strip().strip('[]()').strip().upper() if isinstance(text, str) else ''
 
 
 def _class_tags(value):
@@ -79,7 +76,9 @@ def _class_tags(value):
     if not isinstance(value, list):
         return CLASS_TAGS
     tags = tuple(dict.fromkeys(class_tag(tag) for tag in value if 0 < len(class_tag(tag)) <= MAX_CLASS_TAG))
-    return tags or CLASS_TAGS
+    if not tags or tags == OLD_CLASS_TAGS:
+        return CLASS_TAGS
+    return tags
 
 
 @dataclass(frozen=True)
@@ -292,7 +291,6 @@ def save_settings(path, settings):
         'yellow_flags': settings.yellow_flags,
         'classes': settings.classes,
         'clan_tags': settings.clan_tags,
-        'class_tags': list(settings.class_tags),
         'layout_version': settings.layout_version,
         'blue_seconds': settings.blue_seconds,
         'radar_seconds': settings.radar_seconds,
@@ -300,6 +298,8 @@ def save_settings(path, settings):
         'sections': _section_data(settings.sections),
         'presets': {str(number): _section_data(kept) for number, kept in settings.presets.items()},
     }
+    if settings.class_tags != CLASS_TAGS:  # else the registry's, which may grow
+        data['class_tags'] = list(settings.class_tags)
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_name(path.name + '.tmp')
     temporary.write_text(json.dumps(data, indent=2) + '\n', encoding='utf-8')
