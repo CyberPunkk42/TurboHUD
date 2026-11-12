@@ -7,13 +7,11 @@ last stopped: `docs/CONTINUE_HERE.md`.
 Reported 2026-11-12, after the day's features (class colours, tire column, the player list around the player).
 His log (four online races): reads of 4 ms, frames 53 ms apart, content 2 to 4% and drawing 20 to 24% of the
 time (16 to 19% on 2026-11-10), about the same with the lap times hidden; no CrossOver graphics warning.
-Done (`fix/lap-list-frame-cost`, the same look): the lap times and the player list measure less, and the Mac's
-one window draws again only the sections that changed. Left, the most of the drawing: new texts. Each running
-time or gap that changes is filled anew, about 0.9 ms at 2x, 0.6 ms of it the outline (a pen or a simplified
-outline is no quicker); 7 a frame in the player list and 10 in the lap times, about 12 ms a frame. Next: numbers
-built from kept characters (a few microseconds), not the same pixels where outlines touch, so shown to the user
-side by side first. Then a build for him, and ask whether the stutter is while driving or between races (the
-search from the last race reads for 8 to 11 s).
+Done (`fix/lap-list-frame-cost`): the lap times and the player list measure less, the Mac's one window draws
+again only the sections that changed, and running times and gaps come from kept glyph images (0.06 ms a new text,
+from about 0.9 ms at 2x; a few edge pixels differ a little). Left: the user's race with it, then build
+2026.11.12.5 for the tester and his log's drawing share (was 20 to 24%), and ask whether the stutter is while
+driving or between races (the search from the last race reads for 8 to 11 s).
 
 ## 1. Windows: the overlay, then live data
 Over TSU on Windows, in windowed, Fullscreen and Fullscreen Exclusive: the built app

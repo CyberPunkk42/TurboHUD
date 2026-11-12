@@ -1383,3 +1383,12 @@ its "Recent changes".
   about the same with the lap times hidden. Most of that drawing is new texts: each running time or gap that
   changes is filled anew, about 0.9 ms at 2x (0.6 ms of it the outline), 7 a frame in the player list and 10 in
   the lap times, about 12 ms a frame. Next: numbers from kept characters (backlog item 0). Tests.
+- 2026-11-12: Running times and gaps are drawn from kept glyph images, asked for by the user after the tester's log
+  showed drawing at 20 to 24% of the time: each new one was filled anew, about 0.9 ms at 2x (0.6 ms the outline),
+  17 a frame in the lap times and the player list. Now Qt still shapes the text (spacing, even digits, the colon
+  raised between digits) and each glyph's outline and letter is filled once, placed to 1/64 of a device pixel
+  (`composed_image`, for texts of `COMPOSED_CHARACTERS`; names and labels as before): 0.06 ms a new text, and in a
+  benchmark at 2x with the race clock running the player list took 0.7 ms a frame (5.7 before) and the lap times
+  1.2 ms (6.1). Not the same pixels: in 18 texts at five sizes, 1x and 2x, 0.32% of them differ by more than 8 of
+  255, at most 50 (the smallest size at 1x); looked the same at real size and zoomed, shown to the user. Glyph
+  images are kept up to 16 MiB. Applies on every system. Tests.

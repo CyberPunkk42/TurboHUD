@@ -102,6 +102,85 @@ class TextImageTests(unittest.TestCase):
         )
         self.assertIsNot(painter.text_image('oldest', 60, 0xFFFFFFFF, 0xC8000000, 2.0), first)
 
+
+@unittest.skipUnless(importlib.util.find_spec('PySide6'), 'needs Qt')
+class ComposedTextTests(unittest.TestCase):
+    """Running times and gaps put together from glyph images, each filled once (the tester's
+    stutter, 2026-11-12: about 0.9 ms a new text at 2x, 17 new texts a frame)."""
+
+    @classmethod
+    def setUpClass(cls):
+        os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
+        from PySide6.QtWidgets import QApplication
+
+        cls.app = QApplication.instance() or QApplication([])
+
+    @staticmethod
+    def placed(found, ratio):
+        """{device pixel from the text's start: (r, g, b, a)}, as outlined_text places the image."""
+        image, left, top = found
+        x0, y0 = round(left * ratio), round(top * ratio)
+        pixels = {}
+        for y in range(image.height()):
+            for x in range(image.width()):
+                color = image.pixelColor(x, y)
+                if color.alpha():
+                    pixels[(x0 + x, y0 + y)] = color.getRgb()
+        return pixels
+
+    def differences(self, text, size, ratio):
+        from turbohud.hud.painter import _filled_image, composed_image
+
+        filled = self.placed(_filled_image(text, size, 0xFFFFFFFF, 0xC8000000, ratio), ratio)
+        composed = self.placed(composed_image(text, size, 0xFFFFFFFF, 0xC8000000, ratio), ratio)
+        blank = (0, 0, 0, 0)
+        return [
+            max(abs(a - b) for a, b in zip(filled.get(at, blank), composed.get(at, blank)))
+            for at in set(filled) | set(composed)
+        ]
+
+    def test_numbers_are_composed_and_names_are_filled(self):
+        from turbohud.hud.painter import composable
+
+        for text in ('1:23.456', '+0.123', '−0.250', '(12.03s)', 'PIT 24.5s', 'CUT 3.0s', 'L12', '+2 L'):
+            self.assertTrue(composable(text), text)
+        for text in ('Driver01', 'Lap 12/30', 'GT3 P12', ''):
+            self.assertFalse(composable(text), text)
+
+    def test_a_composed_number_looks_as_a_filled_one(self):
+        # The same places and shapes: only a few edge pixels a little lighter or darker. A
+        # colon on its own sits lower than between digits; drawn so, it was off by 255.
+        for ratio in (1.0, 2.0):
+            for text in ('1:23.456', '+0.123', '(23.45s)', 'PIT 12.3s', '−0.250'):
+                for size in (13, 20):
+                    differences = self.differences(text, size, ratio)
+                    self.assertLess(max(differences), 80, (text, size, ratio))
+                    off = sum(d > 8 for d in differences)
+                    self.assertLess(off, len(differences) * 0.05, (text, size, ratio))
+
+    def test_glyphs_are_kept_so_a_new_number_fills_nothing(self):
+        from turbohud.hud import painter
+
+        painter.text_image('0:12.345', 17, 0xFFFFFFFF, 0xC8000000, 2.0)
+        kept = len(painter._pieces)
+        for number in range(30):
+            painter.text_image(f'0:12.{number:03d}', 17, 0xFFFFFFFF, 0xC8000000, 2.0)
+        # Only glyphs at places within a device pixel not seen yet: far fewer than 30 texts' worth.
+        self.assertLess(len(painter._pieces) - kept, 30)
+
+    def test_glyph_images_cannot_fill_the_memory(self):
+        from turbohud.hud import painter
+
+        limit = painter.PIECES_LIMIT
+        self.addCleanup(setattr, painter, 'PIECES_LIMIT', limit)
+        painter.PIECES_LIMIT = 100 * 1024
+        for size in range(30, 60):
+            painter.composed_image('0123456789', size, 0xFFFFFFFF, 0xC8000000, 2.0)
+        self.assertLessEqual(painter._pieces_size, 100 * 1024 + 60 * 1024)
+        self.assertEqual(
+            painter._pieces_size, sum(found[0].sizeInBytes() for found in painter._pieces.values() if found)
+        )
+
     def test_it_holds_the_whole_text_and_its_outline_for_the_screen(self):
         from turbohud.hud.painter import outline_path, text_image
 
