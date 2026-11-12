@@ -79,6 +79,13 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-12: Windows build 2026.11.12.7 to share, asked for by the user: `releases/TurboHUD-2026.11.12.7-windows-x64.zip`
+  (42.2 MB), from `main` with what came since .6: the player list in track order with the leader on top and 3 cars
+  each side, the lap times' last lap, Ctrl+Shift+F12 for move mode, the quick start (in the zip as
+  `Quick Start.txt`), and the lighter race reads. The zip's reader is the one built from `main` (unchanged since
+  .2, checked byte for byte). Smoke test passed with TurboHUD closed; the zip and the Python modules packed in
+  `TurboHUD.exe` checked for the privacy terms, none. It replaces 2026.11.12.6, still in `releases/`, to be
+  removed by hand.
 - 2026-11-12: Lighter race reads, from a tester's log (macOS, build 2026.11.12.6, stutter mostly while racing):
   his HUD drew steadily, but each race read grew during the evening from 23 to about 82 reads of TSU's memory
   (3 to 13 ms), ten a second through CrossOver's Wine, which TSU needs too. Now other cars' slowly changing state
