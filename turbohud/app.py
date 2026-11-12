@@ -22,6 +22,7 @@ from turbohud.core.hud import (
     tight_place,
 )
 from turbohud.core.settings import (
+    LAP_COLUMNS,
     LAYOUT_VERSION,
     LOG_FILE,
     PRESETS,
@@ -38,6 +39,14 @@ FRAME_MS = 50  # redraw interval, also what checks a race for a late read (hud.F
 MIN_SECTION = 20  # pixels: the smallest a section gets from Smaller in the settings
 PLACEMENT_EVERY = 0.2  # seconds between position checks in move mode
 ICON = 'tsu_turbo_hud_00.png'  # in assets/, also the bundled app's icon
+# The settings window's switches for the lap times' columns (LAP_COLUMNS): (column, label, tooltip)
+LAP_COLUMN_OPTIONS = (
+    ('flag', 'Lap times: flag', "Each driver's country flag before the name"),
+    ('lap', 'Lap times: lap number', 'The lap each driver is on (L3)'),
+    ('tyre', 'Lap times: tire compound', "Each driver's tire compound, as in F1 (S red, M yellow, H white)"),
+    ('best', 'Lap times: best lap', "Each driver's best lap"),
+    ('current', 'Lap times: current lap', "The running time of each driver's lap, or CUT or PIT"),
+)
 log = logging.getLogger('turbohud')
 
 
@@ -335,6 +344,7 @@ def run(args, folder):
                 settings.class_tags if settings.classes else (),
                 shortcut_penalties,
                 settings.clan_tags,
+                settings.lap_columns,
             )
             if not settings.yellow_flags:
                 yellow_flags.reset()  # turned on again, it starts afresh
@@ -572,6 +582,8 @@ def run(args, folder):
                     ),
                 )
             )
+            for column, label, tip in LAP_COLUMN_OPTIONS:
+                listed.append((f'column_{column}', label, column in settings.lap_columns, tip))
         return listed
 
     def set_radar_cone(cone):
@@ -621,6 +633,15 @@ def run(args, folder):
         show_option('clan_tags', shown)
         save()
         log.info('clan tags in the lap times %s', 'on' if shown else 'off')
+
+    def set_lap_column(column, shown):
+        """A lap times column (LAP_COLUMNS) on or off, from the settings window."""
+        nonlocal settings
+        kept = set(settings.lap_columns) | {column} if shown else set(settings.lap_columns) - {column}
+        settings = replace(settings, lap_columns=tuple(c for c in LAP_COLUMNS if c in kept))
+        show_option(f'column_{column}', shown)
+        save()
+        log.info('lap times column %s %s', column, 'on' if shown else 'off')
 
     def set_map_others(others):
         nonlocal settings
@@ -813,6 +834,7 @@ def run(args, folder):
                 'yellow_flags': set_yellow_flags,
                 'classes': set_classes,
                 'clan_tags': set_clan_tags,
+                **{f'column_{c}': (lambda shown, c=c: set_lap_column(c, shown)) for c in LAP_COLUMNS},
             }
             settings_window.option_changed.connect(lambda key, on: setters[key](on))
             settings_window.reads_changed.connect(set_reads)

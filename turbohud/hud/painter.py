@@ -15,7 +15,17 @@ from PySide6.QtGui import (
     QPen,
 )
 
-from turbohud.core.hud import FLAG_WIDTH, MARGIN, before_right, blend, middle_right, steady_text, tag_left
+from turbohud.core.hud import (
+    FLAG_WIDTH,
+    MARGIN,
+    TYRE_WIDTH,
+    before_right,
+    blend,
+    middle_right,
+    steady_text,
+    tag_left,
+    tyre_right,
+)
 
 # On Linux the desktop's default font may be a monospace or icon font; prefer a plain
 # sans-serif one. Qt uses the first that is installed. Windows and macOS keep their
@@ -300,6 +310,29 @@ def draw_rule(painter, x, right, line, color, outline):
     painter.restore()
 
 
+TYRE_RING = 0.13  # a tire compound ring's line, in font sizes
+TYRE_LETTER = 0.78  # its letter's size, as a share of the line's
+TYRE_INSIDE = (0, 0, 0, 150)  # behind the letter, so it reads on any background
+
+
+def draw_tyre(painter, right, line, outline):
+    """A tire compound as in F1: its letter in a ring of its colour, the column ending at
+    `right`, centred on the line's text."""
+    size = line.size
+    radius = (TYRE_WIDTH * size - TYRE_RING * size) / 2
+    centre = QPointF(right - TYRE_WIDTH * size / 2, line.baseline - 0.36 * size)
+    color = QColor(line.tyre_color or '#ffffff')
+    painter.save()
+    painter.setRenderHint(QPainter.Antialiasing)
+    painter.setPen(QPen(color, max(1.5, TYRE_RING * size)))
+    painter.setBrush(QColor(*TYRE_INSIDE))
+    painter.drawEllipse(centre, radius, radius)
+    painter.restore()
+    letter = max(6, round(size * TYRE_LETTER))
+    x = centre.x() - text_advance(line.tyre, letter) / 2
+    outlined_text(painter, x, centre.y() + 0.36 * letter, line.tyre, letter, color, outline)
+
+
 def centred_x(line, width, margin):
     """Where a line starts in the middle of a box `width` wide, between its margins."""
     steady = text_advance(steady_text((line.slot or line.text) + line.tail), line.size)
@@ -321,7 +354,7 @@ def draw_hud(painter, lines, theme, scale=None, left=0, width=None, centre=False
     outline = _rgba(theme.outline_color)
     margin = round(MARGIN * (theme.scale if scale is None else scale))
     x = left + margin
-    middle_end = before_end = tag_start = None
+    middle_end = before_end = tag_start = tyre_end = None
     if width is not None:
         # With digits as zeros, so that the columns stay put as a timer runs.
         def steady_advance(text, size):
@@ -329,6 +362,7 @@ def draw_hud(painter, lines, theme, scale=None, left=0, width=None, centre=False
 
         middle_end = middle_right(lines, width, margin, steady_advance)
         before_end = before_right(lines, middle_end, steady_advance)
+        tyre_end = tyre_right(lines, middle_end, steady_advance)
         tag_start = tag_left(lines, before_end, steady_advance)
     for line in lines:
         text_x = centred_x(line, width, margin) if (centre or line.centred) and width is not None else x
@@ -366,6 +400,8 @@ def draw_hud(painter, lines, theme, scale=None, left=0, width=None, centre=False
                 _pick(colors, line.middle_color),
                 outline,
             )
+        if line.tyre and tyre_end is not None:
+            draw_tyre(painter, tyre_end, line, outline)
         if line.tag and tag_start is not None:
             tag_color = _pick(colors, line.tag_color or line.color)
             outlined_text(painter, tag_start, line.baseline, line.tag, line.size, tag_color, outline)

@@ -1318,3 +1318,16 @@ its "Recent changes".
   fading only to 75 % (from 40 %) the further off the car is; a 2 px dark outline (from 1 px); and a car not yet
   counting has a light grey arrow (`#d3d9e2`, from the darker grey of its car). The shape is worked out in
   `race.radar_arrow`, so it is tested. Seen offscreen side by side with the old; not yet in a race.
+- 2026-11-12: Tire compounds in the lap times, asked for by the user, and the lap times' columns as options. From
+  TSU's metadata (read offline on the Windows PC): an event has 1 to 3 compounds (`TireWearSettings`
+  `MinTireCompoundCount` 1, `MaxTireCompoundCount` 3, `BitsForTireCompound` 2), the count is
+  `EventSettings.tireWear.tireCompoundCount` (reached from a car's `CarStateUpdater.m_eventSettings`, read once an
+  event), and each car's compound is taken as the lowest 2 bits of `VehicleState.tireCompoundAndChangeTicks`,
+  the tire change's ticks above them (2400 at the end of the 12 s change seen is 600 ticks x 4). The tire change bar
+  reads it so too: the same for compound 0, and no longer 0 for others. Each driver's compound is a letter in a
+  ring of its colour, as in F1 (`compound_mark`): one compound a darker yellow M; two S red and H white; three S,
+  M yellow, H; 4 and 5 as the user chose them, should TSU allow more. The ring is a column between the lap number
+  and the best lap. The settings window turns the flag, lap number, tire, best lap and current lap columns on and
+  off (`lap_columns`, all on by default); without the best lap the current one takes its place. Tests. Seen
+  offscreen; not yet in the game: whether index 0 is the softest (`SOFTEST_FIRST`), the bits, and whether other
+  cars' compounds come through online.

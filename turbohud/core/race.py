@@ -36,6 +36,7 @@ from turbohud.core.class_registry import class_colors, class_tag, paler, shown_c
 from turbohud.core.flags import flag_code, flag_text
 from turbohud.core.hud import Row, Sectors, blend, clock, local_time_rows
 from turbohud.core.il2cpp import ARRAY_DATA, ARRAY_LENGTH, LIST_ITEMS, SIMPLE_TYPES, NotFound, ReadError
+from turbohud.core.settings import LAP_COLUMNS
 from turbohud.core.trackmap import OFF_TRACK_LAYERS, off_the_track
 
 log = logging.getLogger(__name__)
@@ -84,6 +85,7 @@ class LapState:
     spectating: bool = False  # the player only watches: no car, the lap counts are the leader's
     on_a_track: bool = True  # a race mode (a circuit, or A to B): False in arena modes, without a map
     shortcut_seconds: float = 0.0  # how long TSU slows a car for a shortcut here (0: not known, or off)
+    compounds: int | None = None  # the event's tire compounds (tireCompoundCount); None: not read
 
     @property
     def lap_times(self):
@@ -273,7 +275,13 @@ def _passed(times, k):
 
 
 MAX_TIRE_WEAR = 5_760_000  # TS.TireWearSettings.MaxTireWear (a constant): worn out
-TIRE_CHANGE_END = 2400  # where TS.VehicleState.tireCompoundAndChangeTicks ends a tire change
+# TS.VehicleState.tireCompoundAndChangeTicks holds the car's tire compound in its lowest bits
+# (TS.TireWearSettings.BitsForTireCompound = 2, from the game's metadata, 2026-11-12) and the
+# tire change's ticks above them: a change of 600 ticks (12 s) counted to 2400 with compound 0.
+COMPOUND_BITS = 2
+COMPOUND_MASK = (1 << COMPOUND_BITS) - 1
+TIRE_CHANGE_END = 2400 >> COMPOUND_BITS  # ticks: where a tire change ends (seen in the stops of 2026-11-05)
+MAX_COMPOUNDS = 3  # TS.TireWearSettings.MaxTireCompoundCount: an event has 1 to 3 compounds
 KMH_PER_MPH = 1.609344
 SPEED_TO_KMH = 3.6  # m_forwardSpeed is taken as metres per second (not yet compared in game)
 PER_LAP_LAPS = 3  # laps averaged for fuel and tire use per lap
@@ -475,6 +483,7 @@ class PlayerState:
     wrecked: bool = False  # it has lost all its hit points (only where damage is on)
     tag: str = ''  # the clan tag (TS.PlayerProfile.teamTag: 'FTR' for [FTR]); it may name a class
     car: str = ''  # the car's name (TS.VehicleProperties.name): the class of a driver without a tag
+    compound: int | None = None  # its tire compound's index (tireCompoundAndChangeTicks); None: not read
 
     @functools.cached_property
     def passed(self):
@@ -534,6 +543,7 @@ class LapReader:
         self._laps = {}  # finished lap object -> its checkpoint times
         self._tags = {}  # profile object -> (its clan tag, when read): see _kept_text
         self._shortcut_for, self._shortcut_length = None, 0.0  # see _shortcut_seconds
+        self._compounds_for, self._compounds = None, None  # see _read_compounds
         self._cars = {}  # vehicle object -> (its car's name, when read)
         self._gates = None  # checkpoint lines, ((x1, z1), (x2, z2)) each
         self._sector_lines = ()  # the checkpoints of type Sector (TS.CheckpointType), read with the lines
@@ -980,6 +990,7 @@ class LapReader:
             draft=self._draft_settings(),
             on_a_track=self._on_a_track(),
             shortcut_seconds=self._shortcut_seconds(state_object),
+            compounds=self._compounds,
         )
         live = state.live_fuel_trend(self._fuel_marks, self._fuel_history)
         if live is not None:
@@ -1048,6 +1059,7 @@ class LapReader:
             gates=gates,
             players=players,
             spectating=True,
+            compounds=self._compounds,
             on_a_track=self._on_a_track(),
         )
 
@@ -1113,11 +1125,10 @@ class LapReader:
         )
 
     def _tire_change(self, state):
-        """How far a tire change has come, 0 to 1. tireCompoundAndChangeTicks counted from 0
-        to TIRE_CHANGE_END in the stops seen (12 s), with the compound in the same field.
-        Above that it holds another compound's bits, not seen yet: 0, so the bar stays true."""
+        """How far a tire change has come, 0 to 1: the ticks of tireCompoundAndChangeTicks
+        (above the compound's bits) against TIRE_CHANGE_END."""
         try:
-            ticks = self._number('vstate', state, 'tireCompoundAndChangeTicks')
+            ticks = self._number('vstate', state, 'tireCompoundAndChangeTicks') >> COMPOUND_BITS
         except (NotFound, ReadError):
             return 0.0
         return ticks / TIRE_CHANGE_END if 0 < ticks <= TIRE_CHANGE_END else 0.0
@@ -1304,7 +1315,7 @@ class LapReader:
             if passed:
                 checkpoints.append(passed)
         in_pit, position, velocity, forward, draft_drag = False, None, None, None, None
-        forward_speed = wheel_grips = wheel_layers = spawns = None
+        forward_speed = wheel_grips = wheel_layers = spawns = compound = None
         car = ''
         shortcut = jump_start = wrecked = False
         try:
@@ -1329,6 +1340,10 @@ class LapReader:
                     wrecked = most > 0 and self._number('vstate', state, 'hitPoints') <= 0
                 except (NotFound, ReadError):
                     pass
+                try:
+                    compound = self._number('vstate', state, 'tireCompoundAndChangeTicks') & COMPOUND_MASK
+                except (NotFound, ReadError):
+                    pass
                 spawns = self._number('vstate', state, 'spawnCount')
                 # Seen 2026-11-11 for half a second on the player's car at a start.
                 jump_start = bool(memory.u8(state + self._offset('vstate', state, 'startPenaltyOn')))
@@ -1344,6 +1359,7 @@ class LapReader:
                 except (NotFound, ReadError):
                     pass
                 forward_speed, wheel_grips, wheel_layers = self._wheels(updater)
+                self._read_compounds(updater)
                 try:
                     # Found 2026-11-11 (a race recorded with shortcuts taken): no limit (the
                     # largest float) normally, a speed of about 28 while TSU slows the car.
@@ -1378,7 +1394,23 @@ class LapReader:
             shortcut=shortcut,
             jump_start=jump_start,
             wrecked=wrecked,
+            compound=compound,
         )
+
+    def _read_compounds(self, updater):
+        """The event's number of tire compounds (TS.EventSettings.tireWear.tireCompoundCount,
+        1 to 3, found in the game's metadata on 2026-11-12), from a car's updater: read once an
+        event, kept in self._compounds."""
+        try:
+            settings = self._ref('updater', updater, 'm_eventSettings')
+            if settings == self._compounds_for:
+                return
+            self._compounds_for, self._compounds = settings, None
+            tires = self._ref('event settings', settings, 'tireWear')
+            count = self._number('tire settings', tires, 'tireCompoundCount')
+        except (NotFound, ReadError):
+            return
+        self._compounds = count if 0 < count <= MAX_COMPOUNDS else None
 
     def _wheels(self, updater):
         """(speed along the car, the grip under each of its four wheels, those surfaces'
@@ -1885,6 +1917,7 @@ def race_sections(
     class_tags=(),
     shortcuts=None,
     clan_tags=True,
+    columns=LAP_COLUMNS,
 ):
     """{section name: rows} for a live-reader snapshot (see core.hud.RACE_SECTIONS); a
     section with nothing to show has no rows. Nothing before the grid: in the menus, the
@@ -1902,7 +1935,7 @@ def race_sections(
         return {}
     state = snapshot.state
     if state.spectating:
-        return _watching_sections(snapshot, now, standings, track_map, class_tags, clan_tags)
+        return _watching_sections(snapshot, now, standings, track_map, class_tags, clan_tags, columns)
     if state.finished or state.laps_to_finish and state.laps_completed >= state.laps_to_finish:
         # Finished: the lap sections say so, and the rest stays (the player list above
         # all) while the others race on, until the race is over and the clock stops.
@@ -1935,7 +1968,15 @@ def race_sections(
         cuts = shortcuts.left(state) if shortcuts is not None else None
         jumped = shortcuts.jump_starts(state) if shortcuts is not None else frozenset()
         sections['laptimes'] = lap_times_rows(
-            state.players, order, clock_now(snapshot, now), class_tags, cuts, jumped, clan_tags
+            state.players,
+            order,
+            clock_now(snapshot, now),
+            class_tags,
+            cuts,
+            jumped,
+            clan_tags,
+            columns,
+            state.compounds,
         )
         rows = shortcut_rows(state, cuts or {}, jumped)
         if rows:
@@ -1974,7 +2015,9 @@ def race_sections(
     return sections
 
 
-def _watching_sections(snapshot, now, standings, track_map, class_tags=(), clan_tags=True):
+def _watching_sections(
+    snapshot, now, standings, track_map, class_tags=(), clan_tags=True, columns=LAP_COLUMNS
+):
     """What a spectator sees: the race, with the leader's lap, the player list with the
     gaps to the leader, the lap times and the map; nothing about a car of their own."""
     state = snapshot.state
@@ -1983,7 +2026,13 @@ def _watching_sections(snapshot, now, standings, track_map, class_tags=(), clan_
         order = standings.order(state.players, now) if standings is not None else ranked(state.players)
         sections['players'] = players_rows(state.players, order, state.clock, state.gates, watching=True)
         sections['laptimes'] = lap_times_rows(
-            state.players, order, clock_now(snapshot, now), class_tags, clan_tags=clan_tags
+            state.players,
+            order,
+            clock_now(snapshot, now),
+            class_tags,
+            clan_tags=clan_tags,
+            columns=columns,
+            compounds=state.compounds,
         )
         if track_map is not None and state.on_a_track:
             shown = track_map.update(state, order)
@@ -2587,6 +2636,33 @@ def shortcut_rows(state, left, jumped=frozenset()):
 
 
 MAX_TAG_SHOWN = 5  # characters of a clan tag in the lap times
+# The lap times' tire column (asked for by the user on 2026-11-12, as in F1): each compound a
+# letter in a ring of its colour, softest first, for an event with that many compounds. With one
+# compound it is a darker yellow medium. TSU allows 3; 4 and 5 are as the user chose them.
+SOFT, MEDIUM, HARD = '#e8352c', '#ffd12e', '#f2f2f2'
+COMPOUND_MARKS = {
+    1: (('M', '#d4a20f'),),
+    2: (('S', SOFT), ('H', HARD)),
+    3: (('S', SOFT), ('M', MEDIUM), ('H', HARD)),
+    4: (('U', '#9b59d0'), ('S', SOFT), ('M', MEDIUM), ('H', HARD)),
+    5: (('X', '#ff6fb5'), ('U', '#9b59d0'), ('S', SOFT), ('M', MEDIUM), ('H', HARD)),
+}
+SOFTEST_FIRST = True  # compound index 0 is the softest (to be checked in the game)
+
+
+def compound_mark(index, count):
+    """(letter, '#rrggbb') for compound `index` of an event with `count` compounds; None
+    where the index is not known. A count not known, or too small for the index, is taken
+    as the fewest that hold it."""
+    if index is None or index < 0:
+        return None
+    count = max(count or 1, index + 1)
+    marks = COMPOUND_MARKS.get(count)
+    if marks is None:
+        return None
+    return marks[index] if SOFTEST_FIRST else marks[count - 1 - index]
+
+
 OTHER_CLASS = 'Other'  # in a multi-class race, the drivers whose clan tag names no class
 # The proximity radar's colours for the classes (asked for by the user on 2026-11-11): none the radar
 # already uses (red beside, yellow closing in, grey, white for the player, cyan for the slipstream).
@@ -2649,7 +2725,15 @@ def by_class(order, classes):
 
 
 def lap_times_rows(
-    players, order=None, clock=0, class_tags=(), cuts=None, jumped=frozenset(), clan_tags=False
+    players,
+    order=None,
+    clock=0,
+    class_tags=(),
+    cuts=None,
+    jumped=frozenset(),
+    clan_tags=False,
+    columns=LAP_COLUMNS,
+    compounds=None,
 ):
     """The lap times list: a heading, then each driver in race order with flag and name,
     their best lap and the running time of their current lap ('Fin' once finished) at
@@ -2665,7 +2749,11 @@ def lap_times_rows(
     In a multi-class race each class has its colour (class_colors, asked for by the user on
     2026-11-12): its line, and the tag column, which then shows each driver's class: their
     own clan tag, or paler the class their car gives them (car_classes). A driver of no class
-    keeps their clan tag there, with `clan_tags`, in the text's colour."""
+    keeps their clan tag there, with `clan_tags`, in the text's colour.
+
+    `columns`: those of LAP_COLUMNS shown (asked for by the user on 2026-11-12): the flag, the
+    lap number, the tire compound (compound_mark, of an event with `compounds`), the best lap
+    and the current lap (or CUT, PIT); without the best lap, the current lap takes its place."""
     order = list(ranked(players) if order is None else order)
     classes = car_classes(order, class_tags)
     places = None
@@ -2734,9 +2822,35 @@ def lap_times_rows(
                 rule=rule,
                 rule_color=colors.get(group, '') if rule else '',
                 **_tag_column(player, group, colors, clan_tags),
+                **_tyre_column(player, compounds),
             )
         )
-    return rows
+    return [_only_columns(row, columns) for row in rows]
+
+
+def _tyre_column(player, compounds):
+    """The tire column's letter and colour for `player` (compound_mark); nothing if unknown."""
+    mark = compound_mark(player.compound, compounds)
+    return {'tyre': mark[0], 'tyre_color': mark[1]} if mark else {}
+
+
+def _only_columns(row, columns):
+    """`row` of the lap times without the columns not in `columns` (LAP_COLUMNS)."""
+    changes = {}
+    if 'flag' not in columns:
+        changes['flag'] = ''
+    if 'lap' not in columns:
+        changes['before'] = ''
+    if 'tyre' not in columns:
+        changes['tyre'] = ''
+    best, current = 'best' in columns, 'current' in columns
+    if not best and current:  # the current lap in the best lap's place
+        changes.update(middle=row.right, middle_color=row.right_color, right='')
+    elif not best:
+        changes.update(middle='', right='')
+    elif not current:
+        changes['right'] = ''
+    return dataclasses.replace(row, **changes) if changes else row
 
 
 def _class_name(group):

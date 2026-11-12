@@ -71,6 +71,19 @@ OLD_CLASS_TAGS = (
 )  # fmt: skip
 
 
+# The lap times' columns one can turn off (asked for by the user on 2026-11-12): the flag, the
+# lap number, the tire compound, the best lap and the current lap. The settings file keeps those
+# shown, in this order.
+LAP_COLUMNS = ('flag', 'lap', 'tyre', 'best', 'current')
+
+
+def _lap_columns(value):
+    """The lap times' columns shown, from the settings file: all where there is no list."""
+    if not isinstance(value, list):
+        return LAP_COLUMNS
+    return tuple(column for column in LAP_COLUMNS if column in value)
+
+
 def _class_tags(value):
     """The class tags from the settings file, or CLASS_TAGS where there are none."""
     if not isinstance(value, list):
@@ -95,6 +108,7 @@ class Settings:
     clan_tags: bool = True  # the lap times show each driver's clan tag, outside a multi-class race
     classes: bool = True  # the lap times grouped by class, from the drivers' clan tags (see class_tags)
     class_tags: tuple = CLASS_TAGS  # the clan tags that name a class (upper case, without brackets)
+    lap_columns: tuple = LAP_COLUMNS  # the lap times' columns shown (see LAP_COLUMNS)
     layout_version: int = 1  # how to read the section sizes: LAYOUT_VERSION is the latest
     presets: dict = field(default_factory=dict)  # number (one of PRESETS) -> a kept `sections`
     blue_seconds: float = 2.0  # how far behind a car about to lap the player shows the blue flag
@@ -258,6 +272,7 @@ def load_settings(path):
         classes=data.get('classes') is not False,
         clan_tags=data.get('clan_tags') is not False,
         class_tags=_class_tags(data.get('class_tags')),
+        lap_columns=_lap_columns(data.get('lap_columns')),
         layout_version=_layout_version(data.get('layout_version')),
         presets=_presets(data.get('presets'), data.get('backdrop') is True),
         blue_seconds=_seconds(data.get('blue_seconds'), Settings.blue_seconds, BLUE_SECONDS),
@@ -291,6 +306,7 @@ def save_settings(path, settings):
         'yellow_flags': settings.yellow_flags,
         'classes': settings.classes,
         'clan_tags': settings.clan_tags,
+        'lap_columns': list(settings.lap_columns),
         'layout_version': settings.layout_version,
         'blue_seconds': settings.blue_seconds,
         'radar_seconds': settings.radar_seconds,
