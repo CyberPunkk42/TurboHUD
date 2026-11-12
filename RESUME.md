@@ -79,6 +79,13 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-12: The tests crashed Python on Windows after the glyph images came in (fix/lap-list-frame-cost): Qt's
+  offscreen platform there has no fonts, and asking its fallback font's glyphs their font's name crashed (segmentation
+  fault, also with the layout alive). The real Windows platform drew the running times fine every time. Now texts
+  are composed from glyph images only where Qt has fonts (`painter.have_fonts`), else filled whole as before; and on
+  Windows the Qt tests give offscreen the system's fonts (`QT_QPA_FONTDIR`). With that, the three painter and
+  settings window tests that always failed on Windows (fonts) pass: 6 fail there now, all Unix-only (sockets, the
+  controller, a build name). A test for the fallback.
 - 2026-11-12: Build 2026.11.12.6 for the tester (`releases/TurboHUD-2026.11.12.6-macos-arm64.dmg`, 32.5 MB, macOS 27,
   `--any-macos`, built with `.buildtools/build-venv`), asked for by the user: `main` with the stutter fixes of .5 and
   the yellow flag for a car left standing (no flag after a minute under 29 km/h). It replaces .5.

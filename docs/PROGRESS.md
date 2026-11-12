@@ -1413,3 +1413,10 @@ its "Recent changes".
   checked for the privacy terms, none, and the packed race module checked to hold the yellow flag fix. The test
   sheet names it, lists the yellow flag change and asks about it online. Tests: 999 of 1000 pass on `main`;
   `test_the_panel_stays_compact_with_linux_sized_text` fails on the Mac, as before.
+- 2026-11-12: The tests crashed Python on Windows after the glyph images came in (fix/lap-list-frame-cost): Qt's
+  offscreen platform there has no fonts, and asking its fallback font's glyphs their font's name crashed (segmentation
+  fault, also with the layout alive). The real Windows platform drew the running times fine every time. Now texts
+  are composed from glyph images only where Qt has fonts (`painter.have_fonts`), else filled whole as before; and on
+  Windows the Qt tests give offscreen the system's fonts (`QT_QPA_FONTDIR`). With that, the three painter and
+  settings window tests that always failed on Windows (fonts) pass: 6 fail there now, all Unix-only (sockets, the
+  controller, a build name). A test for the fallback.

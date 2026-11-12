@@ -7,6 +7,7 @@ from PySide6.QtCore import QPointF, QRectF, Qt
 from PySide6.QtGui import (
     QColor,
     QFont,
+    QFontDatabase,
     QFontMetricsF,
     QImage,
     QPainter,
@@ -123,7 +124,7 @@ def text_image(text, size, color, outline, ratio):
     if found is not None:
         _images.move_to_end(key)
         return found
-    found = composed_image(text, size, color, outline, ratio) if composable(text) else None
+    found = composed_image(text, size, color, outline, ratio) if composable(text) and have_fonts() else None
     found = found or _filled_image(text, size, color, outline, ratio)
     _images[key] = found
     _images_size += found[0].sizeInBytes()
@@ -162,6 +163,14 @@ GLYPH_PHASES = 64  # places kept for a glyph within a device pixel
 PIECES_LIMIT = 16 * 1024 * 1024  # bytes of glyph images kept
 _pieces = OrderedDict()  # (font, glyph, size, ratio, phase, outline?) -> (image, left, top) or None
 _pieces_size = 0
+
+
+@lru_cache(maxsize=1)
+def have_fonts():
+    """Whether Qt found any font. Without one (Qt's offscreen platform on Windows, as the
+    tests run it) the fallback font's glyphs crash Python when asked their font's name
+    (seen 2026-11-12), so texts are then filled whole as before composed_image."""
+    return bool(QFontDatabase.families())
 
 
 def composable(text):
