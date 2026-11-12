@@ -1485,3 +1485,12 @@ its "Recent changes".
   Ctrl+Shift+L; until then Ctrl+Shift+F12 or the icon's Move mode.
 - 2026-11-12: `user_logs/` is ignored, asked for by the user: testers' logs put there to look at stay on the PC
   (they hold player names and paths), never on GitHub.
+- 2026-11-12: Lighter race reads, from a tester's log (macOS, build 2026.11.12.6, stutter mostly while racing):
+  his HUD drew steadily, but each race read grew during the evening from 23 to about 82 reads of TSU's memory
+  (3 to 13 ms), ten a second through CrossOver's Wine, which TSU needs too. Now other cars' slowly changing state
+  (pit area, hit points, respawns, tire compound, the surfaces under their wheels) is read once a second
+  (`FULL_READ_EVERY`, `LapReader.plan_read`); positions, speeds, laps and the player's own car every read, and a
+  car keeps its last slow state in between. The page cache keeps a page plan per kind of read (`clear(kind)`),
+  so the full read fetches its extra pages in one go and the quick reads do not fetch them. A PIT, wreck or
+  respawn of another car shows up to a second later. Tests. Not yet measured in a race (TSU was not running);
+  backlog item 0.

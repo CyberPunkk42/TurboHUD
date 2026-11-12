@@ -12,6 +12,12 @@ again only the sections that changed, and running times and gaps come from kept 
 from about 0.9 ms at 2x; a few edge pixels differ a little). In build 2026.11.12.6 for the tester. Left:
 his log's drawing share (was 20 to 24%), and ask whether the stutter is while
 driving or between races (the search from the last race reads for 8 to 11 s).
+His log with 2026.11.12.6 (evening of 2026-11-12, stutter mostly while racing): drawing 11 to 19%, frames steady
+at 10 a second; but each race read grew from 23 to about 82 reads of TSU's memory (3 to 13 ms), ten a second
+through Wine, and one read about every 30 s took 100 to 230 ms. Done (`fix/lighter-race-reads`): other cars'
+slow state once a second, with a page plan per kind of read. Left: measure the reads before and after in a race;
+what the slow read every 30 s is; TSU's log not found in his bottle ("not known"), so between races it searches
+every 10 s for 10 s (Spanish Windows in the bottle?); the search every 10 s after a race could rely on quick looks.
 
 ## 1. Windows: the overlay, then live data
 Over TSU on Windows, in windowed, Fullscreen and Fullscreen Exclusive: the built app

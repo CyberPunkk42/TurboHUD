@@ -233,6 +233,24 @@ class PrefetchTests(unittest.TestCase):
         self.cache.read(0x13000, 8)
         self.assertEqual(self.memory.calls, [(16 * 4096, 4 * 4096)])
 
+    def test_each_kind_of_read_fetches_the_pages_its_last_one_used(self):
+        # A full read once a second uses more pages (other cars' slow state, 2026-11-12): the quick
+        # reads after it do not fetch them, and the next full read fetches them in one go.
+        self.cache.clear('full')
+        self.cache.read(0x10010, 8)
+        self.cache.read(0x13000, 8)
+        self.cache.clear('quick')
+        self.cache.read(0x10010, 8)
+        self.cache.clear('quick')
+        self.fetched.clear()
+        self.cache.prefetch()
+        self.assertEqual(self.fetched, [[16]])  # the quick read's page only
+        self.cache.read(0x10010, 8)
+        self.cache.clear('full')
+        self.fetched.clear()
+        self.cache.prefetch()
+        self.assertEqual(self.fetched, [[16, 19]])  # the full read's pages, in one go
+
     def test_pages_no_longer_used_are_not_fetched_again(self):
         self.cache.read(0x10010, 8)
         self.cache.clear()
