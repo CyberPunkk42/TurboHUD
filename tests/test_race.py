@@ -131,6 +131,7 @@ def build(
     surfaces=None,
     compounds=None,
     track=None,
+    replay=None,
 ):
     """A fake race; `car` is the car's (x, z) and `gates` the checkpoint lines, both
     optional like in a game without them."""
@@ -270,6 +271,62 @@ def build(
     g.put(local + 0x50, struct.pack('<i', local_index))
     g.q(local + 0x30, stats)
     g.q(state + 0x28, g.list_of([remote, local]))
+    if replay is not None:
+        # A replay (`replay`: paused or not): no active server and nobody driving; the race is
+        # under a TS.EventRecordingPlayer, its camera following the local car's player.
+        g.q(services + 0x10, 0)
+        g.put(local + 0x50, struct.pack('<i', -1))
+        g.klass('TS', 'ClientEventController', [('m_client', 0x60, False)], parent=base_controller)
+        replay_controller = g.alloc_obj(
+            g.klass('TS', 'EventRecordingController', [('m_recording', 0x60, False)], parent=base_controller)
+        )
+        g.q(replay_controller + 0x48, state)
+        runner = g.alloc_obj(
+            g.klass(
+                'TS',
+                'EventRunner',
+                [
+                    ('m_eventController', 0x10, False),
+                    ('m_state', 0x18, False),
+                    ('m_raceCameras', 0x20, False),
+                ],
+            )
+        )
+        g.q(runner + 0x10, replay_controller)
+        g.q(runner + 0x18, state)
+        chooser = g.alloc_obj(g.klass('TS', 'TargetChooser', [('m_target', 0x10, False)]))
+        g.q(chooser + 0x10, local)
+        camera = g.alloc_obj(g.klass('TS', 'RaceCamera', [('m_targetChooser', 0x10, False)]))
+        g.q(camera + 0x10, chooser)
+        cameras = g.alloc_obj(g.klass('TS', 'RaceCameras', [('m_cameras', 0x10, False)]))
+        g.q(cameras + 0x10, g.list_of([camera]))
+        g.q(runner + 0x20, cameras)
+        recording = g.alloc_obj(
+            g.klass(
+                'TS',
+                'EventRecording',
+                [('m_currentTick', 0x10, False), ('m_lastQuantizedVehicleStates', 0x18, False)],
+            )
+        )
+        g.put(recording + 0x10, struct.pack('<i', 100))
+        g.q(recording + 0x18, 0)
+        player_class_r = g.klass(
+            'TS',
+            'EventRecordingPlayer',
+            [
+                ('m_recording', 0x10, False),
+                ('m_eventRunner', 0x18, False),
+                ('m_paused', 0x20, False, 0x02),
+                ('m_exiting', 0x21, False, 0x02),
+            ],
+        )
+        g.alloc_obj(player_class_r)  # one of an earlier replay: nothing filled in
+        replay_player = g.alloc_obj(player_class_r)
+        g.q(replay_player + 0x10, recording)
+        g.q(replay_player + 0x18, runner)
+        g.put(replay_player + 0x20, bytes([replay == 'paused', 0]))
+        g.replay_player, g.chooser = replay_player, chooser
+        g.replay_state_times = state + 0x58  # where the fake keeps the race clock's times
     if name is not None:
         info = g.alloc_obj(g.klass('TS', 'EventPlayerInfo', [('m_profile', 0x10, False)]))
         profile = g.alloc_obj(
@@ -2961,6 +3018,100 @@ class WatchingTests(unittest.TestCase):
         rows = race.players_rows((first, me), None, 11_000)
         self.assertEqual(rows[race.RELATIVE_AHEAD].middle, '')  # me, in the middle row
         self.assertEqual(rows[race.RELATIVE_AHEAD - 1].middle_color, 'behind')
+
+
+class ReplayTests(unittest.TestCase):
+    """TurboHUD in TSU's replays (asked for by the user on 2026-11-12): the race under the replay
+    player, the driver its camera follows as "you", and the HUD kept while it stands paused."""
+
+    def build(self, replay='playing', clock=None):
+        return build(
+            [10_000, 944_595],
+            laps_completed=1,
+            clock=1_000_000,
+            limit=0,
+            name='Followed',
+            car=(5.0, 6.0),
+            replay=replay,
+            clock_fn=clock,
+        )
+
+    def test_a_replay_is_found_and_its_camera_driver_is_you(self):
+        reader = self.build()
+        state = reader.read()
+        self.assertTrue(state.replay)
+        self.assertFalse(state.paused)
+        self.assertFalse(state.spectating)
+        me = next(p for p in state.players if p.local)
+        self.assertEqual(me.name, 'Followed')
+        self.assertEqual(state.laps_completed, 1)  # the followed driver's own laps
+        self.assertEqual(reader._replay, reader.game.replay_player)  # not the earlier one
+
+    def test_one_pass_where_the_memory_searches_several_values(self):
+        reader = self.build()
+        game, calls = reader.game, []
+
+        def any_of(values, address=None):
+            calls.append(values)
+            return sorted((hit, value) for value in values for hit in game.find_pointers(value))
+
+        reader.il.memory.find_pointers_any = any_of
+        self.assertTrue(reader.read().replay)
+        self.assertEqual(len(calls), 1)  # the online races and the replays in one pass
+
+    def test_the_tooltip_says_replay(self):
+        reader = self.build(replay='paused')
+        snapshot = racing(reader.read(), moved_at=0.0)
+        self.assertEqual(race.status_text(snapshot), 'replay, paused')
+
+    def test_found_again_without_a_search(self):
+        reader = self.build()
+        reader.read()
+        searches = reader.game.searches
+        reader.read()
+        self.assertEqual(reader.game.searches, searches)
+
+    def test_no_driver_followed_is_watched_as_a_spectator(self):
+        reader = self.build()
+        reader.game.q(reader.game.chooser + 0x10, 0)
+        state = reader.read()
+        self.assertTrue(state.replay)
+        self.assertTrue(state.spectating)
+        self.assertFalse(any(p.local for p in state.players))
+
+    def test_paused_keeps_the_hud(self):
+        reader = self.build(replay='paused')
+        state = reader.read()
+        self.assertTrue(state.paused)
+        snapshot = race.Snapshot(race.RACING, state, moved_at=0.0)
+        self.assertTrue(race.on_grid(snapshot, now=1000.0))  # the clock stood long: still shown
+        playing = race.Snapshot(race.RACING, dataclasses.replace(state, paused=False), moved_at=0.0)
+        self.assertFalse(race.on_grid(playing, now=1000.0))
+
+    def test_a_closing_replay_is_let_go(self):
+        reader = self.build()
+        reader.read()
+        reader.game.put(reader.game.replay_player + 0x21, bytes([1]))  # m_exiting
+        with self.assertRaises((race.NotFound, OSError)):
+            reader.read()
+        self.assertIsNone(reader._replay)
+
+    def test_a_replay_standing_unpaused_counts_as_closed(self):
+        now = [0.0]
+        reader = self.build(clock=lambda: now[0])
+        reader.read()
+        now[0] = race.REPLAY_STILL + 1  # the clock has not moved, and no pause
+        with self.assertRaises((race.NotFound, OSError)):
+            reader.read()
+        self.assertIsNone(reader._replay)
+        now[0] += 60  # a later search finds it again, still standing: not taken again
+        with self.assertRaises((race.NotFound, OSError)):
+            reader.read()
+        self.assertIsNone(reader._replay)
+        times = reader.game.replay_state_times
+        reader.game.put(times + race.TIMES_NOW, struct.pack('<i', 1_100_000))  # it plays on
+        now[0] += 60
+        self.assertTrue(reader.read().replay)
 
 
 if __name__ == '__main__':

@@ -247,9 +247,11 @@ def search(
     With `share` below 1, it pauses after each piece so that reading takes about that
     share of the time (0.5: twice as long, the rest left to the game). With `first` (a
     multiple of `align`), it begins at that address and comes round to it, so what lies
-    just above is found at once."""
-    pattern = struct.pack('<Q', value)
-    overlap = len(pattern) - 1
+    just above is found at once. With several values (a tuple), one pass looks for all of
+    them and gives (address, value): reading the memory is what takes the time."""
+    several = isinstance(value, tuple)
+    patterns = {struct.pack('<Q', v): v for v in (value if several else (value,))}
+    overlap = 7
     for start, end, *_ in sorted(regions) if first is None else starting_at(regions, first):
         address = start
         while address < end:
@@ -260,15 +262,17 @@ def search(
             except OSError:
                 data = b''
             hits = []
-            index = data.find(pattern)
-            while index != -1:
-                if index < chunk and (address + index) % align == 0:
-                    hits.append(address + index)
-                index = data.find(pattern, index + 1)
+            for pattern, found in patterns.items():
+                index = data.find(pattern)
+                while index != -1:
+                    if index < chunk and (address + index) % align == 0:
+                        hits.append((address + index, found))
+                    index = data.find(pattern, index + 1)
+            hits.sort()
             address += chunk
             if share < 1.0:
                 sleep((clock() - began) * (1.0 - share) / share)
-            yield from hits
+            yield from hits if several else (hit for hit, _value in hits)
 
 
 def under_wine():
@@ -523,6 +527,9 @@ def connect(name='TSU.exe'):
             find_pointers=lambda value: paced(data(), value),
             searcher=paced,
             find_pointers_from=lambda value, address: paced(data(), value, search_start(address)),
+            find_pointers_any=lambda values, address=None: paced(
+                data(), tuple(values), None if address is None else search_start(address)
+            ),
             find_pointers_near=lambda value, address: paced(near(data(), address), value),
         )
         il2cpp = Il2Cpp(memory, metadata, base)

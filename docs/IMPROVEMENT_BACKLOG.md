@@ -128,6 +128,15 @@ still to see on a track with a shortcut on tarmac, and whether SHORT_LAP (0.985)
 later: an arrow for the direction of travel, the pit lane, a hotlap alone (the map
 then needs one whole lap of your own first).
 
+## 7. Replays: check in TSU, then the Mac
+Built 2026-11-12 (`feature/replays`, asked for by the user): the race under TSU's replay player
+(`TS.EventRecordingPlayer`), the driver its camera follows as "you", positions from the recording, and the HUD
+kept while a replay is paused. Still to see in a replay: every section with the followed driver (lap times, player
+list, fuel, tires, health, track map, flags, shortcuts, jump starts, pit times), switching drivers, pausing, and
+the end of a replay. Left: on the Mac the Rust reader searches one value a pass, so a replay costs a second pass
+there when no online race is found (teach it several values, as `winmemory.search` does); and the Mac's check of
+TSU's log may say no event runs during a replay, which would stop the search there (to try).
+
 ## Design notes for the real overlay
 - Move mode is a short, deliberate step: while the overlay takes the mouse, the game gets
   no mouse input under it. On the Mac, end move mode as soon as the game becomes active
