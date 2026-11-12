@@ -79,6 +79,10 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-12: The quick start, after the user's review: a short "What it shows" part, every section in a line or
+  two under the move-mode panel's headings (Timing, Car, Race, Other); and the AMD part says it plainly: AMD Software
+  occupies Ctrl+Shift+L, so remove that binding in AMD Software (Settings, Hotkeys), restart TurboHUD, then use
+  Ctrl+Shift+L; until then Ctrl+Shift+F12 or the icon's Move mode.
 - 2026-11-12: A quick start guide and a second move-mode key, asked for by the user (AMD Software takes
   Ctrl+Shift+L, and Windows then refuses it to TurboHUD: error 1409). `QUICK_START.md`, one page for players: install,
   first start, placing the HUD, settings, every keyboard shortcut, the AMD clash and what to do, and what is good to

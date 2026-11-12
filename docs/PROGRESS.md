@@ -1479,3 +1479,7 @@ its "Recent changes".
   would switch move mode); where Ctrl+Shift+L is taken, the log, the icon's tooltip and the move-mode panel's hint
   name Ctrl+Shift+F12. Tests (registration with Ctrl+Shift+L taken, the note, the guide in each archive). Both keys
   were free on the Windows PC; not yet tried with AMD Software holding Ctrl+Shift+L.
+- 2026-11-12: The quick start, after the user's review: a short "What it shows" part, every section in a line or
+  two under the move-mode panel's headings (Timing, Car, Race, Other); and the AMD part says it plainly: AMD Software
+  occupies Ctrl+Shift+L, so remove that binding in AMD Software (Settings, Hotkeys), restart TurboHUD, then use
+  Ctrl+Shift+L; until then Ctrl+Shift+F12 or the icon's Move mode.
