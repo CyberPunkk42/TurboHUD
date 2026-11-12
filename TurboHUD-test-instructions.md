@@ -1,6 +1,6 @@
 # TurboHUD: test for the Mac, step by step
 
-Nov 12, 2026 · build 2026.11.12.6 · about 55 minutes
+Nov 12, 2026 · build 2026.11.12.7 · about 55 minutes
 
 Thank you for testing again. This build has everything from 2026.11.11.4 (the fixes for races joined online, yellow flags, the gliding delta bar, the tidier panel), and much more:
 
@@ -29,10 +29,19 @@ New since 2026.11.11.9:
 - **The lap times' columns are options**: the settings window turns the flag, lap number, tire, best lap and current lap columns on and off.
 - **The radar's arrows** at the top and bottom edge are bigger and clearer.
 
-New since 2026.11.12.4 (this build is 2026.11.12.6):
+New since 2026.11.12.4:
 
 - **Smoother**: TurboHUD draws its running times and gaps about 20 times faster, and redraws only the parts of the screen that changed. This is for the stutter you saw with 2026.11.12.4. The numbers look the same.
 - **A car left standing**: a car that stays slower than 29 km/h for over a minute (its driver left, or walked away) no longer keeps the yellow flag out. It counts again once it drives faster than 29 km/h.
+
+New since 2026.11.12.6 (this build is 2026.11.12.7):
+
+- **Lighter on TSU**: TurboHUD reads less from the game each time (other cars' pit, damage and tire state once a second instead of ten times). This is for the stutter while racing. A PIT or a wreck of another car can show up to a second later.
+- **The player list, new order**: the race leader on top, then the 3 cars ahead of you and the 3 behind you on the track, with you always in the 5th row. The order follows where the cars really are on the track.
+- **The lap times show each driver's last lap** (column **Last**) instead of the running time. A driver with no lap done yet shows **-**.
+- **Steadier lists**: the lap times and the player list no longer change width or move their columns when someone pits, cuts or gets a longer gap. The player list's tint covers the whole box. The delta bar's number glides instead of jumping.
+- **Replays**: TurboHUD also shows in TSU's replays, around the driver the camera follows.
+- The disk image has a **Quick Start.txt**: a one-page guide for players.
 
 This test checks those, and measures which of two ways of drawing TurboHUD costs TSU fewer frames. If you already did the measurements with 2026.11.11.4, send those too and you can skip Part 3.
 
@@ -46,7 +55,7 @@ TurboHUD only reads what the game shows. It changes nothing in TSU or in CrossOv
 
 You need:
 
-- [ ] The file `TurboHUD-2026.11.12.6-macos-arm64.dmg`
+- [ ] The file `TurboHUD-2026.11.12.7-macos-arm64.dmg`
 - [ ] TSU in CrossOver, as last time
 - [ ] The same way of reading TSU's FPS as last time
 - [ ] The Terminal app (in **Applications > Utilities**)
@@ -67,7 +76,7 @@ For fair FPS numbers: keep the Mac on its **power adapter**, with **Low Power Mo
 In our session TurboHUD ran straight from the disk image. Please install it, as below.
 
 1. If TurboHUD is running, quit it: press **Control + Shift + Q**.
-2. Double-click `TurboHUD-2026.11.12.6-macos-arm64.dmg`. A window opens.
+2. Double-click `TurboHUD-2026.11.12.7-macos-arm64.dmg`. A window opens.
 3. Drag **TurboHUD** onto **Applications**. If asked, choose **Replace**.
 4. Close the window. In Finder, click the eject button next to **TurboHUD** in the sidebar. **Always eject it**: TurboHUD must start from Applications, never from the disk image.
 5. **Don't open TurboHUD yet.** The first measurement is without it.
@@ -159,10 +168,13 @@ Always close move mode (**Control + Shift + L**) before you drive.
 11. **Your dot**: when you are right behind or beside a car, can you still see your own dot (the white ring) on the track map?
 12. **Driving backwards**: turn round and drive back a little into the sector before. Your yellow sector on the map should move back with you.
 13. **The radar**: are the cars big enough to read at a glance? When a car is a bit further behind or ahead, does an arrow show at the bottom or top edge? Is it easy to see?
-14. **The player list**: are you in the middle row, with the cars just in front of you above and those just behind below? When you lap a car or are lapped, does its name turn blue or orange?
+14. **The player list**: is the race leader on top, and are you in the 5th row, with the 3 cars just in front of you on the track above and the 3 just behind below? When you lap a car or are lapped, does its name turn blue or orange?
 15. **Tires**: is there a coloured ring with a letter next to each driver in the lap times and the player list? Which letters and colours do you see? If you change tires in the pits, does yours change?
 16. **Settings**: open **Settings…** from the TurboHUD icon's menu. Turn **Lap times: tire compound** off and on again: the ring column should go and come back. Click **Car classes...**: a sheet with every class in its colour should open.
 17. If you can, run one race on a track whose name has **(WET)**, **(RW)**, **(QW)** or **(W)**: every car should show a blue **W**.
+18. **Lap times, Last column**: does each driver show their last lap time (not a running clock)? Does a driver with no lap done show **-**?
+19. **Steady lists**: when a car goes into the pits (PIT with a timer), do the lap times and the player list keep their width, with the columns staying where they are?
+20. **Replay** (if you know how to watch a replay in TSU): open one. Does TurboHUD show, around the driver the camera follows? Switch to another driver: does the HUD follow?
 
 **✏️ Write down:** Panel buttons readable? None and Undo worked? ______
 
@@ -178,11 +190,15 @@ Always close move mode (**Control + Shift + L**) before you drive.
 
 **✏️ Write down:** The radar: cars big enough? Arrows at the edge seen, and clear? ______
 
-**✏️ Write down:** Player list: you in the middle? Blue and orange names seen? ______
+**✏️ Write down:** Player list: leader on top, you in the 5th row, cars in the right order? Blue and orange names seen? ______
 
 **✏️ Write down:** Tires: which letters and colours? Did yours change after a pit stop? A wet track tried (blue W)? ______
 
 **✏️ Write down:** Settings: the tire column went and came back? The class sheet opened? ______
+
+**✏️ Write down:** Last column right? Lists steady when a car pits? ______
+
+**✏️ Write down:** Replay: did TurboHUD show and follow the driver? (or "not tried") ______
 
 ---
 
@@ -294,9 +310,11 @@ If TSU freezes: quit it with **Stop** in Steam, as last time.
 | | CAR STOPPED AHEAD / SHORTCUT / JUMP START seen and right? | |
 | | Own yellow flag, own dot, sector following a car backwards? | |
 | | Radar: cars big enough, arrows at the edge clear? | |
-| | Player list: you in the middle, blue and orange names? | |
+| | Player list: leader on top, you 5th, right order, blue and orange names? | |
 | | Tires: letters and colours, changed after a pit stop, wet track? | |
 | | Settings: tire column off and on, class sheet? | |
+| | Lap times Last column, lists steady when a car pits? | |
+| | Replay: HUD shown, following the driver? | |
 | | Online race 1: did the HUD show? After how many seconds? | |
 | | Online races 2, 3 ...: after how many seconds? | |
 | | Online, joined during a race: did it show? | |

@@ -1494,3 +1494,11 @@ its "Recent changes".
   so the full read fetches its extra pages in one go and the quick reads do not fetch them. A PIT, wreck or
   respawn of another car shows up to a second later. Tests. Not yet measured in a race (TSU was not running);
   backlog item 0.
+- 2026-11-12: Build 2026.11.12.7 for the tester (`releases/TurboHUD-2026.11.12.7-macos-arm64.dmg`, 31.7 MB, macOS 27,
+  `--any-macos`, built with `.buildtools/build-venv`), asked for by the user: `main` with what came since .6: the
+  lighter race reads (other cars' slow state once a second), the player list in track order with the leader on
+  top, the lap times' Last column, the steady lists, full tint and gliding delta number, SC and PC classes,
+  replays, and `Quick Start.txt` in the image. Smoke test passed with TurboHUD closed; the image, its 200 files
+  and the 174 Python modules packed in the app checked for the privacy terms, none. The test sheet names it, lists
+  what is new and has checks 18 to 20 (the Last column, steady lists, a replay). Tests on `main`: 1028 of 1029
+  pass; `test_the_panel_stays_compact_with_linux_sized_text` fails on the Mac, as before.
