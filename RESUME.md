@@ -79,6 +79,19 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-12: The lap times show each driver's last lap instead of the running one, asked for by the user: the
+  column is headed Last, a finished driver shows its last lap too (before, Fin), and a driver with no lap done '-';
+  CUT, JUMP and PIT still take its place. The column's option reads "Lap times: last lap" (its key stays
+  `current`, so saved settings keep it). Tests.
+- 2026-11-12: The player list's order, reported by the user from an online event (a tester saw the wrong car
+  ahead of him): the cars around the player were sorted by gaps from checkpoint times, and a car that stopped (the
+  user standing in the pits) or one far slower put others minutes away (+-300 s) and out of order. Now each car is
+  placed on the track (`track_progress`: checkpoints passed and the share to the next, by its position, else by time
+  at its pace), the whole laps between cars taken out, and the list ordered by that (`track_offset`); the gap is how
+  long the car behind takes to where the other is at its own best lap's pace (`lap_splits`, kept until its next lap;
+  else the race's best lap), so a stopped car keeps a sensible gap. Also asked for by the user: the race's leader on
+  top with the race gap (empty where it is the player or shown below), then 3 cars ahead and 3 behind (4 and 3
+  before; the player stays in the 5th row, `ME_ROW`). Tests. Not yet seen in a race.
 - 2026-11-12: Windows build 2026.11.12.6 to share, asked for by the user: `releases/TurboHUD-2026.11.12.6-windows-x64.zip`
   (42.2 MB), from `main` with what came since .5: TurboHUD in TSU's replays, and the fixes from the user's first
   replay test (steady lap times and player list, the player list's full tint, SC and PC classes, the delta's number

@@ -2714,10 +2714,14 @@ def _pit_tail(player):
     return f'  {_pit_time(player)} {_pit_bracket(player)}'.rstrip()
 
 
-RELATIVE_AHEAD, RELATIVE_BEHIND = 4, 3  # cars ahead of and behind the local one on the track
+# Cars ahead of and behind the local one on the track, below the race's leader (asked for by the
+# user on 2026-11-12: 4 and 3 before, then the leader on top and 3 each side).
+RELATIVE_AHEAD, RELATIVE_BEHIND = 3, 3
+ME_ROW = 1 + RELATIVE_AHEAD  # the local car's row in the player list: below the leader's and those ahead
 LAPPING_COLOR = '#ff9a5c'  # in the player list: a car a lap or more ahead in the race (let it by)
 LAPPED_COLOR = '#6fb3ff'  # and one a lap or more behind (one being lapped)
 FIGURE_SPACE = ' '  # as wide as a digit: lines up the positions' numbers
+RELATIVE_SHARE_MOST = 0.99  # a car placed by time alone is at most this far to the next checkpoint
 
 
 def numbered(position, name, most):
@@ -2725,48 +2729,130 @@ def numbered(position, name, most):
     return f'{str(position).rjust(len(str(most)), FIGURE_SPACE)}. {name}'
 
 
-def track_gap(player, me, clock=None, gates=()):
+def track_gap(player, me, clock=None, gates=(), reference=None):
     """`player` against `me` on the track, whatever laps they are on (asked for by the user on
     2026-11-12): ('time', 0.1 ms; negative: ahead of `me` on the track), or None before a
-    comparison. Whole laps between them are taken out, so a car is never more than half a
-    lap ahead or behind: one about to be lapped is just ahead. Live as gap is."""
+    comparison. See track_offset."""
+    found = track_offset(player, me, clock, gates, reference)
+    return found[1] if found is not None else None
+
+
+_SPLITS = {}  # (name, first pass, laps completed, last lap's end, lap) -> lap_splits: once a lap
+_SPLITS_MOST = 512
+
+
+def lap_splits(player, lap):
+    """The times (0.1 ms) from each checkpoint to the next on `player`'s best whole lap of `lap`
+    checkpoints (the last one to the next lap's start), or None before a whole lap. Kept until
+    the car completes another lap: the player list asks for every car's every frame."""
+    laps = player.checkpoints
+    first = laps[0][0] if laps and laps[0] else None
+    done = player.laps_completed
+    ended = laps[done][0] if len(laps) > done and laps[done] else None  # the last lap's end
+    key = (player.name, first, player.laps_completed, ended, lap)
+    if key not in _SPLITS:
+        if len(_SPLITS) > _SPLITS_MOST:
+            _SPLITS.clear()
+        _SPLITS[key] = _best_splits(player, lap)
+    return _SPLITS[key]
+
+
+def _best_splits(player, lap):
+    """lap_splits, worked out."""
+    best = None
+    for index in range(min(player.laps_completed, len(player.checkpoints) - 1)):
+        times, after = player.checkpoints[index], player.checkpoints[index + 1]
+        if len(times) != lap or not after:
+            continue
+        passes = [*times, after[0]]
+        if NO_CHECKPOINT in passes or passes[-1] <= passes[0]:
+            continue
+        if best is None or passes[-1] - passes[0] < best[0]:
+            best = (passes[-1] - passes[0], [b - a for a, b in itertools.pairwise(passes)])
+    return best[1] if best else None
+
+
+def track_progress(player, lap, clock=None, gates=(), splits=None):
+    """How far `player` has come in checkpoints, with the share of the way to the next: by its
+    position between the two lines where it is known, else by the time since it passed the
+    last at the pace of `splits` (at most nearly there). None before the first."""
+    passed = player.passed
+    k = len(passed) - 1
+    if k < 0:
+        return None
+    share = 0.0
+    if player.position is not None and gates:
+        share = gate_share(gates[k % len(gates)], gates[(k + 1) % len(gates)], player.position)
+    elif splits and clock is not None and passed[-1] != NO_CHECKPOINT and splits[k % lap] > 0:
+        share = (clock - passed[-1]) / splits[k % lap]
+    return k + min(max(share, 0.0), RELATIVE_SHARE_MOST)
+
+
+def stretch_time(splits, lap, start, end):
+    """The time (0.1 ms) from progress `start` to `end` (track_progress) at the pace of `splits`."""
+    total, at = 0.0, start
+    while at < end - 1e-9:
+        step = min(math.floor(at) + 1, end)
+        total += splits[math.floor(at) % lap] * (step - at)
+        at = step
+    return round(total)
+
+
+def track_offset(player, me, clock=None, gates=(), reference=None):
+    """(checkpoints `player` is ahead of `me` on the track, gap) or None (reported by the user on
+    2026-11-12: comparing checkpoint times put a car that stopped, or one far slower, minutes
+    away and out of order). Both are placed by track_progress, and the whole laps between them
+    taken out, so a car is never more than half a lap ahead or behind: one about to be lapped is
+    just ahead. The gap, ('time', 0.1 ms; negative: ahead), is how long the car behind takes from
+    where it is to the other at its own best lap's pace (else `reference`, the race's best lap's
+    splits): a stopped car keeps a sensible gap. On the first lap, before any lap length, as gap."""
     lap = len(me.checkpoints[0]) if me.checkpoints and len(me.checkpoints) > 1 else 0
-    if lap:
-        laps = math.floor((len(player.passed) - len(me.passed) + lap / 2) / lap)
-        if laps > 0:
-            player = _without_laps(player, laps)
-        elif laps < 0:
-            me = _without_laps(me, -laps)
-    found = gap(player, me, clock, gates)
-    return found if found is not None and found[0] == 'time' else None
-
-
-def _without_laps(player, laps):
-    """`player` without its first `laps` laps, for track_gap. Its `passed` is cut from the
-    one already worked out rather than built again from every lap: done for each car a lap
-    or more away, every frame, that grew with the race (2026-11-12)."""
-    shorter = dataclasses.replace(player, checkpoints=player.checkpoints[laps:])
-    cut = sum(len(times) for times in player.checkpoints[:laps])
-    shorter.__dict__['passed'] = player.passed[cut:]  # what the cached_property would keep
-    return shorter
+    if not lap:
+        found = gap(player, me, clock, gates)
+        if found is None or found[0] != 'time':
+            return None
+        return -found[1], found
+    theirs, mine = lap_splits(player, lap) or reference, lap_splits(me, lap) or reference
+    here = track_progress(me, lap, clock, gates, mine)
+    there = track_progress(player, lap, clock, gates, theirs)
+    if here is None or there is None:
+        return None
+    ahead = there - here
+    ahead -= math.floor(ahead / lap + 0.5) * lap  # within half a lap
+    pace = mine if ahead > 0 else theirs
+    if pace is None:
+        return ahead, None
+    seconds = stretch_time(pace, lap, *((here, here + ahead) if ahead > 0 else (there, there - ahead)))
+    return ahead, ('time', -seconds if ahead > 0 else seconds)
 
 
 def relative_players(players, me, order=None, clock=None, gates=()):
     """(ahead, behind) of `me` on the track: up to RELATIVE_AHEAD cars in front, the furthest
-    first, and up to RELATIVE_BEHIND behind, the nearest first, each as (player, track_gap).
-    A car with no gap yet (on the grid) counts by race `order`. Cars that finished are left
-    out while `me` races."""
+    first, and up to RELATIVE_BEHIND behind, the nearest first, each as (player, gap), in the
+    order they are on the track (track_offset). A car not placed yet (on the grid) counts by race
+    `order`. Cars that finished are left out while `me` races."""
     order = list(ranked(players) if order is None else order)
     others = [p for p in order if p is not me and (me.finished or not p.finished)]
-    gaps = {id(p): track_gap(p, me, clock, gates) for p in others}
-    ahead = sorted((p for p in others if gaps[id(p)] and gaps[id(p)][1] < 0), key=lambda p: -gaps[id(p)][1])
-    behind = sorted((p for p in others if gaps[id(p)] and gaps[id(p)][1] >= 0), key=lambda p: gaps[id(p)][1])
+    lap = len(me.checkpoints[0]) if me.checkpoints and len(me.checkpoints) > 1 else 0
+    fastest = None
+    if lap:
+        laps = [s for s in (lap_splits(p, lap) for p in order) if s]
+        fastest = min(laps, key=sum, default=None)
+    offsets = {id(p): track_offset(p, me, clock, gates, fastest) for p in others}
+    placed = [p for p in others if offsets[id(p)] is not None]
+    ahead = sorted((p for p in placed if offsets[id(p)][0] > 0), key=lambda p: offsets[id(p)][0])
+    behind = sorted((p for p in placed if offsets[id(p)][0] <= 0), key=lambda p: -offsets[id(p)][0])
     mine = order.index(me) if me in order else 0
-    unknown = [p for p in others if gaps[id(p)] is None]
+    unknown = [p for p in others if offsets[id(p)] is None]
     ahead += sorted((p for p in unknown if order.index(p) < mine), key=lambda p: -order.index(p))
     behind += sorted((p for p in unknown if order.index(p) > mine), key=order.index)
-    ahead = [(p, gaps[id(p)]) for p in ahead[:RELATIVE_AHEAD]]
-    behind = [(p, gaps[id(p)]) for p in behind[:RELATIVE_BEHIND]]
+
+    def shown(p):
+        found = offsets[id(p)]
+        return found[1] if found is not None else None
+
+    ahead = [(p, shown(p)) for p in ahead[:RELATIVE_AHEAD]]
+    behind = [(p, shown(p)) for p in behind[:RELATIVE_BEHIND]]
     return ahead[::-1], behind
 
 
@@ -2781,8 +2867,9 @@ def players_rows(
     compounds=None,
     wet=False,
 ):
-    """The player list. Racing (asked for by the user on 2026-11-12): the cars around the local
-    one on the track (relative_players), it always in the middle row, each with its race
+    """The player list. Racing (asked for by the user on 2026-11-12): the race's leader on top,
+    with the race gap (empty where the leader is the local car or is shown below), then the
+    cars around the local one on the track (relative_players), it always in the same row, each with its race
     position, flag, name (in LAPPING_COLOR or LAPPED_COLOR a lap or more apart in the race),
     PIT, its class and place in it in the class's colour (a multi-class race; else its clan
     tag, with `clan_tags`), its tire compound and the gap on the track. `watching`: a
@@ -2799,8 +2886,14 @@ def players_rows(
         colors = class_colors(set(classes.values()) - {OTHER_CLASS})
     ahead, behind = relative_players(players, me, order, clock, gates)
     most = len(order)
-    rows = [Row('', 'small')] * (RELATIVE_AHEAD - len(ahead))  # it stays in the middle row
-    for player, found in [*ahead, (me, None), *behind]:
+    leader = order[0] if order else None
+    listed = {id(p) for p, _found in (*ahead, *behind)} | {id(me)}
+    top = []
+    if leader is not None and id(leader) not in listed:
+        top = [(leader, gap(leader, me, clock, gates))]  # the race gap: laps or time
+    rows = [] if top else [Row('', 'small')]
+    rows += [Row('', 'small')] * (RELATIVE_AHEAD - len(ahead))  # the local car stays in its row
+    for player, found in [*top, *ahead, (me, None), *behind]:
         tail = _pit_tail(player)
         name = _short_name(player.name, tail)
         race_gap = gap(player, me, clock, gates) if player is not me else None
@@ -3061,7 +3154,7 @@ def lap_times_rows(
     wet=False,
 ):
     """The lap times list: a heading, then each driver in race order with flag and name,
-    their best lap and the running time of their current lap ('Fin' once finished) at
+    their best lap and their last lap (asked for by the user on 2026-11-12; before, the running one) at
     race `clock`. The race's fastest lap is purple, as in F1. Up to MAX_LAP_TIME_ROWS drivers.
 
     In a multi-class race (car_classes, from the clan tags in `class_tags`) the drivers
@@ -3078,7 +3171,7 @@ def lap_times_rows(
 
     `columns`: those of LAP_COLUMNS shown (asked for by the user on 2026-11-12): the flag, the
     lap number, the tire compound (compound_mark, of an event with `compounds`), the best lap
-    and the current lap (or CUT, PIT); without the best lap, the current lap takes its place."""
+    and the last lap (or CUT, PIT); without the best lap, the last lap takes its place."""
     order = list(ranked(players) if order is None else order)
     classes = car_classes(order, class_tags)
     places = None
@@ -3102,7 +3195,7 @@ def lap_times_rows(
             'accent',
             middle='Best',
             middle_color='accent',
-            right='Lap',
+            right='Last',
             right_color='accent',
         )
     ]
@@ -3117,11 +3210,12 @@ def lap_times_rows(
         rule = _class_name(group) if group is not None and group != last_class else ''
         last_class = group
         best = bests[id(player)]
-        running = player_current_lap(player, clock)
+        laps_done = player_lap_times(player)
         timed = player.pit_seconds is not None and not player.finished
         plain_pit = player.in_pit and not player.finished and not timed
         bracket = _pit_bracket(player) if timed else ''
-        time_now = 'Fin' if player.finished else format_tenths(running) if running is not None else '-'
+        # The last lap, not the running one (asked for by the user on 2026-11-12).
+        time_now = format_time(laps_done[-1]) if laps_done else '-'
         cut_text = ''
         if cuts and player.name in cuts:
             left = cuts[player.name]

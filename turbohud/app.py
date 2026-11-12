@@ -52,7 +52,7 @@ LAP_COLUMN_OPTIONS = (
         ),
     ),
     ('best', 'Lap times: best lap', "Each driver's best lap"),
-    ('current', 'Lap times: current lap', "The running time of each driver's lap, or CUT or PIT"),
+    ('current', 'Lap times: last lap', "Each driver's last lap, or CUT or PIT"),
 )
 log = logging.getLogger('turbohud')
 

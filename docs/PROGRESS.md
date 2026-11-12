@@ -1457,3 +1457,16 @@ its "Recent changes".
   Python modules packed in `TurboHUD.exe` checked for the privacy terms, none; the app starts and says its version.
   Built without the smoke test, as the user's TurboHUD from source was running: to be run with TurboHUD closed.
   It replaces 2026.11.12.5, still in `releases/`, to be removed by hand.
+- 2026-11-12: The player list's order, reported by the user from an online event (a tester saw the wrong car
+  ahead of him): the cars around the player were sorted by gaps from checkpoint times, and a car that stopped (the
+  user standing in the pits) or one far slower put others minutes away (+-300 s) and out of order. Now each car is
+  placed on the track (`track_progress`: checkpoints passed and the share to the next, by its position, else by time
+  at its pace), the whole laps between cars taken out, and the list ordered by that (`track_offset`); the gap is how
+  long the car behind takes to where the other is at its own best lap's pace (`lap_splits`, kept until its next lap;
+  else the race's best lap), so a stopped car keeps a sensible gap. Also asked for by the user: the race's leader on
+  top with the race gap (empty where it is the player or shown below), then 3 cars ahead and 3 behind (4 and 3
+  before; the player stays in the 5th row, `ME_ROW`). Tests. Not yet seen in a race.
+- 2026-11-12: The lap times show each driver's last lap instead of the running one, asked for by the user: the
+  column is headed Last, a finished driver shows its last lap too (before, Fin), and a driver with no lap done '-';
+  CUT, JUMP and PIT still take its place. The column's option reads "Lap times: last lap" (its key stays
+  `current`, so saved settings keep it). Tests.
