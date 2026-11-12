@@ -1352,3 +1352,9 @@ its "Recent changes".
 - 2026-11-12: A wet race is marked in the track's name, as the user said: (WET), (RW), (QW) or (W), in round
   brackets and in any case (`WET_MARKERS`); a bare WET no longer counts (a track called Wet Hills stays dry). A wet
   race has one compound, so every car on a blue W stays right. Tests.
+- 2026-11-12: Windows build 2026.11.12.4 to share, asked for by the user: `releases/TurboHUD-2026.11.12.4-windows-x64.zip`
+  (42.2 MB), from `main` with everything since .3: the class colours and the class sheet, the bigger radar arrows,
+  the tire column and the lap times' column options, the shorter class codes, the player list around the player on
+  the track, and the wet tires. The zip's reader is the one built from `main` (unchanged since .2, checked byte for
+  byte). Smoke test passed with TurboHUD closed; the zip and the Python modules packed in `TurboHUD.exe` checked for
+  the privacy terms, none. It replaces 2026.11.12.3; the older builds are still in `releases/`, to be removed by hand.
