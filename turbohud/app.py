@@ -43,7 +43,11 @@ ICON = 'tsu_turbo_hud_00.png'  # in assets/, also the bundled app's icon
 LAP_COLUMN_OPTIONS = (
     ('flag', 'Lap times: flag', "Each driver's country flag before the name"),
     ('lap', 'Lap times: lap number', 'The lap each driver is on (L3)'),
-    ('tyre', 'Lap times: tire compound', "Each driver's tire compound, as in F1 (S red, M yellow, H white)"),
+    (
+        'tyre',
+        'Lap times: tire compound',
+        "Each driver's tire compound, as in F1 (S red, M yellow, H white; a blue W on a track named WET)",
+    ),
     ('best', 'Lap times: best lap', "Each driver's best lap"),
     ('current', 'Lap times: current lap', "The running time of each driver's lap, or CUT or PIT"),
 )

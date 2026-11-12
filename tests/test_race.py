@@ -130,6 +130,7 @@ def build(
     gate_types=None,
     surfaces=None,
     compounds=None,
+    track=None,
 ):
     """A fake race; `car` is the car's (x, z) and `gates` the checkpoint lines, both
     optional like in a game without them."""
@@ -147,7 +148,9 @@ def build(
         [('m_server', 0x60, False), ('m_eventLogic', 0x70, False)],
         parent=base_controller,
     )
-    state_class = g.klass('TS', 'EventState', [('players', 0x28, False), ('times', 0x58, False)])
+    state_class = g.klass(
+        'TS', 'EventState', [('players', 0x28, False), ('times', 0x58, False), ('m_level', 0x80, False)]
+    )
     player_fields = [('m_stats', 0x30, False), ('m_localHumanIndex', 0x50, False)]
     if name is not None:
         player_fields.append(('m_playerInfo', 0x40, False))
@@ -211,6 +214,14 @@ def build(
             g.recorder = recorder
     state = g.alloc_obj(state_class)
     g.q(controller + 0x48, state)
+    if track is not None:  # the track's name: EventState.m_level.m_properties.name
+        level = g.alloc_obj(g.klass('TS', 'Level', [('m_properties', 0x10, False)]))
+        level_properties = g.alloc_obj(g.klass('TS', 'LevelProperties', [('name', 0x18, False)]))
+        text = g.alloc_obj(0, 0x14 + 2 * len(track) + 2)
+        g.put(text + 0x10, struct.pack('<i', len(track)) + track.encode('utf-16-le'))
+        g.q(level_properties + 0x18, text)
+        g.q(level + 0x10, level_properties)
+        g.q(state + 0x80, level)
     if draft or event_type is not None:
         logic = g.alloc_obj(g.klass('TS', 'RaceLogic', [('m_eventSettings', 0x10, False)]))
         settings_fields = [('drafting', 0x10, False)]
@@ -1704,6 +1715,16 @@ class CarTests(unittest.TestCase):
         self.assertEqual(read(2, compounds=3), (2, 3))
         self.assertEqual(read(4 * 300 + 1, compounds=2), (1, 2))  # in a tire change
         self.assertEqual(read(1, compounds=9), (1, None))  # more than TSU allows: not a count
+
+    def test_reader_reads_the_tracks_name_once_an_event(self):
+        def read(track):
+            reader = build(
+                [10_000], laps_completed=0, clock=20_000, limit=0, name='A', car=(1.0, 2.0), track=track
+            )
+            return reader.read().track
+
+        self.assertEqual(read('Spa WET'), 'Spa WET')
+        self.assertEqual(read(None), '')  # not there: no name, the race still read
 
     def test_reader_reads_each_cars_position_for_the_radar(self):
         reader = build(

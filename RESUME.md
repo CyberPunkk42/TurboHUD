@@ -75,6 +75,11 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-12: Wet tires, asked for by the user: on a track whose name has the word WET (any case, as a word:
+  `Spa WET`, `Monza_wet`, `Wet-Ring`, not `Wetlands`) every car's tire ring is a blue W, whatever its compound, in
+  the lap times and the player list. The track's name is read once an event from `EventState.m_level`
+  (`TS.Level`) `.m_properties` (`TS.LevelProperties`) `.name`, found in the game's metadata (`LapState.track`).
+  Tests. Seen offscreen; the name's path not yet read in the game.
 - 2026-11-12: The player list shows the cars around the player on the track, asked for by the user: 4 in front and 3
   behind, the player always in the middle row (blank rows above where fewer are in front), whatever lap each is on,
   with the gap on the track (`track_gap`: the whole laps between two cars taken out, then the live gap as before),

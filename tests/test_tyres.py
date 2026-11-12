@@ -43,6 +43,29 @@ class CompoundMarkTests(unittest.TestCase):
         self.assertIsNone(race.compound_mark(7, None))
 
 
+class WetTests(unittest.TestCase):
+    """A track whose name has the word WET: every car on a blue W (asked for by the user on 2026-11-12)."""
+
+    def test_the_word_wet_in_any_case(self):
+        for name in ('Spa WET', 'Monza_wet', 'Wet-Ring', 'Nordschleife (Wet)', 'WET'):
+            self.assertTrue(race.is_wet(name), name)
+        for name in ('Wetlands', 'Sweetwater', 'Spa', '', None):
+            self.assertFalse(race.is_wet(name), name)
+
+    def test_every_car_on_a_blue_w(self):
+        players = [driver('A', 0), driver('B', 2, 100), driver('C', None, 200)]
+        rows = race.lap_times_rows(players, clock=50_000, compounds=3, wet=True)
+        self.assertEqual({(r.tyre, r.tyre_color) for r in rows[1:]}, {race.WET_MARK})
+        self.assertEqual(race.WET_MARK[0], 'W')
+        dry = race.lap_times_rows(players, clock=50_000, compounds=3)
+        self.assertNotIn(race.WET_MARK, {(r.tyre, r.tyre_color) for r in dry})
+
+    def test_the_player_list_too(self):
+        me = dataclasses.replace(driver('Me', 0), local=True)
+        rows = race.players_rows([me, driver('B', 1, 100)], compounds=2, wet=True)
+        self.assertEqual({r.tyre for r in rows if r.text}, {'W'})
+
+
 class TyreColumnTests(unittest.TestCase):
     def rows(self, columns=s.LAP_COLUMNS, compounds=3):
         players = [driver('A', 0), driver('B', 2, 100), driver('C', None, 200)]
