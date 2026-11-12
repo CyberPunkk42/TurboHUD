@@ -75,6 +75,9 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-12: Class codes shortened, asked for by the user: LMDH is now LDH, LMP1 to LMP3 are LM1 to LM3, GTLM is
+  GLM, and HYPER is gone (HYP stays the Hypercar). A driver tagged with an old long form is no longer of a class.
+  The class sheet lists the new codes on its own. 125 codes. Tests.
 - 2026-11-12: Tire compounds in the lap times, asked for by the user, and the lap times' columns as options. From
   TSU's metadata (read offline on the Windows PC): an event has 1 to 3 compounds (`TireWearSettings`
   `MinTireCompoundCount` 1, `MaxTireCompoundCount` 3, `BitsForTireCompound` 2), the count is

@@ -1331,3 +1331,6 @@ its "Recent changes".
   off (`lap_columns`, all on by default); without the best lap the current one takes its place. Tests. Seen
   offscreen; not yet in the game: whether index 0 is the softest (`SOFTEST_FIRST`), the bits, and whether other
   cars' compounds come through online.
+- 2026-11-12: Class codes shortened, asked for by the user: LMDH is now LDH, LMP1 to LMP3 are LM1 to LM3, GTLM is
+  GLM, and HYPER is gone (HYP stays the Hypercar). A driver tagged with an old long form is no longer of a class.
+  The class sheet lists the new codes on its own. 125 codes. Tests.
