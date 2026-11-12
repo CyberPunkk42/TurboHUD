@@ -32,7 +32,7 @@ import time
 import typing
 from dataclasses import dataclass
 
-from turbohud.core.class_registry import class_colors, class_tag, paler, shown_code
+from turbohud.core.class_registry import CLASS_TAGS, class_colors, class_tag, paler, shown_code
 from turbohud.core.flags import flag_code, flag_text
 from turbohud.core.hud import Row, Sectors, blend, clock, local_time_rows
 from turbohud.core.il2cpp import ARRAY_DATA, ARRAY_LENGTH, LIST_ITEMS, SIMPLE_TYPES, NotFound, ReadError
@@ -1964,7 +1964,15 @@ def race_sections(
         sections['draft'] = sections['draft'] + draft_rows(state)
     if state.players:
         order = standings.order(state.players, now) if standings is not None else None
-        sections['players'] = players_rows(state.players, order, state.clock, state.gates)
+        sections['players'] = players_rows(
+            state.players,
+            order,
+            state.clock,
+            state.gates,
+            class_tags=class_tags,
+            clan_tags=clan_tags,
+            compounds=state.compounds,
+        )
         cuts = shortcuts.left(state) if shortcuts is not None else None
         jumped = shortcuts.jump_starts(state) if shortcuts is not None else frozenset()
         sections['laptimes'] = lap_times_rows(
@@ -2520,36 +2528,138 @@ def _pit_tail(player):
     return f'  {_pit_time(player)} {_pit_bracket(player)}'.rstrip()
 
 
-def players_rows(players, order=None, clock=None, gates=(), watching=False):
-    """The player list: position, flag, name, PIT, and the gap to the local player
-    (live with the race `clock` and the checkpoint lines `gates`, see gap). `watching`:
-    a spectator has no car, so the gaps are to the leader."""
-    me = next((p for p in players if p.local), None)
-    if watching:
-        me = (ranked(players) if order is None else order)[0]
-    rows = []
-    for position, player in shown_players(players, order=order):
+RELATIVE_AHEAD, RELATIVE_BEHIND = 4, 3  # cars ahead of and behind the local one on the track
+LAPPING_COLOR = '#ff9a5c'  # in the player list: a car a lap or more ahead in the race (let it by)
+LAPPED_COLOR = '#6fb3ff'  # and one a lap or more behind (one being lapped)
+FIGURE_SPACE = ' '  # as wide as a digit: lines up the positions' numbers
+
+
+def numbered(position, name, most):
+    """'position. name', the number right-aligned for positions up to `most` (' 9.' under '10.')."""
+    return f'{str(position).rjust(len(str(most)), FIGURE_SPACE)}. {name}'
+
+
+def track_gap(player, me, clock=None, gates=()):
+    """`player` against `me` on the track, whatever laps they are on (asked for by the user on
+    2026-11-12): ('time', 0.1 ms; negative: ahead of `me` on the track), or None before a
+    comparison. Whole laps between them are taken out, so a car is never more than half a
+    lap ahead or behind: one about to be lapped is just ahead. Live as gap is."""
+    lap = len(me.checkpoints[0]) if me.checkpoints and len(me.checkpoints) > 1 else 0
+    if lap:
+        laps = math.floor((len(player.passed) - len(me.passed) + lap / 2) / lap)
+        if laps > 0:
+            player = dataclasses.replace(player, checkpoints=player.checkpoints[laps:])
+        elif laps < 0:
+            me = dataclasses.replace(me, checkpoints=me.checkpoints[-laps:])
+    found = gap(player, me, clock, gates)
+    return found if found is not None and found[0] == 'time' else None
+
+
+def relative_players(players, me, order=None, clock=None, gates=()):
+    """(ahead, behind) of `me` on the track: up to RELATIVE_AHEAD cars in front, the furthest
+    first, and up to RELATIVE_BEHIND behind, the nearest first, each as (player, track_gap).
+    A car with no gap yet (on the grid) counts by race `order`. Cars that finished are left
+    out while `me` races."""
+    order = list(ranked(players) if order is None else order)
+    others = [p for p in order if p is not me and (me.finished or not p.finished)]
+    gaps = {id(p): track_gap(p, me, clock, gates) for p in others}
+    ahead = sorted((p for p in others if gaps[id(p)] and gaps[id(p)][1] < 0), key=lambda p: -gaps[id(p)][1])
+    behind = sorted((p for p in others if gaps[id(p)] and gaps[id(p)][1] >= 0), key=lambda p: gaps[id(p)][1])
+    mine = order.index(me) if me in order else 0
+    unknown = [p for p in others if gaps[id(p)] is None]
+    ahead += sorted((p for p in unknown if order.index(p) < mine), key=lambda p: -order.index(p))
+    behind += sorted((p for p in unknown if order.index(p) > mine), key=order.index)
+    ahead = [(p, gaps[id(p)]) for p in ahead[:RELATIVE_AHEAD]]
+    behind = [(p, gaps[id(p)]) for p in behind[:RELATIVE_BEHIND]]
+    return ahead[::-1], behind
+
+
+def players_rows(
+    players,
+    order=None,
+    clock=None,
+    gates=(),
+    watching=False,
+    class_tags=(),
+    clan_tags=True,
+    compounds=None,
+):
+    """The player list. Racing (asked for by the user on 2026-11-12): the cars around the local
+    one on the track (relative_players), it always in the middle row, each with its race
+    position, flag, name (in LAPPING_COLOR or LAPPED_COLOR a lap or more apart in the race),
+    PIT, its class and place in it in the class's colour (a multi-class race; else its clan
+    tag, with `clan_tags`), its tire compound and the gap on the track. `watching`: a
+    spectator has no car, so the list is the race order with the gaps to the leader."""
+    order = list(ranked(players) if order is None else order)
+    if watching or not any(p.local for p in players):
+        return _standings_rows(players, order, clock, gates)
+    me = next(p for p in players if p.local)
+    positions = {id(p): i for i, p in enumerate(order, start=1)}
+    classes = car_classes(order, class_tags)
+    colors, places = {}, {}
+    if classes:
+        places = by_class(order, classes)[1]
+        colors = class_colors(set(classes.values()) - {OTHER_CLASS})
+    ahead, behind = relative_players(players, me, order, clock, gates)
+    most = len(order)
+    rows = [Row('', 'small')] * (RELATIVE_AHEAD - len(ahead))  # it stays in the middle row
+    for player, found in [*ahead, (me, None), *behind]:
         tail = _pit_tail(player)
-        # The section is sized for a full name and the first timer: the bracket takes its
-        # room from the name.
-        most = MAX_NAME_SHOWN - max(len(tail) - len(PIT_TAIL_ROOM), 0)
-        name = player.name or '?'
-        if len(name) > most:
-            name = name[: most - 1] + '…'
-        found = gap(player, me, clock, gates) if me is not None and player is not me else None
-        color = (
-            'text' if watching or found is None or found[1] == 0 else ('behind' if found[1] < 0 else 'ahead')
+        name = _short_name(player.name, tail)
+        race_gap = gap(player, me, clock, gates) if player is not me else None
+        laps = race_gap[1] if race_gap is not None and race_gap[0] == 'laps' else 0
+        group = classes.get(id(player))
+        tag = _tag_column(player, group, colors, clan_tags)
+        if group is not None and group != OTHER_CLASS and tag.get('tag'):
+            tag['tag'] = f"{tag['tag']} P{places[id(player)]}"
+        name_color = (
+            'accent' if player.local else LAPPING_COLOR if laps < 0 else LAPPED_COLOR if laps > 0 else 'text'
         )
+        gap_color = 'text' if found is None or found[1] == 0 else 'behind' if found[1] < 0 else 'ahead'
         rows.append(
             Row(
-                f'{position}. {name}',
+                numbered(positions[id(player)], name, most),
+                'small',
+                name_color,
+                tail=tail,
+                tail_color='lift',
+                flag=flag_code(player.flag) or flag_text(player.flag),
+                middle=gap_text(found),
+                middle_color=gap_color,
+                **tag,
+                **_tyre_column(player, compounds),
+            )
+        )
+    return rows
+
+
+def _short_name(name, tail):
+    """The name cut to fit: the section is sized for a full name and the first timer, so the
+    PIT bracket takes its room from the name."""
+    most = MAX_NAME_SHOWN - max(len(tail) - len(PIT_TAIL_ROOM), 0)
+    name = name or '?'
+    return name[: most - 1] + '…' if len(name) > most else name
+
+
+def _standings_rows(players, order, clock, gates):
+    """The player list in race order (the leader and those around the local player), with
+    the gaps to the leader: for a spectator."""
+    me = order[0] if order else None
+    rows = []
+    most = len(order)
+    for position, player in shown_players(players, order=order):
+        tail = _pit_tail(player)
+        found = gap(player, me, clock, gates) if me is not None and player is not me else None
+        rows.append(
+            Row(
+                numbered(position, _short_name(player.name, tail), most),
                 'small',
                 'accent' if player.local else 'text',
                 tail=tail,
                 tail_color='lift',
                 flag=flag_code(player.flag) or flag_text(player.flag),
                 right=gap_text(found),
-                right_color=color,
+                right_color='text',
             )
         )
     return rows
@@ -2709,13 +2819,19 @@ def car_classes(players, class_tags):
 
 
 def by_class(order, classes):
-    """`order` (race order) grouped by class: the class whose leader is furthest ahead
-    first, each in race order, OTHER_CLASS last; and each player's place in its class."""
-    groups = {}
+    """`order` (race order) grouped by class, each in race order, and each player's place in
+    its class. The classes come in the class list's order (CLASS_TAGS: Prototype before GT,
+    GT3 before GT4), from the start whoever qualified where (asked for by the user on
+    2026-11-12); a class from the settings file's own list after those, OTHER_CLASS last."""
+    found = {}
     for player in order:
-        groups.setdefault(classes[id(player)], []).append(player)
-    if OTHER_CLASS in groups:
-        groups[OTHER_CLASS] = groups.pop(OTHER_CLASS)  # last
+        found.setdefault(classes[id(player)], []).append(player)
+    rank = {tag: index for index, tag in enumerate(CLASS_TAGS)}
+    seen = list(found)
+    groups = {
+        tag: found[tag]
+        for tag in sorted(seen, key=lambda t: (t == OTHER_CLASS, rank.get(t, len(rank)), seen.index(t)))
+    }
     grouped, places = [], {}
     for members in groups.values():
         for place, player in enumerate(members, start=1):
@@ -2762,6 +2878,7 @@ def lap_times_rows(
         order, places = by_class(order, classes)
         colors = class_colors(set(classes.values()) - {OTHER_CLASS})
     shown = shown_players(players, MAX_LAP_TIME_ROWS, order)
+    max_place = max((places or {}).values(), default=len(order)) if places else len(order)
     bests = {id(player): min(player_lap_times(player), default=None) for player in order}
     fastest = {}
     for player in order:
@@ -2804,7 +2921,7 @@ def lap_times_rows(
             cut_text = 'JUMP'  # TSU's false-start penalty (see ShortcutPenalties.jump_starts)
         rows.append(
             Row(
-                f'{position}. {name}',
+                numbered(position, name, max_place),
                 'small',
                 'accent' if player.local else 'text',
                 before=f'L{player_lap_number(player)}',

@@ -58,7 +58,7 @@ class Row:
 
 
 FLAG_WIDTH = 1.5  # a flag's room before the text, in font sizes
-TYRE_WIDTH = 1.25  # a tire compound's ring, in font sizes
+TYRE_WIDTH = 1.0  # a tire compound's ring, in font sizes (no lower than the text's descenders)
 COLUMN_GAP = 1.0  # least room between the text and the right column, in font sizes
 
 
@@ -387,7 +387,15 @@ RACE_SECTIONS = (
         'Players',
         (
             tuple(
-                Row(f'{n}. Playername1234567', 'small', tail='  PIT 00.0s', flag='DE', right='+00.000')
+                Row(
+                    f'{n}. Playername1234567',
+                    'small',
+                    tail='  PIT 00.0s',
+                    flag='DE',
+                    middle='+00.000',
+                    tag='GT3 P20',
+                    tyre='M',
+                )
                 for n in range(10, 10 + 8)
             ),
         ),
@@ -405,6 +413,8 @@ RACE_SECTIONS = (
                     flag='DE',
                     middle='PIT 00.0s',
                     right='(00.00s)',
+                    tag='GT3',
+                    tyre='M',
                 )
                 for n in range(10, 10 + LAP_TIME_ROWS)
             ),
