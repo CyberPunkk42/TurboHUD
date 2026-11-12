@@ -62,6 +62,10 @@
   2026.11.10 went to the tester with new instructions (the same comparison, and the Rust reader). Race reads merge pages further apart since 2026-11-10 (31
   to 49 reads of the game a read and 16 to 22 ms, from 84 to 88 and 26 to 29 ms). Online, the search from the last race found
   three races in a row in 0.4 s (2026-11-10).
+- The tester has stutter again with build 2026.11.12.4 on macOS (2026-11-12). The lap times and the player list
+  cost about what they did before since `fix/lap-list-frame-cost`, but that may not be all: get his `turbohud.log` from a
+  race that stuttered (copied before TurboHUD starts again; its `HUD frames` lines) and build him a new one
+  (backlog item 0).
 1. Windows: the overlay over TSU (windowed, Fullscreen, Fullscreen Exclusive), and the live data
    through the Rust reader (built 2026-11-11, not yet run there).
    Also a trial of all of TurboHUD inside the CrossOver bottle (backlog item 1b,
@@ -75,6 +79,14 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+- 2026-11-12: The lap times and the player list cost less to draw, asked for by the user after the tester's stutter
+  with build 2026.11.12.4 on macOS; they look the same. A benchmark (20 cars with classes and tires, both sections
+  built and painted) took 1.5 to 1.8 ms a frame on `main`, twice the 0.8 to 0.9 ms of the day before, and now 0.8
+  to 1.2 ms: text widths are kept (`text_advance`, with `cap_height`, `text_ink` and `text_width`, were asked of Qt
+  each time), the middle column is measured once a frame (`before_right` takes `tyre_right`'s answer), and a car a
+  lap or more away keeps its passes cut, not rebuilt (`_without_laps`). The rows and the pictures of both sections,
+  at 1x and 2x, dry and wet, in 36 races, are the same as before, pixel for pixel. Not yet known whether this was the
+  tester's stutter (backlog item 0). Tests.
 - 2026-11-12: Build 2026.11.12.4 for the tester (`releases/TurboHUD-2026.11.12.4-macos-arm64.dmg`, 32.5 MB, macOS 27,
   `--any-macos`, built with `.buildtools/build-venv`), asked for by the user: `main` with today's features from
   GitHub (the player list around the player, tire compounds and the wet W, car classes in colour and the class

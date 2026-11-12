@@ -1367,3 +1367,11 @@ its "Recent changes".
   features. Tests: 986 of 987 pass; `test_the_panel_stays_compact_with_linux_sized_text` fails on the Mac (817 px,
   under 800 wanted), as on `main` before today's pull, so not from this build. The 2026.11.11.8 and .9 images are
   still in `releases/`.
+- 2026-11-12: The lap times and the player list cost less to draw, asked for by the user after the tester's stutter
+  with build 2026.11.12.4 on macOS; they look the same. A benchmark (20 cars with classes and tires, both sections
+  built and painted) took 1.5 to 1.8 ms a frame on `main`, twice the 0.8 to 0.9 ms of the day before, and now 0.8
+  to 1.2 ms: text widths are kept (`text_advance`, with `cap_height`, `text_ink` and `text_width`, were asked of Qt
+  each time), the middle column is measured once a frame (`before_right` takes `tyre_right`'s answer), and a car a
+  lap or more away keeps its passes cut, not rebuilt (`_without_laps`). The rows and the pictures of both sections,
+  at 1x and 2x, dry and wet, in 36 races, are the same as before, pixel for pixel. Not yet known whether this was the
+  tester's stutter (backlog item 0). Tests.

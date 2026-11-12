@@ -54,9 +54,18 @@ def hud_font(size):
     return font
 
 
+@lru_cache(maxsize=32)
+def _metrics(size):
+    return QFontMetricsF(hud_font(size))
+
+
+@lru_cache(maxsize=4096)
 def text_advance(text, size):
-    """How far the pen moves for `text`, spaces included (where the next text starts)."""
-    return QFontMetricsF(hud_font(size)).horizontalAdvance(text)
+    """How far the pen moves for `text`, spaces included (where the next text starts).
+    Kept: the lap times and the player list measure each column's texts every frame, and
+    the same texts come back (with digits as zeros, the steady ones are a handful); asking
+    Qt each time was the largest part of drawing them (2026-11-12)."""
+    return _metrics(size).horizontalAdvance(text)
 
 
 @lru_cache(maxsize=512)
@@ -142,11 +151,13 @@ def outlined_text(painter, x, y, text, size, color, outline):
     painter.drawImage(QPointF(round((x + left) * ratio) / ratio, round((y + top) * ratio) / ratio), image)
 
 
+@lru_cache(maxsize=256)
 def cap_height(size):
     """How tall a capital letter or digit of the HUD's font is, in pixels."""
-    return QFontMetricsF(hud_font(size)).capHeight()
+    return _metrics(size).capHeight()
 
 
+@lru_cache(maxsize=4096)
 def text_ink(text, size):
     """How far a line of HUD text reaches (above, below) its baseline, with its outline."""
     box = text_path(text, size).boundingRect()
@@ -154,6 +165,7 @@ def text_ink(text, size):
     return -box.top() + outline, box.bottom() + outline
 
 
+@lru_cache(maxsize=4096)
 def text_width(text, size):
     """How wide a line of HUD text is, in pixels, with its outline."""
     return text_path(text, size).boundingRect().right() + outline_width(size)
@@ -361,8 +373,8 @@ def draw_hud(painter, lines, theme, scale=None, left=0, width=None, centre=False
             return text_advance(steady_text(text), size)
 
         middle_end = middle_right(lines, width, margin, steady_advance)
-        before_end = before_right(lines, middle_end, steady_advance)
         tyre_end = tyre_right(lines, middle_end, steady_advance)
+        before_end = before_right(lines, middle_end, steady_advance, tyre_end)
         tag_start = tag_left(lines, before_end, steady_advance)
     for line in lines:
         text_x = centred_x(line, width, margin) if (centre or line.centred) and width is not None else x

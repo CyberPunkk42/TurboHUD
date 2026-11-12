@@ -231,10 +231,12 @@ def tyre_right(lines, middle_end, measure):
     return middle_end - middle - gap
 
 
-def before_right(lines, middle_end, measure):
+def before_right(lines, middle_end, measure, tyre_end=None):
     """Where the `before` column ends (it is right-aligned there): before the tire column, if
-    any, else before the widest middle column, whose right edge is at `middle_end`, with a gap."""
-    end = tyre_right(lines, middle_end, measure)
+    any, else before the widest middle column, whose right edge is at `middle_end`, with a gap.
+    `tyre_end`: tyre_right's answer for the same lines, if the caller has it (draw_hud does,
+    each frame), so the middle column is not measured twice."""
+    end = tyre_right(lines, middle_end, measure) if tyre_end is None else tyre_end
     tyre = tyre_width(lines)
     if tyre is None:
         return end

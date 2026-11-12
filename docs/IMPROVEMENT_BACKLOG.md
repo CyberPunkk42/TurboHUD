@@ -3,6 +3,15 @@
 Open items, most valuable first. Finished items move to `docs/PROGRESS.md`. Where the work
 last stopped: `docs/CONTINUE_HERE.md`.
 
+## 0. The tester's stutter with build 2026.11.12.4 (macOS)
+Reported 2026-11-12, after the day's features (class colours, tire column, the player list around the player).
+Done: the lap times and the player list cost what they did before (`fix/lap-list-frame-cost`, the same look). Left:
+his `turbohud.log` from a race that stuttered (copied before TurboHUD starts again, as it is written anew each
+start), whose `HUD frames` lines say whether the frames are slow. If they are not, look at the canvas: a frame
+redraws one rectangle round every changed section (`HudCanvas.paintEvent` takes `event.rect()`), which with the
+lap times at the top and the player list at the bottom is most of the screen, at 2x on a Retina screen. Then a
+new build for him.
+
 ## 1. Windows: the overlay, then live data
 Over TSU on Windows, in windowed, Fullscreen and Fullscreen Exclusive: the built app
 (`tools/build_app.py`), the Qt probe (`experiments/run_qt_overlay_probe.cmd`) and the
