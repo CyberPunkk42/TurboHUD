@@ -1162,6 +1162,7 @@ class MovePanelPresetTests(unittest.TestCase):
         self.assertEqual(
             got, ['redo', 'screen_default', 'export', 'import', (3840, 2160), 'design_save', 'design_cancel']
         )
+        panel.fit_height(800)  # as the app does for the screen it opens on
         panel.show()
         self.assertLessEqual(panel.height(), 800)  # still within a small screen
 
@@ -1378,10 +1379,38 @@ class MovePanelPresetTests(unittest.TestCase):
 
     def test_the_panel_stays_compact(self):
         # It was 675 x 978 px with the options and a row per preset: most of a laptop's screen.
+        # Since 2026-11-13 it fits the screen it opens on (fit_height), its rows scrolling.
         panel = self.panel()
+        panel.fit_height(800)
         self.assertLess(panel.height(), 800)
-        self.assertLess(panel.width(), 600)
+        # 542 px on the Mac; offscreen its word buttons are at least 80 px wide.
+        self.assertLess(panel.width(), 650)
         self.assertFalse(hasattr(panel, 'mph'))  # the options for the whole HUD are in the settings
+
+    def test_the_panel_fits_a_small_screen(self):
+        # Reported on 2026-11-13: 991 px tall on the Mac, more than a small Mac laptop's screen,
+        # so Lock and Quit were off it. The rows of sections scroll; the rest always shows.
+        from turbohud.overlay.window import PANEL_LEAST_ROWS, PANEL_SCREEN_ROOM
+
+        panel = self.panel()
+        panel.fit_height(None)
+        full = panel.height()
+        self.assertFalse(panel.rows_scroll())
+        self.assertEqual(panel.rows_area.height(), panel.rows.sizeHint().height())
+        panel.fit_height(full + 2 * PANEL_SCREEN_ROOM)  # just room enough: nothing scrolls
+        self.assertFalse(panel.rows_scroll())
+        self.assertEqual(panel.height(), full)
+        panel.fit_height(600)
+        self.assertTrue(panel.rows_scroll())
+        self.assertLessEqual(panel.height(), 600 - 2 * PANEL_SCREEN_ROOM)
+        self.assertFalse(panel.rows_area.isAncestorOf(panel.undo))  # the buttons stay outside the scrolling
+        self.assertFalse(panel.rows_area.isAncestorOf(panel.global_size))
+        self.assertTrue(panel.rows_area.isAncestorOf(next(iter(panel.boxes.values()))))
+        panel.fit_height(100)  # absurdly short: still some rows to see
+        self.assertGreaterEqual(panel.rows_area.height(), PANEL_LEAST_ROWS)
+        panel.fit_height(None)  # back on a tall screen
+        self.assertFalse(panel.rows_scroll())
+        self.assertEqual(panel.height(), full)
 
     def test_the_panel_stays_compact_with_linux_sized_text(self):
         # Linux desktops use about 15 px text, also given to buttons and lists on their own,
@@ -1400,6 +1429,7 @@ class MovePanelPresetTests(unittest.TestCase):
             self.addCleanup(QApplication.setFont, QApplication.font(kind), kind)
             QApplication.setFont(large, kind)
         panel = self.panel()
+        panel.fit_height(800)
         self.assertLess(panel.height(), 800)
         for widget in (*panel.findChildren(QPushButton), *panel.findChildren(QComboBox)):
             self.assertLessEqual(QFontInfo(widget.font()).pixelSize(), PANEL_FONT_PX)

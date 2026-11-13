@@ -646,7 +646,10 @@ def run(args, folder):
         section, near the middle a third down, but never over a shown section (it would
         hide it from dragging)."""
         shown = [w for w in windows.values() if w.wanted] or list(windows.values())
-        return panel_place((panel.width(), panel.height()), [w.placement() for w in shown], usable)
+        boxes = [w.placement() for w in shown]
+        screen = screen_of(boxes[0], usable) if boxes else main_screen(usable)
+        panel.fit_height(screen[3] if screen else None)  # rows scroll on a short screen
+        return panel_place((panel.width(), panel.height()), boxes, usable)
 
     def set_locked(value):
         nonlocal locked
