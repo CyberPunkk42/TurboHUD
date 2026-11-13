@@ -2220,6 +2220,7 @@ def race_sections(
     shortcuts=None,
     clan_tags=True,
     columns=LAP_COLUMNS,
+    retirements=None,
 ):
     """{section name: rows} for a live-reader snapshot (see core.hud.RACE_SECTIONS); a
     section with nothing to show has no rows. Nothing before the grid: in the menus, the
@@ -2232,12 +2233,16 @@ def race_sections(
     bars out (an option); `yellow_flags` (a YellowFlags) gives the yellow flag section and
     the cars ringed on the track map; `class_tags`: the clan tags that name a class, for the
     lap times of a multi-class race (none: no classes); `shortcuts` (a ShortcutPenalties)
-    gives the shortcut section and CUT in the lap times."""
+    gives the shortcut section and CUT in the lap times; `retirements` (a Retirements) DNF in
+    the lists."""
     if not on_grid(snapshot, now):
         return {}
     state = snapshot.state
+    retired = retirements.update(state) if retirements is not None and state.players else frozenset()
     if state.spectating:
-        return _watching_sections(snapshot, now, standings, track_map, class_tags, clan_tags, columns)
+        return _watching_sections(
+            snapshot, now, standings, track_map, class_tags, clan_tags, columns, retired
+        )
     if state.finished or state.laps_to_finish and state.laps_completed >= state.laps_to_finish:
         # Finished: the lap sections say so, and the rest stays (the player list above
         # all) while the others race on, until the race is over and the clock stops.
@@ -2279,6 +2284,7 @@ def race_sections(
             clan_tags=clan_tags,
             compounds=state.compounds,
             wet=is_wet(state.track),
+            retired=retired,
         )
         cuts = shortcuts.left(state) if shortcuts is not None else None
         jumped = shortcuts.jump_starts(state) if shortcuts is not None else frozenset()
@@ -2293,6 +2299,7 @@ def race_sections(
             columns,
             state.compounds,
             is_wet(state.track),
+            retired,
         )
         rows = shortcut_rows(state, cuts or {}, jumped)
         if rows:
@@ -2332,7 +2339,14 @@ def race_sections(
 
 
 def _watching_sections(
-    snapshot, now, standings, track_map, class_tags=(), clan_tags=True, columns=LAP_COLUMNS
+    snapshot,
+    now,
+    standings,
+    track_map,
+    class_tags=(),
+    clan_tags=True,
+    columns=LAP_COLUMNS,
+    retired=frozenset(),
 ):
     """What a spectator sees: the race, with the leader's lap, the player list with the
     gaps to the leader, the lap times and the map; nothing about a car of their own."""
@@ -2344,7 +2358,9 @@ def _watching_sections(
             if standings is not None
             else ranked(state.players, state.hotlapping)
         )
-        sections['players'] = players_rows(state.players, order, state.clock, state.gates, watching=True)
+        sections['players'] = players_rows(
+            state.players, order, state.clock, state.gates, watching=True, retired=retired
+        )
         sections['laptimes'] = lap_times_rows(
             state.players,
             order,
@@ -2354,6 +2370,7 @@ def _watching_sections(
             columns=columns,
             compounds=state.compounds,
             wet=is_wet(state.track),
+            retired=retired,
         )
         if track_map is not None and state.on_a_track:
             shown = track_map.update(state, order)
@@ -3003,6 +3020,7 @@ def players_rows(
     clan_tags=True,
     compounds=None,
     wet=False,
+    retired=frozenset(),
 ):
     """The player list. Racing (asked for by the user on 2026-11-12): the race's leader on top,
     with the race gap (empty where the leader is the local car or is shown below), then the
@@ -3010,10 +3028,11 @@ def players_rows(
     position, flag, name (in LAPPING_COLOR or LAPPED_COLOR a lap or more apart in the race),
     PIT, its class and place in it in the class's colour (a multi-class race; else its clan
     tag, with `clan_tags`), its tire compound and the gap on the track. `watching`: a
-    spectator has no car, so the list is the race order with the gaps to the leader."""
+    spectator has no car, so the list is the race order with the gaps to the leader. A car in
+    `retired` (Retirements) has DNF in its gap's place."""
     order = list(ranked(players) if order is None else order)
     if watching or not any(p.local for p in players):
-        return _standings_rows(players, order, clock, gates)
+        return _standings_rows(players, order, clock, gates, retired)
     me = next(p for p in players if p.local)
     positions = {id(p): i for i, p in enumerate(order, start=1)}
     classes = car_classes(order, class_tags)
@@ -3051,8 +3070,8 @@ def players_rows(
                 tail=tail,
                 tail_color='lift',
                 flag=flag_code(player.flag) or flag_text(player.flag),
-                middle=gap_text(found),
-                middle_color=gap_color,
+                middle=DNF_TEXT if player.name in retired else gap_text(found),
+                middle_color=SHORTCUT_COLOR if player.name in retired else gap_color,
                 **tag,
                 **_tyre_column(player, compounds, wet),
             )
@@ -3068,7 +3087,7 @@ def _short_name(name, tail):
     return name[: most - 1] + '…' if len(name) > most else name
 
 
-def _standings_rows(players, order, clock, gates):
+def _standings_rows(players, order, clock, gates, retired=frozenset()):
     """The player list in race order (the leader and those around the local player), with
     the gaps to the leader: for a spectator."""
     me = order[0] if order else None
@@ -3085,8 +3104,8 @@ def _standings_rows(players, order, clock, gates):
                 tail=tail,
                 tail_color='lift',
                 flag=flag_code(player.flag) or flag_text(player.flag),
-                right=gap_text(found),
-                right_color='text',
+                right=DNF_TEXT if player.name in retired else gap_text(found),
+                right_color=SHORTCUT_COLOR if player.name in retired else 'text',
             )
         )
     return rows
@@ -3157,6 +3176,42 @@ class ShortcutPenalties:
             length = state.shortcut_seconds
             found[name] = max(length - (now - since), 0.0) if length > 0 else None
         return found
+
+
+DNF_TEXT = (
+    'DNF'  # in the lists' gap and Last lap columns, in SHORTCUT_COLOR (asked for by the user on 2026-11-13)
+)
+
+
+class Retirements:
+    """Which cars are out of the race, shown DNF in the lists (asked for by the user on
+    2026-11-13). TSU keeps no such mark for a car, so TurboHUD goes by what the yellow flags
+    call idle: not finished, outside the pit area, and slower than YELLOW_SLOW (either way)
+    for YELLOW_IDLE_AFTER seconds of race time. Only going faster than that again ends it."""
+
+    def __init__(self):
+        self._slow_since = {}  # name -> race clock (seconds) since when it is that slow
+
+    def update(self, state):
+        """The names of the cars out of the race now."""
+        now = state.clock / UNITS_PER_SECOND
+        out, kept = set(), {}
+        for player in state.players:
+            if player.finished or player.in_pit or len(player.passed) < 2:
+                continue  # done, in the pits, or still on the grid: not out
+            since = self._slow_since.get(player.name)
+            speed = player.forward_speed
+            if speed is not None:
+                if abs(speed) >= YELLOW_SLOW:
+                    since = None
+                elif since is None or since > now:  # or a new race's clock
+                    since = now
+            if since is not None:
+                kept[player.name] = since
+                if now - since >= YELLOW_IDLE_AFTER:
+                    out.add(player.name)
+        self._slow_since = kept
+        return frozenset(out)
 
 
 def shortcut_rows(state, left, jumped=frozenset()):
@@ -3294,6 +3349,7 @@ def lap_times_rows(
     columns=LAP_COLUMNS,
     compounds=None,
     wet=False,
+    retired=frozenset(),
 ):
     """The lap times list: a heading, then each driver in race order with flag and name,
     their best lap and their last lap (asked for by the user on 2026-11-12; before, the running one) at
@@ -3369,6 +3425,8 @@ def lap_times_rows(
             cut_text = f'CUT {left:.1f}s' if left is not None else 'CUT'
         elif player.name in jumped:
             cut_text = 'JUMP'  # TSU's false-start penalty (see ShortcutPenalties.jump_starts)
+        elif player.name in retired:
+            cut_text = DNF_TEXT  # out of the race (Retirements), in the Last lap's place
         rows.append(
             Row(
                 numbered(position, name, max_place),

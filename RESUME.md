@@ -81,6 +81,12 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+  - 2026-11-13: DNF in the lists, asked for by the user: a car out of the race shows DNF, in the shortcut colour, in
+    the lap times where the Last lap is (as CUT does; the rest of the row stays) and in the player list in the gap's
+    place (also a spectator's list). TSU keeps no retired mark for a car (only methods and messages by that name), so
+    `race.Retirements` goes by what the yellow flags call idle: not finished, outside the pit area, and slower than
+    about 29 km/h for 60 s of race time; driving faster again ends it. Tests: the minute, a speed not read, driving
+    on, pits/finished/grid not out, the label in both lists. Not yet seen in a race or replay.
   - 2026-11-13: Text sections resize by hand again, and line spacing, asked for by the user: in move mode a text
     section's top or bottom edge (or a corner) sets its text size, live and in whole pixels, its box staying tight
     round the text (`hud.font_for_height`, from a table of each size's height: a big number rounds on its own, so

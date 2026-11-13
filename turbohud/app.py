@@ -345,6 +345,7 @@ def run(args, folder):
             RACING,
             DeltaBar,
             Radar,
+            Retirements,
             ShortcutPenalties,
             Standings,
             YellowFlags,
@@ -369,6 +370,7 @@ def run(args, folder):
             ShortcutPenalties()
         )  # not `shortcuts`: that name holds whether the hotkeys are there
         track_map = TrackMap(settings.map_others, folder)  # learnt tracks beside the settings
+        retirements = Retirements()
 
         def contents():
             snapshot = live.snapshot()
@@ -390,6 +392,7 @@ def run(args, folder):
                 shortcut_penalties,
                 settings.clan_tags,
                 settings.lap_columns,
+                retirements,
             )
             if not settings.yellow_flags:
                 yellow_flags.reset()  # turned on again, it starts afresh

@@ -1583,3 +1583,9 @@ its "Recent changes".
     Lines %) to keep the panel within two thirds of a small screen. Tests: the height to size, the spacing, saving
     it, the edges (bottom, top, sides, never narrower), the Lines boxes. Run once offscreen on a copy of the user's
     settings: starts and quits cleanly. Not yet tried by hand.
+  - 2026-11-13: DNF in the lists, asked for by the user: a car out of the race shows DNF, in the shortcut colour, in
+    the lap times where the Last lap is (as CUT does; the rest of the row stays) and in the player list in the gap's
+    place (also a spectator's list). TSU keeps no retired mark for a car (only methods and messages by that name), so
+    `race.Retirements` goes by what the yellow flags call idle: not finished, outside the pit area, and slower than
+    about 29 km/h for 60 s of race time; driving faster again ends it. Tests: the minute, a speed not read, driving
+    on, pits/finished/grid not out, the label in both lists. Not yet seen in a race or replay.
