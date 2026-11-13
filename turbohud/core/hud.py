@@ -129,8 +129,8 @@ def help_lines(shortcuts, commands=False, lock_key='Ctrl+Shift+L'):
     the key that switches it (Ctrl+Shift+F12 where another program has Ctrl+Shift+L)."""
     finish = f'{lock_key} or Lock finishes.' if shortcuts else 'Lock finishes.'
     lines = [
-        'Drag a section to move it. At a corner: sizes its text; at an edge:',
-        'adds room (longer bars). Size and Lines set them exactly.',
+        'Drag a section, or click it and nudge it with the arrow keys (Shift: 10 px).',
+        'At a corner: sizes its text; at an edge: adds room. Size and Lines set them.',
         finish,
     ]
     if commands and not shortcuts:
@@ -902,6 +902,19 @@ def common_font(fonts):
 
 
 RESIZE_EDGE = 8  # pixels along a resizable section's edges that resize it in move mode
+NUDGE, NUDGE_FAR = 1, 10  # pixels an arrow key moves the section clicked last, and with Shift
+NUDGE_KEYS = {'left': (-1, 0), 'right': (1, 0), 'up': (0, -1), 'down': (0, 1)}
+
+
+def nudge(key, shift):
+    """(dx, dy) an arrow key moves the section clicked last in move mode (asked for by the user
+    on 2026-11-13, for fine adjustments): NUDGE pixels, NUDGE_FAR with Shift; None for another key.
+    `key`: 'left', 'right', 'up' or 'down'."""
+    if key not in NUDGE_KEYS:
+        return None
+    step = NUDGE_FAR if shift else NUDGE
+    dx, dy = NUDGE_KEYS[key]
+    return dx * step, dy * step
 
 
 def resize_edges(x, y, width, height, edge=RESIZE_EDGE):

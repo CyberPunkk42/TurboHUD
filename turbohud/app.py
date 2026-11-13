@@ -292,9 +292,18 @@ def listen_for_commands(app, on_command):
 
 def run(args, folder):
     import PySide6
-    from PySide6.QtCore import QObject, Qt, QTimer, Signal
+    from PySide6.QtCore import QEvent, QObject, Qt, QTimer, Signal
     from PySide6.QtGui import QAction, QGuiApplication, QIcon
-    from PySide6.QtWidgets import QApplication, QFileDialog, QMenu, QMessageBox, QSystemTrayIcon
+    from PySide6.QtWidgets import (
+        QAbstractSpinBox,
+        QApplication,
+        QComboBox,
+        QFileDialog,
+        QLineEdit,
+        QMenu,
+        QMessageBox,
+        QSystemTrayIcon,
+    )
 
     from turbohud.core import presets as layout_presets
     from turbohud.core.flagstack import combined
@@ -314,6 +323,7 @@ def run(args, folder):
         has_tint,
         local_time_rows,
         main_screen,
+        nudge,
         panel_place,
         screen_of,
         session_rows,
@@ -565,6 +575,7 @@ def run(args, folder):
         move_action.setChecked(not value)
         if value:
             design_end()  # locking leaves the design screen
+            select(None)
             panel.hide()
             native.give_focus_back()
             history.record(layout_state())
@@ -1377,6 +1388,47 @@ def run(args, folder):
         load_layout(sections, 'own layout back after designing')
         show_fonts()
         panel.set_designing(False)
+
+    selected = None  # the section clicked last in move mode: the arrow keys nudge it
+
+    def select(name):
+        nonlocal selected
+        for window in windows.values():
+            if window.selected != (window.section.name == name):
+                window.selected = window.section.name == name
+                window.update()
+        selected = name
+
+    def nudge_selected(dx, dy):
+        """Move the section clicked last by (dx, dy): as a drag, so its group follows and a run
+        of nudges is one step for Undo (asked for by the user on 2026-11-13)."""
+        window = windows.get(selected)
+        if window is None:
+            return
+        x, y, width, height = window.placement()
+        move_window(window, (x + dx, y + dy, width, height), settle=True)
+
+    arrows = {Qt.Key_Left: 'left', Qt.Key_Right: 'right', Qt.Key_Up: 'up', Qt.Key_Down: 'down'}
+
+    class ArrowKeys(QObject):
+        """In move mode, the arrow keys nudge the section clicked last; not while a text, number
+        or list box has the keyboard (there they change its value)."""
+
+        def eventFilter(self, watched, event):
+            if locked or selected is None or event.type() != QEvent.KeyPress:
+                return False
+            key = arrows.get(event.key())
+            if key is None or isinstance(
+                QApplication.focusWidget(), (QAbstractSpinBox, QComboBox, QLineEdit)
+            ):
+                return False
+            nudge_selected(*nudge(key, bool(event.modifiers() & Qt.ShiftModifier)))
+            return True
+
+    arrow_keys = ArrowKeys()
+    app.installEventFilter(arrow_keys)
+    for window in windows.values():
+        window.clicked.connect(select)
 
     def undo():
         """Back one change. What the desktop reports may lag behind the move (see

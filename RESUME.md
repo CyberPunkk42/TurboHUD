@@ -81,6 +81,12 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+  - 2026-11-13: Arrow keys nudge a section in move mode, asked for by the user (fine adjustments): clicking a section
+    selects it (a frame in the highlight colour) and gives TurboHUD the keyboard; the arrow keys then move it 1 px,
+    with Shift 10 px (`hud.nudge`), as a drag, so its group follows and a run of nudges is one step for Undo. Not
+    while a number, list or text box has the keyboard (there the arrows change its value); locking clears the
+    selection. Move-mode help text says so. Tests: the steps; driven in the app offscreen (move mode, the radar
+    clicked, right and Shift+down: moved 1 and 10 px, no error).
   - 2026-11-13: Layout presets per screen size, asked for by the user: shipped defaults for 1920x1080, 2560x1440,
     2560x1600, 3840x2160 and 5120x1440 (`assets/presets`, bundled), the 5120x1440 one the user's own layout, the
     others fitted from it; presets of one's own to make and share. A preset file (`turbohud.core.presets`) holds the

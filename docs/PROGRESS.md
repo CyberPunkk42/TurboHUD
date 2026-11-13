@@ -1728,3 +1728,9 @@ its "Recent changes".
     first start and with the user's settings, no error. The panel's buttons and the design screen not yet tried by
     hand. The shipped 1920x1080 layout's smallest text is 8 px: the user's layout is wide, to be redone in the design
     screen.
+  - 2026-11-13: Arrow keys nudge a section in move mode, asked for by the user (fine adjustments): clicking a section
+    selects it (a frame in the highlight colour) and gives TurboHUD the keyboard; the arrow keys then move it 1 px,
+    with Shift 10 px (`hud.nudge`), as a drag, so its group follows and a run of nudges is one step for Undo. Not
+    while a number, list or text box has the keyboard (there the arrows change its value); locking clears the
+    selection. Move-mode help text says so. Tests: the steps; driven in the app offscreen (move mode, the radar
+    clicked, right and Shift+down: moved 1 and 10 px, no error).
