@@ -43,7 +43,8 @@ launch option: see the README.
 Icon menu, **Settings...**: text colours, all sections bigger or smaller, km/h or mph, a
 light tint behind the sections, which columns the lap times show (flag, lap, tire, best,
 last), when the blue flag and the radar warn, and **Car classes...**, a list of every car
-class you can put in your clan tag (such as [GT3] or [LMP]) with its colour.
+class you can put in your clan tag (such as [GT3] or [LMP]) with its colour. **About...**
+(also **About TurboHUD...** in the icon's menu) shows the version you have.
 
 ## What it shows
 

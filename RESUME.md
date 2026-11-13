@@ -81,6 +81,13 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+  - 2026-11-13: About, and the new app icon, asked for by the user: "About TurboHUD..." in the icon's menu and an
+    "About..." button in Settings open a small window with the icon, the name and the version ("development (run
+    from source)" when not built; `app.about_text`). The icon is now `assets/tsu_turbo_hud.png` (the user's new one,
+    a neon speedometer with the name), for the tray, the windows and the built app's icon; the old
+    `tsu_turbo_hud_00.png` is gone. The Quick Start mentions About. Tests: the text, the icon file and the build's
+    icon path, the Settings button. Checked offscreen in the app: About from the menu showed icon, name and version.
+    Not tried yet: a build with the new icon (PyInstaller makes the .ico / .icns from it).
   - 2026-11-13: Only one TurboHUD at a time, reported by the user (two or more could run): on Windows nothing
     stopped a second copy (the command socket that finds a running one is for macOS and Linux only), and on the Mac
     and Linux two started together could both get past it. Now TurboHUD holds a lock file (`turbohud.lock`, Qt's

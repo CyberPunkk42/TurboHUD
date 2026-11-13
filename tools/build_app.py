@@ -37,7 +37,7 @@ RELEASES = ROOT / 'releases'
 VERSION_FILE = ROOT / 'turbohud' / '_build.py'  # gitignored; written for the build only
 NAME = 'TurboHUD'
 PRESETS = ROOT / 'assets' / 'presets'  # the shipped layouts (turbohud.core.presets)
-ICON = ROOT / 'assets' / 'tsu_turbo_hud_00.png'  # PyInstaller turns it into .ico / .icns with Pillow
+ICON = ROOT / 'assets' / 'tsu_turbo_hud.png'  # PyInstaller turns it into .ico / .icns with Pillow
 BUNDLE_ID = 'local.turbohud.TurboHUD'  # holds nothing personal: it goes out with the app
 MAC_READ_ME = ROOT / 'tools' / 'mac_read_me.txt'
 # The players' guide, in every download next to the app (asked for by the user on 2026-11-12); a

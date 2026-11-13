@@ -72,6 +72,15 @@ class SettingsWindowTests(unittest.TestCase):
         sheet.close_window()
         self.assertFalse(sheet.isVisible())
 
+    def test_about_asks_for_the_about_window(self):
+        from PySide6.QtWidgets import QPushButton
+
+        window = self.window()
+        got = []
+        window.about_requested.connect(lambda: got.append(True))
+        next(b for b in window.findChildren(QPushButton) if b.text() == 'About...').click()
+        self.assertEqual(got, [True])
+
     def test_without_options_there_are_none(self):
         self.assertEqual(self.window().options, {})
 

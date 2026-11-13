@@ -99,6 +99,7 @@ class SettingsWindow(QWidget):
     radar_seconds_changed = Signal(float)
     reads_changed = Signal(int)
     option_changed = Signal(str, bool)  # an option's key (see `options`), on or off
+    about_requested = Signal()  # About...: the app's name and version
     closed = Signal()
 
     focusable = True  # it takes clicks on its buttons
@@ -173,8 +174,12 @@ class SettingsWindow(QWidget):
         classes = QPushButton('Car classes...')
         classes.setToolTip('Every car class a clan tag can name, in its colour')
         classes.clicked.connect(self.open_class_sheet)
+        about = QPushButton('About...')
+        about.setToolTip("TurboHUD's name and version")
+        about.clicked.connect(self.about_requested)
         row.addWidget(reset)
         row.addWidget(classes)
+        row.addWidget(about)
         row.addStretch()
         row.addWidget(close)
         column.addLayout(row)
