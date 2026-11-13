@@ -1681,3 +1681,15 @@ its "Recent changes".
     reversing flag is on and the car goes backwards (faster than 0.5 units a second, `GEAR_REVERSING`), and 1 while
     the car stands (slower than 0.5 either way, `GEAR_STANDING`), whatever the engine sound's gear and the flag;
     a car sliding backwards after a spin, not in reverse, keeps its gear (`race.shown_gear`). Tests: each case.
+  - 2026-11-13: Build 2026.11.13 for the tester (`releases/TurboHUD-2026.11.13-macos-arm64.dmg`, 32.7 MB, macOS 27,
+    `--any-macos`, built with `.buildtools/build-venv`), asked for by the user: `main` after merging GitHub's main
+    (fast-forward, no conflicts, nothing to push), with what came since .7: text sizes in pixels with edge and corner
+    resizing and line spacing, resizing at every edge, move mode staying on a click and ending when a race begins,
+    the gear and rev lights, the radar only in cockpit cameras and arrows only behind, DNF, pit stops timed only in
+    the box, the lap times' name field and Ovr column, one class for one car, qualifying by best lap, and the replay
+    fixes. The Rust reader is unchanged since .7. Smoke test passed with TurboHUD closed; the image's 200 files and
+    the 174 Python modules packed in the app checked for the privacy terms, none. The test sheet names it, lists what
+    is new, updates check 13 (radar) and 20 (replay rewind) and adds checks 21 to 24 (text sizes, move mode, gear and
+    revs, pit box). Tests on `main` (build-venv): 1110 of 1113 pass; the three `MovePanelPresetTests` failures are
+    only under the offscreen platform on the Mac (its buttons get an 80 px minimum, the panel 816 px): drawn with
+    cocoa, every button fits and the panel is 950 px tall (915 before the merge, for the Size px and Lines % columns).

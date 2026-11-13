@@ -1,6 +1,6 @@
 # TurboHUD: test for the Mac, step by step
 
-Nov 12, 2026 · build 2026.11.12.7 · about 55 minutes
+Nov 13, 2026 · build 2026.11.13 · about 60 minutes
 
 Thank you for testing again. This build has everything from 2026.11.11.4 (the fixes for races joined online, yellow flags, the gliding delta bar, the tidier panel), and much more:
 
@@ -34,7 +34,7 @@ New since 2026.11.12.4:
 - **Smoother**: TurboHUD draws its running times and gaps about 20 times faster, and redraws only the parts of the screen that changed. This is for the stutter you saw with 2026.11.12.4. The numbers look the same.
 - **A car left standing**: a car that stays slower than 29 km/h for over a minute (its driver left, or walked away) no longer keeps the yellow flag out. It counts again once it drives faster than 29 km/h.
 
-New since 2026.11.12.6 (this build is 2026.11.12.7):
+New since 2026.11.12.6:
 
 - **Lighter on TSU**: TurboHUD reads less from the game each time (other cars' pit, damage and tire state once a second instead of ten times). This is for the stutter while racing. A PIT or a wreck of another car can show up to a second later.
 - **The player list, new order**: the race leader on top, then the 3 cars ahead of you and the 3 behind you on the track, with you always in the 5th row. The order follows where the cars really are on the track.
@@ -42,6 +42,18 @@ New since 2026.11.12.6 (this build is 2026.11.12.7):
 - **Steadier lists**: the lap times and the player list no longer change width or move their columns when someone pits, cuts or gets a longer gap. The player list's tint covers the whole box. The delta bar's number glides instead of jumping.
 - **Replays**: TurboHUD also shows in TSU's replays, around the driver the camera follows.
 - The disk image has a **Quick Start.txt**: a one-page guide for players.
+
+New since 2026.11.12.7 (this build is 2026.11.13):
+
+- **Text sizes in pixels**: in move mode, each text section has a **Size px** box (**global** follows the **Global text size** below the list; **All global** puts every section back on it). Dragging a text section's top or bottom edge, or a corner, sizes its text; its left or right edge adds room (longer bars). Sections with several rows have a **Lines %** box for the space between rows. Your saved layout is converted once, so it should look as before.
+- **Resizing at every edge**: the radar, track map, delta bar and blue flag resize at any edge or corner in move mode.
+- **Move mode stays on** when you click elsewhere; it ends with **Control + Shift + L**, **Lock**, or by itself when a race you drive begins.
+- **Gear and rev lights**: the speed section can show your gear above the speed (R in reverse) and rev lights below it, green, yellow and red. It is on; **Settings…** has **Gear and revs in the speed section** to turn it off.
+- **The radar only in cockpit cameras** (a setting, on by default): with a camera outside the car it hides. Its arrows now only point to cars **behind** you.
+- **DNF**: a car out of the race (standing still for a minute outside the pits) shows **DNF** in the lap times and the player list.
+- **Pit stops**: the stop time counts only while a car stands in its pit box; a car standing a minute anywhere in the pits shows plain **PIT** without timers.
+- **Lap times**: names have a fixed 20-letter field with the columns right after it; in a race with classes an **Ovr** column shows the overall place; drivers all in the same car are no longer split into classes; in qualifying the lists go by best lap.
+- **Replays**: a replay watched after a race in the same TSU session shows the HUD, and after a rewind it is back within a moment, without false wrong-way yellow flags.
 
 This test checks those, and measures which of two ways of drawing TurboHUD costs TSU fewer frames. If you already did the measurements with 2026.11.11.4, send those too and you can skip Part 3.
 
@@ -55,7 +67,7 @@ TurboHUD only reads what the game shows. It changes nothing in TSU or in CrossOv
 
 You need:
 
-- [ ] The file `TurboHUD-2026.11.12.7-macos-arm64.dmg`
+- [ ] The file `TurboHUD-2026.11.13-macos-arm64.dmg`
 - [ ] TSU in CrossOver, as last time
 - [ ] The same way of reading TSU's FPS as last time
 - [ ] The Terminal app (in **Applications > Utilities**)
@@ -76,7 +88,7 @@ For fair FPS numbers: keep the Mac on its **power adapter**, with **Low Power Mo
 In our session TurboHUD ran straight from the disk image. Please install it, as below.
 
 1. If TurboHUD is running, quit it: press **Control + Shift + Q**.
-2. Double-click `TurboHUD-2026.11.12.7-macos-arm64.dmg`. A window opens.
+2. Double-click `TurboHUD-2026.11.13-macos-arm64.dmg`. A window opens.
 3. Drag **TurboHUD** onto **Applications**. If asked, choose **Replace**.
 4. Close the window. In Finder, click the eject button next to **TurboHUD** in the sidebar. **Always eject it**: TurboHUD must start from Applications, never from the disk image.
 5. **Don't open TurboHUD yet.** The first measurement is without it.
@@ -167,14 +179,18 @@ Always close move mode (**Control + Shift + L**) before you drive.
 10. **Your own yellow flag**: drive off the track with all four wheels onto the grass for a second (or spin). The yellow box should show **your** name, and your dot on the track map should get a yellow ring. There should be **no** CAR STOPPED AHEAD for your own car.
 11. **Your dot**: when you are right behind or beside a car, can you still see your own dot (the white ring) on the track map?
 12. **Driving backwards**: turn round and drive back a little into the sector before. Your yellow sector on the map should move back with you.
-13. **The radar**: are the cars big enough to read at a glance? When a car is a bit further behind or ahead, does an arrow show at the bottom or top edge? Is it easy to see?
+13. **The radar**: are the cars big enough to read at a glance? When a car is a bit further behind, does an arrow show at the bottom edge (and none at the top for cars ahead)? Is it easy to see? Switch to a camera outside the car: does the radar hide, and come back in the cockpit view?
 14. **The player list**: is the race leader on top, and are you in the 5th row, with the 3 cars just in front of you on the track above and the 3 just behind below? When you lap a car or are lapped, does its name turn blue or orange?
 15. **Tires**: is there a coloured ring with a letter next to each driver in the lap times and the player list? Which letters and colours do you see? If you change tires in the pits, does yours change?
 16. **Settings**: open **Settings…** from the TurboHUD icon's menu. Turn **Lap times: tire compound** off and on again: the ring column should go and come back. Click **Car classes...**: a sheet with every class in its colour should open.
 17. If you can, run one race on a track whose name has **(WET)**, **(RW)**, **(QW)** or **(W)**: every car should show a blue **W**.
 18. **Lap times, Last column**: does each driver show their last lap time (not a running clock)? Does a driver with no lap done show **-**?
 19. **Steady lists**: when a car goes into the pits (PIT with a timer), do the lap times and the player list keep their width, with the columns staying where they are?
-20. **Replay** (if you know how to watch a replay in TSU): open one. Does TurboHUD show, around the driver the camera follows? Switch to another driver: does the HUD follow?
+20. **Replay** (if you know how to watch a replay in TSU): open one. Does TurboHUD show, around the driver the camera follows? Switch to another driver: does the HUD follow? Rewind it: does the HUD come back quickly, with no yellow WRONG WAY for cars driving normally?
+21. **Text sizes** (before a race, in move mode): type a size in one section's **Size px** box, then drag another section's bottom edge. Does the text grow and shrink, with the box staying tight round it? Change **Global text size**: do the sections without their own size follow?
+22. **Move mode**: open it, click on the desktop or the game. It should stay open. Then start a race: it should close by itself when the race begins.
+23. **Gear and revs** (on unless you turned off **Gear and revs in the speed section** in **Settings…**): while driving, does the gear change and the rev lights fill up to red before each shift? In reverse, does it show **R**?
+24. **Pits**: stop in your pit box. Does the stop timer run only while you stand in the box?
 
 **✏️ Write down:** Panel buttons readable? None and Undo worked? ______
 
@@ -188,7 +204,7 @@ Always close move mode (**Control + Shift + L**) before you drive.
 
 **✏️ Write down:** Your own yellow flag (box and ring)? Your dot visible next to a car? The sector following you backwards? ______
 
-**✏️ Write down:** The radar: cars big enough? Arrows at the edge seen, and clear? ______
+**✏️ Write down:** The radar: cars big enough? Arrows at the bottom edge seen, and clear? Hidden outside the cockpit? ______
 
 **✏️ Write down:** Player list: leader on top, you in the 5th row, cars in the right order? Blue and orange names seen? ______
 
@@ -198,7 +214,13 @@ Always close move mode (**Control + Shift + L**) before you drive.
 
 **✏️ Write down:** Last column right? Lists steady when a car pits? ______
 
-**✏️ Write down:** Replay: did TurboHUD show and follow the driver? (or "not tried") ______
+**✏️ Write down:** Replay: did TurboHUD show and follow the driver? Back quickly after a rewind? (or "not tried") ______
+
+**✏️ Write down:** Text sizes: Size px, edges and global size worked? Your layout looked as before? ______
+
+**✏️ Write down:** Move mode stayed open on a click, and closed when the race began? ______
+
+**✏️ Write down:** Gear and rev lights right? R in reverse? Pit stop timer only in the box? ______
 
 ---
 
@@ -309,12 +331,15 @@ If TSU freezes: quit it with **Stop** in Steam, as last time.
 | | Flags like TSU's, all the same size? | |
 | | CAR STOPPED AHEAD / SHORTCUT / JUMP START seen and right? | |
 | | Own yellow flag, own dot, sector following a car backwards? | |
-| | Radar: cars big enough, arrows at the edge clear? | |
+| | Radar: cars big enough, arrows at the bottom clear, hidden outside the cockpit? | |
 | | Player list: leader on top, you 5th, right order, blue and orange names? | |
 | | Tires: letters and colours, changed after a pit stop, wet track? | |
 | | Settings: tire column off and on, class sheet? | |
 | | Lap times Last column, lists steady when a car pits? | |
-| | Replay: HUD shown, following the driver? | |
+| | Replay: HUD shown, following the driver, back quickly after a rewind? | |
+| | Text sizes: Size px, edges, global size; layout as before? | |
+| | Move mode: stays on a click, closes when the race begins? | |
+| | Gear and rev lights, R in reverse, pit timer only in the box? | |
 | | Online race 1: did the HUD show? After how many seconds? | |
 | | Online races 2, 3 ...: after how many seconds? | |
 | | Online, joined during a race: did it show? | |
