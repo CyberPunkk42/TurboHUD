@@ -208,6 +208,52 @@ def parse_args(argv):
     return args
 
 
+LOCK_FILE = 'turbohud.lock'
+
+
+def single_instance(folder):
+    """The lock that lets only one TurboHUD run at a time for this user (asked for by the user on
+    2026-11-13: a second copy could be started; on Windows there is no command socket to find the
+    running one by), or None where another TurboHUD holds it. A lock left by a TurboHUD that is gone
+    (its process no longer runs) is taken over."""
+    from PySide6.QtCore import QLockFile
+
+    try:
+        Path(folder).mkdir(parents=True, exist_ok=True)
+    except OSError:
+        pass  # QLockFile then fails: run anyway rather than not at all
+    lock = QLockFile(str(Path(folder) / LOCK_FILE))
+    lock.setStaleLockTime(0)  # stale only when its process is gone, however long it ran
+    if lock.tryLock(0):
+        return lock
+    if lock.error() == QLockFile.LockFailedError:
+        return None
+    return _NoLock()  # the folder cannot be written to: no lock, but TurboHUD still starts
+
+
+class _NoLock:
+    def unlock(self):
+        pass
+
+
+ALREADY_RUNNING = (
+    'TurboHUD is already running. Its icon in the system tray (Mac: the menu bar) has its menu; '
+    'Ctrl+Shift+L switches move mode (Windows, Mac).'
+)
+
+
+def already_running():
+    """Tell that TurboHUD runs already: in the terminal, and in a window (a started app has no
+    terminal)."""
+    if sys.stderr:
+        print(ALREADY_RUNNING, file=sys.stderr)
+    from PySide6.QtWidgets import QApplication, QMessageBox
+
+    app = QApplication.instance() or QApplication([])
+    QMessageBox.information(None, 'TurboHUD', ALREADY_RUNNING)
+    del app
+
+
 def setup_log(folder):
     """Log to the terminal and to turbohud.log in the settings folder, replaced each run."""
     handlers = [logging.StreamHandler()] if sys.stderr else []  # a windowed app has no terminal
@@ -1795,5 +1841,12 @@ def main(argv=None):
         print('run_turbohud.cmd (Windows), which set it up first.', file=sys.stderr)
         return 2
     folder = settings_dir()
+    lock = single_instance(folder)  # before the log: a second copy would empty the running one's
+    if lock is None:
+        already_running()
+        return 0
     setup_log(folder)
-    return run(args, folder)
+    try:
+        return run(args, folder)
+    finally:
+        lock.unlock()
