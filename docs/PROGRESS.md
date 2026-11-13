@@ -1786,3 +1786,10 @@ its "Recent changes".
     full size), and 5120x1440 the user's newest own layout (bigger blue flag, shortcut warning and local time; lap,
     flags and draft moved). 3840x2160 stays the one fitted from the earlier 5120x1440 layout (none made yet). Each
     has all 19 sections on its screen and holds positions, sizes and text sizes only. Tests pass with them.
+  - 2026-11-13: Windows build 2026.11.13.2 (`releases/`, not tagged): the shipped layouts, design screen, display
+    presets folder, one TurboHUD at a time, About and the new icon. Checked: the zip holds the exe (new icon), the
+    Quick Start, `customization/display_presets/README.txt` and the five layouts (the repository's), and the smoke
+    test passed. The smoke test now runs the built app with settings and command socket in a folder of its own
+    (`build_app.smoke_env`) and passes only when its log ends with "done": before, it used the player's settings, and
+    with a TurboHUD running a built app that only told that one and quit would have passed. Tests: the environment
+    per system and where the log is.
