@@ -1122,6 +1122,19 @@ class MovePanelPresetTests(unittest.TestCase):
         next(b for b in panel.findChildren(type(panel.undo)) if b.text() == 'All global').click()
         self.assertEqual((every, back), ([18], [True]))
 
+    def test_the_design_frame_is_never_on_the_canvas(self):
+        # Reported by the user on 2026-11-13: Design did nothing, as placing the frame asked it
+        # whether the HUD canvas draws it, which only a section's window could answer.
+        from turbohud.overlay.window import DesignFrame
+
+        class Native:
+            def raise_window(self, window):
+                return 'test'
+
+        frame = DesignFrame(Native())
+        self.addCleanup(frame.close)
+        self.assertFalse(frame.on_canvas)
+
     def test_the_layout_rows_redo_and_the_design_screen(self):
         # Asked for by the user on 2026-11-13: shipped layouts, files, Redo and a design screen.
         panel = self.panel()

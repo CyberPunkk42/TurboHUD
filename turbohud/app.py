@@ -875,7 +875,7 @@ def run(args, folder):
             native_move(window, place, settle)
         else:
             window.setGeometry(*place)
-        if window.on_canvas:
+        if getattr(window, 'on_canvas', False):  # a section's window (not the design frame)
             window.update()  # a hidden window does not draw itself again: the canvas does
 
     def follow_groups(now):

@@ -1011,6 +1011,8 @@ class DesignFrame(QWidget):
     """The design screen's frame (move mode): the area that stands for another screen size, with
     its name above it. Clicks go through it to the sections, which are arranged inside it."""
 
+    on_canvas = False  # never drawn on the HUD canvas: its own window, in move mode only
+
     def __init__(self, native):
         super().__init__(None, window_flags())
         self.native = native
