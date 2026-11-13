@@ -81,6 +81,10 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+  - 2026-11-13: R only while reversing, 1st while standing, asked for by the user: the gear shows R only while TSU's
+    reversing flag is on and the car goes backwards (faster than 0.5 units a second, `GEAR_REVERSING`), and 1 while
+    the car stands (slower than 0.5 either way, `GEAR_STANDING`), whatever the engine sound's gear and the flag;
+    a car sliding backwards after a spin, not in reverse, keeps its gear (`race.shown_gear`). Tests: each case.
   - 2026-11-13: Reverse shows R, and the speed section's lines stay put, reported and asked for by the user: the
     engine sound has no reverse gear (reversing showed its gear 2), so the reader also reads
     `TS.VehicleState.reversing` (`CarState.reversing`) and the gear shows R. The speed is a number right-aligned in a

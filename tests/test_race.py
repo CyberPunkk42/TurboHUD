@@ -3591,7 +3591,7 @@ class GearTests(unittest.TestCase):
             gear=(1, 0.7),
             reversing=True,
         )
-        car = reader.read().car
+        car = dataclasses.replace(reader.read().car, speed=-3.0)  # going backwards
         self.assertTrue(car.reversing)
         self.assertEqual(race.car_sections(car)['speed'][0].text, 'R')
         self.assertFalse(self.car((1, 0.7)).reversing)
@@ -3601,3 +3601,29 @@ class GearTests(unittest.TestCase):
         self.addCleanup(setattr, race.LapReader, 'read_gear', True)
         car = self.car((3, 0.8))
         self.assertEqual((car.gear, car.revs), (None, None))
+
+
+class ShownGearTests(unittest.TestCase):
+    """R only while going backwards in reverse, 1 while standing (asked for by the user on 2026-11-13)."""
+
+    def car(self, speed, reversing=False, gear=3):
+        return race.CarState(
+            fuel_on=False,
+            fuel_used=0,
+            fuel_tank=1,
+            tires_on=False,
+            tire_wear=0,
+            speed=speed,
+            gear=gear,
+            revs=0.7,
+            reversing=reversing,
+        )
+
+    def test_the_gear_shown(self):
+        self.assertEqual(race.shown_gear(self.car(-3.0, reversing=True)), 'R')
+        self.assertEqual(race.shown_gear(self.car(0.0, reversing=True)), '1')  # stands, the flag on: 1st
+        self.assertEqual(race.shown_gear(self.car(0.2)), '1')  # rolling to a stop
+        self.assertEqual(
+            race.shown_gear(self.car(-3.0)), '3'
+        )  # sliding backwards after a spin, not in reverse
+        self.assertEqual(race.shown_gear(self.car(30.0, reversing=True)), '3')  # forwards: the sound's gear

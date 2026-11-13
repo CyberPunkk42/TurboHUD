@@ -1672,3 +1672,7 @@ its "Recent changes".
     middle of the box, measured with its digits as zeros: the gear centred above the speed, neither moving as the
     numbers change (also without the gear). Tests: R from the reader, the speed's slot and unit; checked in an
     offscreen render (8, 98 and 171 km/h end at the same place, the gear in the middle).
+  - 2026-11-13: R only while reversing, 1st while standing, asked for by the user: the gear shows R only while TSU's
+    reversing flag is on and the car goes backwards (faster than 0.5 units a second, `GEAR_REVERSING`), and 1 while
+    the car stands (slower than 0.5 either way, `GEAR_STANDING`), whatever the engine sound's gear and the flag;
+    a car sliding backwards after a spin, not in reverse, keeps its gear (`race.shown_gear`). Tests: each case.

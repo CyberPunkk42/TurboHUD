@@ -2769,6 +2769,20 @@ def rev_share(pitch):
 
 
 SPEED_SLOT = '000'  # the speed's number is right-aligned in this much room
+# The gear shown (asked for by the user on 2026-11-13): R only while the car goes backwards in reverse,
+# 1 while it stands, whatever the engine sound's gear and TSU's reversing flag (on at a standstill too).
+GEAR_STANDING = 0.5  # game units a second either way: slower, the car stands
+GEAR_REVERSING = 0.5  # ... and faster than this backwards, in reverse: R
+
+
+def shown_gear(car):
+    """The gear to show for `car` (a CarState with a gear): 'R' while it goes backwards in reverse,
+    '1' while it stands, else the engine sound's gear."""
+    if car.reversing and car.speed < -GEAR_REVERSING:
+        return 'R'
+    if abs(car.speed) < GEAR_STANDING:
+        return '1'
+    return str(car.gear)
 
 
 def car_sections(car, laps_to_go=None, speed_unit='kmh'):
@@ -2787,7 +2801,7 @@ def car_sections(car, laps_to_go=None, speed_unit='kmh'):
     if car.gear is not None:
         # The gear above the speed (hud.speed_section), red near the shift.
         gear_color = 'behind' if rev_share(car.revs) >= REVS_SHIFT else 'text'
-        gear = 'R' if car.reversing else str(car.gear)
+        gear = shown_gear(car)
         sections['speed'] = [Row(gear, 'big', gear_color), *sections['speed']]
     if car.fuel_left is not None:
         color = {True: 'ahead', False: 'behind', None: 'text'}[car.saving]
