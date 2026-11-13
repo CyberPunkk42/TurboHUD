@@ -1691,3 +1691,9 @@ its "Recent changes".
     the speed section (an option). The zip's reader is the one built from `main` (unchanged since .2, checked byte
     for byte). Smoke test passed (a TurboHUD from the source folder was running); the zip and every file in it
     checked for the privacy terms, none; no other players' names in the code. Not yet tried by hand.
+  - 2026-11-13: The lap title no longer cut off, reported by the user: with the leader a lap ahead the title
+    ("Lap 3/13 · Leader 4  -  16:..") was cut after the time's colon. Its box is sized from the section's sample,
+    which had no leader part, and since text sizes a text keeps its size. The sample now has it ("Lap 13/13 · Leader
+    13  -  21:00 left"), so the box is wide enough (a saved box widens by itself: never narrower than its text), and
+    in every text section a live text still wider than its box is drawn just small enough to fit, not cut
+    (`hud.fitting_scale`; the text size is kept otherwise). Tests: the lap box at three sizes, the fit, the pedal bars.

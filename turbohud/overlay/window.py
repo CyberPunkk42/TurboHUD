@@ -39,6 +39,7 @@ from turbohud.core.hud import (
     content_shift,
     content_size,
     drawn_scale,
+    fitting_scale,
     font_for_height,
     font_scale,
     has_tint,
@@ -457,7 +458,16 @@ class SectionWindow(QWidget):
             rows = rows or list(self.section.samples[0])  # something to place, also before a race
         bars = pedal_space(self.theme.scale) if self.section.pedals else 0
         if self.font is not None:
-            scale = font_scale(self.font)  # its text size, whatever the box (text_box fits it)
+            # Its text size, whatever the box (text_box fits it); only a live text wider than the box
+            # is drawn smaller, to fit.
+            scale = fitting_scale(
+                rows,
+                font_scale(self.font),
+                self.width(),
+                text_width,
+                self.section.spacing,
+                self.section.pedals,
+            )
         else:
             scale = drawn_scale(
                 self.section,

@@ -81,6 +81,12 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+  - 2026-11-13: The lap title no longer cut off, reported by the user: with the leader a lap ahead the title
+    ("Lap 3/13 · Leader 4  -  16:..") was cut after the time's colon. Its box is sized from the section's sample,
+    which had no leader part, and since text sizes a text keeps its size. The sample now has it ("Lap 13/13 · Leader
+    13  -  21:00 left"), so the box is wide enough (a saved box widens by itself: never narrower than its text), and
+    in every text section a live text still wider than its box is drawn just small enough to fit, not cut
+    (`hud.fitting_scale`; the text size is kept otherwise). Tests: the lap box at three sizes, the fit, the pedal bars.
   - 2026-11-13: Windows build 2026.11.13, asked for by the user: `releases/TurboHUD-2026.11.13-windows-x64.zip`
     (42.2 MB, sha256 in the .sha256 beside it), from `main` (ddc0031) with what came since 2026.11.12.7: text sizes
     (global and per section, corners size the text, edges add room, line spacing), DNF, the stop time only in a pit
