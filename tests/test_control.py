@@ -10,7 +10,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from turbohud import app, control
-from turbohud.core import hud, settings
+from turbohud.core import hud, presets, settings
 from turbohud.overlay import choose_platform
 
 
@@ -333,3 +333,45 @@ class FirstStartLayoutTests(unittest.TestCase):
             before, (0, 0, 1920, 1080), hud.RACE_SECTIONS, self.measure, self.ink, empty
         )
         self.assertEqual(after, before)
+
+
+class StartLayoutTests(unittest.TestCase):
+    """A layout in customization/display_presets for the screen's size is taken at a start, once
+    each time it is new or changed (asked for by the user on 2026-11-13)."""
+
+    measure = staticmethod(FirstStartLayoutTests.measure)
+    ink = staticmethod(FirstStartLayoutTests.ink)
+    screen = (0, 0, 1920, 1080)
+
+    def setUp(self):
+        self.folder = Path(tempfile.mkdtemp())
+        self.own = {s.name: settings.SectionPlace(100, 200, 300, 40) for s in hud.RACE_SECTIONS}
+
+    def start(self, before):
+        return app.start_layout(before, self.screen, hud.RACE_SECTIONS, self.measure, self.ink, self.folder)
+
+    def test_own_layout_taken_once(self):
+        presets.save_file(self.folder / '1920x1080.json', self.own, (1920, 1080), 13)
+        first = self.start(settings.Settings())
+        self.assertEqual(first.sections['speed'].x, 100)
+        self.assertTrue(first.applied_preset)
+        moved = replace(first, sections={**first.sections, 'speed': replace(first.sections['speed'], x=5)})
+        self.assertEqual(self.start(moved), moved)  # moving sections afterwards sticks
+
+    def test_changed_file_taken_again(self):
+        presets.save_file(self.folder / '1920x1080.json', self.own, (1920, 1080), 13)
+        first = self.start(settings.Settings())
+        changed = {**self.own, 'speed': settings.SectionPlace(600, 200, 300, 40)}
+        presets.save_file(self.folder / '1920x1080.json', changed, (1920, 1080), 13)
+        self.assertEqual(self.start(first).sections['speed'].x, 600)
+
+    def test_other_size_not_taken(self):
+        presets.save_file(self.folder / '2560x1440.json', self.own, (2560, 1440), 13)
+        shipped = app.first_start_layout(
+            settings.Settings(), self.screen, hud.RACE_SECTIONS, self.measure, self.ink
+        )
+        self.assertEqual(self.start(settings.Settings()), shipped)
+
+    def test_placed_sections_kept_without_own_layout(self):
+        placed = replace(settings.Settings(), sections={'speed': settings.SectionPlace(1, 2, 3, 4)})
+        self.assertEqual(self.start(placed), placed)

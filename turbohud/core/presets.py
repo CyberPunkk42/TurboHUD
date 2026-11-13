@@ -13,7 +13,10 @@ overlap. Only where the sections would not fit side by side even without room be
 wide screen's layout on a narrow one) are they scaled smaller, as little as needs be.
 """
 
+import hashlib
 import json
+import os
+import sys
 from dataclasses import replace
 from pathlib import Path
 
@@ -277,28 +280,113 @@ def out_of_frame(places, frame, scale, size):
     return on_screen(full, size)
 
 
+# Layouts of one's own, beside the app (asked for by the user on 2026-11-13: easy to find): Export,
+# Import and Save design open it, and at every start a layout there for the screen's size is taken,
+# once each time the file is new or has changed.
+CUSTOM_FOLDER = Path('customization') / 'display_presets'
+CUSTOM_README = 'README.txt'
+CUSTOM_README_TEXT = """TurboHUD display presets
+
+Put a TurboHUD layout file (.json) here, named after the screen size it is for, such as
+2560x1440.json. When TurboHUD starts on a screen of that size, it takes that layout (once each
+time the file is new or has changed, so moving sections afterwards sticks).
+
+Export... in move mode saves the layout here; Import... loads one from here; Load screen default
+puts back the one here for your screen, or else the layout TurboHUD comes with.
+"""
+
+
+def app_folder(frozen=None, executable=None, source=None):
+    """The folder TurboHUD was started from: the one holding TurboHUD.exe (or TurboHUD, or on the
+    Mac the one holding TurboHUD.app) in the built app, the source folder otherwise."""
+    frozen = getattr(sys, 'frozen', False) if frozen is None else frozen
+    if not frozen:
+        return Path(source) if source is not None else Path(__file__).resolve().parents[2]
+    program = Path(executable or sys.executable).resolve()
+    bundle = next((parent for parent in program.parents if parent.suffix == '.app'), None)
+    return bundle.parent if bundle is not None else program.parent
+
+
+def custom_folder(settings_folder, start=None):
+    """customization/display_presets in the folder TurboHUD was started from (`start`, else
+    app_folder()), or in `settings_folder` where that one cannot be written to (an app installed
+    in the Mac's Applications)."""
+    start = Path(start) if start is not None else app_folder()
+    if os.access(start, os.W_OK):
+        return start / CUSTOM_FOLDER
+    return Path(settings_folder) / CUSTOM_FOLDER
+
+
+def ready_folder(folder):
+    """Make `folder` (custom_folder) with its read-me where missing; the folder, or None where it
+    cannot be made."""
+    try:
+        Path(folder).mkdir(parents=True, exist_ok=True)
+        readme = Path(folder) / CUSTOM_README
+        if not readme.exists():
+            readme.write_text(CUSTOM_README_TEXT, encoding='utf-8')
+    except OSError:
+        return None
+    return Path(folder)
+
+
+def custom_for(size, folder):
+    """(the file's digest, {name: SectionPlace}) of the layout made for exactly `size` among the
+    files in `folder` (its name, else any file made for that size); None where there is none."""
+    folder = Path(folder)
+    named = folder / file_name(size)
+    candidates = [named] + sorted(p for p in folder.glob('*.json') if p != named) if folder.is_dir() else []
+    for path in candidates:
+        try:
+            data = path.read_bytes()
+        except OSError:
+            continue
+        try:
+            preset = read_preset(json.loads(data.decode('utf-8')))
+        except (UnicodeDecodeError, ValueError):
+            continue
+        if preset is not None and preset[0] == tuple(size):
+            return hashlib.sha256(data).hexdigest(), preset[1]
+    return None
+
+
+def layout_for(size, folder, shipped_folder, sections, measure, ink):
+    """{name: SectionPlace} for a screen of `size`: one's own layout for it in `folder`
+    (custom_for), else the shipped one (default_for); None without either."""
+    own = custom_for(size, folder) if folder is not None else None
+    if own is not None:
+        return on_screen(own[1], size)
+    return default_for(size, shipped_folder, sections, measure, ink)
+
+
 def kept_sections(places, known):
     """`places` without sections TurboHUD does not have (a file from a newer version)."""
     return {name: place for name, place in places.items() if name in known}
 
 
 __all__ = [
+    'CUSTOM_FOLDER',
     'FORMAT',
     'SCREENS',
     'SectionPlace',
     'absolute',
+    'app_folder',
+    'custom_folder',
+    'custom_for',
     'default_for',
     'design_frame',
     'file_name',
     'fit_layout',
     'into_frame',
     'kept_sections',
+    'layout_for',
     'load_file',
     'nearest',
     'on_screen',
     'out_of_frame',
     'preset_data',
     'read_preset',
+    'ready_folder',
     'relative',
     'save_file',
     'shipped',
