@@ -18,6 +18,7 @@ seconds and fails if it does not quit cleanly.
 
 import argparse
 import hashlib
+import io
 import os
 import platform
 import plistlib
@@ -43,6 +44,9 @@ MAC_READ_ME = ROOT / 'tools' / 'mac_read_me.txt'
 # .txt opens with a double-click everywhere, and its Markdown reads as plain text.
 QUICK_START = ROOT / 'QUICK_START.md'
 QUICK_START_NAME = 'Quick Start.txt'
+# customization/display_presets with its read-me, in the zip and the tar beside the program (on the Mac
+# the app's own folder is not written to: TurboHUD makes it in its settings folder).
+CUSTOM_README_PATH = 'customization/display_presets/README.txt'
 MAC_NEWEST_MINIMUM = (15, 0)  # the build stops if the app would need a newer macOS than this
 MACH_O_MAGIC = {
     b'\xcf\xfa\xed\xfe',  # 64-bit
@@ -197,6 +201,15 @@ def pack_dmg(app, archive, minimum):
         )
 
 
+def custom_readme():
+    """The read-me of customization/display_presets, as TurboHUD itself writes it (UTF-8)."""
+    if str(ROOT) not in sys.path:
+        sys.path.insert(0, str(ROOT))
+    from turbohud.core.presets import CUSTOM_README_TEXT
+
+    return CUSTOM_README_TEXT.encode('utf-8')
+
+
 def pack(dist, archive, system=sys.platform, minimum=(0, 0)):
     archive.parent.mkdir(parents=True, exist_ok=True)
     archive.unlink(missing_ok=True)
@@ -206,12 +219,19 @@ def pack(dist, archive, system=sys.platform, minimum=(0, 0)):
         with tarfile.open(archive, 'w:gz') as tar:
             tar.add(dist / NAME, arcname=NAME)
             tar.add(QUICK_START, arcname=f'{NAME}/{QUICK_START_NAME}')
+            readme = tarfile.TarInfo(f'{NAME}/{CUSTOM_README_PATH}')
+            text = custom_readme()
+            readme.size = len(text)
+            readme.mode = 0o644
+            tar.addfile(readme, io.BytesIO(text))
     else:
         folder = dist / NAME
         with zipfile.ZipFile(archive, 'w', zipfile.ZIP_DEFLATED) as zip_file:
             for path in sorted(folder.rglob('*')):
                 zip_file.write(path, Path(NAME) / path.relative_to(folder))
             zip_file.write(QUICK_START, Path(NAME) / QUICK_START_NAME)
+            # The folder for one's own layouts, beside the program (turbohud.core.presets).
+            zip_file.writestr(f'{NAME}/{CUSTOM_README_PATH}', custom_readme())
     digest = hashlib.sha256(archive.read_bytes()).hexdigest()
     archive.with_name(archive.name + '.sha256').write_text(f'{digest}  {archive.name}\n', encoding='utf-8')
     return digest

@@ -179,7 +179,7 @@ class PackTests(unittest.TestCase):
             with zipfile.ZipFile(archive) as zip_file:
                 self.assertEqual(sorted(zip_file.namelist()), [
                     'TurboHUD/Quick Start.txt', 'TurboHUD/TurboHUD.exe', 'TurboHUD/_internal/',
-                    'TurboHUD/_internal/lib.dll',
+                    'TurboHUD/_internal/lib.dll', 'TurboHUD/customization/display_presets/README.txt',
                 ])  # fmt: skip
                 guide = zip_file.read('TurboHUD/Quick Start.txt')
                 self.assertEqual(guide, build_app.QUICK_START.read_bytes())
@@ -192,6 +192,8 @@ class PackTests(unittest.TestCase):
             with tarfile.open(archive) as tar:
                 self.assertIn('TurboHUD/_internal/lib.dll', tar.getnames())
                 self.assertIn('TurboHUD/Quick Start.txt', tar.getnames())
+                readme = tar.extractfile('TurboHUD/customization/display_presets/README.txt').read()
+                self.assertEqual(readme, build_app.custom_readme())
             self.check_digest(archive)
 
 

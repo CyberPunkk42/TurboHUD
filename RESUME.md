@@ -81,6 +81,18 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+  - 2026-11-13: Layouts of one's own in `customization/display_presets`, asked for by the user (easy to find and
+    share): the folder sits beside the program (the one holding TurboHUD.exe, TurboHUD, or on the Mac TurboHUD.app;
+    from source the repository, gitignored), in the settings folder where that one cannot be written to. Export...,
+    Import... and Save design... open it (made with a read-me where missing). At every start a layout there made for
+    the screen's exact size is taken, once each time the file is new or has changed (its digest is kept as
+    `applied_preset` in the settings), so moving sections afterwards sticks; otherwise a first start takes the
+    nearest shipped layout, fitted. Load screen default takes the one there first, then the shipped one. The Windows
+    zip and the Linux tar hold the empty folder with its read-me. To ship a layout with the app, it still goes into
+    `assets/presets`. Tests: app folder (exe, .app, source), the folder's fallback, the read-me, the exact-size pick,
+    taken once and again when changed, the archives' read-me. Checked in the app offscreen on a copy of the settings:
+    Export offered `<repo>/customization/display_presets/800x800.json`; an 800x800 file there was taken on the first
+    start and not again on the second.
   - 2026-11-13: "Load screen default", and Export offers the shipped folder, asked for by the user: the button that
     loads the shipped layout for the screen is named so (it read as if it saved). Export, run from the source folder,
     now offers `assets/presets/<width>x<height>.json`, as Save design does: saved there, the layout is the shipped

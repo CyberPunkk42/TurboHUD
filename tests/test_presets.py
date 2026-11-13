@@ -200,3 +200,55 @@ class DesignScreenTests(unittest.TestCase):
             if original.font:
                 self.assertLessEqual(abs(back[name].font - original.font), 1, name)
         self.assertLessEqual(back['localtime'].x + back['localtime'].width, size[0])
+
+
+class CustomFolderTests(unittest.TestCase):
+    """customization/display_presets beside the app (asked for by the user on 2026-11-13)."""
+
+    def test_app_folder(self):
+        self.assertEqual(presets.app_folder(frozen=False, source='/src'), Path('/src'))
+        exe = Path(tempfile.mkdtemp()) / 'TurboHUD' / 'TurboHUD.exe'
+        self.assertEqual(presets.app_folder(frozen=True, executable=exe), exe.resolve().parent)
+        mac = Path(tempfile.mkdtemp()) / 'TurboHUD.app' / 'Contents' / 'MacOS' / 'TurboHUD'
+        self.assertEqual(presets.app_folder(frozen=True, executable=mac), mac.resolve().parents[3])
+
+    def test_custom_folder_beside_the_app(self):
+        start = Path(tempfile.mkdtemp())
+        self.assertEqual(
+            presets.custom_folder('/settings', start), start / 'customization' / 'display_presets'
+        )
+
+    def test_custom_folder_in_settings_where_not_writable(self):
+        missing = Path(tempfile.mkdtemp()) / 'not there'
+        self.assertEqual(
+            presets.custom_folder('/settings', missing), Path('/settings') / presets.CUSTOM_FOLDER
+        )
+
+    def test_ready_folder_writes_its_read_me(self):
+        folder = Path(tempfile.mkdtemp()) / 'customization' / 'display_presets'
+        self.assertEqual(presets.ready_folder(folder), folder)
+        self.assertIn('2560x1440.json', (folder / 'README.txt').read_text(encoding='utf-8'))
+
+    def test_custom_for_exact_size_only(self):
+        folder = Path(tempfile.mkdtemp())
+        places = {'speed': SectionPlace(10, 20, 30, 40)}
+        self.assertIsNone(presets.custom_for((1920, 1080), folder))
+        presets.save_file(folder / 'mine.json', places, (1920, 1080), 13)
+        presets.save_file(folder / '2560x1440.json', places, (2560, 1440), 13)
+        (folder / 'broken.json').write_text('{', encoding='utf-8')
+        digest, found = presets.custom_for((1920, 1080), folder)
+        self.assertEqual(found['speed'].x, 10)
+        self.assertEqual(len(digest), 64)
+        self.assertIsNone(presets.custom_for((3840, 2160), folder))
+
+    def test_layout_for_prefers_own(self):
+        folder, shipped = Path(tempfile.mkdtemp()), Path(tempfile.mkdtemp())
+        presets.save_file(
+            folder / '1920x1080.json', {'speed': SectionPlace(10, 20, 30, 40)}, (1920, 1080), 13
+        )
+        sections = {s.name: s for s in hud.RACE_SECTIONS}
+        laid = presets.layout_for((1920, 1080), folder, shipped, sections, len, lambda _t, s: (s, 0))
+        self.assertEqual(laid['speed'].x, 10)
+        self.assertIsNone(
+            presets.layout_for((1920, 1080), None, shipped, sections, len, lambda _t, s: (s, 0))
+        )

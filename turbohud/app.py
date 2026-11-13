@@ -138,12 +138,38 @@ def first_start_layout(settings, screen, layout, measure, ink, folder=None):
     default = presets.default_for(screen[2:], folder or asset_path('presets'), sections, measure, ink)
     if not default:
         return settings
-    default = presets.kept_sections(presets.absolute(default, screen), sections)
-    fonts = [p.font for n, p in default.items() if is_text_section(sections[n]) and p.font is not None]
-    font_size = common_font(fonts)
-    places = {n: replace(p, font=None if p.font == font_size else p.font) for n, p in default.items()}
     log.info('first start: the layout for %dx%d', screen[2], screen[3])
-    return replace(settings, sections=places, font_size=font_size)
+    return with_layout(settings, default, screen, sections)
+
+
+def with_layout(settings, places, screen, sections):
+    """The settings with `places` (from `screen`'s top left, each text size written out) as the
+    sections' places on `screen`: the text size most have becomes the global one."""
+    from turbohud.core import presets
+
+    laid = presets.kept_sections(presets.absolute(places, screen), sections)
+    fonts = [p.font for n, p in laid.items() if is_text_section(sections[n]) and p.font is not None]
+    font_size = common_font(fonts)
+    laid = {n: replace(p, font=None if p.font == font_size else p.font) for n, p in laid.items()}
+    return replace(settings, sections=laid, font_size=font_size)
+
+
+def start_layout(settings, screen, layout, measure, ink, folder, shipped=None):
+    """The settings at a start on `screen`: the layout in `folder` (customization/display_presets)
+    made for its size, where that file is new or changed since it was last taken (asked for by the
+    user on 2026-11-13); else on a first start the shipped one (first_start_layout); else as they
+    are."""
+    from turbohud.core import presets
+
+    sections = {section.name: section for section in layout}
+    own = presets.custom_for(screen[2:], folder) if folder is not None else None
+    if own is not None and own[0] != settings.applied_preset:
+        log.info('the layout for %dx%d from customization/display_presets', screen[2], screen[3])
+        settings = with_layout(settings, presets.on_screen(own[1], screen[2:]), screen, sections)
+        return replace(settings, applied_preset=own[0])
+    if not settings.sections:
+        return first_start_layout(settings, screen, layout, measure, ink, shipped)
+    return settings
 
 
 def asset_path(name, bundle=None):
@@ -481,8 +507,9 @@ def run(args, folder):
         log.info('locked: the sections in one window per screen (%d)', len(screens))
     first = {name: window.base for name, window in windows.items()}
     screen = main_screen(screens)
-    if not settings.sections and screen is not None:
-        settings = first_start_layout(settings, screen, layout, text_width, text_ink)
+    own_folder = layout_presets.custom_folder(settings_dir())
+    if screen is not None:
+        settings = start_layout(settings, screen, layout, text_width, text_ink, own_folder)
     defaults = first_launch(layout, first, screen[:2] if screen else (0, 0))
     saved_places = {
         name: (place.x, place.y, place.width, place.height)
@@ -1277,19 +1304,18 @@ def run(args, folder):
         """The shipped layout for the screen the sections are on."""
         target = busiest_screen()
         known = {section.name: section for section in layout}
-        default = layout_presets.default_for(target[2:], asset_path('presets'), known, text_width, text_ink)
-        if default:
-            load_layout(layout_presets.absolute(default, target), f'the default for {target[2]}x{target[3]}')
+        laid = layout_presets.layout_for(
+            target[2:], own_folder, asset_path('presets'), known, text_width, text_ink
+        )
+        if laid:
+            load_layout(layout_presets.absolute(laid, target), f'the default for {target[2]}x{target[3]}')
 
     def export_layout():
         """The layout to a file, for the screen the sections are on."""
         target = busiest_screen()
-        # Run from the source folder, the shipped layouts' folder: saved there, it ships with the next build.
-        shipped_folder = asset_path('presets')
-        if os.access(shipped_folder, os.W_OK):
-            suggested = shipped_folder / layout_presets.file_name(target[2:])
-        else:
-            suggested = Path.home() / f'TurboHUD layout {target[2]}x{target[3]}.json'
+        # customization/display_presets beside the app (asked for by the user on 2026-11-13).
+        folder = layout_presets.ready_folder(own_folder) or Path.home()
+        suggested = folder / layout_presets.file_name(target[2:])
         chosen, _ = QFileDialog.getSaveFileName(
             panel, 'Export layout', str(suggested), 'TurboHUD layouts (*.json)'
         )
@@ -1306,8 +1332,9 @@ def run(args, folder):
 
     def import_layout():
         """A layout from a file, fitted to the screen the sections are on where made for another."""
+        start = layout_presets.ready_folder(own_folder) or Path.home()
         chosen, _ = QFileDialog.getOpenFileName(
-            panel, 'Import layout', str(Path.home()), 'TurboHUD layouts (*.json)'
+            panel, 'Import layout', str(start), 'TurboHUD layouts (*.json)'
         )
         if not chosen:
             return
@@ -1362,8 +1389,7 @@ def run(args, folder):
             if is_text_section(window.section) and name in shown:
                 shown[name] = replace(shown[name], font=window.own_font or settings.font_size)
         places = layout_presets.out_of_frame(shown, frame, scale, size)
-        shipped_folder = asset_path('presets')
-        folder = shipped_folder if os.access(shipped_folder, os.W_OK) else Path.home()
+        folder = layout_presets.ready_folder(own_folder) or Path.home()
         suggested = folder / layout_presets.file_name(size)
         chosen, _ = QFileDialog.getSaveFileName(
             panel, 'Save design', str(suggested), 'TurboHUD layouts (*.json)'
