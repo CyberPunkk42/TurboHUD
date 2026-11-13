@@ -81,6 +81,16 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+  - 2026-11-13: Text sections resize by hand again, and line spacing, asked for by the user: in move mode a text
+    section's top or bottom edge (or a corner) sets its text size, live and in whole pixels, its box staying tight
+    round the text (`hud.font_for_height`, from a table of each size's height: a big number rounds on its own, so
+    sizes do not always grow by one); its left or right edge adds room, never narrower than its text. The opposite
+    edges stay put. A size dragged back to the global one follows it again. The move-mode panel has a Lines column
+    (percent of the usual room between rows, 0 to 300, for sections of several rows; `Section.spacing`,
+    `SectionPlace.spacing`, saved only where not 100). The unit moved from the boxes to the headings (Size px,
+    Lines %) to keep the panel within two thirds of a small screen. Tests: the height to size, the spacing, saving
+    it, the edges (bottom, top, sides, never narrower), the Lines boxes. Run once offscreen on a copy of the user's
+    settings: starts and quits cleanly. Not yet tried by hand.
   - 2026-11-13: Resizing at every edge and corner, reported by the user: Qt's corner grip pointed and pulled the
     wrong way at times, and no edge could be grabbed. The sections that still resize by their box (radar, track map,
     delta bar, blue flag) now resize at any edge or corner in move mode (`hud.resize_edges`, 8 px), the cursor

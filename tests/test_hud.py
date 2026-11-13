@@ -1144,3 +1144,38 @@ class ResizeEdgeTests(unittest.TestCase):
         box = (100, 200, 300, 150)
         self.assertEqual(hud.resized(box, ('right',), -500, 0, (40, 10)), (100, 200, 40, 150))
         self.assertEqual(hud.resized(box, ('left',), 500, 0, (40, 10)), (360, 200, 40, 150))
+
+
+class HeightAndSpacingTests(unittest.TestCase):
+    """Height sets the text size, and line spacing per section (asked for by the user on 2026-11-13)."""
+
+    SECTIONS: ClassVar = {section.name: section for section in hud.RACE_SECTIONS}
+
+    def test_a_height_gives_the_largest_size_that_fits(self):
+        for name in ('players', 'speed', 'lap'):
+            section = self.SECTIONS[name]
+            for font in (9, 16, 30):
+                with self.subTest(section=name, font=font):
+                    height = hud.text_box(section, (0, 0, 0, 0), font, size_measure, ink)[3]
+                    found = hud.font_for_height(section, height, ink)
+                    self.assertGreaterEqual(found, font)  # a bigger one may have the same height
+
+                    def tall(size, section=section):
+                        return hud.text_box(section, (0, 0, 0, 0), size, size_measure, ink)[3]
+
+                    self.assertLessEqual(tall(found), height)
+                    self.assertTrue(all(tall(size) > height for size in range(found + 1, found + 4)))
+        self.assertEqual(hud.font_for_height(self.SECTIONS['players'], 1, ink), hud.FONT_SIZES[0])
+
+    def test_line_spacing_changes_the_room_between_rows_only(self):
+        players = self.SECTIONS['players']
+        normal = hud.text_box(players, (0, 0, 0, 0), 13, size_measure, ink)
+        roomy = hud.text_box(hud.replace(players, spacing=2.0), (0, 0, 0, 0), 13, size_measure, ink)
+        none = hud.text_box(hud.replace(players, spacing=0.0), (0, 0, 0, 0), 13, size_measure, ink)
+        rows = len(players.samples[0])
+        gap = hud.Sizes.for_scale(1.0).gap
+        self.assertEqual(roomy[3] - normal[3], (rows - 1) * gap)
+        self.assertEqual(normal[3] - none[3], (rows - 1) * gap)
+        self.assertEqual(roomy[2], normal[2])  # as wide
+        lines = hud.hud_lines(list(players.samples[0]), 1.0, 2.0)
+        self.assertEqual(lines[1].baseline - lines[0].baseline - lines[1].size, 2 * gap)

@@ -62,6 +62,7 @@ class SectionPlace:
     text_centred: bool = False  # its text in the middle of its box, not at the left
     tint: bool = False  # a light tint behind its text while locked; for the track map, its dark square
     font: int | None = None  # a text section's own text size in pixels; None: the global one
+    spacing: float = 1.0  # the room between its rows, as a share of the usual (core.hud.SPACINGS)
 
 
 # The clan tags that name a car class, for a multi-class race: turbohud.core.class_registry.
@@ -219,8 +220,16 @@ def _sections(data, tint=False):
             entry.get('text_centred') is True,
             entry.get('tint', tint) is True,
             _font(entry.get('font')),
+            _spacing(entry.get('spacing')),
         )
     return places
+
+
+def _spacing(value):
+    """A line spacing from the file, from none to three times the usual; 1 where there is none."""
+    if not isinstance(value, (int, float)) or isinstance(value, bool) or math.isnan(value):
+        return 1.0
+    return min(max(float(value), 0.0), 3.0)
 
 
 def _font(value):
@@ -250,6 +259,7 @@ def _section_data(sections):
             'text_centred': place.text_centred,
             'tint': place.tint,
             **({'font': place.font} if place.font is not None else {}),
+            **({'spacing': place.spacing} if place.spacing != 1.0 else {}),
         }
         for name, place in sections.items()
     }

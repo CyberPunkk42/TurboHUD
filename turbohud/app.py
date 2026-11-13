@@ -457,6 +457,8 @@ def run(args, folder):
         if is_text_section(window.section):
             window.own_font = saved.font if saved else None
             window.font = window.own_font or settings.font_size
+            window.section = replace(window.section, spacing=saved.spacing if saved else 1.0)
+            window.text_resized.connect(lambda name: resized_by_hand(name))
             place = text_box(window.section, place, window.font, text_width, text_ink)
         place = fit_on_screens(place, screens)
         window.setGeometry(*place)
@@ -493,6 +495,7 @@ def run(args, folder):
             window.text_centred,
             window.backdrop,
             getattr(window, 'own_font', None),
+            window.section.spacing,
         )
 
     def all_tinted():
@@ -1021,6 +1024,26 @@ def run(args, folder):
         panel.set_global_font(settings.font_size)
         for name, window in text_windows().items():
             panel.set_font_size(name, window.own_font)
+            panel.set_spacing(name, window.section.spacing)
+
+    @undoable
+    def set_spacing(name, percent):
+        """A section's line spacing from the move-mode panel (asked for by the user on 2026-11-13)."""
+        window = windows[name]
+        window.section = replace(window.section, spacing=percent / 100)
+        resize_sections({name: fitted(window, keep_width=True)})
+        log.info('section %s: line spacing %d%%', name, percent)
+
+    def resized_by_hand(name):
+        """A text section dragged at its edge: its text size or width is kept (Undo takes the
+        drag as a step of its own, as any drag)."""
+        window = windows[name]
+        saved = settings.sections.get(name)
+        if window.own_font == settings.font_size and saved is not None and saved.font is None:
+            window.own_font = None  # dragged back to the global size: it follows it again
+        save()
+        show_fonts()
+        log.info('section %s resized by hand: text size %s', name, window.own_font or 'global')
 
     def keep_text_boxes(found, now):
         """Move mode: a text section's box follows its text, so one the desktop resized
@@ -1090,6 +1113,7 @@ def run(args, folder):
             if is_text_section(window.section):
                 window.own_font = place.font
                 window.font = place.font or settings.font_size
+                window.section = replace(window.section, spacing=place.spacing)
                 fixed = text_box(window.section, box, window.font, text_width, text_ink)
                 if fixed != box:
                     move_window(window, fixed, settle=True)
@@ -1242,6 +1266,7 @@ def run(args, folder):
     panel.font_size_changed.connect(set_own_font)
     panel.global_font_changed.connect(set_global_font)
     panel.all_global_requested.connect(all_global)
+    panel.spacing_changed.connect(set_spacing)
     panel.undo_requested.connect(undo)
     panel.relearn_requested.connect(relearn_track)
     menu.aboutToShow.connect(relearn_available)
