@@ -1869,3 +1869,6 @@ its "Recent changes".
     times 1.4, players 1.0 to 1.2, speed 0.9. Now a slow frame is logged only when it brings a new read: one without
     waited for the reader (whose slow read is logged), and at a race's end such frames every 100 to 150 ms had
     filled the log. Tests: that case; all 1170 pass.
+  - 2026-11-13: Build 2026.11.13.5 for the tester, asked for by the user: as .4, with slow frames logged only when
+    they bring a new read (no end-of-race noise). Smoke test of the built app passed. Build
+    `releases/TurboHUD-2026.11.13.5-macos-arm64.dmg` (33.7 MB, sha256 97cd15c2...); the test sheet names it.
