@@ -1533,9 +1533,9 @@ class TextResizeTests(unittest.TestCase):
         window.setGeometry(*box)
         return window, box
 
-    def test_the_bottom_edge_sets_the_text_size_and_the_box_stays_tight(self):
+    def test_a_corner_sets_the_text_size_and_the_box_stays_tight(self):
         window, box = self.window()
-        window._resize_text(('bottom',), box, 0, box[3])  # twice as tall
+        window._resize_text(('right', 'bottom'), box, 0, box[3])  # twice as tall
         self.assertGreater(window.font, 20)
         self.assertEqual(window.own_font, window.font)
         self.assertEqual(window.geometry().getRect()[:2], box[:2])
@@ -1544,11 +1544,20 @@ class TextResizeTests(unittest.TestCase):
 
         self.assertEqual(window.height(), text_box(window.section, box, window.font, text_width, text_ink)[3])
 
+    def test_the_bottom_edge_adds_room_and_keeps_the_text_size(self):
+        # Asked for by the user on 2026-11-13: longer pedal bars beside the speed, the same text.
+        window, box = self.window('speed')
+        window._resize_text(('bottom',), box, 0, 60)
+        self.assertEqual((window.font, window.own_font), (13, None))
+        self.assertEqual(window.geometry().getRect(), (box[0], box[1], box[2], box[3] + 60))
+        window._resize_text(('bottom',), box, 0, -500)  # never shorter than its text
+        self.assertEqual(window.height(), box[3])
+
     def test_the_top_edge_keeps_the_bottom_in_place(self):
         window, box = self.window()
-        window._resize_text(('top',), box, 0, -box[3])
+        window._resize_text(('top',), box, 0, -40)
         _x, y, _width, height = window.geometry().getRect()
-        self.assertEqual(y + height, box[1] + box[3])
+        self.assertEqual((y + height, height, window.font), (box[1] + box[3], box[3] + 40, 13))
 
     def test_the_side_edges_add_room_and_keep_the_text_size(self):
         window, box = self.window()

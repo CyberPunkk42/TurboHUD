@@ -1179,3 +1179,33 @@ class HeightAndSpacingTests(unittest.TestCase):
         self.assertEqual(roomy[2], normal[2])  # as wide
         lines = hud.hud_lines(list(players.samples[0]), 1.0, 2.0)
         self.assertEqual(lines[1].baseline - lines[0].baseline - lines[1].size, 2 * gap)
+
+
+class RoomTests(unittest.TestCase):
+    """Room an edge added stays, as tall as wide, until the text size changes (asked for by
+    the user on 2026-11-13)."""
+
+    SECTIONS: ClassVar = {section.name: section for section in hud.RACE_SECTIONS}
+
+    def test_a_taller_box_is_kept_never_a_shorter_one(self):
+        speed = self.SECTIONS['speed']
+        tight = hud.text_box(speed, (0, 0, 0, 0), 13, size_measure, ink)
+        roomy = hud.text_box(speed, (0, 0, tight[2], tight[3] + 50), 13, size_measure, ink)
+        self.assertEqual(roomy[3], tight[3] + 50)
+        self.assertEqual(hud.text_box(speed, (0, 0, tight[2], 5), 13, size_measure, ink)[3], tight[3])
+        refit = hud.text_box(
+            speed, (0, 0, tight[2] + 30, tight[3] + 50), 13, size_measure, ink, keep_width=False
+        )
+        self.assertEqual(refit[2:], tight[2:])  # a new text size: tight again, both ways
+        only_wide = hud.text_box(
+            speed, (0, 0, tight[2] + 30, tight[3] + 50), 13, size_measure, ink, keep_height=False
+        )
+        self.assertEqual(only_wide[2:], (tight[2] + 30, tight[3]))
+
+    def test_the_pedal_bars_run_the_whole_height(self):
+        short = hud.pedal_bars(300, 80, 1.0, 0.5, 0.0)
+        tall = hud.pedal_bars(300, 160, 1.0, 0.5, 0.0)
+        self.assertGreater(
+            tall[0].height, short[0].height + 70
+        )  # the throttle bar: longer, the scale the same
+        self.assertEqual(tall[0].width, short[0].width)

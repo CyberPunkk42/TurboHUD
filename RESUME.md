@@ -81,6 +81,12 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+  - 2026-11-13: Corners size the text, edges add room, asked for by the user (the speed section's pedal bars could
+    not be longer without bigger text): in move mode a text section's corner sets its text size, and every edge adds
+    room: the top or bottom edge height (the text centred and its size kept; the pedal bars run the box's height),
+    the left or right edge width. `hud.text_box` keeps a taller saved box as it kept a wider one; a new text size
+    (Size, global, Match) fits the box tight again. Move-mode help text updated. Tests: a corner, the bottom and top
+    edges (never shorter than the text), a taller box kept, the bars' length.
   - 2026-11-13: The proximity radar only in cockpit cameras, asked for by the user (a setting, on by default): TSU's
     camera keys 1 to 9 and 0 give TS.CameraPropertiesUpdater.m_selectedPreset 1 to 10, but a player can make any of
     them first person, so the reader goes by the camera itself: the race controller's m_audio.m_raceCameras

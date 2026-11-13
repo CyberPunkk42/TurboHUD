@@ -1627,3 +1627,9 @@ its "Recent changes".
     radar only in cockpit cameras" in the settings window and the tray menu. Tests: the camera's view (cockpit,
     behind, far, not read), the radar shown or not, the setting saved. Not yet seen in a live race (same path, through
     the host or client controller).
+  - 2026-11-13: Corners size the text, edges add room, asked for by the user (the speed section's pedal bars could
+    not be longer without bigger text): in move mode a text section's corner sets its text size, and every edge adds
+    room: the top or bottom edge height (the text centred and its size kept; the pedal bars run the box's height),
+    the left or right edge width. `hud.text_box` keeps a taller saved box as it kept a wider one; a new text size
+    (Size, global, Match) fits the box tight again. Move-mode help text updated. Tests: a corner, the bottom and top
+    edges (never shorter than the text), a taller box kept, the bars' length.
