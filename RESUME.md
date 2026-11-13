@@ -64,7 +64,7 @@
   three races in a row in 0.4 s (2026-11-10).
 - The tester has stutter again with build 2026.11.12.4 on macOS (2026-11-12). His log: drawing 20 to 24% of the
   time, most of it new texts; since `fix/lap-list-frame-cost` changing numbers are drawn from kept glyphs (about 20
-  times quicker). Build 2026.11.12.7 had them, the yellow flag fix and the lighter race reads; 2026.11.13 adds the work of 2026-11-13: next, his log's `HUD frames` drawing share (was 20 to 24%) and
+  times quicker). Build 2026.11.12.7 had them, the yellow flag fix and the lighter race reads; 2026.11.13 and .2 add the work of 2026-11-13: next, his log's `HUD frames` drawing share (was 20 to 24%) and
   whether TSU stutters while driving or between races (backlog item 0).
 - Replays after a race (`fix/replays-after-a-race`, 2026-11-13): try in TSU a recording watched after a race in the
   same session, opened from the list and watched again; on the Mac, whether the recordings get an access time.
@@ -81,6 +81,16 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+  - 2026-11-13: Build 2026.11.13.2 for the tester (`releases/TurboHUD-2026.11.13.2-macos-arm64.dmg`, 33.7 MB, macOS 27,
+    `--any-macos`, built with `.buildtools/build-venv`), asked for by the user: `main` after merging GitHub's main
+    and `docs/tester-build-2026-11-13`, with what came since 2026.11.13: the new icon and About, one TurboHUD at a
+    time, arrow keys in move mode, layouts per screen size (the five shipped ones bundled in `assets/presets`, Load
+    screen default, Export, Import, Redo, the design screen) and the lap title fixes. Smoke test passed with TurboHUD
+    closed; the image's 205 files and the 175 Python modules packed in the app checked for the privacy terms, none.
+    The test sheet names it, lists what is new and adds checks 25 to 27 (About and one copy, arrow keys, lap title).
+    It replaces 2026.11.13, still in `releases/`, to be removed by hand. Tests on `main` (build-venv): 1151 of 1155
+    pass; the four `MovePanelPresetTests` failures are only under the offscreen platform on the Mac (the panel 844 px
+    there); drawn with cocoa the panel is 991 px tall, more than some Mac laptops' screens (about 900 px), to look at.
   - 2026-11-13: The user's own layouts shipped, asked for by the user: `assets/presets` 1920x1080, 2560x1440 and
     2560x1600 are now the ones the user arranged on the design screen (exported, then repaired from the frame back to
     full size), and 5120x1440 the user's newest own layout (bigger blue flag, shortcut warning and local time; lap,
