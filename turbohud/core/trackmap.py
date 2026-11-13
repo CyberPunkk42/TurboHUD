@@ -69,6 +69,8 @@ def off_the_track(grips, layers=None):
     if layers is not None:
         return all(grip > 0.0 and layer in OFF_TRACK_LAYERS for grip, layer in zip(grips, layers))
     return all(0.0 < grip < CLEAN_GRIP for grip in grips)
+
+
 LEARN_LAPS = 3  # clean laps compared before a track is saved
 SHORT_LAP = 0.985  # a lap shorter than this share of the longest is left out: a shortcut
 COMPARE_POINTS = 100  # laps are compared at about this many points each

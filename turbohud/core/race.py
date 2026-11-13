@@ -486,7 +486,8 @@ class PlayerState:
     pit_stopped: float = 0.0  # of those, seconds standing still (refuelling, tires, repairs)
     forward_speed: float | None = None  # game units a second along the car; below 0 backwards
     wheel_grips: tuple | None = None  # the grip of the surface under each of its four wheels (0: in the air)
-    wheel_layers: tuple | None = None  # those surfaces' Unity layers (trackmap.OFF_TRACK_LAYERS); None: not known
+    # Those surfaces' Unity layers (trackmap.OFF_TRACK_LAYERS); None: not known.
+    wheel_layers: tuple | None = None
     spawns: int | None = None  # how often it was put back on the track (a respawn)
     shortcut: bool = False  # TSU slows it now for a shortcut (its updater's speed cap is set)
     jump_start: bool = False  # TSU's false-start penalty is on for it (VehicleState.startPenaltyOn)
@@ -3428,7 +3429,7 @@ YELLOW_ROWS = 3  # incidents listed at most
 YELLOW_COLOR = '#ffd400'  # the flag: the section's background (hud's Section.background) and the map's ring
 YELLOW_TEXT = '#111111'  # its text, dark on the yellow (asked for by the user on 2026-11-11)
 # What happened, most serious first: the one shown when several hold.
-YELLOW_KINDS = ('wrecked', 'stopped', 'wrong way', 'spun', 'respawned', 'off track', 'slow')  # most serious first
+YELLOW_KINDS = ('wrecked', 'stopped', 'wrong way', 'spun', 'respawned', 'off track', 'slow')
 
 
 @dataclass(frozen=True)

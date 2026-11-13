@@ -1509,3 +1509,10 @@ its "Recent changes".
   and the 174 Python modules packed in the app checked for the privacy terms, none. The test sheet names it, lists
   what is new and has checks 18 to 20 (the Last column, steady lists, a replay). Tests on `main`: 1028 of 1029
   pass; `test_the_panel_stays_compact_with_linux_sized_text` fails on the Mac, as before.
+  - 2026-11-13: Ruff clean again, asked for by the user: the 8 lint errors fixed (`ClassVar` on the yellow-flag
+    tests' surface dicts, two `noqa` comments that did nothing removed, the recorder test's gzip file opened in a
+    `with`, the "still no race" log check in `tsu/client.py` made one condition) and the 5 unformatted files
+    formatted; long lines with trailing comments got their comment on a line of its own instead. No behavior
+    change. `ruff check` and `ruff format --check` pass. Tests on Windows (`.buildtools\venv`): 1017 of 1023 pass;
+    the 6 that fail need macOS/Linux (`os.getuid`, `fcntl`, `AF_UNIX`) or the symlink privilege, and fail on `main`
+    too.
