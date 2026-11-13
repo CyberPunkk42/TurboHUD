@@ -1609,3 +1609,9 @@ its "Recent changes".
     gone). The reason it was there: on the Mac the game's mouse handling got out of step if it was played while the
     overlay was in move mode (experiments/README.md); to watch for. Tests: the Linux native's test of the old rule
     removed.
+  - 2026-11-13: Move mode ends when a race begins, asked for by the user (option 1 of two): with a click elsewhere
+    no longer ending it, a forgotten move mode would last into the race. `race.RaceStarts` tells once when a race
+    the player drives begins (the grid is set and its clock starts: `on_grid` turns on), not in a replay nor while
+    spectating; the app then locks ("a race began: locking" in the log). A race already running when TurboHUD
+    starts or when move mode begins is no start, so move mode can be used mid-race. Tests: once at the start, a race
+    already running, the next race, replays and spectating. Run once offscreen: no error.

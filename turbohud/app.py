@@ -344,6 +344,7 @@ def run(args, folder):
         from turbohud.core.race import (
             RACING,
             DeltaBar,
+            RaceStarts,
             Radar,
             Retirements,
             ShortcutPenalties,
@@ -370,10 +371,14 @@ def run(args, folder):
             ShortcutPenalties()
         )  # not `shortcuts`: that name holds whether the hotkeys are there
         track_map = TrackMap(settings.map_others, folder)  # learnt tracks beside the settings
+        race_starts = RaceStarts()
         retirements = Retirements()
 
         def contents():
             snapshot = live.snapshot()
+            if race_starts.started(snapshot, time.monotonic()) and not locked:
+                log.info('a race began: locking')
+                set_locked(True)  # move mode forgotten: the race is no time for it
             track_map.others = settings.map_others
             radar.within = settings.radar_seconds
             radar.cone = settings.radar_cone

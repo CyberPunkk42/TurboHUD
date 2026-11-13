@@ -81,6 +81,12 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+  - 2026-11-13: Move mode ends when a race begins, asked for by the user (option 1 of two): with a click elsewhere
+    no longer ending it, a forgotten move mode would last into the race. `race.RaceStarts` tells once when a race
+    the player drives begins (the grid is set and its clock starts: `on_grid` turns on), not in a replay nor while
+    spectating; the app then locks ("a race began: locking" in the log). A race already running when TurboHUD
+    starts or when move mode begins is no start, so move mode can be used mid-race. Tests: once at the start, a race
+    already running, the next race, replays and spectating. Run once offscreen: no error.
   - 2026-11-13: Move mode stays on a click elsewhere, asked for by the user: it ends only by its shortcut or the
     panel's Lock (or the tray menu). Before, when another app became active (a click on the game or the desktop)
     TurboHUD locked itself, on Windows, the Mac and Linux without Hyprland (`on_state`, `Native.auto_lock`, both
