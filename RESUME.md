@@ -81,6 +81,14 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+  - 2026-11-13: The leader label shows for 6 s as the leader crosses the line, and says "Final lap", reported and
+    asked for by the user (it flickered while shown): the moment it began was taken from whichever car on the
+    leader's lap came first in the list, so it jumped as others crossed; now it is the first car to begin that lap
+    (`_leader_crossed`). The label shows for `LEADER_SHOWN` (6 s) from that crossing, fading in and out over half a
+    second each: the leader's lap where it is ahead of the player's, or "Final lap" as the leader begins the last
+    (the last of the laps set, or in a timed race the lap begun once the time is up), whether or not the leader is
+    the player; none once a car has finished. Tests: the window and fades, final lap (laps and time), the winner in,
+    a second car crossing.
   - 2026-11-13: The leader's lap fades in at the end of the lap title, asked for by the user (it jumped in): it moved
     from the middle to the end ("Lap 3/13  -  16:23 left · Leader 4"), so nothing before it moves when it appears,
     and it fades in over half a second (`LEADER_FADE`) from the moment the leader began that lap, by the race clock

@@ -474,13 +474,25 @@ class DeltaBarTests(unittest.TestCase):
 
 
 class LeaderLapTests(unittest.TestCase):
-    def state(self, laps, leader_laps, to_finish=20, time_limit=0, leader_finished=False):
+    """The label at the end of the lap title as the leader crosses the line: its lap where it is ahead,
+    or "Final lap", for LEADER_SHOWN, fading in and out (asked for by the user on 2026-11-13)."""
+
+    CROSSED = 500_000  # race clock when the leader began its lap
+
+    def driver(self, name, laps, began, local=False, finished=False):
+        done = [lap(i * 1000) for i in range(laps)]
+        return dataclasses.replace(
+            player(name, [*done, (began, began + 100)], laps=laps, local=local, finished=finished)
+        )
+
+    def state(self, laps, leader_laps, seconds=1.0, to_finish=20, time_limit=0, others=(), me_began=100_000):
         players = (
-            player('Leader', [lap(0)] * (leader_laps + 1), laps=leader_laps, finished=leader_finished),
-            player('Me', [lap(0)] * (laps + 1), laps=laps, local=True),
+            self.driver('Leader', leader_laps, self.CROSSED),
+            self.driver('Me', laps, me_began, local=True),
+            *others,
         )
         return race.LapState(
-            clock=0,
+            clock=self.CROSSED + round(seconds * race.UNITS_PER_SECOND),
             time_limit=time_limit,
             laps_completed=laps,
             laps_to_finish=to_finish,
@@ -493,45 +505,49 @@ class LeaderLapTests(unittest.TestCase):
         row = race.lap_title_row(state)
         return row.text + row.tail
 
-    def test_a_lapped_driver_sees_the_leaders_lap(self):
-        self.assertEqual(self.title(self.state(8, 11)), 'Lap 9/20 · Leader 12')
+    def test_a_lapped_driver_sees_the_leaders_lap_after_the_time_left(self):
+        state = dataclasses.replace(self.state(8, 11), time_limit=self.CROSSED + 10_000 + 600_000)
+        self.assertEqual(self.title(state), 'Lap 9/20  -  1:00 left · Leader 12')
+        self.assertEqual(race.lap_title_row(state).text, 'Lap 9/20  -  1:00 left')  # stays put
 
-    def test_on_the_leaders_lap_it_is_left_out(self):
+    def test_left_out_on_the_leaders_lap(self):
         self.assertEqual(self.title(self.state(8, 8)), 'Lap 9/20')
 
-    def test_it_is_left_out_while_leading(self):
-        self.assertEqual(self.title(self.state(8, 3)), 'Lap 9/20')
+    def test_for_six_seconds_fading_in_and_out(self):
+        def shown(seconds):
+            return race.lap_title_row(self.state(8, 11, seconds)).tail_color
 
-    def test_a_finished_leader_counts_the_laps_it_drove(self):
-        self.assertEqual(self.title(self.state(15, 20, leader_finished=True)), 'Lap 16/20 · Leader 20')
+        self.assertEqual(shown(0.0), 'text@0.00')
+        self.assertEqual(shown(0.25), 'text@0.50')
+        self.assertEqual(shown(3.0), 'text@1.00')
+        self.assertEqual(shown(race.LEADER_SHOWN - 0.25), 'text@0.50')
+        self.assertEqual(self.title(self.state(8, 11, race.LEADER_SHOWN + 0.1)), 'Lap 9/20')  # gone
 
-    def test_the_leaders_lap_stops_at_the_last_lap(self):
-        self.assertEqual(self.title(self.state(15, 25)), 'Lap 16/20 · Leader 20')
+    def test_final_lap_for_everyone(self):
+        self.assertEqual(self.title(self.state(19, 19, me_began=self.CROSSED)), 'Lap 20/20 · Final lap')
+        self.assertEqual(self.title(self.state(15, 19)), 'Lap 16/20 · Final lap')
 
-    def test_it_goes_after_the_time_left(self):
-        # At the end, so nothing moves when it appears (asked for by the user on 2026-11-13).
-        state = dataclasses.replace(self.state(8, 11), time_limit=600_000)
-        self.assertEqual(self.title(state), 'Lap 9/20  -  1:00 left · Leader 12')
+    def test_final_lap_in_a_timed_race(self):
+        # Without a lap limit: the lap the leader begins once the time is up is its last.
+        timed = self.state(8, 11, to_finish=0, time_limit=self.CROSSED - 10_000)
+        self.assertEqual(self.title(timed), 'Lap 9  -  time is up · Final lap')
+        running = self.state(8, 11, to_finish=0, time_limit=self.CROSSED + 10_000 + 600_000)
+        self.assertEqual(self.title(running), 'Lap 9  -  1:00 left · Leader 12')
 
-    def test_without_a_lap_limit(self):
-        self.assertEqual(self.title(self.state(8, 11, to_finish=0)), 'Lap 9 · Leader 12')
+    def test_no_label_once_the_winner_is_in(self):
+        winner = dataclasses.replace(self.driver('Winner', 20, 400_000), finished=True)
+        self.assertEqual(self.title(self.state(15, 19, others=(winner,))), 'Lap 16/20')
+
+    def test_the_crossing_stays_as_others_follow(self):
+        # Reported by the user on 2026-11-13: the label flickered as cars on the leader's lap took turns.
+        follower = self.driver('Second', 11, self.CROSSED + 20_000)
+        alone = race.lap_title_row(self.state(8, 11, 1.0)).tail_color
+        followed = race.lap_title_row(self.state(8, 11, 1.0, others=(follower,))).tail_color
+        self.assertEqual(alone, followed)
 
     def test_without_players(self):
         state = dataclasses.replace(self.state(8, 11), players=())
         self.assertEqual(self.title(state), 'Lap 9/20')
-
-    def test_it_fades_in_as_the_leader_begins_its_lap(self):
-        state = self.state(8, 11)
-        began = state.players[0].checkpoints[-1][0]  # when the leader began its lap
-        half = race.LEADER_FADE * race.UNITS_PER_SECOND / 2
-
-        def fade(clock):
-            return race.lap_title_row(dataclasses.replace(state, clock=round(clock))).tail_color
-
-        self.assertEqual(fade(began), 'text@0.00')
-        self.assertEqual(fade(began + half), 'text@0.50')
-        self.assertEqual(fade(began + 4 * half), 'text@1.00')
-        self.assertEqual(race.lap_title_row(state).text, 'Lap 9/20')  # what comes before stays as it was
 
 
 class SpeedUnitTests(unittest.TestCase):

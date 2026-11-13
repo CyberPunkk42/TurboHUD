@@ -1703,3 +1703,11 @@ its "Recent changes".
     (`race.lap_title_row`; no state kept). The painter draws a tail whose colour is 'name@share' at that opacity,
     outline and all, so no dark outline shows before the text. Tests: the order, the fade at its start, middle and
     end; checked in an offscreen render.
+  - 2026-11-13: The leader label shows for 6 s as the leader crosses the line, and says "Final lap", reported and
+    asked for by the user (it flickered while shown): the moment it began was taken from whichever car on the
+    leader's lap came first in the list, so it jumped as others crossed; now it is the first car to begin that lap
+    (`_leader_crossed`). The label shows for `LEADER_SHOWN` (6 s) from that crossing, fading in and out over half a
+    second each: the leader's lap where it is ahead of the player's, or "Final lap" as the leader begins the last
+    (the last of the laps set, or in a timed race the lap begun once the time is up), whether or not the leader is
+    the player; none once a car has finished. Tests: the window and fades, final lap (laps and time), the winner in,
+    a second car crossing.
