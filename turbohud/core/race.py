@@ -3191,8 +3191,13 @@ def car_classes(players, class_tags):
     in WEC or IMSA): the class a driver's clan tag names (one of `class_tags`); for a
     driver without one, the class most drivers tagged with a class have in the same car
     (so a GT3 car is GT3 whoever drives it); OTHER_CLASS for the rest. {} unless at least
-    two classes are in the race."""
+    two classes are in the race, and {} when every driver is in the same car: the tags then
+    name no classes (reported by the user on 2026-11-13: drivers tagged LMP and GT4, all in
+    one car, were split in two)."""
     if not class_tags:
+        return {}
+    cars = {player.car for player in players}
+    if len(cars) == 1 and '' not in cars:
         return {}
     tagged = {}
     for player in players:
