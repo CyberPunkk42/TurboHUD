@@ -35,6 +35,7 @@ BUILD = ROOT / 'build'
 RELEASES = ROOT / 'releases'
 VERSION_FILE = ROOT / 'turbohud' / '_build.py'  # gitignored; written for the build only
 NAME = 'TurboHUD'
+PRESETS = ROOT / 'assets' / 'presets'  # the shipped layouts (turbohud.core.presets)
 ICON = ROOT / 'assets' / 'tsu_turbo_hud_00.png'  # PyInstaller turns it into .ico / .icns with Pillow
 BUNDLE_ID = 'local.turbohud.TurboHUD'  # holds nothing personal: it goes out with the app
 MAC_READ_ME = ROOT / 'tools' / 'mac_read_me.txt'
@@ -109,6 +110,7 @@ def pyinstaller_args(system=sys.platform):
         '--exclude-module', 'tkinter',
         '--icon', str(ICON),
         '--add-data', f'{ICON}:assets',  # for the tray and window icon at runtime
+        '--add-data', f'{PRESETS}:assets/presets',  # the shipped layouts, one per screen size
     ]  # fmt: skip
     if system == 'win32':
         if RUST_READER.exists():

@@ -1251,3 +1251,34 @@ class WideTextTests(unittest.TestCase):
         rows = [hud.Row('000 km/h', 'medium')]
         wide = hud.content_size(rows, 1.0, size_measure)[0]
         self.assertLess(hud.fitting_scale(rows, 1.0, wide + 5, size_measure, pedals=True), 1.0)
+
+
+class RedoTests(unittest.TestCase):
+    """Redo after Undo (asked for by the user on 2026-11-13)."""
+
+    def test_redo_goes_forward_again(self):
+        history = hud.LayoutHistory('a')
+        history.record('b')
+        history.record('c')
+        self.assertEqual(history.undo('c'), 'b')
+        self.assertEqual(history.undo('b'), 'a')
+        self.assertTrue(history.can_redo('a'))
+        self.assertEqual(history.redo('a'), 'b')
+        self.assertEqual(history.redo('b'), 'c')
+        self.assertIsNone(history.redo('c'))
+        self.assertEqual(history.undo('c'), 'b')  # and back again
+
+    def test_a_change_after_undo_ends_redo(self):
+        history = hud.LayoutHistory('a')
+        history.record('b')
+        history.undo('b')
+        history.record('x')  # a new change
+        self.assertFalse(history.can_redo('x'))
+        self.assertIsNone(history.redo('x'))
+
+    def test_a_drag_after_undo_ends_redo(self):
+        history = hud.LayoutHistory('a')
+        history.record('b')
+        history.undo('b')
+        self.assertFalse(history.can_redo('dragged'))  # the layout moved since
+        self.assertIsNone(history.redo('dragged'))

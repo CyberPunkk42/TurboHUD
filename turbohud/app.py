@@ -127,6 +127,25 @@ def upgrade_layout(settings, path, ink, measure=None):
     return settings
 
 
+def first_start_layout(settings, screen, layout, measure, ink, folder=None):
+    """The settings with the shipped layout for `screen` (x, y, width, height) where no section
+    has a place yet (a first start): assets/presets' one for its size, else the nearest fitted
+    (asked for by the user on 2026-11-13). The text size most sections have becomes the global
+    one. Unchanged where there is no shipped layout."""
+    from turbohud.core import presets
+
+    sections = {section.name: section for section in layout}
+    default = presets.default_for(screen[2:], folder or asset_path('presets'), sections, measure, ink)
+    if not default:
+        return settings
+    default = presets.kept_sections(presets.absolute(default, screen), sections)
+    fonts = [p.font for n, p in default.items() if is_text_section(sections[n]) and p.font is not None]
+    font_size = common_font(fonts)
+    places = {n: replace(p, font=None if p.font == font_size else p.font) for n, p in default.items()}
+    log.info('first start: the layout for %dx%d', screen[2], screen[3])
+    return replace(settings, sections=places, font_size=font_size)
+
+
 def asset_path(name, bundle=None):
     """A file from assets/: next to the source, or inside the bundled app, whose folder
     PyInstaller gives as sys._MEIPASS."""
@@ -275,8 +294,9 @@ def run(args, folder):
     import PySide6
     from PySide6.QtCore import QObject, Qt, QTimer, Signal
     from PySide6.QtGui import QAction, QGuiApplication, QIcon
-    from PySide6.QtWidgets import QApplication, QMenu, QSystemTrayIcon
+    from PySide6.QtWidgets import QApplication, QFileDialog, QMenu, QMessageBox, QSystemTrayIcon
 
+    from turbohud.core import presets as layout_presets
     from turbohud.core.flagstack import combined
     from turbohud.core.hud import (
         CLOCK_SECTIONS,
@@ -311,7 +331,7 @@ def run(args, folder):
         native_for,
     )
     from turbohud.overlay.settings_window import SettingsWindow
-    from turbohud.overlay.window import HudCanvases, MovePanel, SectionWindow, window_flags
+    from turbohud.overlay.window import DesignFrame, HudCanvases, MovePanel, SectionWindow, window_flags
 
     platform = choose_platform()
     if platform is not None:
@@ -451,6 +471,8 @@ def run(args, folder):
         log.info('locked: the sections in one window per screen (%d)', len(screens))
     first = {name: window.base for name, window in windows.items()}
     screen = main_screen(screens)
+    if not settings.sections and screen is not None:
+        settings = first_start_layout(settings, screen, layout, text_width, text_ink)
     defaults = first_launch(layout, first, screen[:2] if screen else (0, 0))
     saved_places = {
         name: (place.x, place.y, place.width, place.height)
@@ -542,6 +564,7 @@ def run(args, folder):
             canvas.set_shown(value)  # locked: the canvas; move mode: the sections' own windows
         move_action.setChecked(not value)
         if value:
+            design_end()  # locking leaves the design screen
             panel.hide()
             native.give_focus_back()
             history.record(layout_state())
@@ -552,7 +575,7 @@ def run(args, folder):
             mover.pending.clear()
             native.take_focus()
             history.resume(layout_state())
-            panel.set_undo_available(history.can_undo(history.current))
+            show_history(history.current)
             relearn_available()
             panel.show_at(*panel_spot())
             log.info('move mode')
@@ -815,7 +838,7 @@ def run(args, folder):
             action(*arguments)
             state = layout_state()
             history.record(state)
-            panel.set_undo_available(history.can_undo(state))
+            show_history(state)
 
         return run
 
@@ -852,7 +875,7 @@ def run(args, folder):
             native_move(window, place, settle)
         else:
             window.setGeometry(*place)
-        if window.on_canvas:
+        if getattr(window, 'on_canvas', False):  # a section's window (not the design frame)
             window.update()  # a hidden window does not draw itself again: the canvas does
 
     def follow_groups(now):
@@ -1196,6 +1219,165 @@ def run(args, folder):
             panel.set_tint(name, place.tint)
         show_all_tinted()
 
+    def show_history(state):
+        """Undo and Redo, each where there is a step to take."""
+        panel.set_undo_available(history.can_undo(state))
+        panel.set_redo_available(history.can_redo(state))
+
+    def redo():
+        """Forward again to the layout the last Undo went back from (asked for by the user on
+        2026-11-13)."""
+        nonlocal settings
+        state = history.redo(layout_state())
+        if state is None:
+            return
+        sections, kept, font_size = state
+        settings = replace(settings, font_size=font_size)
+        apply_places(sections)
+        show_fonts()
+        settings = replace(settings, sections={**settings.sections, **sections}, presets=kept)
+        write_settings()
+        panel.set_presets_saved(kept)
+        show_history(state)
+        log.info('redone; %d more to go forward', len(history.future))
+
+    def busiest_screen():
+        """The screen (x, y, width, height) most shown sections are on: the one a layout file is
+        made for and fitted to."""
+        counts = {}
+        for window in windows.values():
+            if window.wanted:
+                found = screen_of(tuple(window.placement()), screens)
+                if found is not None:
+                    counts[tuple(found)] = counts.get(tuple(found), 0) + 1
+        return max(counts, key=counts.get) if counts else tuple(screen or screens[0])
+
+    @undoable
+    def load_layout(places, what):
+        """Put the sections as `places` {name: SectionPlace} has them: one step for Undo."""
+        nonlocal settings
+        places = {name: place for name, place in places.items() if name in windows}
+        apply_places(places)
+        settings = replace(settings, sections={**settings.sections, **places})
+        write_settings()
+        log.info('layout: %s', what)
+
+    def screen_default():
+        """The shipped layout for the screen the sections are on."""
+        target = busiest_screen()
+        known = {section.name: section for section in layout}
+        default = layout_presets.default_for(target[2:], asset_path('presets'), known, text_width, text_ink)
+        if default:
+            load_layout(layout_presets.absolute(default, target), f'the default for {target[2]}x{target[3]}')
+
+    def export_layout():
+        """The layout to a file, for the screen the sections are on."""
+        target = busiest_screen()
+        suggested = Path.home() / f'TurboHUD layout {target[2]}x{target[3]}.json'
+        chosen, _ = QFileDialog.getSaveFileName(
+            panel, 'Export layout', str(suggested), 'TurboHUD layouts (*.json)'
+        )
+        if not chosen:
+            return
+        places = layout_presets.relative(layout_state()[0], target)
+        try:
+            layout_presets.save_file(chosen, places, target[2:], settings.font_size)
+        except OSError as error:
+            log.warning('the layout could not be exported: %s', error.strerror or error)
+            QMessageBox.warning(panel, 'TurboHUD', f'The layout could not be saved there ({error.strerror}).')
+            return
+        log.info('layout exported, for %dx%d', target[2], target[3])
+
+    def import_layout():
+        """A layout from a file, fitted to the screen the sections are on where made for another."""
+        chosen, _ = QFileDialog.getOpenFileName(
+            panel, 'Import layout', str(Path.home()), 'TurboHUD layouts (*.json)'
+        )
+        if not chosen:
+            return
+        found = layout_presets.load_file(chosen)
+        if found is None:
+            QMessageBox.warning(panel, 'TurboHUD', 'That file is not a TurboHUD layout.')
+            return
+        size, places = found
+        target = busiest_screen()
+        if tuple(size) != tuple(target[2:]):
+            known = {section.name: section for section in layout}
+            places = layout_presets.fit_layout(places, size, target[2:], known, text_width, text_ink)
+        load_layout(layout_presets.absolute(places, target), f'imported, made for {size[0]}x{size[1]}')
+
+    design = None  # while designing: (screen size, frame (x, y, w, h), scale, the own layout state)
+    design_frame_window = None
+
+    def design_start(width, height):
+        """The design screen for a screen of width x height: a frame on the screen the sections
+        are on, standing for it to scale, that size's layout shown in it (asked for by the user on
+        2026-11-13: presets for screens one does not have)."""
+        nonlocal design, design_frame_window
+        if design is not None:
+            design_end()
+        size = (width, height)
+        known = {section.name: section for section in layout}
+        laid = layout_presets.default_for(size, asset_path('presets'), known, text_width, text_ink)
+        if not laid:
+            return
+        frame, scale = layout_presets.design_frame(size, busiest_screen())
+        design = (size, frame, scale, layout_state())
+        if design_frame_window is None:
+            design_frame_window = DesignFrame(native)
+        design_frame_window.label = f'{width} x {height}, shown at {scale * 100:.0f}%'
+        move_window(design_frame_window, frame, settle=True)
+        design_frame_window.show()
+        native.raise_window(design_frame_window)
+        load_layout(layout_presets.into_frame(laid, frame, scale), f'designing for {width}x{height}')
+        for window in windows.values():
+            window.show_on_top()  # above the frame
+        panel.set_designing(True)
+        log.info('design screen: %dx%d at %.0f%%', width, height, scale * 100)
+
+    def design_save():
+        """The layout in the frame, at full size, to a file for that screen size; then the own
+        layout back. Run from the source folder, assets/presets is offered: the shipped ones."""
+        if design is None:
+            return
+        size, frame, scale, _own = design
+        shown = layout_state()[0]
+        for name, window in windows.items():
+            if is_text_section(window.section) and name in shown:
+                shown[name] = replace(shown[name], font=window.own_font or settings.font_size)
+        places = layout_presets.out_of_frame(shown, frame, scale, size)
+        shipped_folder = asset_path('presets')
+        folder = shipped_folder if os.access(shipped_folder, os.W_OK) else Path.home()
+        suggested = folder / layout_presets.file_name(size)
+        chosen, _ = QFileDialog.getSaveFileName(
+            panel, 'Save design', str(suggested), 'TurboHUD layouts (*.json)'
+        )
+        if not chosen:
+            return  # still designing
+        try:
+            layout_presets.save_file(chosen, places, size, settings.font_size)
+        except OSError as error:
+            log.warning('the design could not be saved: %s', error.strerror or error)
+            QMessageBox.warning(panel, 'TurboHUD', f'The design could not be saved there ({error.strerror}).')
+            return
+        log.info('design for %dx%d saved', size[0], size[1])
+        design_end()
+
+    def design_end():
+        """Leave the design screen: the frame goes, the own layout comes back."""
+        nonlocal design, settings
+        if design is None:
+            return
+        _size, _frame, _scale, own = design
+        design = None
+        if design_frame_window is not None:
+            design_frame_window.hide()
+        sections, _kept, font_size = own
+        settings = replace(settings, font_size=font_size)
+        load_layout(sections, 'own layout back after designing')
+        show_fonts()
+        panel.set_designing(False)
+
     def undo():
         """Back one change. What the desktop reports may lag behind the move (see
         load_preset), so the settings take the earlier places, not what it says."""
@@ -1210,7 +1392,7 @@ def run(args, folder):
         settings = replace(settings, sections={**settings.sections, **sections}, presets=presets)
         write_settings()
         panel.set_presets_saved(presets)
-        panel.set_undo_available(history.can_undo(previous))
+        show_history(previous)
         log.info('undone; %d more to go back', len(history.past))
 
     # Tray icon (menu bar on the Mac): the way to move mode where there are no shortcuts.
@@ -1347,6 +1529,13 @@ def run(args, folder):
     panel.all_global_requested.connect(all_global)
     panel.spacing_changed.connect(set_spacing)
     panel.undo_requested.connect(undo)
+    panel.redo_requested.connect(redo)
+    panel.screen_default_requested.connect(screen_default)
+    panel.export_requested.connect(export_layout)
+    panel.import_requested.connect(import_layout)
+    panel.design_requested.connect(design_start)
+    panel.design_save_requested.connect(design_save)
+    panel.design_cancel_requested.connect(design_end)
     panel.relearn_requested.connect(relearn_track)
     menu.aboutToShow.connect(relearn_available)
     panel.text_centred_changed.connect(set_text_centred)
@@ -1443,7 +1632,7 @@ def run(args, folder):
             state = layout_state()
             keep_text_boxes({n: (p.x, p.y, p.width, p.height) for n, p in state[0].items()}, last_seen)
             history.look(state, last_seen)
-            panel.set_undo_available(history.can_undo(state))
+            show_history(state)
         if args.seconds is not None and time.monotonic() - started >= args.seconds:
             log.info('time is up')
             app.quit()
