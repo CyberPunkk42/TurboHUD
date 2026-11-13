@@ -65,7 +65,9 @@
 - The tester has stutter again with build 2026.11.12.4 on macOS (2026-11-12). His log: drawing 20 to 24% of the
   time, most of it new texts; since `fix/lap-list-frame-cost` changing numbers are drawn from kept glyphs (about 20
   times quicker). Build 2026.11.12.7 had them, the yellow flag fix and the lighter race reads; 2026.11.13 and .2 add the work of 2026-11-13: next, his log's `HUD frames` drawing share (was 20 to 24%) and
-  whether TSU stutters while driving or between races (backlog item 0).
+  whether TSU stutters while driving or between races (backlog item 0). Since 2026-11-13 on hold: with 2026.11.13.5
+  TurboHUD ran smoothly through his huge stutters, fewer reads did not help, and a later race had at most one;
+  most likely his Mac (2 to 3 GB of disk free, about 3 GB of memory left): he frees space and races again.
 - Replays after a race (`fix/replays-after-a-race`, 2026-11-13): try in TSU a recording watched after a race in the
   same session, opened from the list and watched again; on the Mac, whether the recordings get an access time.
 1. Windows: the overlay over TSU (windowed, Fullscreen, Fullscreen Exclusive). The live data through
@@ -82,6 +84,11 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+  - 2026-11-13: The tester's stutter, most likely his Mac, asked for by the user (backlog item 0, on hold). With
+    2026.11.13.5 his log through an evening of huge stutters has no slow read, no slow frame and collections of 0 to
+    10 ms; 5 reads a second stuttered as 20; in a later online race with the user (both logs clean) at most one
+    stutter. His Mac has 2 to 3 GB of disk free and about 3 GB of memory left while racing, so no room for swap:
+    he frees 20 to 30 GB, restarts and races again. No code change.
   - 2026-11-13: Build 2026.11.13.5 for the tester, asked for by the user: as .4, with slow frames logged only when
     they bring a new read (no end-of-race noise). Smoke test of the built app passed. Build
     `releases/TurboHUD-2026.11.13.5-macos-arm64.dmg` (33.7 MB, sha256 97cd15c2...); the test sheet names it.

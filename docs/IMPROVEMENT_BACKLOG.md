@@ -3,7 +3,7 @@
 Open items, most valuable first. Finished items move to `docs/PROGRESS.md`. Where the work
 last stopped: `docs/CONTINUE_HERE.md`.
 
-## 0. The tester's stutter with build 2026.11.12.4 (macOS)
+## 0. The tester's stutter with build 2026.11.12.4 (macOS): on hold, most likely his disk and memory
 Reported 2026-11-12, after the day's features (class colours, tire column, the player list around the player).
 His log (four online races): reads of 4 ms, frames 53 ms apart, content 2 to 4% and drawing 20 to 24% of the
 time (16 to 19% on 2026-11-10), about the same with the lap times hidden; no CrossOver graphics warning.
@@ -27,6 +27,18 @@ His log with 2026.11.13.4: not garbage collection; one read stalls 140 to 190 ms
 reader's start (mostly in reading TSU's memory through Wine), none for 10 minutes in the second race. Next: his
 stutter times against :07 and :37; the same track with TurboHUD closed; if only with TurboHUD, fewer reads a second;
 why the fuel section costs the most to draw (1.5 to 1.9 ms a frame).
+With 2026.11.13.5 (2026-11-13): an evening of huge stutters (two online races, 15 minutes) whose log has no slow
+read (slowest 26 ms), no slow frame and collections of 0 to 10 ms, so TSU stuttered while TurboHUD ran smoothly;
+5 reads a second stuttered the same as 20. Later the same night, one online race with the user (22 minutes, the
+user's log as clean, reads 4 ms): at most one stutter, the same build and settings. His race reads cost about twice
+the user's (33 to 54 reads of the game, 7 to 8 ms, against 25 to 28 and 4 ms), and on the bad evening his race data
+spread at times over 3,090 MiB (the user's: 375 to 435). His Mac: M3 Pro, 18 GB of memory, about 3 GB left with TSU,
+CrossOver and TurboHUD running, and only 2 to 3 GB of disk free: macOS then has no room for swap when memory runs
+out, which fits stutters on some evenings and not others. Asked of him: free at least 20 to 30 GB, restart, race
+again. On hold until he reports. If the huge stutters come back with that free: TurboHUD closed (does it stay?),
+Activity Monitor's Memory Pressure, Swap Used and the largest processes (TurboHUD's own memory, not yet measured
+in a race), and the clock times with the log; if only with TurboHUD, its windows over the game (the old FPS cost),
+not the reads.
 
 ## 1. Windows: the overlay, then live data
 Over TSU on Windows, in windowed, Fullscreen and Fullscreen Exclusive: the built app
