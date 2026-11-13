@@ -3690,6 +3690,13 @@ YELLOW_CLEAR_AFTER = 3.0  # seconds the flag stays once the car is back on the t
 # away, and it gets no flag. Seen by the user on 2026-11-12: a car left on the track kept the
 # yellow flag out for the rest of the race. It counts again once faster than YELLOW_SLOW.
 YELLOW_IDLE_AFTER = 60.0
+# A car further from where it was than it can drive (game units: YELLOW_JUMP_LEAST, or YELLOW_JUMP_SPEED a
+# second of race time) jumped: put back on the track, or a replay jumped. The way the race goes is then
+# looked up for it on the whole track, not near the point it was at before: near that point, a part of
+# the track running close by the other way could be taken (reported by the user on 2026-11-13: drivers
+# shown as driving the wrong way after a recording was started again).
+YELLOW_JUMP_LEAST = 30.0
+YELLOW_JUMP_SPEED = 150.0  # about 540 km/h: faster than any car drives
 # Hazard ahead (asked for by the user on 2026-11-11, instead of an automatic full course yellow,
 # which a car left by a player who quit or lost the connection would set off for everyone): only
 # this player's HUD warns, while a stopped car on the tarmac, or one going the wrong way, is a few
@@ -3758,6 +3765,7 @@ class YellowFlags:
     def __init__(self):
         self._cars = {}  # name -> {'since': {condition: since}, 'kind', 'until', 'spawns', 'respawn_until'}
         self._hazard = None  # ((heading, Incident), race time it was last seen): see hazard
+        self._clock = None  # the race clock (seconds) at the last update
 
     def reset(self):
         """Forget every car: while turned off, nothing was followed."""
@@ -3808,6 +3816,12 @@ class YellowFlags:
         where it last crossed a line (reported by the user on 2026-11-11: a car driving
         backwards kept the sector it turned round in)."""
         now = state.clock / UNITS_PER_SECOND
+        if self._clock is not None and now < self._clock - 1.0:
+            # The clock went back: a replay started again or rewound, or a new race. What was kept
+            # of the cars (where on the track each was, its incidents) belongs to another moment.
+            self._cars.clear()
+        elapsed = now - self._clock if self._clock is not None and now >= self._clock else None
+        self._clock = now
         starts = sector_starts(len(state.gates), state.sector_lines) if state.gates else ()
         found, seen = [], set()
         for player in state.players:  # the local car too: its driver sees the flag it caused (the user)
@@ -3816,6 +3830,10 @@ class YellowFlags:
                 player.name, {'since': {}, 'kind': None, 'until': None, 'spawns': None}
             )
             look = None
+            if _jumped(car.get('at'), player.position, elapsed):
+                car.pop('hint', None)  # looked up on the whole track again
+                car['since'].pop('wrong way', None)
+            car['at'] = player.position or car.get('at')
             if heading is not None and player.position is not None:
                 look = heading(player.position, car.get('hint'))
                 if look is not None:
@@ -3906,6 +3924,15 @@ class YellowFlags:
             return False
         dx, dz = look[0]
         return vx * dx + vz * dz < -YELLOW_WRONG_WAY * moving
+
+
+def _jumped(before, now, elapsed):
+    """Whether a car went from `before` to `now` ((x, z) each, or None) faster than any car
+    drives in `elapsed` seconds of race time (None: not known, any distance over the least)."""
+    if before is None or now is None:
+        return False
+    reach = max(YELLOW_JUMP_LEAST, YELLOW_JUMP_SPEED * (elapsed or 0.0))
+    return math.dist(before, now) > reach
 
 
 def yellow_sector_spans(incidents, state):

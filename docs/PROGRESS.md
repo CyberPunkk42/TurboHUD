@@ -1641,3 +1641,11 @@ its "Recent changes".
     the left or right edge width. `hud.text_box` keeps a taller saved box as it kept a wider one; a new text size
     (Size, global, Match) fits the box tight again. Move-mode help text updated. Tests: a corner, the bottom and top
     edges (never shorter than the text), a taller box kept, the bars' length.
+  - 2026-11-13: No false "wrong way" after a jump, reported by the user: after a recording was started again, drivers
+    driving normally were flagged as driving the wrong way. Each car's place on the learnt track is kept and looked
+    up next time only near it; after the cars jumped, the search near the old place could take a part of the track
+    running close by the other way. A read of the same replay from fresh (no kept places) showed no flag at all.
+    Now the yellow flags forget every car when the race clock goes back (a replay started again or rewound, a new
+    race), and a car further from where it was than any car drives (`YELLOW_JUMP_LEAST` 30 units, or 150 a second:
+    put back on the track, a replay jump) is looked up on the whole track again, its wrong way count started anew.
+    Tests: driving on, a jump, a wrong way building up then a jump, the clock going back.
