@@ -91,6 +91,8 @@ class LapState:
     replay: bool = False  # a replay plays: "you" is the driver its camera follows
     paused: bool = False  # the replay stands paused: the HUD stays though the clock stands
     hotlapping: bool = False  # a hotlapping event (how qualifying is run): ranked by best lap, not race order
+    # Whether the race camera sits at the driver (a "CAM 5" view: cockpit_camera); None: not read.
+    cockpit: bool | None = None
 
     @property
     def lap_times(self):
@@ -457,6 +459,11 @@ REPLAY_STILL = 10.0  # seconds a replay's clock may stand, not paused, before it
 # car, positions, speeds and laps are read every time.
 FULL_READ_EVERY = 1.0
 CLIENT_LOG_EVERY = 2.0  # seconds between looks at TSU's log while it says no event runs
+# The race camera at the driver (LapReader.cockpit_camera): TS.CameraPositionMode AlignTarget (a camera
+# that turns with the car), at most this far from it (game units; a car is CAR_LENGTH long): a far
+# AlignTarget camera is a third-person view all the same.
+COCKPIT_POSITION = 3
+COCKPIT_MOST_DISTANCE = 4.0
 # While TSU's log says no event runs, a replay may still play (the log says nothing of replays): a
 # search for one this long after the log first says so, the wait doubling up to REPLAY_SEARCH_MOST
 # (a search reads all of the game's data: on Windows about 8 s of a CPU core). A recording just
@@ -585,6 +592,7 @@ class LapReader:
         self._compounds_for, self._compounds = None, None  # see _read_compounds
         self._track_for, self._track = None, ''  # see _track_name
         self._hotlapping_for, self._hotlapping = None, False  # see _hotlapping_event
+        self._camera_logged = 'unread'  # the camera view last logged (cockpit_camera)
         self._cars = {}  # vehicle object -> (its car's name, when read)
         self._gates = None  # checkpoint lines, ((x1, z1), (x2, z2)) each
         self._sector_lines = ()  # the checkpoints of type Sector (TS.CheckpointType), read with the lines
@@ -1233,6 +1241,7 @@ class LapReader:
             compounds=self._compounds,
             track=self._track_name(state_object),
             hotlapping=self._hotlapping_event(state_object),
+            cockpit=self.cockpit_camera(),
         )
         live = state.live_fuel_trend(self._fuel_marks, self._fuel_history)
         if live is not None:
@@ -1255,6 +1264,31 @@ class LapReader:
             except (NotFound, OSError):
                 pass
         return self._track
+
+    def cockpit_camera(self):
+        """Whether the race camera now sits at the driver, the view of the first person (asked
+        for by the user on 2026-11-13: the proximity radar only there). The race controller's
+        TS.EventController.m_audio (TS.Audio) .m_raceCameras (TS.RaceCameras) .m_cameras[0]
+        (TS.RaceCamera, the player's) .m_cameraPropertiesUpdater .m_properties
+        (TS.RaceCameraProperties): its cameraPosition is TS.CameraPositionMode, AlignTarget
+        (COCKPIT_POSITION) for a camera that turns with the car, and its distance from it. Read
+        in a replay on the user's PC (2026-11-13): keys 4 to 7 AlignTarget at 1.5 to 2.2, the
+        rest following behind or from above at 12 to 80. None where it cannot be read."""
+        try:
+            audio = self._ref('event controller', self._listener, 'm_audio')
+            cameras = self._ref('audio', audio, 'm_raceCameras')
+            camera = next(c for c in self.il.list_items(self._ref('race cameras', cameras, 'm_cameras')) if c)
+            updater = self._ref('race camera', camera, 'm_cameraPropertiesUpdater')
+            properties = self._ref('camera updater', updater, 'm_properties')
+            position = self.il.memory.i32(properties + self._offset('camera', properties, 'cameraPosition'))
+            distance = self._number('camera', properties, 'distance')
+            cockpit = position == COCKPIT_POSITION and distance <= COCKPIT_MOST_DISTANCE
+        except (NotFound, OSError, StopIteration, TypeError):
+            cockpit = None
+        if cockpit != self._camera_logged:
+            self._camera_logged = cockpit
+            log.info('camera: %s', {True: 'at the driver', False: 'outside the car'}.get(cockpit, 'not read'))
+        return cockpit
 
     def _hotlapping_event(self, state):
         """Whether the event is hotlapping, as qualifying is run (the user, 2026-11-13: the
@@ -2260,6 +2294,7 @@ def race_sections(
     clan_tags=True,
     columns=LAP_COLUMNS,
     retirements=None,
+    radar_cockpit_only=False,
 ):
     """{section name: rows} for a live-reader snapshot (see core.hud.RACE_SECTIONS); a
     section with nothing to show has no rows. Nothing before the grid: in the menus, the
@@ -2362,7 +2397,10 @@ def race_sections(
             if radar is not None
             else None
         )
-        if view is not None:
+        # With `radar_cockpit_only`, the radar shows only while the camera sits at the driver
+        # (asked for by the user on 2026-11-13); where the camera is not read it shows, as before.
+        # It follows the cars all the same, so it comes back at once.
+        if view is not None and not (radar_cockpit_only and state.cockpit is False):
             sections['radar'] = view
         if track_map is not None and state.on_a_track:  # no map, nor a track learnt, in an arena
             shown = track_map.update(

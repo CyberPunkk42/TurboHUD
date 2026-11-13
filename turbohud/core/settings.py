@@ -108,6 +108,7 @@ class Settings:
     backdrop: bool = False  # every section with a tint has it on (see SectionPlace.tint)
     map_others: bool = False  # the track map also shows the other cars, as faint grey dots
     radar_cone: bool = True  # the proximity radar shows the slipstream behind cars ahead
+    radar_cockpit_only: bool = True  # the proximity radar only while the camera sits at the driver
     sector_bars: bool = True  # the sector bars below the last and best lap
     yellow_flags: bool = True  # the yellow flag section and the yellow rings on the track map
     clan_tags: bool = True  # the lap times show each driver's clan tag, outside a multi-class race
@@ -291,6 +292,7 @@ def load_settings(path):
         backdrop=data.get('backdrop') is True,
         map_others=data.get('map_others') is True,
         radar_cone=data.get('radar_cone') is not False,
+        radar_cockpit_only=data.get('radar_cockpit_only') is not False,
         sector_bars=data.get('sector_bars') is not False,
         yellow_flags=data.get('yellow_flags') is not False,
         classes=data.get('classes') is not False,
@@ -327,6 +329,7 @@ def save_settings(path, settings):
         'backdrop': settings.backdrop,
         'map_others': settings.map_others,
         'radar_cone': settings.radar_cone,
+        'radar_cockpit_only': settings.radar_cockpit_only,
         'sector_bars': settings.sector_bars,
         'yellow_flags': settings.yellow_flags,
         'classes': settings.classes,

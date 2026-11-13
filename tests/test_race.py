@@ -137,6 +137,7 @@ def build(
     recording_opened=None,
     hotlapping=None,
     in_box=None,
+    camera=None,
 ):
     """A fake race; `car` is the car's (x, z) and `gates` the checkpoint lines, both
     optional like in a game without them."""
@@ -147,7 +148,9 @@ def build(
         'TS', 'Services', [('sm_instance', 0, True), ('m_activeServer', 0x10, False)], statics
     )
     server_class = g.klass('TS', 'Server', [('m_eventListener', 0x18, False)])
-    base_controller = g.klass('TS', 'EventController', [('m_eventState', 0x48, False)])
+    base_controller = g.klass(
+        'TS', 'EventController', [('m_audio', 0x10, False), ('m_eventState', 0x48, False)]
+    )
     controller_class = g.klass(
         'TS',
         'HostEventController',
@@ -227,6 +230,28 @@ def build(
             g.recorder = recorder
     state = g.alloc_obj(state_class)
     g.q(controller + 0x48, state)
+    if camera is not None:  # (cameraPosition, distance): controller.m_audio.m_raceCameras.m_cameras[0] ...
+        position, distance = camera
+        audio = g.alloc_obj(g.klass('TS', 'Audio', [('m_raceCameras', 0x88, False)]))
+        cameras = g.alloc_obj(g.klass('TS', 'RaceCameras', [('m_cameras', 0x10, False)]))
+        race_camera = g.alloc_obj(
+            g.klass('TS', 'RaceCamera', [('m_cameraPropertiesUpdater', 0x100, False)]), 0x110
+        )
+        updater_c = g.alloc_obj(g.klass('TS', 'CameraPropertiesUpdater', [('m_properties', 0x18, False)]))
+        properties = g.alloc_obj(
+            g.klass(
+                'TS',
+                'RaceCameraProperties',
+                [('cameraPosition', 0x10, False, 0x11), ('distance', 0x1C, False, 0x0C)],
+            )
+        )
+        g.put(properties + 0x10, struct.pack('<i', position))
+        g.put(properties + 0x1C, struct.pack('<f', distance))
+        g.q(updater_c + 0x18, properties)
+        g.q(race_camera + 0x100, updater_c)
+        g.q(cameras + 0x10, g.list_of([race_camera]))
+        g.q(audio + 0x88, cameras)
+        g.q(controller + 0x10, audio)
     if hotlapping is not None:  # EventState.m_eventStats.raceStats.m_hotlappingOnCircuit
         stats = g.alloc_obj(g.klass('TS', 'EventStats', [('raceStats', 0x30, False)]))
         race_stats = g.alloc_obj(g.klass('TS', 'RaceStats', [('m_hotlappingOnCircuit', 0x3C, False)]))
@@ -3353,3 +3378,40 @@ class HotlappingTests(unittest.TestCase):
         )
         standings = race.Standings()
         self.assertEqual(standings.order(players, 0.0, hotlapping=True)[0].name, 'Fast')
+
+
+class CockpitCameraTests(unittest.TestCase):
+    """The proximity radar only while the camera sits at the driver (asked for by the user on
+    2026-11-13): TSU's camera position mode and distance, read through the race controller."""
+
+    def state(self, camera):
+        return build([10_000], laps_completed=0, clock=20_000, limit=0, name='A', camera=camera).read()
+
+    def test_the_cameras_view(self):
+        self.assertTrue(self.state((race.COCKPIT_POSITION, 1.5)).cockpit)  # AlignTarget, at the driver
+        self.assertFalse(self.state((1, 35.0)).cockpit)  # BehindVelocity: following behind
+        self.assertFalse(self.state((race.COCKPIT_POSITION, 30.0)).cockpit)  # turns with the car, but far
+        self.assertIsNone(self.state(None).cockpit)  # not read
+
+    def sections(self, cockpit, only=True):
+        class Radar:
+            def update(self, *arguments):
+                return 'the radar'
+
+        state = race.LapState(
+            clock=20_000,
+            time_limit=0,
+            laps_completed=0,
+            laps_to_finish=3,
+            lap_starts=[10_000],
+            players=(race.PlayerState('A', 0, 0, ((10_000,),), False, False, True),),
+            cockpit=cockpit,
+        )
+        snapshot = race.Snapshot(race.RACING, state, running=True, read_at=5.0, moved_at=5.0)
+        return race.race_sections(snapshot, 5.0, radar=Radar(), radar_cockpit_only=only)
+
+    def test_the_radar_hides_only_outside_the_car(self):
+        self.assertIn('radar', self.sections(True))
+        self.assertNotIn('radar', self.sections(False))
+        self.assertIn('radar', self.sections(None))  # the camera not read: as before
+        self.assertIn('radar', self.sections(False, only=False))  # the setting off
