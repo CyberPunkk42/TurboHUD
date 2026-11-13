@@ -57,7 +57,7 @@ New since 2026.11.12.7:
 
 New since 2026.11.13 (this build is 2026.11.13.2):
 
-- **A new icon**, and **About TurboHUD…** in the TurboHUD icon's menu (also an **About…** button in **Settings…**): it shows the version.
+- **A new icon**, and **About TurboHUD…** in the TurboHUD icon's menu (also an **About...** button in **Settings…**): it shows the version.
 - **Only one TurboHUD at a time**: starting it a second time no longer opens a second copy.
 - **Arrow keys in move mode**: click a section (it gets a coloured frame), then the arrow keys move it 1 pixel, with **Shift** 10 pixels.
 - **Layouts for screen sizes**: the move-mode panel has **Load screen default** (a ready-made layout for your screen size), **Export…** and **Import…** (a layout as a file, to share), and **Redo** beside **Undo**.
