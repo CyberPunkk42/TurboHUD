@@ -81,6 +81,10 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+  - 2026-11-13: The radar's arrows only to cars behind, asked for by the user: a car ahead beyond the radar's reach
+    no longer gets an arrow at the top edge; a car behind beyond it keeps its arrow at the bottom
+    (`race.radar_edge_blips`). Tests: which cars get an arrow, and the painter test now checks the bottom arrow and
+    no top one.
   - 2026-11-13: Replays after a race, reported by the user: a recording watched after a race in the same TSU session
     showed only the local time. TSU writes nothing to its log for a replay, so the log still ended with "Event
     ended." and TurboHUD, taking it that no event ran, never searched. Now, while the log says no event runs,

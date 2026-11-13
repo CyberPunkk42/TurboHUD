@@ -1526,3 +1526,7 @@ its "Recent changes".
     replay found after a race with and without an access time, the growing waits, replays only, a game without
     replays. 1027 of 1033 pass on Windows; the 6 that fail need macOS/Linux or the symlink privilege, as on `main`.
     Checked on the real folder (read only): it finds the recording opened at 01:29. Not yet seen in TSU itself.
+  - 2026-11-13: The radar's arrows only to cars behind, asked for by the user: a car ahead beyond the radar's reach
+    no longer gets an arrow at the top edge; a car behind beyond it keeps its arrow at the bottom
+    (`race.radar_edge_blips`). Tests: which cars get an arrow, and the painter test now checks the bottom arrow and
+    no top one.

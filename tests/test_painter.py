@@ -301,14 +301,17 @@ class RedrawTests(unittest.TestCase):
         self.addCleanup(window.close)
         window.resize(200, 200)
 
-        def shown(ahead):
+        def shown(ahead, rows):
             view = RadarView(1.0, (Blip(ahead, 0.0, 0.0, 0.2),), RADAR_VIEW_MAX, within=1.0)
             window.show_content([], radar=view)
             image = window.grab().toImage()
-            return sum(image.pixelColor(x, y).alpha() > 0 for x in range(85, 116) for y in range(3, 14))
+            return sum(image.pixelColor(x, y).alpha() > 0 for x in range(85, 116) for y in rows)
 
-        far_ahead, far_behind = shown(RADAR_VIEW_MAX * 2), shown(-RADAR_VIEW_MAX * 2)
-        self.assertGreater(far_ahead, far_behind + 20)  # an arrow at the top edge only for a car far ahead
+        top, bottom = range(3, 14), range(186, 197)
+        none = shown(0.0, bottom)  # a car on the local one: what the bottom edge shows anyway
+        self.assertGreater(shown(-RADAR_VIEW_MAX * 2, bottom), none + 20)  # far behind: an arrow there
+        # Far ahead: no arrow at the top edge (asked for by the user on 2026-11-13).
+        self.assertEqual(shown(RADAR_VIEW_MAX * 2, top), shown(0.0, top))
 
     def test_a_car_of_another_class_is_its_class_colour_with_the_warning_round_it(self):
         # Asked for by the user on 2026-11-11.
