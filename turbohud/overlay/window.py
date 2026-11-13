@@ -1329,6 +1329,7 @@ class MovePanel(QWidget):
             presets.addWidget(delete, line, 4)
             self.preset_deletes[number] = delete
         # Beside the presets, a layout to and from files, and the shipped one for this screen.
+        self.layout_buttons = {}
         for line, (text, tip, signal) in enumerate(
             (
                 (
@@ -1352,6 +1353,7 @@ class MovePanel(QWidget):
             button.setToolTip(tip)
             button.clicked.connect(signal)
             presets.addWidget(button, line, 6)
+            self.layout_buttons[text] = button
         presets.setColumnStretch(5, 1)
         column.addLayout(presets)
         designing = QHBoxLayout()
@@ -1485,9 +1487,13 @@ class MovePanel(QWidget):
         self.redo.setEnabled(available)
 
     def set_designing(self, designing):
-        """Save design and Cancel only while the design screen shows."""
+        """Save design and Cancel only while the design screen shows; meanwhile Load screen default
+        and Import... are off (they would put a full-size layout over the design). Export... then
+        saves the design (the app does it)."""
         self.design_save.setEnabled(designing)
         self.design_cancel.setEnabled(designing)
+        for text in ('Load screen default', 'Import…'):
+            self.layout_buttons[text].setEnabled(not designing)
 
     def set_relearn_available(self, available):
         """Relearn map works only while a track is known (in a race)."""

@@ -1151,8 +1151,14 @@ class MovePanelPresetTests(unittest.TestCase):
         panel.design_size.setCurrentText('3840x2160')
         panel.design.click()
         panel.set_designing(True)
+        # Loading a full-size layout would cover the design: off while designing; Export saves it.
+        self.assertFalse(panel.layout_buttons['Load screen default'].isEnabled())
+        self.assertFalse(panel.layout_buttons['Import…'].isEnabled())
+        self.assertTrue(panel.layout_buttons['Export…'].isEnabled())
         panel.design_save.click()
         panel.design_cancel.click()
+        panel.set_designing(False)
+        self.assertTrue(panel.layout_buttons['Import…'].isEnabled())
         self.assertEqual(
             got, ['redo', 'screen_default', 'export', 'import', (3840, 2160), 'design_save', 'design_cancel']
         )

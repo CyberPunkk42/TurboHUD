@@ -378,6 +378,7 @@ def run(args, folder):
     from PySide6.QtCore import QEvent, QObject, Qt, QTimer, Signal
     from PySide6.QtGui import QAction, QGuiApplication, QIcon
     from PySide6.QtWidgets import (
+        QAbstractItemView,
         QAbstractSpinBox,
         QApplication,
         QComboBox,
@@ -1369,7 +1370,12 @@ def run(args, folder):
             load_layout(layout_presets.absolute(laid, target), f'the default for {target[2]}x{target[3]}')
 
     def export_layout():
-        """The layout to a file, for the screen the sections are on."""
+        """The layout to a file, for the screen the sections are on. On the design screen: the
+        design, as Save design (exported there, it was the shrunken layout in the frame saved as one
+        for this screen: found in the user's files on 2026-11-13)."""
+        if design is not None:
+            design_save()
+            return
         target = busiest_screen()
         # customization/display_presets beside the app (asked for by the user on 2026-11-13).
         folder = layout_presets.ready_folder(own_folder) or Path.home()
@@ -1507,8 +1513,10 @@ def run(args, folder):
             if locked or selected is None or event.type() != QEvent.KeyPress:
                 return False
             key = arrows.get(event.key())
-            if key is None or isinstance(
-                QApplication.focusWidget(), (QAbstractSpinBox, QComboBox, QLineEdit)
+            if key is None or QApplication.activeModalWidget() is not None:  # a dialog: its own keys
+                return False
+            if isinstance(
+                QApplication.focusWidget(), (QAbstractItemView, QAbstractSpinBox, QComboBox, QLineEdit)
             ):
                 return False
             nudge_selected(*nudge(key, bool(event.modifiers() & Qt.ShiftModifier)))
