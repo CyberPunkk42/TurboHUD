@@ -5,6 +5,11 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+try:
+    import fcntl  # noqa: F401  (the controller is read through Linux's joystick device)
+except ImportError:
+    raise unittest.SkipTest('the controller reader is for Linux') from None
+
 from turbohud.tsu import controller
 
 

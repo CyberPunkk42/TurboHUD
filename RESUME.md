@@ -81,6 +81,12 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+  - 2026-11-13: The six test errors on Windows fixed, asked for by the user: all were tests of macOS and Linux
+    parts run where those cannot work (a file link, which Windows makes only with developer mode; `os.getuid`;
+    `fcntl` for the Linux controller reader; Unix sockets for the control and probe sockets). The link is made where
+    allowed, the control path test passes its user ID, and the socket and controller tests are skipped where the
+    system lacks them (they still run on the Mac and Linux). The app is unchanged. Windows: 1110 tests, all pass
+    (27 skipped).
   - 2026-11-13: Layouts of one's own in `customization/display_presets`, asked for by the user (easy to find and
     share): the folder sits beside the program (the one holding TurboHUD.exe, TurboHUD, or on the Mac TurboHUD.app;
     from source the repository, gitignored), in the settings folder where that one cannot be written to. Export...,

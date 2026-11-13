@@ -1751,3 +1751,9 @@ its "Recent changes".
     taken once and again when changed, the archives' read-me. Checked in the app offscreen on a copy of the settings:
     Export offered `<repo>/customization/display_presets/800x800.json`; an 800x800 file there was taken on the first
     start and not again on the second.
+  - 2026-11-13: The six test errors on Windows fixed, asked for by the user: all were tests of macOS and Linux
+    parts run where those cannot work (a file link, which Windows makes only with developer mode; `os.getuid`;
+    `fcntl` for the Linux controller reader; Unix sockets for the control and probe sockets). The link is made where
+    allowed, the control path test passes its user ID, and the socket and controller tests are skipped where the
+    system lacks them (they still run on the Mac and Linux). The app is unchanged. Windows: 1110 tests, all pass
+    (27 skipped).

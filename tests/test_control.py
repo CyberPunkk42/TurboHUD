@@ -185,7 +185,7 @@ class FakeTurboHUD:
 class ControlTests(unittest.TestCase):
     def setUp(self):
         self.folder = tempfile.mkdtemp()
-        self.path = control.control_path({'XDG_RUNTIME_DIR': self.folder}, 'linux')
+        self.path = control.control_path({'XDG_RUNTIME_DIR': self.folder}, 'linux', uid=1000)
 
     def test_path_in_the_private_runtime_folder(self):
         self.assertEqual(self.path, Path(self.folder) / 'turbohud' / 'control.sock')
@@ -194,6 +194,7 @@ class ControlTests(unittest.TestCase):
         )
         self.assertIsNone(control.control_path({}, 'win32'))
 
+    @unittest.skipUnless(hasattr(socket, 'AF_UNIX'), 'the control socket is for macOS and Linux')
     def test_send_reaches_the_running_turbohud(self):
         fake = FakeTurboHUD(self.path)
         try:
@@ -203,6 +204,7 @@ class ControlTests(unittest.TestCase):
         finally:
             fake.close()
 
+    @unittest.skipUnless(hasattr(socket, 'AF_UNIX'), 'the control socket is for macOS and Linux')
     def test_nothing_running(self):
         self.assertIsNone(control.send('quit', self.path))
         control.prepare_folder(self.path)

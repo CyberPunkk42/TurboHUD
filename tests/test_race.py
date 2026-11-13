@@ -1,5 +1,6 @@
 import dataclasses
 import itertools
+import socket
 import struct
 import sys
 import time
@@ -3045,6 +3046,7 @@ class LiveRaceTests(unittest.TestCase):
         live.stop()
         self.assertFalse(live._thread.is_alive())
 
+    @unittest.skipUnless(hasattr(socket, 'AF_UNIX'), 'the probe socket is for macOS and Linux')
     def test_connect_without_the_probe_fails_cleanly(self):
         import tempfile
 
