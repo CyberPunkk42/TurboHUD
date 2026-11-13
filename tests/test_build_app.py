@@ -227,5 +227,64 @@ class AppArgsTests(unittest.TestCase):
         self.assertIn('run_turbohud', err.getvalue())
 
 
+@unittest.skipUnless(importlib.util.find_spec('PySide6'), "the lock is Qt's")
+class SingleInstanceTests(unittest.TestCase):
+    """Only one TurboHUD at a time (asked for by the user on 2026-11-13)."""
+
+    def test_a_second_copy_does_not_get_the_lock(self):
+        with tempfile.TemporaryDirectory() as folder:
+            first = app.single_instance(Path(folder))
+            self.assertIsNotNone(first)
+            self.assertIsNone(app.single_instance(Path(folder)))
+            first.unlock()
+            again = app.single_instance(Path(folder))
+            self.assertIsNotNone(again)
+            again.unlock()
+
+    def test_another_process_holds_it_until_it_is_gone(self):
+        # Another TurboHUD: a process holding the lock, then killed as if it crashed.
+        holder = (
+            'import sys, time\n'
+            f'sys.path.insert(0, {str(ROOT)!r})\n'
+            'from pathlib import Path\n'
+            'from turbohud import app\n'
+            'lock = app.single_instance(Path(sys.argv[1]))\n'  # kept: a freed lock lets go
+            "print('held' if lock else 'refused', flush=True)\n"
+            'time.sleep(60)\n'
+        )
+        # Windows lets go of the killed one's lock file a moment later: the folder may stay behind.
+        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as folder:
+            other = subprocess.Popen(
+                [sys.executable, '-c', holder, folder], stdout=subprocess.PIPE, text=True
+            )
+            try:
+                self.assertEqual(other.stdout.readline().strip(), 'held')
+                self.assertIsNone(app.single_instance(Path(folder)))
+            finally:
+                other.kill()
+                other.wait()
+                other.stdout.close()
+            lock = app.single_instance(Path(folder))  # the crashed one's lock is taken over
+            self.assertIsNotNone(lock)
+            lock.unlock()
+
+    def test_main_stops_while_another_runs(self):
+        with (
+            tempfile.TemporaryDirectory() as folder,
+            mock.patch('turbohud.control.send', return_value=None),
+            mock.patch.object(app, 'settings_dir', return_value=Path(folder)),
+            mock.patch.object(app, 'setup_log'),
+            mock.patch.object(app, 'already_running') as told,
+            mock.patch.object(app, 'run') as run,
+        ):
+            held = app.single_instance(Path(folder))
+            self.assertEqual(app.main(['--seconds', '1']), 0)
+            told.assert_called_once()
+            run.assert_not_called()
+            held.unlock()
+            app.main(['--seconds', '1'])
+            run.assert_called_once()
+
+
 if __name__ == '__main__':
     unittest.main()

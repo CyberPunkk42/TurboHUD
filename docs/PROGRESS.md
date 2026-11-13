@@ -1711,3 +1711,13 @@ its "Recent changes".
     (the last of the laps set, or in a timed race the lap begun once the time is up), whether or not the leader is
     the player; none once a car has finished. Tests: the window and fades, final lap (laps and time), the winner in,
     a second car crossing.
+  - 2026-11-13: Only one TurboHUD at a time, reported by the user (two or more could run): on Windows nothing
+    stopped a second copy (the command socket that finds a running one is for macOS and Linux only), and on the Mac
+    and Linux two started together could both get past it. Now TurboHUD holds a lock file (`turbohud.lock`, Qt's
+    QLockFile) in its settings folder while it runs; a second copy says "TurboHUD is already running" (terminal and a
+    message window) and quits before anything else, so it no longer empties the running one's log either. A lock
+    left by a TurboHUD that crashed is taken over (its process is gone). On macOS and Linux a plain second start
+    still switches the running one to move mode first, as before. Tests: a second lock refused, another process
+    holding it until killed, then taken over; main() stops while another runs. Checked offscreen: a second copy
+    started while one ran quit at once with code 0, the first ran on with its log whole, the lock went at its end.
+    Not seen yet: the message window itself.
