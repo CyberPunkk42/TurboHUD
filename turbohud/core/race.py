@@ -2767,9 +2767,9 @@ def car_sections(car, laps_to_go=None, speed_unit='kmh'):
     speed = f'{car.kmh / KMH_PER_MPH:.0f} mph' if speed_unit == 'mph' else f'{car.kmh:.0f} km/h'
     sections = {'speed': [Row(speed, 'medium', speed_color)], 'pedals': (car.throttle, car.brake)}
     if car.gear is not None:
-        sections['gear'] = [
-            Row(str(car.gear), 'big', 'behind' if rev_share(car.revs) >= REVS_SHIFT else 'text')
-        ]
+        # The gear above the speed (hud.speed_section), red near the shift.
+        gear_color = 'behind' if rev_share(car.revs) >= REVS_SHIFT else 'text'
+        sections['speed'] = [Row(str(car.gear), 'big', gear_color), *sections['speed']]
     if car.fuel_left is not None:
         color = {True: 'ahead', False: 'behind', None: 'text'}[car.saving]
         tail = _laps_text(car.fuel_laps) + _balance_text(car)
@@ -2809,7 +2809,7 @@ def car_sections(car, laps_to_go=None, speed_unit='kmh'):
         ]
         levels['draft'] = (car.draft, 'draft')
     if car.gear is not None and car.revs is not None:
-        levels['gear'] = Sectors(rev_lights(rev_share(car.revs)))
+        levels['speed'] = Sectors(rev_lights(rev_share(car.revs)))  # below the speed
     if levels:
         sections['levels'] = levels  # {section: (0 to 1, colour)} for the bars below the text
     return sections

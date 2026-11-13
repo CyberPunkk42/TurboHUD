@@ -297,6 +297,7 @@ def run(args, folder):
         panel_place,
         screen_of,
         session_rows,
+        speed_section,
         text_box,
     )
     from turbohud.hud.painter import text_ink, text_width, use_game_flags
@@ -376,8 +377,8 @@ def run(args, folder):
         retirements = Retirements()
 
         def contents():
-            gear = windows.get('gear')
-            LapReader.read_gear = settings.gear and gear is not None and gear.wanted
+            speed = windows.get('speed')
+            LapReader.read_gear = settings.gear and speed is not None and speed.wanted
             snapshot = live.snapshot()
             if race_starts.started(snapshot, time.monotonic()) and not locked:
                 log.info('a race began: locking')
@@ -470,6 +471,10 @@ def run(args, folder):
             window.own_font = saved.font if saved else None
             window.font = window.own_font or settings.font_size
             window.section = replace(window.section, spacing=saved.spacing if saved else 1.0)
+            if name == 'speed':
+                window.section = replace(
+                    speed_section(window.section, settings.gear), spacing=window.section.spacing
+                )
             window.text_resized.connect(lambda name: resized_by_hand(name))
             place = text_box(window.section, place, window.font, text_width, text_ink)
         place = fit_on_screens(place, screens)
@@ -644,13 +649,16 @@ def run(args, folder):
                     ),
                 )
             )
-        if any(section.name == 'gear' for section in layout):
+        if any(section.name == 'speed' for section in layout):
             listed.append(
                 (
                     'gear',
-                    'Gear and revs',
+                    'Gear and revs in the speed section',
                     settings.gear,
-                    'The gear and a rev bar, from the engine sound; off, they are not read at all',
+                    (
+                        'The gear above the speed and rev lights below it, from the engine sound;'
+                        ' off, they are not read at all'
+                    ),
                 )
             )
         if any(section.name == 'laptimes' for section in layout):
@@ -728,12 +736,19 @@ def run(args, folder):
         settings = replace(settings, gear=shown)
         gear_action.setChecked(shown)
         show_option('gear', shown)
-        window = windows.get('gear')
+        window = windows.get('speed')
         if window is not None:
-            window.show_content([])  # nothing until it is read again
+            with_gear(window)
+            resize_sections({'speed': fitted(window, keep_width=True)})
             window.update()
         save()
         log.info('gear and revs %s', 'on' if shown else 'off')
+
+    def with_gear(window):
+        """The speed section's window with the gear and rev lights or without (hud.speed_section),
+        its line spacing kept."""
+        base = next(section for section in layout if section.name == 'speed')
+        window.section = replace(speed_section(base, settings.gear), spacing=window.section.spacing)
 
     def set_classes(shown):
         nonlocal settings
@@ -1234,10 +1249,10 @@ def run(args, folder):
     yellow_flags_action.triggered.connect(lambda checked: set_yellow_flags(checked))
     if any(section.name == 'yellowflag' for section in layout):
         menu.addAction(yellow_flags_action)
-    gear_action = QAction('Gear and revs', menu, checkable=True)
+    gear_action = QAction('Gear and revs in the speed section', menu, checkable=True)
     gear_action.setChecked(settings.gear)
     gear_action.triggered.connect(lambda checked: set_gear(checked))
-    if any(section.name == 'gear' for section in layout):
+    if any(section.name == 'speed' for section in layout):
         menu.addAction(gear_action)
     classes_action = QAction('Classes in the lap times', menu, checkable=True)
     classes_action.setChecked(settings.classes)

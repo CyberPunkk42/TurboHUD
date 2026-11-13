@@ -241,7 +241,6 @@ class TextCanCentreTests(unittest.TestCase):
                 'tires',
                 'health',
                 'draft',
-                'gear',
                 'localtime',
                 'yellowflag',
                 'shortcut',
@@ -511,7 +510,6 @@ class SectionTests(unittest.TestCase):
                 'health',
                 'draft',
                 'speed',
-                'gear',
                 'localtime',
                 'players',
                 'laptimes',
@@ -1211,3 +1209,18 @@ class RoomTests(unittest.TestCase):
             tall[0].height, short[0].height + 70
         )  # the throttle bar: longer, the scale the same
         self.assertEqual(tall[0].width, short[0].width)
+
+
+class SpeedWithGearTests(unittest.TestCase):
+    """The gear and rev lights in the speed section (asked for by the user on 2026-11-13)."""
+
+    def test_with_the_option_on(self):
+        speed = next(s for s in hud.RACE_SECTIONS if s.name == 'speed')
+        self.assertIs(hud.speed_section(speed, False), speed)  # off: as it was
+        with_gear = hud.speed_section(speed, True)
+        self.assertEqual([row.style for row in with_gear.samples[0]], ['big', 'medium'])
+        self.assertTrue(with_gear.level and with_gear.pedals)
+        self.assertGreater(hud.tight_height(with_gear, 1.0, ink), hud.tight_height(speed, 1.0, ink))
+
+    def test_no_separate_gear_section(self):
+        self.assertNotIn('gear', [s.name for s in hud.RACE_SECTIONS])

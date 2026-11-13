@@ -1683,11 +1683,14 @@ class GearSectionTests(unittest.TestCase):
         self.assertEqual(race.rev_share(0.2), 0.0)  # below: empty
         self.assertEqual(race.rev_share(None), 0.0)
 
-    def test_the_section(self):
+    def test_in_the_speed_section(self):
         sections = race.car_sections(self.car(4, 0.75))
-        self.assertEqual(sections['gear'][0].text, '4')
-        self.assertEqual(sections['gear'][0].color, 'text')
-        self.assertIsInstance(sections['levels']['gear'], race.Sectors)
+        self.assertEqual([row.text for row in sections['speed']], ['4', '108 km/h'])
+        self.assertEqual(sections['speed'][0].color, 'text')
+        self.assertIsInstance(sections['levels']['speed'], race.Sectors)  # the rev lights below
         shifting = race.car_sections(self.car(4, race.REVS_TOP))
-        self.assertEqual(shifting['gear'][0].color, 'behind')  # red: about to shift up
-        self.assertNotIn('gear', race.car_sections(self.car(None, None)))
+        self.assertEqual(shifting['speed'][0].color, 'behind')  # red: about to shift up
+        without = race.car_sections(self.car(None, None))
+        self.assertEqual([row.text for row in without['speed']], ['108 km/h'])  # as before
+        self.assertNotIn('speed', without.get('levels', {}))
+        self.assertNotIn('gear', without)

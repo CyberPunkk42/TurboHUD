@@ -81,6 +81,13 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+  - 2026-11-13: The gear and rev lights in the speed section, asked for by the user (like a race car's dash), the
+    separate Gear section dropped: with the option ("Gear and revs in the speed section") the speed section shows the
+    gear in large digits above the speed and the rev lights below it, between the pedal bars (`hud.speed_section`;
+    a level bar in a section with pedal bars keeps between them, and the text and lights are centred together).
+    Off, the section is as it was and nothing of it is read. Drawing: inside the speed section, redrawn anyway as the
+    speed changes, the lights cost next to nothing more. Tests: the section with and without, the rows and lights;
+    checked in an offscreen render.
   - 2026-11-13: Gear and revs, asked for by the user: TSU's cars have no gearbox of their own, but the engine sound
     has one (`TS.EngineAudio`, through `VehicleModel.m_engineAudio`): `m_gear`, counted from 0 (it picks the gear's
     ratio from `m_gearRatios`: a replay matched the ratios that way), and `m_enginePitch`, which rose from about 0.55

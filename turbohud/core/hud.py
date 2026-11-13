@@ -434,8 +434,6 @@ RACE_SECTIONS = (
         level=True,
     ),
     Section('speed', 'Speed', ((Row('000 km/h', 'medium'),),), pedals=True),
-    # The engine sound's gear and a rev bar below it (asked for by the user on 2026-11-13).
-    Section('gear', 'Gear', ((Row('6', 'big'),),), level=True),
     Section('localtime', 'Local time', ((Row('00:00', 'medium'),),)),
     Section(
         'players',
@@ -505,10 +503,19 @@ RACE_SECTIONS = (
 # 2026-11-11); a section not named here comes under the last.
 PANEL_CATEGORIES = (
     ('Timing', ('lap', 'current', 'delta', 'deltabar', 'times', 'laptimes')),
-    ('Car', ('fuel', 'fuelfinish', 'tires', 'health', 'draft', 'speed', 'gear')),
+    ('Car', ('fuel', 'fuelfinish', 'tires', 'health', 'draft', 'speed')),
     ('Race', ('players', 'trackmap', 'radar', 'blueflag', 'yellowflag', 'shortcut')),
     ('Other', ('localtime', 'clock')),
 )
+
+
+def speed_section(section, gear):
+    """The speed section with the gear above the speed and rev lights below it (`gear`: the
+    option "Gear and revs", asked for by the user on 2026-11-13 in the speedometer, like a race
+    car's dash), or as it is without them."""
+    if not gear:
+        return section
+    return replace(section, samples=((Row('6', 'big'), *section.samples[0]),), level=True)
 
 
 def panel_categories(sections):

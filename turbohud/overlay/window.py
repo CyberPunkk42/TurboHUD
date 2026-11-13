@@ -480,7 +480,7 @@ class SectionWindow(QWidget):
             throttle, brake = self.pedals or (None, None)
             draw_bars(painter, pedal_bars(self.width(), self.height(), scale, throttle, brake))
             # The bars keep to the window's edges however small the text gets.
-            left, down = centred_text(
+            left, centred_down = centred_text(
                 (self.width(), self.height()),
                 rows,
                 scale,
@@ -489,6 +489,8 @@ class SectionWindow(QWidget):
                 pedal_space(scale) // 2,
                 self.section.spacing,
             )
+            if not self.section.level:  # with the rev lights below, those are centred with the text
+                down = centred_down
         painter.translate(0, down)
         centre = self.text_centred and text_can_centre(self.section)
         theme = self.theme
@@ -514,7 +516,7 @@ class SectionWindow(QWidget):
                 SECTORS_SAMPLE
                 if self.section.sectors
                 else REVS_SAMPLE
-                if self.section.name == 'gear'
+                if self.section.name == 'speed'
                 else LEVEL_SAMPLE
             )
             level = self.level or (None if self.locked else sample)
@@ -522,13 +524,16 @@ class SectionWindow(QWidget):
                 level = None  # turned off: the room stays, so the text keeps its size
             if level is not None:
                 content_height = content_size(rows, scale, text_width, self.section.spacing)[1]
+                # Between the pedal bars where the section has them (the speed's rev lights).
+                inner = pedal_space(scale) // 2 if self.section.pedals else 0
+                painter.translate(inner, 0)
                 if isinstance(level, Sectors):
                     count = len(level.colours)
-                    draw_sectors(
-                        painter, sector_bars(self.width(), content_height, scale, count), level.colours
-                    )
+                    bars = sector_bars(self.width() - 2 * inner, content_height, scale, count)
+                    draw_sectors(painter, bars, level.colours)
                 else:
-                    draw_level(painter, level_bar(self.width(), content_height, scale, *level))
+                    draw_level(painter, level_bar(self.width() - 2 * inner, content_height, scale, *level))
+                painter.translate(-inner, 0)
         painter.translate(0, -down)
 
     def _paint_backdrop(self, painter, rows, scale, bars, down=0, color=None):
