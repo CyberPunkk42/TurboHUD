@@ -850,6 +850,45 @@ def common_font(fonts):
     return max(set(fonts), key=lambda font: (fonts.count(font), -abs(font - middle), font))
 
 
+RESIZE_EDGE = 8  # pixels along a resizable section's edges that resize it in move mode
+
+
+def resize_edges(x, y, width, height, edge=RESIZE_EDGE):
+    """Which edges of a box `width` by `height` the point (x, y) in it is on, for resizing
+    (reported by the user on 2026-11-13: only a corner grip, which pointed and pulled the
+    wrong way at times): a tuple of 'left', 'right', 'top', 'bottom', two of them at a
+    corner; () in the middle. In a box too small for both, the nearer edge wins."""
+    edge = max(1, min(edge, width // 3 or 1, height // 3 or 1))
+    found = []
+    if x < edge:
+        found.append('left')
+    elif x >= width - edge:
+        found.append('right')
+    if y < edge:
+        found.append('top')
+    elif y >= height - edge:
+        found.append('bottom')
+    return tuple(found)
+
+
+def resized(box, edges, dx, dy, least=(40, 10)):
+    """`box` (x, y, width, height) dragged by (dx, dy) at `edges` (resize_edges), where the
+    desktop cannot resize it itself: the opposite edges stay put, and it keeps at least
+    `least` in size."""
+    x, y, width, height = box
+    if 'left' in edges:
+        moved = min(dx, width - least[0])
+        x, width = x + moved, width - moved
+    if 'right' in edges:
+        width = max(width + dx, least[0])
+    if 'top' in edges:
+        moved = min(dy, height - least[1])
+        y, height = y + moved, height - moved
+    if 'bottom' in edges:
+        height = max(height + dy, least[1])
+    return x, y, width, height
+
+
 def section_scale(size, base_height, needed_width=None, low=0.3, high=8.0):
     """How much a section of `size` scales its content: the box's height sets it, so
     resizing taller or shorter makes the text bigger or smaller. `needed_width` is how

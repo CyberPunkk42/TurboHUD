@@ -24,7 +24,6 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QPushButton,
-    QSizeGrip,
     QSpinBox,
     QVBoxLayout,
     QWidget,
@@ -49,6 +48,8 @@ from turbohud.core.hud import (
     panel_categories,
     pedal_bars,
     pedal_space,
+    resize_edges,
+    resized,
     sector_bars,
     steady_rows,
     text_can_centre,
@@ -189,6 +190,25 @@ def _set_input(widget, native, transparent):
     return False
 
 
+# The edges resize_edges names, as Qt has them, and the cursor for each edge or corner.
+RESIZE_FLAGS = {
+    'left': Qt.LeftEdge,
+    'right': Qt.RightEdge,
+    'top': Qt.TopEdge,
+    'bottom': Qt.BottomEdge,
+}
+RESIZE_CURSORS = {
+    frozenset({'left'}): Qt.SizeHorCursor,
+    frozenset({'right'}): Qt.SizeHorCursor,
+    frozenset({'top'}): Qt.SizeVerCursor,
+    frozenset({'bottom'}): Qt.SizeVerCursor,
+    frozenset({'top', 'left'}): Qt.SizeFDiagCursor,
+    frozenset({'bottom', 'right'}): Qt.SizeFDiagCursor,
+    frozenset({'top', 'right'}): Qt.SizeBDiagCursor,
+    frozenset({'bottom', 'left'}): Qt.SizeBDiagCursor,
+}
+
+
 class SectionWindow(QWidget):
     drawing_time = 0.0  # seconds all sections have spent drawing, for the log
 
@@ -231,12 +251,10 @@ class SectionWindow(QWidget):
             height = tight_height(section, theme.scale, text_ink)
             self.setToolTip(section.label)  # no room for its name in the box (move mode)
         self.base = (width, height)
-        self.grip = QSizeGrip(self)
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.addStretch()
-        layout.addWidget(self.grip, 0, Qt.AlignBottom | Qt.AlignRight)
-        self.grip.setVisible(False)
+        # Resized at any edge or corner in move mode (resize_edges), by the desktop where it can:
+        # Qt's size grip pointed and pulled the wrong way at times (reported by the user on 2026-11-13).
+        self._resizing = None  # (edges, where the drag began on the screen, the box then): resized here
+        self.setMouseTracking(True)  # the cursor shows the edge under it
         lowest = round(self.base[1] * 0.3)
         if self.resizable:
             self.setMinimumSize(MIN_WIDTH, lowest if section.bar else max(lowest, MIN_HEIGHT))
@@ -291,7 +309,6 @@ class SectionWindow(QWidget):
         movable = getattr(self.native, 'set_movable', None)
         if movable is not None:
             movable(self, not locked)
-        self.grip.setVisible(not locked and self.resizable)
         self.setCursor(Qt.ArrowCursor if locked else Qt.OpenHandCursor)
         if not in_place or self.canvas is not None:
             self.show_on_top()  # changing a window flag hides the window; the canvas hides it
@@ -310,7 +327,6 @@ class SectionWindow(QWidget):
         movable = getattr(self.native, 'set_movable', None)
         if movable is not None:
             movable(self, wanted and not self.locked)
-        self.grip.setVisible(wanted and not self.locked and self.resizable)
         if not wanted and getattr(self.native, 'hides_windows', False):
             self.hide()
             if self.on_canvas:
@@ -320,14 +336,56 @@ class SectionWindow(QWidget):
             self.show_on_top()
         self.update()
 
+    def _edges_at(self, event):
+        """The edges under the pointer that resize this section (resize_edges); () where none."""
+        if self.locked or not self.resizable:
+            return ()
+        point = event.position()
+        return resize_edges(point.x(), point.y(), self.width(), self.height())
+
     def mousePressEvent(self, event):
-        if not self.locked and event.button() == Qt.LeftButton:
+        if self.locked or event.button() != Qt.LeftButton:
+            return
+        edges = self._edges_at(event)
+        if not edges:
             self.windowHandle().startSystemMove()
+            return
+        flags = Qt.Edges()
+        for name in edges:
+            flags |= RESIZE_FLAGS[name]
+        if not self.windowHandle().startSystemResize(flags):
+            # The desktop cannot (macOS): resize it here, following the pointer.
+            self._resizing = (edges, event.globalPosition(), self.geometry().getRect())
+
+    def mouseMoveEvent(self, event):
+        if self._resizing is not None:
+            edges, start, box = self._resizing
+            moved = event.globalPosition() - start
+            least = (self.minimumWidth(), self.minimumHeight())
+            self.setGeometry(*resized(box, edges, round(moved.x()), round(moved.y()), least))
+            return
+        if not self.locked:
+            self.setCursor(RESIZE_CURSORS.get(frozenset(self._edges_at(event)), Qt.OpenHandCursor))
+
+    def mouseReleaseEvent(self, _event):
+        self._resizing = None
+
+    def _paint_corner(self, painter):
+        """Move mode: two short lines in the bottom right corner of a resizable section,
+        where it can be resized (and at every edge)."""
+        painter.save()
+        painter.setPen(QPen(QColor(*BORDER), 2))
+        right, bottom = self.width() - 4, self.height() - 4
+        for step in (6, 11):
+            painter.drawLine(QPointF(right - step, bottom), QPointF(right, bottom - step))
+        painter.restore()
 
     def paintEvent(self, _event):
         began = time.perf_counter()
         painter = QPainter(self)
         self.draw(painter)
+        if not self.locked and self.wanted and self.resizable:
+            self._paint_corner(painter)
         painter.end()
         SectionWindow.drawing_time += time.perf_counter() - began
 

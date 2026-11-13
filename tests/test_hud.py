@@ -1114,3 +1114,33 @@ class TextSizeTests(unittest.TestCase):
     def test_only_text_sections_have_a_text_size(self):
         drawn = {s.name for s in hud.RACE_SECTIONS if not hud.is_text_section(s)}
         self.assertEqual(drawn, {'deltabar', 'trackmap', 'radar', 'blueflag'})
+
+
+class ResizeEdgeTests(unittest.TestCase):
+    """Resizing the radar, the map and the flags at any edge or corner (reported by the user on
+    2026-11-13: only a corner grip, which pointed and pulled the wrong way at times)."""
+
+    def test_the_edge_under_the_pointer(self):
+        self.assertEqual(hud.resize_edges(100, 50, 200, 100), ())
+        self.assertEqual(hud.resize_edges(2, 50, 200, 100), ('left',))
+        self.assertEqual(hud.resize_edges(197, 50, 200, 100), ('right',))
+        self.assertEqual(hud.resize_edges(100, 1, 200, 100), ('top',))
+        self.assertEqual(hud.resize_edges(100, 99, 200, 100), ('bottom',))
+        self.assertEqual(hud.resize_edges(199, 99, 200, 100), ('right', 'bottom'))
+        self.assertEqual(hud.resize_edges(0, 0, 200, 100), ('left', 'top'))
+        self.assertEqual(hud.resize_edges(195, 3, 200, 100), ('right', 'top'))
+
+    def test_a_small_box_keeps_a_middle_to_move_it_by(self):
+        self.assertEqual(hud.resize_edges(10, 10, 21, 21), ())
+        self.assertEqual(hud.resize_edges(0, 10, 21, 21), ('left',))
+
+    def test_the_opposite_edges_stay_put(self):
+        box = (100, 200, 300, 150)
+        self.assertEqual(hud.resized(box, ('right', 'bottom'), 20, 10), (100, 200, 320, 160))
+        self.assertEqual(hud.resized(box, ('left',), 30, 99), (130, 200, 270, 150))
+        self.assertEqual(hud.resized(box, ('top',), 0, -20), (100, 180, 300, 170))
+
+    def test_never_smaller_than_the_least(self):
+        box = (100, 200, 300, 150)
+        self.assertEqual(hud.resized(box, ('right',), -500, 0, (40, 10)), (100, 200, 40, 150))
+        self.assertEqual(hud.resized(box, ('left',), 500, 0, (40, 10)), (360, 200, 40, 150))

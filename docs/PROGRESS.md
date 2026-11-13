@@ -1565,3 +1565,11 @@ its "Recent changes".
     its saved box (`hud.font_of_box`), the most common one global (`hud.common_font`), the file kept beside it.
     Tests: sizes in proportion, the box, the upgrade (also presets), the panel, a section drawn at its size whatever
     its box. Not yet tried in the running app.
+  - 2026-11-13: Resizing at every edge and corner, reported by the user: Qt's corner grip pointed and pulled the
+    wrong way at times, and no edge could be grabbed. The sections that still resize by their box (radar, track map,
+    delta bar, blue flag) now resize at any edge or corner in move mode (`hud.resize_edges`, 8 px), the cursor
+    showing which way; the desktop resizes them (`startSystemResize`), and where it cannot (macOS) TurboHUD follows
+    the pointer itself (`hud.resized`, the opposite edges kept). A small mark in their bottom right corner in move
+    mode. Text sections have no corner: their text size sets their box. Tests: the edges, the fallback resize, the
+    cursors. Also run once offscreen on a copy of the user's settings: layout 6 converted, global 22 px, boxes as
+    before but for three whose text had been shrunk to their width (fuel, speed, players: now as tall as the text).

@@ -1495,3 +1495,13 @@ class CanvasTests(unittest.TestCase):
         colors = [image.pixelColor(x, top.y() + 20) for x in range(top.x(), top.x() + top.width())]
         self.assertTrue(any(c.alpha() == 255 and c.green() > c.red() for c in colors))  # green: drawn
         self.assertEqual(image.pixelColor(middle.x() + 20, middle.y() + 20).alpha(), 0)  # not drawn again
+
+
+class ResizeCursorTests(unittest.TestCase):
+    def test_every_edge_and_corner_has_its_cursor(self):
+        from turbohud.overlay.window import RESIZE_CURSORS, RESIZE_FLAGS
+
+        corners = {
+            frozenset(c) for c in (('left', 'top'), ('left', 'bottom'), ('right', 'top'), ('right', 'bottom'))
+        }
+        self.assertEqual(set(RESIZE_CURSORS), {frozenset({e}) for e in RESIZE_FLAGS} | corners)
