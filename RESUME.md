@@ -81,6 +81,12 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+  - 2026-11-13: The leader's lap fades in at the end of the lap title, asked for by the user (it jumped in): it moved
+    from the middle to the end ("Lap 3/13  -  16:23 left · Leader 4"), so nothing before it moves when it appears,
+    and it fades in over half a second (`LEADER_FADE`) from the moment the leader began that lap, by the race clock
+    (`race.lap_title_row`; no state kept). The painter draws a tail whose colour is 'name@share' at that opacity,
+    outline and all, so no dark outline shows before the text. Tests: the order, the fade at its start, middle and
+    end; checked in an offscreen render.
   - 2026-11-13: The lap title no longer cut off, reported by the user: with the leader a lap ahead the title
     ("Lap 3/13 · Leader 4  -  16:..") was cut after the time's colon. Its box is sized from the section's sample,
     which had no leader part, and since text sizes a text keeps its size. The sample now has it ("Lap 13/13 · Leader

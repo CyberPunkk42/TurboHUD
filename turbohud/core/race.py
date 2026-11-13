@@ -2497,7 +2497,7 @@ def _watching_sections(
     """What a spectator sees: the race, with the leader's lap, the player list with the
     gaps to the leader, the lap times and the map; nothing about a car of their own."""
     state = snapshot.state
-    sections = {'lap': [Row(f'Spectating  -  {_lap_title(state)}', 'title')]}
+    sections = {'lap': [lap_title_row(state, 'Spectating  -  ')]}
     if state.players:
         order = (
             standings.order(state.players, now, state.hotlapping)
@@ -2533,25 +2533,43 @@ def leader_lap(state):
     return min(lap, state.laps_to_finish) if state.laps_to_finish else lap
 
 
-def _lap_title(state):
-    title = (
+LEADER_FADE = 0.5  # seconds the leader's lap takes to fade in at the end of the lap title
+
+
+def lap_title_row(state, prefix=''):
+    """The lap title: the lap, the time left, and at the end the leader's lap where it is ahead of
+    the player's. At the end, so nothing before it moves when it appears, and fading in over
+    LEADER_FADE from the moment the leader began that lap (asked for by the user on 2026-11-13:
+    it jumped in, in the middle of the line)."""
+    title = prefix + (
         f'Lap {state.lap_number}/{state.laps_to_finish}'
         if state.laps_to_finish
         else f'Lap {state.lap_number}'
     )
-    leader = leader_lap(state)
-    if leader is not None and leader > state.lap_number:  # the player's own lap says it otherwise
-        title += f' · Leader {leader}'
     left = state.time_left
     if left is not None:
         title += f'  -  {clock(math.ceil(left / UNITS_PER_SECOND))} left' if left > 0 else '  -  time is up'
-    return title
+    leader = leader_lap(state)
+    if leader is None or leader <= state.lap_number:  # the player's own lap says it otherwise
+        return Row(title, 'title')
+    return Row(title, 'title', tail=f' · Leader {leader}', tail_color=f'text@{_leader_fade(state):.2f}')
+
+
+def _leader_fade(state):
+    """How far the leader's lap has faded in, 0 to 1: by the race clock since the furthest driver
+    began its lap (1 where that is not known)."""
+    furthest = max(state.players, key=player_lap_number, default=None)
+    if furthest is None or not furthest.checkpoints or not furthest.checkpoints[-1]:
+        return 1.0
+    began = furthest.checkpoints[-1][0]
+    if began == NO_CHECKPOINT or state.clock < began:
+        return 1.0
+    return min((state.clock - began) / (LEADER_FADE * UNITS_PER_SECOND), 1.0)
 
 
 def _racing_sections(snapshot, now):
     """The lap sections while the local player races."""
     state = snapshot.state
-    title = _lap_title(state)
     delta = state.delta_to_best
     if delta is None:
         delta_row = Row('vs best  -', 'medium')
@@ -2561,7 +2579,7 @@ def _racing_sections(snapshot, now):
         number = format_delta(delta, DELTA_PLACES).replace('-', '\u2212')
         delta_row = Row(number, 'medium', color, tail=' vs best', tail_color=color, slot=DELTA_SLOT)
     return {
-        'lap': [Row(title, 'title')],
+        'lap': [lap_title_row(state)],
         'current': [Row(format_tenths(current_lap_now(snapshot, now)), 'big', 'accent')],
         'delta': [delta_row],
         'times': [times_row(state)],

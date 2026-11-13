@@ -488,32 +488,50 @@ class LeaderLapTests(unittest.TestCase):
             players=players,
         )
 
+    @staticmethod
+    def title(state):
+        row = race.lap_title_row(state)
+        return row.text + row.tail
+
     def test_a_lapped_driver_sees_the_leaders_lap(self):
-        self.assertEqual(race._lap_title(self.state(8, 11)), 'Lap 9/20 · Leader 12')
+        self.assertEqual(self.title(self.state(8, 11)), 'Lap 9/20 · Leader 12')
 
     def test_on_the_leaders_lap_it_is_left_out(self):
-        self.assertEqual(race._lap_title(self.state(8, 8)), 'Lap 9/20')
+        self.assertEqual(self.title(self.state(8, 8)), 'Lap 9/20')
 
     def test_it_is_left_out_while_leading(self):
-        self.assertEqual(race._lap_title(self.state(8, 3)), 'Lap 9/20')
+        self.assertEqual(self.title(self.state(8, 3)), 'Lap 9/20')
 
     def test_a_finished_leader_counts_the_laps_it_drove(self):
-        title = race._lap_title(self.state(15, 20, leader_finished=True))
-        self.assertEqual(title, 'Lap 16/20 · Leader 20')
+        self.assertEqual(self.title(self.state(15, 20, leader_finished=True)), 'Lap 16/20 · Leader 20')
 
     def test_the_leaders_lap_stops_at_the_last_lap(self):
-        self.assertEqual(race._lap_title(self.state(15, 25)), 'Lap 16/20 · Leader 20')
+        self.assertEqual(self.title(self.state(15, 25)), 'Lap 16/20 · Leader 20')
 
-    def test_it_goes_before_the_time_left(self):
+    def test_it_goes_after_the_time_left(self):
+        # At the end, so nothing moves when it appears (asked for by the user on 2026-11-13).
         state = dataclasses.replace(self.state(8, 11), time_limit=600_000)
-        self.assertEqual(race._lap_title(state), 'Lap 9/20 · Leader 12  -  1:00 left')
+        self.assertEqual(self.title(state), 'Lap 9/20  -  1:00 left · Leader 12')
 
     def test_without_a_lap_limit(self):
-        self.assertEqual(race._lap_title(self.state(8, 11, to_finish=0)), 'Lap 9 · Leader 12')
+        self.assertEqual(self.title(self.state(8, 11, to_finish=0)), 'Lap 9 · Leader 12')
 
     def test_without_players(self):
         state = dataclasses.replace(self.state(8, 11), players=())
-        self.assertEqual(race._lap_title(state), 'Lap 9/20')
+        self.assertEqual(self.title(state), 'Lap 9/20')
+
+    def test_it_fades_in_as_the_leader_begins_its_lap(self):
+        state = self.state(8, 11)
+        began = state.players[0].checkpoints[-1][0]  # when the leader began its lap
+        half = race.LEADER_FADE * race.UNITS_PER_SECOND / 2
+
+        def fade(clock):
+            return race.lap_title_row(dataclasses.replace(state, clock=round(clock))).tail_color
+
+        self.assertEqual(fade(began), 'text@0.00')
+        self.assertEqual(fade(began + half), 'text@0.50')
+        self.assertEqual(fade(began + 4 * half), 'text@1.00')
+        self.assertEqual(race.lap_title_row(state).text, 'Lap 9/20')  # what comes before stays as it was
 
 
 class SpeedUnitTests(unittest.TestCase):

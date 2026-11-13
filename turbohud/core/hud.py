@@ -405,7 +405,7 @@ RACE_SECTIONS = (
         'Lap and time left',
         (
             # The widest it gets, the leader a lap ahead (reported by the user on 2026-11-13: cut off).
-            (Row('Lap 13/13 · Leader 13  -  21:00 left', 'title'),),
+            (Row('Lap 13/13  -  21:00 left', 'title', tail=' · Leader 13'),),
             (Row('Waiting for TSU (launch option)', 'title'),),
         ),
     ),

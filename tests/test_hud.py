@@ -1235,7 +1235,7 @@ class WideTextTests(unittest.TestCase):
         for font in (13, 22, 41):
             with self.subTest(font=font):
                 box = hud.text_box(lap, (0, 0, 0, 0), font, size_measure, ink)
-                title = [hud.Row('Lap 3/13 · Leader 4  -  16:23 left', 'title')]
+                title = [hud.Row('Lap 3/13  -  16:23 left', 'title', tail=' · Leader 4')]
                 needed = hud.content_size(title, hud.font_scale(font), size_measure)[0]
                 self.assertLessEqual(needed, box[2])
 

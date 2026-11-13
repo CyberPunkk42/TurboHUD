@@ -1697,3 +1697,9 @@ its "Recent changes".
     13  -  21:00 left"), so the box is wide enough (a saved box widens by itself: never narrower than its text), and
     in every text section a live text still wider than its box is drawn just small enough to fit, not cut
     (`hud.fitting_scale`; the text size is kept otherwise). Tests: the lap box at three sizes, the fit, the pedal bars.
+  - 2026-11-13: The leader's lap fades in at the end of the lap title, asked for by the user (it jumped in): it moved
+    from the middle to the end ("Lap 3/13  -  16:23 left · Leader 4"), so nothing before it moves when it appears,
+    and it fades in over half a second (`LEADER_FADE`) from the moment the leader began that lap, by the race clock
+    (`race.lap_title_row`; no state kept). The painter draws a tail whose colour is 'name@share' at that opacity,
+    outline and all, so no dark outline shows before the text. Tests: the order, the fade at its start, middle and
+    end; checked in an offscreen render.
