@@ -344,6 +344,7 @@ def run(args, folder):
         from turbohud.core.race import (
             RACING,
             DeltaBar,
+            RaceStarts,
             Radar,
             Retirements,
             ShortcutPenalties,
@@ -370,10 +371,14 @@ def run(args, folder):
             ShortcutPenalties()
         )  # not `shortcuts`: that name holds whether the hotkeys are there
         track_map = TrackMap(settings.map_others, folder)  # learnt tracks beside the settings
+        race_starts = RaceStarts()
         retirements = Retirements()
 
         def contents():
             snapshot = live.snapshot()
+            if race_starts.started(snapshot, time.monotonic()) and not locked:
+                log.info('a race began: locking')
+                set_locked(True)  # move mode forgotten: the race is no time for it
             track_map.others = settings.map_others
             radar.within = settings.radar_seconds
             radar.cone = settings.radar_cone
@@ -518,7 +523,7 @@ def run(args, folder):
         return panel_place((panel.width(), panel.height()), [w.placement() for w in shown], usable)
 
     def set_locked(value):
-        nonlocal locked, was_active
+        nonlocal locked
         if value == locked:
             return
         locked = value
@@ -527,7 +532,6 @@ def run(args, folder):
         if canvas is not None:
             canvas.set_shown(value)  # locked: the canvas; move mode: the sections' own windows
         move_action.setChecked(not value)
-        was_active = False
         if value:
             panel.hide()
             native.give_focus_back()
@@ -1291,21 +1295,8 @@ def run(args, folder):
         panel.set_tint(name, window.backdrop)
 
     history = LayoutHistory(layout_state())
-    was_active = False  # in move mode: whether TurboHUD has been the active app yet
-
-    def on_state(state):
-        nonlocal was_active
-        if locked or not getattr(native, 'auto_lock', True):
-            return
-        if state == Qt.ApplicationActive:
-            was_active = True
-        elif was_active:
-            # Another app (the game, usually) became active: move mode is over. Playing
-            # while the overlay is the active app upsets the game's mouse handling.
-            log.info('another app became active; locking')
-            set_locked(True)
-
-    app.applicationStateChanged.connect(on_state)
+    # Move mode ends only by its shortcut or the panel's Lock (asked for by the user on
+    # 2026-11-13): a click elsewhere, on the game or the desktop, no longer locks it.
 
     last_seen = 0.0
 

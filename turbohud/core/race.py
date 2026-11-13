@@ -2207,6 +2207,24 @@ def on_grid(snapshot, now=None):
     return now is None or now - snapshot.moved_at < STILL_SECONDS
 
 
+class RaceStarts:
+    """Tells once when a race the player drives begins: the grid is set and its clock starts
+    (on_grid turns on), not in a replay nor while spectating. Move mode then ends by itself
+    (asked for by the user on 2026-11-13: a click elsewhere no longer ends it, so a forgotten
+    move mode would last into the race). A race already running when TurboHUD starts, or
+    when move mode begins, is no start."""
+
+    def __init__(self):
+        self._driving = None  # whether the player drove a race at the look before; None: no look yet
+
+    def started(self, snapshot, now):
+        state = snapshot.state
+        driving = on_grid(snapshot, now) and not state.spectating and not state.replay
+        began = driving and self._driving is False
+        self._driving = driving
+        return began
+
+
 def status_text(snapshot, platform=sys.platform):
     """What TurboHUD is waiting for, for the tray icon's tooltip. On the Mac TurboHUD
     finds TSU by itself, so what is in the way is the reader's own message."""

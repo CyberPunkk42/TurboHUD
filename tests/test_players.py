@@ -1615,3 +1615,39 @@ class DnfTests(unittest.TestCase):
             [me, mike], [me, mike], 100_000, watching=True, retired=frozenset({'Mike'})
         )
         self.assertEqual(next(r for r in watching if 'Mike' in r.text).right, 'DNF')
+
+
+class RaceStartTests(unittest.TestCase):
+    """Move mode ends when a race the player drives begins (asked for by the user on 2026-11-13)."""
+
+    def snapshot(self, racing=True, clock=50_000, moved_at=0.0, **state):
+        lap_state = race.LapState(
+            clock=clock, time_limit=0, laps_completed=0, laps_to_finish=0, lap_starts=[], **state
+        )
+        status = race.RACING if racing else race.WAITING_FOR_RACE
+        return race.Snapshot(status, lap_state if racing else None, moved_at=moved_at)
+
+    def test_once_when_the_clock_starts(self):
+        starts = race.RaceStarts()
+        self.assertFalse(starts.started(self.snapshot(racing=False), 1.0))  # the lobby
+        self.assertTrue(starts.started(self.snapshot(moved_at=2.0), 2.0))  # the grid is set
+        self.assertFalse(starts.started(self.snapshot(moved_at=3.0), 3.0))  # racing on: told once
+
+    def test_a_race_running_already_is_no_start(self):
+        starts = race.RaceStarts()
+        self.assertFalse(starts.started(self.snapshot(moved_at=1.0), 1.0))  # TurboHUD started mid-race
+
+    def test_the_next_race_is_a_start_again(self):
+        starts = race.RaceStarts()
+        starts.started(self.snapshot(racing=False), 0.0)
+        starts.started(self.snapshot(moved_at=1.0), 1.0)
+        still = self.snapshot(moved_at=1.0)  # its clock stands: over, back in the lobby
+        self.assertFalse(starts.started(still, 1.0 + race.STILL_SECONDS + 1))
+        self.assertTrue(starts.started(self.snapshot(moved_at=30.0), 30.0))
+
+    def test_not_in_a_replay_nor_spectating(self):
+        for kind in ({'replay': True}, {'spectating': True}):
+            with self.subTest(**kind):
+                starts = race.RaceStarts()
+                starts.started(self.snapshot(racing=False), 0.0)
+                self.assertFalse(starts.started(self.snapshot(moved_at=1.0, **kind), 1.0))
