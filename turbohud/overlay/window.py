@@ -59,6 +59,7 @@ from turbohud.core.hud import (
     text_can_centre,
     tight_height,
 )
+from turbohud.core.presets import SCREENS
 from turbohud.core.race import (
     RADAR_FULL,
     Blip,
@@ -219,6 +220,7 @@ RESIZE_CURSORS = {
 class SectionWindow(QWidget):
     drawing_time = 0.0  # seconds all sections have spent drawing, for the log
     text_resized = Signal(str)  # a text section's name, resized by hand: its text size or width changed
+    clicked = Signal(str)  # the section's name, clicked in move mode: the arrow keys nudge it
 
     def __init__(self, native, theme, section):
         super().__init__(None, window_flags())
@@ -245,6 +247,7 @@ class SectionWindow(QWidget):
         self.text = is_text_section(section)  # sized by a text size, not by its box
         self.resizable = True  # at its edges in move mode: a text section by its text size (_resize_text)
         self.own_font = None  # a text section's own text size; None: the global one (the app sets it)
+        self.selected = False  # clicked last in move mode: the arrow keys nudge it
         # While locked, a HudCanvas may draw this section with every other in one window per
         # screen, and this window stays hidden: 17 windows above the game cost it frames.
         self.canvas = None
@@ -356,6 +359,8 @@ class SectionWindow(QWidget):
     def mousePressEvent(self, event):
         if self.locked or event.button() != Qt.LeftButton:
             return
+        self.clicked.emit(self.section.name)
+        self.activateWindow()  # the keyboard to TurboHUD: the arrow keys nudge it
         edges = self._edges_at(event)
         if not edges:
             self.windowHandle().startSystemMove()
@@ -429,6 +434,11 @@ class SectionWindow(QWidget):
         self.draw(painter)
         if not self.locked and self.wanted and self.resizable:
             self._paint_corner(painter)
+        if not self.locked and self.wanted and self.selected:
+            # The section the arrow keys nudge: a frame in the highlight colour.
+            painter.setPen(QPen(QColor(LIFT_COLOR), 2))
+            painter.setBrush(Qt.NoBrush)
+            painter.drawRoundedRect(QRectF(self.rect()).adjusted(1, 1, -1, -1), 8, 8)
         painter.end()
         SectionWindow.drawing_time += time.perf_counter() - began
 
@@ -1006,6 +1016,32 @@ class HudCanvases:
                 canvas.hide()
 
 
+class DesignFrame(QWidget):
+    """The design screen's frame (move mode): the area that stands for another screen size, with
+    its name above it. Clicks go through it to the sections, which are arranged inside it."""
+
+    on_canvas = False  # never drawn on the HUD canvas: its own window, in move mode only
+
+    def __init__(self, native):
+        super().__init__(None, window_flags())
+        self.native = native
+        self.label = ''
+        self.setWindowTitle('TurboHUD - design screen')
+        self.setAttribute(Qt.WA_TranslucentBackground)
+        self.setAttribute(Qt.WA_ShowWithoutActivating)
+        self.setWindowFlag(Qt.WindowTransparentForInput, True)
+
+    def paintEvent(self, _event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.Antialiasing)
+        painter.setPen(QPen(QColor(LIFT_COLOR), 2, Qt.DashLine))
+        painter.setBrush(QColor(255, 225, 77, 18))
+        painter.drawRect(QRectF(self.rect()).adjusted(1, 1, -1, -1))
+        painter.setPen(QColor(LIFT_COLOR))
+        painter.drawText(QRectF(self.rect()).adjusted(8, 6, -8, -6), Qt.AlignTop | Qt.AlignRight, self.label)
+        painter.end()
+
+
 class MovePanel(QWidget):
     """Shown in move mode: what to do, then per section a tick box to show it, its group,
     centring and its text options; matching a group, the presets, Undo, Lock, Settings and
@@ -1024,6 +1060,13 @@ class MovePanel(QWidget):
     preset_delete_requested = Signal(int)
     match_requested = Signal(str)  # the group
     undo_requested = Signal()
+    redo_requested = Signal()  # forward again after Undo (asked for by the user on 2026-11-13)
+    screen_default_requested = Signal()  # the shipped layout for this screen
+    export_requested = Signal()  # the layout to a file, to share
+    import_requested = Signal()  # a layout from a file, fitted to this screen
+    design_requested = Signal(int, int)  # the design screen for this size (width, height)
+    design_save_requested = Signal()
+    design_cancel_requested = Signal()
     relearn_requested = Signal()  # forget the current track's map and learn it again
     tint_changed = Signal(str, bool)  # section name, a tint behind its text
     text_centred_changed = Signal(str, bool)  # section name, its text in the middle of its box
@@ -1285,14 +1328,67 @@ class MovePanel(QWidget):
             delete.clicked.connect(lambda _checked=False, n=number: self.preset_delete_requested.emit(n))
             presets.addWidget(delete, line, 4)
             self.preset_deletes[number] = delete
+        # Beside the presets, a layout to and from files, and the shipped one for this screen.
+        for line, (text, tip, signal) in enumerate(
+            (
+                (
+                    'Load screen default',
+                    (
+                        "The layout TurboHUD comes with for this screen's size (fitted where none is made for it);"
+                        ' one step for Undo'
+                    ),
+                    self.screen_default_requested,
+                ),
+                ('Export…', 'Save the layout to a file, to share it or keep it', self.export_requested),
+                (
+                    'Import…',
+                    'Load a layout from a file, fitted to this screen if made for another; one step for Undo',
+                    self.import_requested,
+                ),
+            )
+        ):
+            button = QPushButton(text)
+            button.setMinimumWidth(PANEL_WORD_BUTTON)
+            button.setToolTip(tip)
+            button.clicked.connect(signal)
+            presets.addWidget(button, line, 6)
         presets.setColumnStretch(5, 1)
         column.addLayout(presets)
+        designing = QHBoxLayout()
+        designing.addWidget(QLabel('Design for:'))
+        self.design_size = QComboBox()
+        for width, height in SCREENS:
+            self.design_size.addItem(f'{width}x{height}', (width, height))
+        self.design_size.setToolTip('A screen size to make the layout for, shown to scale on this screen')
+        designing.addWidget(self.design_size)
+        self.design = QPushButton('Design')
+        self.design.setToolTip('Show that screen size as a frame here, its layout inside to arrange')
+        self.design.clicked.connect(lambda: self.design_requested.emit(*self.design_size.currentData()))
+        self.design_save = QPushButton('Save design…')
+        self.design_save.setToolTip(
+            'Save the layout in the frame, at full size, as a file for that screen size'
+        )
+        self.design_save.clicked.connect(self.design_save_requested)
+        self.design_cancel = QPushButton('Cancel')
+        self.design_cancel.setToolTip('Leave the design screen; your own layout comes back')
+        self.design_cancel.clicked.connect(self.design_cancel_requested)
+        for button in (self.design, self.design_save, self.design_cancel):
+            button.setMinimumWidth(PANEL_WORD_BUTTON)
+            designing.addWidget(button)
+        designing.addStretch()
+        column.addLayout(designing)
+        self.set_designing(False)
         row = QHBoxLayout()
         self.undo = QPushButton('Undo')
         self.undo.setToolTip('Go back one change to the layout, as often as there are changes')
         self.undo.setEnabled(False)
         self.undo.clicked.connect(self.undo_requested)
         row.addWidget(self.undo)
+        self.redo = QPushButton('Redo')
+        self.redo.setToolTip('Go forward again to the change Undo went back from')
+        self.redo.setEnabled(False)
+        self.redo.clicked.connect(self.redo_requested)
+        row.addWidget(self.redo)
         self.relearn = None  # only with a track map
         if any(section.drawing == 'map' for section in sections):
             self.relearn = QPushButton('Relearn map')
@@ -1384,6 +1480,14 @@ class MovePanel(QWidget):
 
     def set_undo_available(self, available):
         self.undo.setEnabled(available)
+
+    def set_redo_available(self, available):
+        self.redo.setEnabled(available)
+
+    def set_designing(self, designing):
+        """Save design and Cancel only while the design screen shows."""
+        self.design_save.setEnabled(designing)
+        self.design_cancel.setEnabled(designing)
 
     def set_relearn_available(self, available):
         """Relearn map works only while a track is known (in a race)."""

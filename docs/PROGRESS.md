@@ -1723,3 +1723,66 @@ its "Recent changes".
     (the last of the laps set, or in a timed race the lap begun once the time is up), whether or not the leader is
     the player; none once a car has finished. Tests: the window and fades, final lap (laps and time), the winner in,
     a second car crossing.
+  - 2026-11-13: Layout presets per screen size, asked for by the user: shipped defaults for 1920x1080, 2560x1440,
+    2560x1600, 3840x2160 and 5120x1440 (`assets/presets`, bundled), the 5120x1440 one the user's own layout, the
+    others fitted from it; presets of one's own to make and share. A preset file (`turbohud.core.presets`) holds the
+    layout from the screen's top left (positions, sizes, text sizes written out, options) and the screen size,
+    nothing personal. Fitting (`fit_layout`) keeps the order: the sections scale by the heights' ratio (less where
+    they would not fit side by side), the room between them is shared out on each axis, and spare room by where each
+    section is, so sections keep to their edges and none come to overlap. A first start takes the shipped layout for
+    the main screen (the nearest shape fitted where none is made for it; `app.first_start_layout`). Move-mode panel:
+    Screen default, Export... and Import... (a file for another size is fitted) beside the presets, Redo beside Undo
+    (`LayoutHistory.redo`, ended by a new change), and a design screen: "Design for" a size shows a frame on the
+    screen standing for it, to scale (3840x2160 at about 59% on 1440 high), that size's layout inside to arrange
+    with the usual tools; "Save design..." writes it at full size (offering assets/presets from the source folder),
+    Cancel or Lock bring the own layout back. Tests: files, fitting (inside, order, edges, sizes, no new overlaps),
+    nearest size, defaults, the first start, Redo, the design frame and its round trip, the panel. Run offscreen:
+    first start and with the user's settings, no error. The panel's buttons and the design screen not yet tried by
+    hand. The shipped 1920x1080 layout's smallest text is 8 px: the user's layout is wide, to be redone in the design
+    screen.
+  - 2026-11-13: Arrow keys nudge a section in move mode, asked for by the user (fine adjustments): clicking a section
+    selects it (a frame in the highlight colour) and gives TurboHUD the keyboard; the arrow keys then move it 1 px,
+    with Shift 10 px (`hud.nudge`), as a drag, so its group follows and a run of nudges is one step for Undo. Not
+    while a number, list or text box has the keyboard (there the arrows change its value); locking clears the
+    selection. Move-mode help text says so. Tests: the steps; driven in the app offscreen (move mode, the radar
+    clicked, right and Shift+down: moved 1 and 10 px, no error).
+  - 2026-11-13: "Load screen default", and Export offers the shipped folder, asked for by the user: the button that
+    loads the shipped layout for the screen is named so (it read as if it saved). Export, run from the source folder,
+    now offers `assets/presets/<width>x<height>.json`, as Save design does: saved there, the layout is the shipped
+    one for that size with the next build (once committed to `main`); the packaged app offers the home folder.
+    Checked in the app offscreen: Export offered assets/presets, nothing written.
+  - 2026-11-13: Layouts of one's own in `customization/display_presets`, asked for by the user (easy to find and
+    share): the folder sits beside the program (the one holding TurboHUD.exe, TurboHUD, or on the Mac TurboHUD.app;
+    from source the repository, gitignored), in the settings folder where that one cannot be written to. Export...,
+    Import... and Save design... open it (made with a read-me where missing). At every start a layout there made for
+    the screen's exact size is taken, once each time the file is new or has changed (its digest is kept as
+    `applied_preset` in the settings), so moving sections afterwards sticks; otherwise a first start takes the
+    nearest shipped layout, fitted. Load screen default takes the one there first, then the shipped one. The Windows
+    zip and the Linux tar hold the empty folder with its read-me. To ship a layout with the app, it still goes into
+    `assets/presets`. Tests: app folder (exe, .app, source), the folder's fallback, the read-me, the exact-size pick,
+    taken once and again when changed, the archives' read-me. Checked in the app offscreen on a copy of the settings:
+    Export offered `<repo>/customization/display_presets/800x800.json`; an 800x800 file there was taken on the first
+    start and not again on the second.
+  - 2026-11-13: The six test errors on Windows fixed, asked for by the user: all were tests of macOS and Linux
+    parts run where those cannot work (a file link, which Windows makes only with developer mode; `os.getuid`;
+    `fcntl` for the Linux controller reader; Unix sockets for the control and probe sockets). The link is made where
+    allowed, the control path test passes its user ID, and the socket and controller tests are skipped where the
+    system lacks them (they still run on the Mac and Linux). The app is unchanged. Windows: 1110 tests, all pass
+    (27 skipped).
+  - 2026-11-13: Only one TurboHUD at a time, reported by the user (two or more could run): on Windows nothing
+    stopped a second copy (the command socket that finds a running one is for macOS and Linux only), and on the Mac
+    and Linux two started together could both get past it. Now TurboHUD holds a lock file (`turbohud.lock`, Qt's
+    QLockFile) in its settings folder while it runs; a second copy says "TurboHUD is already running" (terminal and a
+    message window) and quits before anything else, so it no longer empties the running one's log either. A lock
+    left by a TurboHUD that crashed is taken over (its process is gone). On macOS and Linux a plain second start
+    still switches the running one to move mode first, as before. Tests: a second lock refused, another process
+    holding it until killed, then taken over; main() stops while another runs. Checked offscreen: a second copy
+    started while one ran quit at once with code 0, the first ran on with its log whole, the lock went at its end.
+    Not seen yet: the message window itself.
+  - 2026-11-13: About, and the new app icon, asked for by the user: "About TurboHUD..." in the icon's menu and an
+    "About..." button in Settings open a small window with the icon, the name and the version ("development (run
+    from source)" when not built; `app.about_text`). The icon is now `assets/tsu_turbo_hud.png` (the user's new one,
+    a neon speedometer with the name), for the tray, the windows and the built app's icon; the old
+    `tsu_turbo_hud_00.png` is gone. The Quick Start mentions About. Tests: the text, the icon file and the build's
+    icon path, the Settings button. Checked offscreen in the app: About from the menu showed icon, name and version.
+    Not tried yet: a build with the new icon (PyInstaller makes the .ico / .icns from it).

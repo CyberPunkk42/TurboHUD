@@ -122,6 +122,9 @@ class Settings:
     radar_seconds: float = 0.5  # how far ahead or behind a car shows the proximity radar
     reads_per_second: int = 20  # how often a race is read and its sections updated (READS_PER_SECOND)
     font_size: int = DEFAULT_FONT  # the global text size in pixels, for text sections without their own
+    # The digest of the layout file from customization/display_presets last taken at a start: a file is
+    # taken once each time it is new or has changed (turbohud.core.presets.custom_for).
+    applied_preset: str = ''
 
 
 def settings_dir(platform=sys.platform, environ=None, home=None):
@@ -311,6 +314,7 @@ def load_settings(path):
             else Settings.reads_per_second
         ),
         font_size=_font(data.get('font_size')) or DEFAULT_FONT,
+        applied_preset=data.get('applied_preset') if isinstance(data.get('applied_preset'), str) else '',
     )
 
 
@@ -343,6 +347,7 @@ def save_settings(path, settings):
         'radar_seconds': settings.radar_seconds,
         'reads_per_second': settings.reads_per_second,
         'font_size': settings.font_size,
+        'applied_preset': settings.applied_preset,
         'sections': _section_data(settings.sections),
         'presets': {str(number): _section_data(kept) for number, kept in settings.presets.items()},
     }

@@ -10,7 +10,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from turbohud import app, control
-from turbohud.core import hud, settings
+from turbohud.core import hud, presets, settings
 from turbohud.overlay import choose_platform
 
 
@@ -185,7 +185,7 @@ class FakeTurboHUD:
 class ControlTests(unittest.TestCase):
     def setUp(self):
         self.folder = tempfile.mkdtemp()
-        self.path = control.control_path({'XDG_RUNTIME_DIR': self.folder}, 'linux')
+        self.path = control.control_path({'XDG_RUNTIME_DIR': self.folder}, 'linux', uid=1000)
 
     def test_path_in_the_private_runtime_folder(self):
         self.assertEqual(self.path, Path(self.folder) / 'turbohud' / 'control.sock')
@@ -194,6 +194,7 @@ class ControlTests(unittest.TestCase):
         )
         self.assertIsNone(control.control_path({}, 'win32'))
 
+    @unittest.skipUnless(hasattr(socket, 'AF_UNIX'), 'the control socket is for macOS and Linux')
     def test_send_reaches_the_running_turbohud(self):
         fake = FakeTurboHUD(self.path)
         try:
@@ -203,6 +204,7 @@ class ControlTests(unittest.TestCase):
         finally:
             fake.close()
 
+    @unittest.skipUnless(hasattr(socket, 'AF_UNIX'), 'the control socket is for macOS and Linux')
     def test_nothing_running(self):
         self.assertIsNone(control.send('quit', self.path))
         control.prepare_folder(self.path)
@@ -295,3 +297,83 @@ class HelpTests(unittest.TestCase):
     def test_the_panel_says_how_to_switch_without_shortcuts(self):
         self.assertIn('--toggle', ' '.join(hud.help_lines(shortcuts=False, commands=True)))
         self.assertNotIn('--toggle', ' '.join(hud.help_lines(shortcuts=True, commands=True)))
+
+
+class FirstStartLayoutTests(unittest.TestCase):
+    """A first start gets the shipped layout for its screen (asked for by the user on 2026-11-13)."""
+
+    @staticmethod
+    def measure(text, size):
+        return len(text) * size * 0.6
+
+    @staticmethod
+    def ink(_text, size):
+        return size * 0.7, size * 0.2
+
+    def layout(self, screen):
+        return app.first_start_layout(settings.Settings(), screen, hud.RACE_SECTIONS, self.measure, self.ink)
+
+    def test_every_section_placed_on_the_screen(self):
+        for screen in ((0, 0, 1920, 1080), (0, 0, 5120, 1440), (1920, 0, 2560, 1440), (0, 0, 1366, 768)):
+            with self.subTest(screen=screen):
+                result = self.layout(screen)
+                self.assertEqual(set(result.sections), {s.name for s in hud.RACE_SECTIONS})
+                for name, place in result.sections.items():
+                    inside = screen[0] <= place.x and place.x + place.width <= screen[0] + screen[2]
+                    self.assertTrue(inside and screen[1] <= place.y <= screen[1] + screen[3], name)
+
+    def test_the_common_text_size_is_the_global_one(self):
+        result = self.layout((0, 0, 5120, 1440))
+        fonts = [p.font for p in result.sections.values()]
+        self.assertIn(None, fonts)  # those with the common size follow the global one
+        self.assertNotIn(result.font_size, fonts)
+
+    def test_without_shipped_layouts_nothing_changes(self):
+        empty = Path(tempfile.mkdtemp())
+        before = settings.Settings()
+        after = app.first_start_layout(
+            before, (0, 0, 1920, 1080), hud.RACE_SECTIONS, self.measure, self.ink, empty
+        )
+        self.assertEqual(after, before)
+
+
+class StartLayoutTests(unittest.TestCase):
+    """A layout in customization/display_presets for the screen's size is taken at a start, once
+    each time it is new or changed (asked for by the user on 2026-11-13)."""
+
+    measure = staticmethod(FirstStartLayoutTests.measure)
+    ink = staticmethod(FirstStartLayoutTests.ink)
+    screen = (0, 0, 1920, 1080)
+
+    def setUp(self):
+        self.folder = Path(tempfile.mkdtemp())
+        self.own = {s.name: settings.SectionPlace(100, 200, 300, 40) for s in hud.RACE_SECTIONS}
+
+    def start(self, before):
+        return app.start_layout(before, self.screen, hud.RACE_SECTIONS, self.measure, self.ink, self.folder)
+
+    def test_own_layout_taken_once(self):
+        presets.save_file(self.folder / '1920x1080.json', self.own, (1920, 1080), 13)
+        first = self.start(settings.Settings())
+        self.assertEqual(first.sections['speed'].x, 100)
+        self.assertTrue(first.applied_preset)
+        moved = replace(first, sections={**first.sections, 'speed': replace(first.sections['speed'], x=5)})
+        self.assertEqual(self.start(moved), moved)  # moving sections afterwards sticks
+
+    def test_changed_file_taken_again(self):
+        presets.save_file(self.folder / '1920x1080.json', self.own, (1920, 1080), 13)
+        first = self.start(settings.Settings())
+        changed = {**self.own, 'speed': settings.SectionPlace(600, 200, 300, 40)}
+        presets.save_file(self.folder / '1920x1080.json', changed, (1920, 1080), 13)
+        self.assertEqual(self.start(first).sections['speed'].x, 600)
+
+    def test_other_size_not_taken(self):
+        presets.save_file(self.folder / '2560x1440.json', self.own, (2560, 1440), 13)
+        shipped = app.first_start_layout(
+            settings.Settings(), self.screen, hud.RACE_SECTIONS, self.measure, self.ink
+        )
+        self.assertEqual(self.start(settings.Settings()), shipped)
+
+    def test_placed_sections_kept_without_own_layout(self):
+        placed = replace(settings.Settings(), sections={'speed': settings.SectionPlace(1, 2, 3, 4)})
+        self.assertEqual(self.start(placed), placed)

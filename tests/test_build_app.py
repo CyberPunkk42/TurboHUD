@@ -97,7 +97,8 @@ class NamingTests(unittest.TestCase):
             (app / 'windows.exe').write_bytes(b'MZ' + b'x' * 20)
             (app / 'text.txt').write_text('hello')
             (app / 'empty').write_bytes(b'')
-            (app / 'link').symlink_to(app / 'library.dylib')
+            with contextlib.suppress(OSError):  # Windows makes links only with the right to (developer mode)
+                (app / 'link').symlink_to(app / 'library.dylib')
             found = [path.name for path in build_app.mac_programs(app)]
         self.assertEqual(found, ['library.dylib', 'universal'])
 
@@ -179,7 +180,7 @@ class PackTests(unittest.TestCase):
             with zipfile.ZipFile(archive) as zip_file:
                 self.assertEqual(sorted(zip_file.namelist()), [
                     'TurboHUD/Quick Start.txt', 'TurboHUD/TurboHUD.exe', 'TurboHUD/_internal/',
-                    'TurboHUD/_internal/lib.dll',
+                    'TurboHUD/_internal/lib.dll', 'TurboHUD/customization/display_presets/README.txt',
                 ])  # fmt: skip
                 guide = zip_file.read('TurboHUD/Quick Start.txt')
                 self.assertEqual(guide, build_app.QUICK_START.read_bytes())
@@ -192,6 +193,8 @@ class PackTests(unittest.TestCase):
             with tarfile.open(archive) as tar:
                 self.assertIn('TurboHUD/_internal/lib.dll', tar.getnames())
                 self.assertIn('TurboHUD/Quick Start.txt', tar.getnames())
+                readme = tar.extractfile('TurboHUD/customization/display_presets/README.txt').read()
+                self.assertEqual(readme, build_app.custom_readme())
             self.check_digest(archive)
 
 
@@ -202,6 +205,21 @@ class AssetPathTests(unittest.TestCase):
 
     def test_inside_the_bundle(self):
         self.assertEqual(app.asset_path(app.ICON, bundle='/b'), Path('/b') / 'assets' / app.ICON)
+
+
+class AboutTests(unittest.TestCase):
+    def test_name_and_version(self):
+        text = app.about_text('2026.11.13.2')
+        self.assertIn('TurboHUD', text)
+        self.assertIn('Version 2026.11.13.2', text)
+
+    def test_run_from_source(self):
+        self.assertIn('development', app.about_text('dev'))
+
+    def test_the_icon_is_there(self):
+        self.assertEqual(app.ICON, 'tsu_turbo_hud.png')
+        self.assertTrue(app.asset_path(app.ICON).is_file())
+        self.assertEqual(build_app.ICON, ROOT / 'assets' / app.ICON)
 
 
 class AppArgsTests(unittest.TestCase):
@@ -225,6 +243,65 @@ class AppArgsTests(unittest.TestCase):
             self.assertEqual(app.main(['--seconds', '1']), 2)
         send.assert_called_once_with('ping')
         self.assertIn('run_turbohud', err.getvalue())
+
+
+@unittest.skipUnless(importlib.util.find_spec('PySide6'), "the lock is Qt's")
+class SingleInstanceTests(unittest.TestCase):
+    """Only one TurboHUD at a time (asked for by the user on 2026-11-13)."""
+
+    def test_a_second_copy_does_not_get_the_lock(self):
+        with tempfile.TemporaryDirectory() as folder:
+            first = app.single_instance(Path(folder))
+            self.assertIsNotNone(first)
+            self.assertIsNone(app.single_instance(Path(folder)))
+            first.unlock()
+            again = app.single_instance(Path(folder))
+            self.assertIsNotNone(again)
+            again.unlock()
+
+    def test_another_process_holds_it_until_it_is_gone(self):
+        # Another TurboHUD: a process holding the lock, then killed as if it crashed.
+        holder = (
+            'import sys, time\n'
+            f'sys.path.insert(0, {str(ROOT)!r})\n'
+            'from pathlib import Path\n'
+            'from turbohud import app\n'
+            'lock = app.single_instance(Path(sys.argv[1]))\n'  # kept: a freed lock lets go
+            "print('held' if lock else 'refused', flush=True)\n"
+            'time.sleep(60)\n'
+        )
+        # Windows lets go of the killed one's lock file a moment later: the folder may stay behind.
+        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as folder:
+            other = subprocess.Popen(
+                [sys.executable, '-c', holder, folder], stdout=subprocess.PIPE, text=True
+            )
+            try:
+                self.assertEqual(other.stdout.readline().strip(), 'held')
+                self.assertIsNone(app.single_instance(Path(folder)))
+            finally:
+                other.kill()
+                other.wait()
+                other.stdout.close()
+            lock = app.single_instance(Path(folder))  # the crashed one's lock is taken over
+            self.assertIsNotNone(lock)
+            lock.unlock()
+
+    def test_main_stops_while_another_runs(self):
+        with (
+            tempfile.TemporaryDirectory() as folder,
+            mock.patch('turbohud.control.send', return_value=None),
+            mock.patch.object(app, 'settings_dir', return_value=Path(folder)),
+            mock.patch.object(app, 'setup_log'),
+            mock.patch.object(app, 'already_running') as told,
+            mock.patch.object(app, 'run') as run,
+        ):
+            held = app.single_instance(Path(folder))
+            self.assertEqual(app.main(['--seconds', '1']), 0)
+            told.assert_called_once()
+            run.assert_not_called()
+            held.unlock()
+            app.main(['--seconds', '1'])
+            run.assert_called_once()
 
 
 if __name__ == '__main__':
