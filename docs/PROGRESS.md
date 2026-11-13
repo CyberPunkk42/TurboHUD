@@ -1547,3 +1547,10 @@ its "Recent changes".
     `Row`/`Line`, right-aligned a gap before the other columns (`hud.overall_right`), counted in the width; no switch
     in the settings window yet. Tests: the places with classes grouped, none in one class, the column's place and
     width; checked in an offscreen render. On top of `feature/lap-times-name-width`.
+  - 2026-11-13: Qualifying ranked by best lap, reported by the user: in qualifying (run as hotlapping) the player list
+    and lap times kept race order. TSU says so in `EventState.m_eventStats.raceStats.m_hotlappingOnCircuit` (1 in a
+    hotlapping replay on the user's PC; TSU has no "qualifying" of its own). The reader reads it once an event
+    (`LapState.hotlapping`), and `ranked`/`Standings.order` then go by best lap, drivers without a lap after them.
+    Tests: the flag read (on, off, missing), the order by best lap. Checked on the live replay (read only): True. Not
+    changed: the player list's gaps are still race gaps (by best lap would suit qualifying); not yet seen in a race
+    that the flag is 0 there (missing reads as a race, as before).

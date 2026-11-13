@@ -90,6 +90,7 @@ class LapState:
     track: str = ''  # the track's name (EventState.m_level.m_properties.name); '' where not read
     replay: bool = False  # a replay plays: "you" is the driver its camera follows
     paused: bool = False  # the replay stands paused: the HUD stays though the clock stands
+    hotlapping: bool = False  # a hotlapping event (how qualifying is run): ranked by best lap, not race order
 
     @property
     def lap_times(self):
@@ -576,6 +577,7 @@ class LapReader:
         self._shortcut_for, self._shortcut_length = None, 0.0  # see _shortcut_seconds
         self._compounds_for, self._compounds = None, None  # see _read_compounds
         self._track_for, self._track = None, ''  # see _track_name
+        self._hotlapping_for, self._hotlapping = None, False  # see _hotlapping_event
         self._cars = {}  # vehicle object -> (its car's name, when read)
         self._gates = None  # checkpoint lines, ((x1, z1), (x2, z2)) each
         self._sector_lines = ()  # the checkpoints of type Sector (TS.CheckpointType), read with the lines
@@ -1223,6 +1225,7 @@ class LapReader:
             shortcut_seconds=self._shortcut_seconds(state_object),
             compounds=self._compounds,
             track=self._track_name(state_object),
+            hotlapping=self._hotlapping_event(state_object),
         )
         live = state.live_fuel_trend(self._fuel_marks, self._fuel_history)
         if live is not None:
@@ -1245,6 +1248,22 @@ class LapReader:
             except (NotFound, OSError):
                 pass
         return self._track
+
+    def _hotlapping_event(self, state):
+        """Whether the event is hotlapping, as qualifying is run (the user, 2026-11-13: the
+        player list and lap times kept race order in qualifying): EventState.m_eventStats
+        (TS.EventStats) .raceStats (TS.RaceStats) .m_hotlappingOnCircuit, 1 in a hotlapping
+        replay on the user's PC (2026-11-13). Read once an event; False where missing."""
+        if self._hotlapping_for is not state:
+            self._hotlapping_for, self._hotlapping = state, False
+            try:
+                stats = self._ref('state', state, 'm_eventStats')
+                race_stats = self._ref('event stats', stats, 'raceStats')
+                flag = race_stats + self._offset('race stats', race_stats, 'm_hotlappingOnCircuit')
+                self._hotlapping = bool(self.il.memory.u8(flag))
+            except (NotFound, OSError):
+                pass
+        return self._hotlapping
 
     def _shortcut_seconds(self, state):
         """How long TSU slows a car for a shortcut in this event: EventState's
@@ -1308,6 +1327,7 @@ class LapReader:
             compounds=self._compounds,
             track=self._track_name(state),
             on_a_track=self._on_a_track(),
+            hotlapping=self._hotlapping_event(state),
         )
 
     def _count_draft(self, state):
@@ -2245,7 +2265,11 @@ def race_sections(
     if 'draft' in sections and state.draft is not None:
         sections['draft'] = sections['draft'] + draft_rows(state)
     if state.players:
-        order = standings.order(state.players, now) if standings is not None else None
+        order = (
+            standings.order(state.players, now, state.hotlapping)
+            if standings is not None
+            else ranked(state.players, state.hotlapping)
+        )
         sections['players'] = players_rows(
             state.players,
             order,
@@ -2297,7 +2321,7 @@ def race_sections(
         if track_map is not None and state.on_a_track:  # no map, nor a track learnt, in an arena
             shown = track_map.update(
                 state,
-                order if order is not None else ranked(state.players),
+                order if order is not None else ranked(state.players, state.hotlapping),
                 yellow=frozenset(incident.name for incident in incidents),
                 yellow_sectors=yellow_sector_spans(incidents, state),
             )
@@ -2315,7 +2339,11 @@ def _watching_sections(
     state = snapshot.state
     sections = {'lap': [Row(f'Spectating  -  {_lap_title(state)}', 'title')]}
     if state.players:
-        order = standings.order(state.players, now) if standings is not None else ranked(state.players)
+        order = (
+            standings.order(state.players, now, state.hotlapping)
+            if standings is not None
+            else ranked(state.players, state.hotlapping)
+        )
         sections['players'] = players_rows(state.players, order, state.clock, state.gates, watching=True)
         sections['laptimes'] = lap_times_rows(
             state.players,
@@ -2635,12 +2663,13 @@ MAX_NAME_SHOWN = 18
 LAP_NAME_SHOWN = 20
 
 
-def ranked(players):
+def ranked(players, hotlapping=False):
     """Players in race order: by how far they got (checkpoints passed, a finish
     counting as the next lap's start line), and as far by who got there first. So a
     lapped car that finishes right after the winner (once the winner is in, everyone
     finishes at their next crossing) stays behind the cars on the lead lap, finished or
-    not, rather than coming second."""
+    not, rather than coming second. In a hotlapping event (qualifying, LapState.hotlapping):
+    by best lap, those without a lap after them in race order."""
 
     def key(player):
         finish = player.finish_time
@@ -2651,7 +2680,12 @@ def ranked(players):
         passed = player.passed
         return (-len(passed), passed[-1] if passed else 0)
 
-    return sorted(players, key=key)
+    order = sorted(players, key=key)
+    if hotlapping:
+        bests = {id(player): min(player_lap_times(player), default=None) for player in order}
+        place = {id(player): index for index, player in enumerate(order)}
+        order.sort(key=lambda p: (bests[id(p)] is None, bests[id(p)] or 0, place[id(p)]))
+    return order
 
 
 def live_gap(ahead, behind, clock, gates):
@@ -2763,9 +2797,10 @@ class Standings:
         self.pending = None  # a different order, and since when it has lasted
         self.since = 0.0
 
-    def order(self, players, now):
-        """The players in the order to show at monotonic time `now`."""
-        current = ranked(players)
+    def order(self, players, now, hotlapping=False):
+        """The players in the order to show at monotonic time `now` (by best lap in a
+        hotlapping event: ranked)."""
+        current = ranked(players, hotlapping)
         names = tuple(p.name for p in current)
         if self.shown is None or sorted(names) != sorted(self.shown) or len(set(names)) != len(names):
             self.shown, self.pending = names, None

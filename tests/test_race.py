@@ -135,6 +135,7 @@ def build(
     track=None,
     replay=None,
     recording_opened=None,
+    hotlapping=None,
 ):
     """A fake race; `car` is the car's (x, z) and `gates` the checkpoint lines, both
     optional like in a game without them."""
@@ -153,7 +154,14 @@ def build(
         parent=base_controller,
     )
     state_class = g.klass(
-        'TS', 'EventState', [('players', 0x28, False), ('times', 0x58, False), ('m_level', 0x80, False)]
+        'TS',
+        'EventState',
+        [
+            ('players', 0x28, False),
+            ('times', 0x58, False),
+            ('m_level', 0x80, False),
+            ('m_eventStats', 0x90, False),
+        ],
     )
     player_fields = [('m_stats', 0x30, False), ('m_localHumanIndex', 0x50, False)]
     if name is not None:
@@ -218,6 +226,12 @@ def build(
             g.recorder = recorder
     state = g.alloc_obj(state_class)
     g.q(controller + 0x48, state)
+    if hotlapping is not None:  # EventState.m_eventStats.raceStats.m_hotlappingOnCircuit
+        stats = g.alloc_obj(g.klass('TS', 'EventStats', [('raceStats', 0x30, False)]))
+        race_stats = g.alloc_obj(g.klass('TS', 'RaceStats', [('m_hotlappingOnCircuit', 0x3C, False)]))
+        g.put(race_stats + 0x3C, bytes([hotlapping]))
+        g.q(stats + 0x30, race_stats)
+        g.q(state + 0x90, stats)
     if track is not None:  # the track's name: EventState.m_level.m_properties.name
         level = g.alloc_obj(g.klass('TS', 'Level', [('m_properties', 0x10, False)]))
         level_properties = g.alloc_obj(g.klass('TS', 'LevelProperties', [('name', 0x18, False)]))
@@ -3288,3 +3302,36 @@ class ReplayAfterARaceTests(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class HotlappingTests(unittest.TestCase):
+    """Qualifying, run as hotlapping (reported by the user on 2026-11-13: the list kept race
+    order): TSU's RaceStats says so, and the order is by best lap."""
+
+    def test_the_reader_reads_the_flag(self):
+        for flag in (True, False):
+            reader = build([10_000, 944_595], laps_completed=1, clock=1_000_000, limit=0, hotlapping=flag)
+            self.assertEqual(reader.read().hotlapping, flag)
+        plain = build([10_000, 944_595], laps_completed=1, clock=1_000_000, limit=0)
+        self.assertFalse(plain.read().hotlapping)  # not found: a race, as before
+
+    def test_a_hotlapping_event_is_ranked_by_best_lap(self):
+        def driver(name, laps):
+            starts, at = [0], 0
+            for lap_time in laps:
+                at += lap_time
+                starts.append(at)
+            return race.PlayerState(name, 0, len(laps), tuple((t,) for t in starts), False, False, False)
+
+        many = driver('Many laps', [70_000, 69_000, 68_000])  # furthest on: leads the race order
+        fast = driver('Fast', [65_000])
+        slow = driver('Slow', [75_000, 74_000])
+        none = driver('No lap yet', [])
+        players = [none, slow, many, fast]
+        self.assertEqual(race.ranked(players)[0].name, 'Many laps')
+        self.assertEqual(
+            [p.name for p in race.ranked(players, hotlapping=True)],
+            ['Fast', 'Many laps', 'Slow', 'No lap yet'],
+        )
+        standings = race.Standings()
+        self.assertEqual(standings.order(players, 0.0, hotlapping=True)[0].name, 'Fast')

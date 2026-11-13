@@ -81,6 +81,13 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+  - 2026-11-13: Qualifying ranked by best lap, reported by the user: in qualifying (run as hotlapping) the player list
+    and lap times kept race order. TSU says so in `EventState.m_eventStats.raceStats.m_hotlappingOnCircuit` (1 in a
+    hotlapping replay on the user's PC; TSU has no "qualifying" of its own). The reader reads it once an event
+    (`LapState.hotlapping`), and `ranked`/`Standings.order` then go by best lap, drivers without a lap after them.
+    Tests: the flag read (on, off, missing), the order by best lap. Checked on the live replay (read only): True. Not
+    changed: the player list's gaps are still race gaps (by best lap would suit qualifying); not yet seen in a race
+    that the flag is 0 there (missing reads as a race, as before).
   - 2026-11-13: The overall place in the lap times, asked for by the user: in a multi-class race, where the number in
     front of a name is the place in the class, a column right after the name field shows the overall place (P5),
     headed "Ovr". None in a one-class race (the number is the overall place there). A new `overall` column in
