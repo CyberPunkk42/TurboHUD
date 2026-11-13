@@ -1859,3 +1859,13 @@ its "Recent changes".
     the branch); the image's 205 files and the 176 packed modules checked for the privacy terms, none. The test sheet
     starts with a stutter part: one race of 10 minutes with the clock times of each stutter, then the same track
     with TurboHUD closed; Part 7's command also prints the new lines.
+  - 2026-11-13: The tester's log with 2026.11.13.4, and no end-of-race noise, asked for by the user. The log (two
+    races, 18:44 to 18:58): garbage collections 0 to 2 ms, none in a freeze, so not the cause; the HUD's slow frames
+    follow slow reads (a race frame waits for a read up to 100 ms). One read stalled 143 to 192 ms at 18:46:07.8,
+    18:46:37.8, 18:47:07.8, 18:48:07.8 and 18:58:07.8: on an exact 30 s beat from the reader's start, none from 18:48
+    to 18:58; three of them in reading TSU's memory (191, 142, 190 ms, usually 1.5), two on the way to and from the
+    reader in the bottle. The Rust reader has no 30 s timer (it only answers), so something in the bottle or the Mac
+    on a 30 s cycle (Steam in the bottle, Wine, TSU). Drawing 12 to 19%; costliest fuel 1.5 to 1.9 ms a frame, lap
+    times 1.4, players 1.0 to 1.2, speed 0.9. Now a slow frame is logged only when it brings a new read: one without
+    waited for the reader (whose slow read is logged), and at a race's end such frames every 100 to 150 ms had
+    filled the log. Tests: that case; all 1170 pass.

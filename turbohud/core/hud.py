@@ -1196,8 +1196,9 @@ class FrameTimes:
     the seconds it spent on the content, on drawing since the last one, and whether it
     has a new read.
 
-    For a tester's stutter (2026-11-13) also: a frame at least stalls.STALL after the last is
-    logged at once, with its time and how much of the wait was garbage collection (`gc_during`,
+    For a tester's stutter (2026-11-13) also: a frame with a new read at least stalls.STALL
+    after the last is logged at once (one without waited for the reader, which logs its slow
+    reads; at a race's end they came every 100 to 150 ms and filled the log), with its time and how much of the wait was garbage collection (`gc_during`,
     on `clock`); `parts()` gives and clears each section's drawing seconds, logged with the
     summary as milliseconds a frame; `on_flush` is called with each summary (the collections')."""
 
@@ -1220,7 +1221,7 @@ class FrameTimes:
         if self._last is not None:
             gap = now - self._last
             self._gaps.append(gap)
-            if gap >= STALL:
+            if gap >= STALL and fresh:
                 self._slow(gap, now, worked, drawn)
         else:
             self._since = now

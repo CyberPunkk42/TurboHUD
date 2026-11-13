@@ -102,6 +102,18 @@ class SlowFrameTests(unittest.TestCase):
             ],
         )
 
+    def test_a_slow_frame_without_a_new_read_is_left_to_the_reads(self):
+        # At a race's end, frames came every 100 to 150 ms with nothing new read (2026-11-13).
+        self.frames.frame(0.001, 0.005)
+        for _ in range(5):
+            self.clock.now += 0.15
+            self.frames.frame(0.0001, 0.0, fresh=False)
+        self.assertEqual(self.lines, [])
+        self.clock.now += 0.3
+        self.frames.frame(0.001, 0.005)  # a new read 300 ms after the last frame: TurboHUD itself was held
+        self.assertEqual(len(self.lines), 1)
+        self.assertTrue(self.lines[0].startswith('slow frame: 300 ms'))
+
     def test_the_summary_names_the_costliest_sections(self):
         for _ in range(4):
             self.parts['laptimes'] = self.parts.get('laptimes', 0.0) + 0.004
