@@ -7,7 +7,7 @@ from typing import ClassVar
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from turbohud.core import hud
+from turbohud.core import hud, race
 
 
 class ClockTests(unittest.TestCase):
@@ -994,3 +994,71 @@ class PanelPlaceTests(unittest.TestCase):
         screens = [self.USABLE, (2056, 0, 1920, 1080)]
         x, _y = hud.panel_place(self.PANEL, [(2500, 300, 200, 50)], screens)
         self.assertGreaterEqual(x, 2056)
+
+
+class SnugColumnsTests(unittest.TestCase):
+    """The lap times' columns right after a 20-letter name field (asked for by the user on
+    2026-11-13), not at the box's right edge, and the same whoever is in the race."""
+
+    SAMPLE = '10. Playername1234567890'
+
+    def line(self, text, **columns):
+        return hud.Line(text, 1, 'text', 10, **columns)
+
+    @staticmethod
+    def measure(text, size):
+        return len(text) * size
+
+    def width(self, *names):
+        lines = [self.line(name, middle='1:00.000', right='1:01.000') for name in names]
+        sample = [self.line(self.SAMPLE, middle='PIT 00.0s', right='CUT 00.0s')]
+        return hud.snug_width(lines, sample, 400, 5, self.measure)
+
+    def test_the_columns_come_after_the_name_field(self):
+        gap = hud.COLUMN_GAP
+        # The field, then the sample's widest columns (it keeps them steady), and the margins.
+        expected = len(self.SAMPLE) + gap + len('PIT 00.0s') + gap + len('CUT 00.0s') + 10
+        self.assertEqual(self.width('1. shizo_peak', '2. Bo'), expected)
+
+    def test_the_same_width_whoever_joins(self):
+        self.assertEqual(self.width('1. Bo'), self.width('1. Bo', '2. ' + 'x' * race.LAP_NAME_SHOWN))
+
+    def test_the_sample_holds_a_full_name(self):
+        section = next(s for s in hud.RACE_SECTIONS if s.name == 'laptimes')
+        name = section.samples[0][1].text.split('. ', 1)[1]
+        self.assertEqual(len(name), race.LAP_NAME_SHOWN)
+
+    def test_a_name_is_cut_at_the_field(self):
+        long = race.PlayerState('A' * 25, 0, 0, ((0,),), False, False, False)
+        rows = race.lap_times_rows([long], clock=1000)
+        self.assertEqual(rows[1].text, '1. ' + 'A' * (race.LAP_NAME_SHOWN - 1) + '…')
+
+    def test_never_wider_than_the_box(self):
+        lines = [self.line('1. ' + 'x' * 60, middle='1:00.000', right='1:01.000')]
+        self.assertEqual(hud.snug_width(lines, [], 50, 5, self.measure), 50)
+
+    def test_only_the_lap_times_are_snug(self):
+        self.assertEqual([s.name for s in hud.RACE_SECTIONS if s.snug], ['laptimes'])
+
+
+class OverallColumnTests(unittest.TestCase):
+    """The overall place's column: right after the text, before the other columns."""
+
+    @staticmethod
+    def measure(text, size):
+        return len(text) * size
+
+    def test_it_ends_a_gap_before_the_tag_or_the_next_column(self):
+        line = hud.Line('1. Name', 1, 'text', 10, overall='P12', tag='GT3', before='L4', middle='1:00.0')
+        self.assertEqual(hud.overall_right([line], 100, 100, 90, 80, self.measure), 80 - hud.COLUMN_GAP)
+        no_tag = hud.replace(line, tag='')
+        self.assertEqual(
+            hud.overall_right([no_tag], 100, 100, 90, None, self.measure), 90 - 2 - hud.COLUMN_GAP
+        )
+        self.assertIsNone(hud.overall_right([hud.replace(line, overall='')], 100, 100, 90, 80, self.measure))
+
+    def test_it_counts_in_the_width(self):
+        line = hud.Line('1. Name', 1, 'text', 10, overall='P12', middle='1:00.0')
+        without = hud.replace(line, overall='')
+        widths = hud.lines_width([line], self.measure), hud.lines_width([without], self.measure)
+        self.assertEqual(widths[0] - widths[1], len('P12') + hud.COLUMN_GAP)

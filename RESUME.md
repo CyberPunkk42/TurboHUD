@@ -81,6 +81,18 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+  - 2026-11-13: The overall place in the lap times, asked for by the user: in a multi-class race, where the number in
+    front of a name is the place in the class, a column right after the name field shows the overall place (P5),
+    headed "Ovr". None in a one-class race (the number is the overall place there). A new `overall` column in
+    `Row`/`Line`, right-aligned a gap before the other columns (`hud.overall_right`), counted in the width; no switch
+    in the settings window yet. Tests: the places with classes grouped, none in one class, the column's place and
+    width; checked in an offscreen render. On top of `feature/lap-times-name-width`.
+  - 2026-11-13: The lap times' columns right after a 20-letter name field, asked for by the user: before, they sat
+    at the window's right edge. A snug section (`Section.snug`, only the lap times) puts its columns after the field
+    its sample makes room for (`hud.snug_width`), now a 20-letter name (`race.LAP_NAME_SHOWN`; longer names cut with
+    an ellipsis), so the list keeps its width whoever joins. The window keeps its size; the text may be a little
+    smaller in it for the longer sample, and the room to the right of the columns stays empty. Tests: the field,
+    the same width whoever joins, the sample's length, the cut; checked in an offscreen render.
   - 2026-11-13: One class when every car is the same, reported by the user: drivers tagged LMP and GT4, all in one
     car, were split into two classes in the lap times (and coloured as two on the radar). `race.car_classes` now gives
     no classes when every driver is in the same car (car names read); different cars split by the tags as before,

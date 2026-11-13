@@ -377,7 +377,17 @@ class SectionWindow(QWidget):
             theme = dataclasses.replace(theme, outline_color='#00000000')
         # The usual content's columns are made room for too, so they stay put (draw_hud).
         reserve = hud_lines(steady_rows(self.section.samples[0]), scale) if self.rows else ()
-        draw_hud(painter, hud_lines(rows, scale), theme, scale, left, self.width() - left, centre, reserve)
+        draw_hud(
+            painter,
+            hud_lines(rows, scale),
+            theme,
+            scale,
+            left,
+            self.width() - left,
+            centre,
+            reserve,
+            snug=self.section.snug,
+        )
         if self.section.level and rows:
             sample = SECTORS_SAMPLE if self.section.sectors else LEVEL_SAMPLE
             level = self.level or (None if self.locked else sample)

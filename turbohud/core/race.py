@@ -2630,6 +2630,9 @@ def with_local_time(sections, snapshot, now_struct):
 
 MAX_PLAYER_ROWS = 8  # more players: the leader and those around the local player
 MAX_NAME_SHOWN = 18
+# The lap times' name field: this many letters, a longer name cut with '…' (asked for by the user on
+# 2026-11-13, so the list keeps its width whoever joins; its sample in hud.RACE_SECTIONS is as long).
+LAP_NAME_SHOWN = 20
 
 
 def ranked(players):
@@ -3263,7 +3266,8 @@ def lap_times_rows(
 
     In a multi-class race (car_classes, from the clan tags in `class_tags`) the drivers
     come by class, each class below a line labelled with its name, numbered and with its
-    fastest lap purple within the class. `cuts` (ShortcutPenalties.left): CUT and the seconds
+    fastest lap purple within the class, and each driver's overall place (P5) in a column
+    after the name. `cuts` (ShortcutPenalties.left): CUT and the seconds
     left in orange, in the lap's place, for a driver TSU slows for a shortcut. With `clan_tags`,
     outside a multi-class race, each driver's clan tag in a column after the name (asked for
     by the user on 2026-11-11), cut to MAX_TAG_SHOWN.
@@ -3280,6 +3284,9 @@ def lap_times_rows(
     classes = car_classes(order, class_tags)
     places = None
     colors = {}
+    # In a multi-class race the number is the place in the class; the overall place goes in a
+    # column of its own (asked for by the user on 2026-11-13).
+    overall = {id(player): index for index, player in enumerate(order, start=1)} if classes else {}
     if classes:
         order, places = by_class(order, classes)
         colors = class_colors(set(classes.values()) - {OTHER_CLASS})
@@ -3301,13 +3308,14 @@ def lap_times_rows(
             middle_color='accent',
             right='Last',
             right_color='accent',
+            overall='Ovr' if overall else '',
         )
     ]
     last_class = None
     for position, player in shown:
         name = player.name or '?'
-        if len(name) > MAX_NAME_SHOWN:
-            name = name[: MAX_NAME_SHOWN - 1] + '…'
+        if len(name) > LAP_NAME_SHOWN:
+            name = name[: LAP_NAME_SHOWN - 1] + '…'
         group = classes.get(id(player))
         if places is not None:
             position = places[id(player)]
@@ -3345,6 +3353,7 @@ def lap_times_rows(
                 right_color=SHORTCUT_COLOR if cut_text else 'lift' if plain_pit or bracket else 'text',
                 rule=rule,
                 rule_color=colors.get(group, '') if rule else '',
+                overall=f'P{overall[id(player)]}' if overall else '',
                 **_tag_column(player, group, colors, clan_tags),
                 **_tyre_column(player, compounds, wet),
             )

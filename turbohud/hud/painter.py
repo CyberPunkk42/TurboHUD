@@ -24,6 +24,8 @@ from turbohud.core.hud import (
     before_right,
     blend,
     middle_right,
+    overall_right,
+    snug_width,
     steady_text,
     tag_left,
     tyre_right,
@@ -502,12 +504,13 @@ def centred_x(line, width, margin):
     return max(round((width - steady) / 2), margin)
 
 
-def draw_hud(painter, lines, theme, scale=None, left=0, width=None, centre=False, reserve=()):
+def draw_hud(painter, lines, theme, scale=None, left=0, width=None, centre=False, reserve=(), snug=False):
     """Draw the lines from turbohud.core.hud.hud_lines with the theme's colours, at
     `scale` (the theme's own by default). `centre`: each line in the middle of a box
     `width` wide, for lines without columns. `reserve`: lines (the section's usual content)
     whose columns are made room for too, so the columns stay put as the content changes
-    (a longer gap or tag moved the player list's columns: reported by the user on 2026-11-12)."""
+    (a longer gap or tag moved the player list's columns: reported by the user on 2026-11-12).
+    `snug`: the columns right after the longest text, not at the box's right edge (snug_width)."""
     colors = {
         'text': QColor(theme.text_color),
         'accent': QColor(theme.accent_color),
@@ -519,17 +522,20 @@ def draw_hud(painter, lines, theme, scale=None, left=0, width=None, centre=False
     outline = _rgba(theme.outline_color)
     margin = round(MARGIN * (theme.scale if scale is None else scale))
     x = left + margin
-    middle_end = before_end = tag_start = tyre_end = None
+    middle_end = before_end = tag_start = tyre_end = overall_end = None
     if width is not None:
         # With digits as zeros, so that the columns stay put as a timer runs.
         def steady_advance(text, size):
             return text_advance(steady_text(text), size)
 
         placed = list(lines) + list(reserve)
+        if snug and not centre:
+            width = snug_width(lines, reserve, width, margin, steady_advance)
         middle_end = middle_right(placed, width, margin, steady_advance)
         tyre_end = tyre_right(placed, middle_end, steady_advance)
         before_end = before_right(placed, middle_end, steady_advance, tyre_end)
         tag_start = tag_left(placed, before_end, steady_advance)
+        overall_end = overall_right(placed, middle_end, tyre_end, before_end, tag_start, steady_advance)
     for line in lines:
         text_x = centred_x(line, width, margin) if (centre or line.centred) and width is not None else x
         if line.rule:
@@ -571,6 +577,16 @@ def draw_hud(painter, lines, theme, scale=None, left=0, width=None, centre=False
         if line.tag and tag_start is not None:
             tag_color = _pick(colors, line.tag_color or line.color)
             outlined_text(painter, tag_start, line.baseline, line.tag, line.size, tag_color, outline)
+        if line.overall and overall_end is not None:
+            outlined_text(
+                painter,
+                overall_end - text_advance(line.overall, line.size),
+                line.baseline,
+                line.overall,
+                line.size,
+                _pick(colors, line.color),
+                outline,
+            )
         if line.before and before_end is not None:
             outlined_text(
                 painter,
