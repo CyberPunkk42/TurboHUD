@@ -1781,3 +1781,8 @@ its "Recent changes".
     open or a file list has the keyboard (Linux's Qt file dialog). `customization/display_presets/README.txt` had been
     committed by mistake (on a branch made before the ignore rule): no longer tracked. Tests: the panel's buttons
     while designing. Checked offscreen in the app: Design 1920x1080, then Export..., wrote a file for 1920x1080.
+  - 2026-11-13: The user's own layouts shipped, asked for by the user: `assets/presets` 1920x1080, 2560x1440 and
+    2560x1600 are now the ones the user arranged on the design screen (exported, then repaired from the frame back to
+    full size), and 5120x1440 the user's newest own layout (bigger blue flag, shortcut warning and local time; lap,
+    flags and draft moved). 3840x2160 stays the one fitted from the earlier 5120x1440 layout (none made yet). Each
+    has all 19 sections on its screen and holds positions, sizes and text sizes only. Tests pass with them.
