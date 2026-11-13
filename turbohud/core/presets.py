@@ -232,6 +232,51 @@ def on_screen(places, size):
     }
 
 
+DESIGN_ROOM = (0.94, 0.88)  # share of the screen's width and height the design frame may take
+
+
+def design_frame(size, screen):
+    """(the frame (x, y, width, height), its scale) that stands for a screen of `size` on `screen`
+    (x, y, width, height): as large as fits, at most at full size, in the middle of it (the design
+    screen, asked for by the user on 2026-11-13: presets for screens one does not have)."""
+    scale = min(screen[2] * DESIGN_ROOM[0] / size[0], screen[3] * DESIGN_ROOM[1] / size[1], 1.0)
+    width, height = round(size[0] * scale), round(size[1] * scale)
+    return (screen[0] + (screen[2] - width) // 2, screen[1] + (screen[3] - height) // 2, width, height), scale
+
+
+def into_frame(places, frame, scale):
+    """`places` (from the designed screen's top left) shown in `frame` at `scale`: positions,
+    sizes and text sizes scaled (text at least the smallest size)."""
+    return {
+        name: replace(
+            p,
+            x=frame[0] + round(p.x * scale),
+            y=frame[1] + round(p.y * scale),
+            width=max(round(p.width * scale), 1),
+            height=max(round(p.height * scale), 1),
+            font=None if p.font is None else max(round(p.font * scale), FONT_SIZES[0]),
+        )
+        for name, p in places.items()
+    }
+
+
+def out_of_frame(places, frame, scale, size):
+    """`places` shown in `frame` at `scale` back at full size, from the designed screen's top left,
+    each wholly on it (into_frame's reverse)."""
+    full = {
+        name: replace(
+            p,
+            x=round((p.x - frame[0]) / scale),
+            y=round((p.y - frame[1]) / scale),
+            width=max(round(p.width / scale), 1),
+            height=max(round(p.height / scale), 1),
+            font=None if p.font is None else min(max(round(p.font / scale), FONT_SIZES[0]), FONT_SIZES[1]),
+        )
+        for name, p in places.items()
+    }
+    return on_screen(full, size)
+
+
 def kept_sections(places, known):
     """`places` without sections TurboHUD does not have (a file from a newer version)."""
     return {name: place for name, place in places.items() if name in known}
@@ -243,12 +288,15 @@ __all__ = [
     'SectionPlace',
     'absolute',
     'default_for',
+    'design_frame',
     'file_name',
     'fit_layout',
+    'into_frame',
     'kept_sections',
     'load_file',
     'nearest',
     'on_screen',
+    'out_of_frame',
     'preset_data',
     'read_preset',
     'relative',

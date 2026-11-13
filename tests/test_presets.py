@@ -164,3 +164,39 @@ class DefaultTests(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class DesignScreenTests(unittest.TestCase):
+    """The design screen: another screen size shown to scale in a frame (asked for by the user on
+    2026-11-13), and back at full size."""
+
+    MINE = (0, 0, 5120, 1440)
+
+    def test_the_frame_fits_the_screen_in_the_middle(self):
+        frame, scale = presets.design_frame((3840, 2160), self.MINE)
+        self.assertAlmostEqual(scale, 1440 * presets.DESIGN_ROOM[1] / 2160)
+        x, y, width, height = frame
+        self.assertEqual((width, height), (round(3840 * scale), round(2160 * scale)))
+        self.assertLessEqual(abs(x + width / 2 - 2560), 1)  # in the middle, to a pixel
+        self.assertLessEqual(abs(y + height / 2 - 720), 1)
+        _frame, full = presets.design_frame((1920, 1080), self.MINE)
+        self.assertEqual(full, 1.0)  # fits at full size: not larger
+
+    def test_into_the_frame_and_back(self):
+        size = (3840, 2160)
+        frame, scale = presets.design_frame(size, self.MINE)
+        places = {
+            'lap': place(100, 50, 900, 80, font=26),
+            'radar': place(1800, 1000, 360, 360),
+            'localtime': place(3600, 2080, 240, 80, font=20),
+        }
+        shown = presets.into_frame(places, frame, scale)
+        self.assertEqual(shown['lap'].font, round(26 * scale))
+        self.assertTrue(frame[0] <= shown['radar'].x <= frame[0] + frame[2])
+        back = presets.out_of_frame(shown, frame, scale, size)
+        for name, original in places.items():
+            self.assertLessEqual(abs(back[name].x - original.x), 2, name)
+            self.assertLessEqual(abs(back[name].width - original.width), 2, name)
+            if original.font:
+                self.assertLessEqual(abs(back[name].font - original.font), 1, name)
+        self.assertLessEqual(back['localtime'].x + back['localtime'].width, size[0])

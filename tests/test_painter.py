@@ -1122,6 +1122,30 @@ class MovePanelPresetTests(unittest.TestCase):
         next(b for b in panel.findChildren(type(panel.undo)) if b.text() == 'All global').click()
         self.assertEqual((every, back), ([18], [True]))
 
+    def test_the_layout_rows_redo_and_the_design_screen(self):
+        # Asked for by the user on 2026-11-13: shipped layouts, files, Redo and a design screen.
+        panel = self.panel()
+        got = []
+        for name in ('redo', 'screen_default', 'export', 'import', 'design_save', 'design_cancel'):
+            getattr(panel, f'{name}_requested').connect(lambda *_a, n=name: got.append(n))
+        panel.design_requested.connect(lambda w, h: got.append((w, h)))
+        self.assertFalse(panel.redo.isEnabled())
+        panel.set_redo_available(True)
+        panel.redo.click()
+        for text in ('Screen default', 'Export…', 'Import…'):
+            next(b for b in panel.findChildren(type(panel.undo)) if b.text() == text).click()
+        self.assertFalse(panel.design_save.isEnabled())  # only while designing
+        panel.design_size.setCurrentText('3840x2160')
+        panel.design.click()
+        panel.set_designing(True)
+        panel.design_save.click()
+        panel.design_cancel.click()
+        self.assertEqual(
+            got, ['redo', 'screen_default', 'export', 'import', (3840, 2160), 'design_save', 'design_cancel']
+        )
+        panel.show()
+        self.assertLessEqual(panel.height(), 800)  # still within a small screen
+
     def test_match_works_from_two_text_sections_in_a_group(self):
         panel = self.panel()
         got = []

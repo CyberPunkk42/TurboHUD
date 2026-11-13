@@ -1711,3 +1711,20 @@ its "Recent changes".
     (the last of the laps set, or in a timed race the lap begun once the time is up), whether or not the leader is
     the player; none once a car has finished. Tests: the window and fades, final lap (laps and time), the winner in,
     a second car crossing.
+  - 2026-11-13: Layout presets per screen size, asked for by the user: shipped defaults for 1920x1080, 2560x1440,
+    2560x1600, 3840x2160 and 5120x1440 (`assets/presets`, bundled), the 5120x1440 one the user's own layout, the
+    others fitted from it; presets of one's own to make and share. A preset file (`turbohud.core.presets`) holds the
+    layout from the screen's top left (positions, sizes, text sizes written out, options) and the screen size,
+    nothing personal. Fitting (`fit_layout`) keeps the order: the sections scale by the heights' ratio (less where
+    they would not fit side by side), the room between them is shared out on each axis, and spare room by where each
+    section is, so sections keep to their edges and none come to overlap. A first start takes the shipped layout for
+    the main screen (the nearest shape fitted where none is made for it; `app.first_start_layout`). Move-mode panel:
+    Screen default, Export... and Import... (a file for another size is fitted) beside the presets, Redo beside Undo
+    (`LayoutHistory.redo`, ended by a new change), and a design screen: "Design for" a size shows a frame on the
+    screen standing for it, to scale (3840x2160 at about 59% on 1440 high), that size's layout inside to arrange
+    with the usual tools; "Save design..." writes it at full size (offering assets/presets from the source folder),
+    Cancel or Lock bring the own layout back. Tests: files, fitting (inside, order, edges, sizes, no new overlaps),
+    nearest size, defaults, the first start, Redo, the design frame and its round trip, the panel. Run offscreen:
+    first start and with the user's settings, no error. The panel's buttons and the design screen not yet tried by
+    hand. The shipped 1920x1080 layout's smallest text is 8 px: the user's layout is wide, to be redone in the design
+    screen.

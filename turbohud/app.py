@@ -331,7 +331,7 @@ def run(args, folder):
         native_for,
     )
     from turbohud.overlay.settings_window import SettingsWindow
-    from turbohud.overlay.window import HudCanvases, MovePanel, SectionWindow, window_flags
+    from turbohud.overlay.window import DesignFrame, HudCanvases, MovePanel, SectionWindow, window_flags
 
     platform = choose_platform()
     if platform is not None:
@@ -564,6 +564,7 @@ def run(args, folder):
             canvas.set_shown(value)  # locked: the canvas; move mode: the sections' own windows
         move_action.setChecked(not value)
         if value:
+            design_end()  # locking leaves the design screen
             panel.hide()
             native.give_focus_back()
             history.record(layout_state())
@@ -1305,6 +1306,78 @@ def run(args, folder):
             places = layout_presets.fit_layout(places, size, target[2:], known, text_width, text_ink)
         load_layout(layout_presets.absolute(places, target), f'imported, made for {size[0]}x{size[1]}')
 
+    design = None  # while designing: (screen size, frame (x, y, w, h), scale, the own layout state)
+    design_frame_window = None
+
+    def design_start(width, height):
+        """The design screen for a screen of width x height: a frame on the screen the sections
+        are on, standing for it to scale, that size's layout shown in it (asked for by the user on
+        2026-11-13: presets for screens one does not have)."""
+        nonlocal design, design_frame_window
+        if design is not None:
+            design_end()
+        size = (width, height)
+        known = {section.name: section for section in layout}
+        laid = layout_presets.default_for(size, asset_path('presets'), known, text_width, text_ink)
+        if not laid:
+            return
+        frame, scale = layout_presets.design_frame(size, busiest_screen())
+        design = (size, frame, scale, layout_state())
+        if design_frame_window is None:
+            design_frame_window = DesignFrame(native)
+        design_frame_window.label = f'{width} x {height}, shown at {scale * 100:.0f}%'
+        move_window(design_frame_window, frame, settle=True)
+        design_frame_window.show()
+        native.raise_window(design_frame_window)
+        load_layout(layout_presets.into_frame(laid, frame, scale), f'designing for {width}x{height}')
+        for window in windows.values():
+            window.show_on_top()  # above the frame
+        panel.set_designing(True)
+        log.info('design screen: %dx%d at %.0f%%', width, height, scale * 100)
+
+    def design_save():
+        """The layout in the frame, at full size, to a file for that screen size; then the own
+        layout back. Run from the source folder, assets/presets is offered: the shipped ones."""
+        if design is None:
+            return
+        size, frame, scale, _own = design
+        shown = layout_state()[0]
+        for name, window in windows.items():
+            if is_text_section(window.section) and name in shown:
+                shown[name] = replace(shown[name], font=window.own_font or settings.font_size)
+        places = layout_presets.out_of_frame(shown, frame, scale, size)
+        shipped_folder = asset_path('presets')
+        folder = shipped_folder if os.access(shipped_folder, os.W_OK) else Path.home()
+        suggested = folder / layout_presets.file_name(size)
+        chosen, _ = QFileDialog.getSaveFileName(
+            panel, 'Save design', str(suggested), 'TurboHUD layouts (*.json)'
+        )
+        if not chosen:
+            return  # still designing
+        try:
+            layout_presets.save_file(chosen, places, size, settings.font_size)
+        except OSError as error:
+            log.warning('the design could not be saved: %s', error.strerror or error)
+            QMessageBox.warning(panel, 'TurboHUD', f'The design could not be saved there ({error.strerror}).')
+            return
+        log.info('design for %dx%d saved', size[0], size[1])
+        design_end()
+
+    def design_end():
+        """Leave the design screen: the frame goes, the own layout comes back."""
+        nonlocal design, settings
+        if design is None:
+            return
+        _size, _frame, _scale, own = design
+        design = None
+        if design_frame_window is not None:
+            design_frame_window.hide()
+        sections, _kept, font_size = own
+        settings = replace(settings, font_size=font_size)
+        load_layout(sections, 'own layout back after designing')
+        show_fonts()
+        panel.set_designing(False)
+
     def undo():
         """Back one change. What the desktop reports may lag behind the move (see
         load_preset), so the settings take the earlier places, not what it says."""
@@ -1460,6 +1533,9 @@ def run(args, folder):
     panel.screen_default_requested.connect(screen_default)
     panel.export_requested.connect(export_layout)
     panel.import_requested.connect(import_layout)
+    panel.design_requested.connect(design_start)
+    panel.design_save_requested.connect(design_save)
+    panel.design_cancel_requested.connect(design_end)
     panel.relearn_requested.connect(relearn_track)
     menu.aboutToShow.connect(relearn_available)
     panel.text_centred_changed.connect(set_text_centred)
