@@ -81,6 +81,13 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+  - 2026-11-13: Reverse shows R, and the speed section's lines stay put, reported and asked for by the user: the
+    engine sound has no reverse gear (reversing showed its gear 2), so the reader also reads
+    `TS.VehicleState.reversing` (`CarState.reversing`) and the gear shows R. The speed is a number right-aligned in a
+    three-digit slot with the unit after it (`SPEED_SLOT`), and in a section with pedal bars every line is in the
+    middle of the box, measured with its digits as zeros: the gear centred above the speed, neither moving as the
+    numbers change (also without the gear). Tests: R from the reader, the speed's slot and unit; checked in an
+    offscreen render (8, 98 and 171 km/h end at the same place, the gear in the middle).
   - 2026-11-13: The gear and rev lights in the speed section, asked for by the user (like a race car's dash), the
     separate Gear section dropped: with the option ("Gear and revs in the speed section") the speed section shows the
     gear in large digits above the speed and the rev lights below it, between the pedal bars (`hud.speed_section`;

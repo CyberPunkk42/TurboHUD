@@ -347,6 +347,7 @@ class CarState:
     # gearbox of their own, the sound has one (TS.EngineAudio). None where not read.
     gear: int | None = None
     revs: float | None = None
+    reversing: bool = False  # TS.VehicleState.reversing: the gear shows R (the sound has no reverse gear)
 
     @property
     def damage_effect(self):
@@ -1472,7 +1473,16 @@ class LapReader:
             draft_downforce_loss=downforce_loss,
             tire_change=self._tire_change(state),
             **(self._gear(vehicle) if self.read_gear else {}),
+            reversing=self.read_gear and self._reversing(state),
         )
+
+    def _reversing(self, state):
+        """Whether the car is in reverse: TS.VehicleState.reversing (reported by the user on
+        2026-11-13: reversing showed the engine sound's gear 2)."""
+        try:
+            return bool(self.il.memory.u8(state + self._offset('vstate', state, 'reversing')))
+        except (NotFound, OSError):
+            return False
 
     def _gear(self, vehicle):
         """{'gear', 'revs'} of the car's engine sound: TS.VehicleModel.m_engineAudio
@@ -2758,18 +2768,27 @@ def rev_share(pitch):
     return min(max((pitch - REVS_LOW) / (REVS_TOP - REVS_LOW), 0.0), 1.0)
 
 
+SPEED_SLOT = '000'  # the speed's number is right-aligned in this much room
+
+
 def car_sections(car, laps_to_go=None, speed_unit='kmh'):
     """{section: rows} for fuel, tires and speed; empty where the event has none.
     `laps_to_go` (LapState.laps_to_go) gives the fuel margin to the finish."""
     if car is None:
         return {}
     speed_color = 'lift' if car.lifting else 'text'
-    speed = f'{car.kmh / KMH_PER_MPH:.0f} mph' if speed_unit == 'mph' else f'{car.kmh:.0f} km/h'
-    sections = {'speed': [Row(speed, 'medium', speed_color)], 'pedals': (car.throttle, car.brake)}
+    value, unit = (car.kmh / KMH_PER_MPH, 'mph') if speed_unit == 'mph' else (car.kmh, 'km/h')
+    # The number at the right of a three-digit slot and the unit after it: the line stays put as the
+    # speed changes (asked for by the user on 2026-11-13).
+    speed = Row(
+        f'{value:.0f}', 'medium', speed_color, tail=f' {unit}', tail_color=speed_color, slot=SPEED_SLOT
+    )
+    sections = {'speed': [speed], 'pedals': (car.throttle, car.brake)}
     if car.gear is not None:
         # The gear above the speed (hud.speed_section), red near the shift.
         gear_color = 'behind' if rev_share(car.revs) >= REVS_SHIFT else 'text'
-        sections['speed'] = [Row(str(car.gear), 'big', gear_color), *sections['speed']]
+        gear = 'R' if car.reversing else str(car.gear)
+        sections['speed'] = [Row(gear, 'big', gear_color), *sections['speed']]
     if car.fuel_left is not None:
         color = {True: 'ahead', False: 'behind', None: 'text'}[car.saving]
         tail = _laps_text(car.fuel_laps) + _balance_text(car)

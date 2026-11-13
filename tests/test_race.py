@@ -139,6 +139,7 @@ def build(
     in_box=None,
     camera=None,
     gear=None,
+    reversing=False,
 ):
     """A fake race; `car` is the car's (x, z) and `gates` the checkpoint lines, both
     optional like in a game without them."""
@@ -435,6 +436,7 @@ def build(
                     ('hitPoints', 0x54, False, 0x08),
                     ('inPitArea', 0x58, False, 0x02),
                     ('tireCompoundAndChangeTicks', 0x5C, False, 0x08),
+                    ('reversing', 0x60, False, 0x02),
                 ],
             )
         )
@@ -442,6 +444,7 @@ def build(
         g.put(state + 0x5C, struct.pack('<i', tire_ticks))
         g.put(state + 0x50, struct.pack('<ii', 500, health if health is not None else 500))
         g.put(state + 0x58, bytes([pit_area]))
+        g.put(state + 0x60, bytes([reversing]))
         g.put(state + 0x48, struct.pack('<i', 576_000))
         g.q(vehicle + 0x30, state)
         updater = g.alloc_obj(
@@ -1062,7 +1065,7 @@ class CarTests(unittest.TestCase):
         fuel = sections['fuel'][0]
         self.assertEqual((fuel.text, fuel.tail, fuel.tail_color), ('Fuel 75.0%', '  ~12.0 laps', 'text'))
         self.assertEqual(sections['tires'][0].text, 'Tires 90%')  # no lap measured yet
-        self.assertEqual(sections['speed'][0].text, '180 km/h')
+        self.assertEqual(sections['speed'][0].text + sections['speed'][0].tail, '180 km/h')
 
     def test_the_fuel_saved_or_burnt_this_lap(self):
         saved = race.car_sections(self.car(fuel_per_lap=10_000, fuel_trend=-300))['fuel'][0]
@@ -3575,6 +3578,23 @@ class GearTests(unittest.TestCase):
         self.assertIsNone(self.car(None).gear)
         self.assertIsNone(self.car((race.MAX_GEARS, 0.8)).gear)
         self.assertIsNone(self.car((-1, 0.8)).gear)
+
+    def test_reverse_is_r(self):
+        # Reported by the user on 2026-11-13: reversing showed the engine sound's gear 2.
+        reader = build(
+            [10_000],
+            laps_completed=0,
+            clock=20_000,
+            limit=0,
+            car=(1.0, 2.0),
+            name='A',
+            gear=(1, 0.7),
+            reversing=True,
+        )
+        car = reader.read().car
+        self.assertTrue(car.reversing)
+        self.assertEqual(race.car_sections(car)['speed'][0].text, 'R')
+        self.assertFalse(self.car((1, 0.7)).reversing)
 
     def test_not_read_while_turned_off(self):
         race.LapReader.read_gear = False

@@ -500,6 +500,11 @@ class SectionWindow(QWidget):
         # The usual content's columns are made room for too, so they stay put (draw_hud).
         spacing = self.section.spacing
         reserve = hud_lines(steady_rows(self.section.samples[0]), scale, spacing) if self.rows else ()
+        if self.section.pedals:
+            # Between the pedal bars every line in the middle of the box, each measured with its digits
+            # as zeros: the gear above the speed, and the speed in its slot, stay put (asked for by the
+            # user on 2026-11-13).
+            left, centre = 0, True
         draw_hud(
             painter,
             hud_lines(rows, scale, spacing),

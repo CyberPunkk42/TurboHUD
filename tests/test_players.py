@@ -519,8 +519,9 @@ class LeaderLapTests(unittest.TestCase):
 class SpeedUnitTests(unittest.TestCase):
     def test_mph(self):
         car = race.CarState(True, 0, 1, True, 0, 200 / 3.6)
-        self.assertEqual(race.car_sections(car)['speed'][0].text, '200 km/h')
-        self.assertEqual(race.car_sections(car, speed_unit='mph')['speed'][0].text, '124 mph')
+        kmh, mph = race.car_sections(car)['speed'][0], race.car_sections(car, speed_unit='mph')['speed'][0]
+        self.assertEqual((kmh.text, kmh.tail), ('200', ' km/h'))
+        self.assertEqual((mph.text, mph.tail), ('124', ' mph'))
 
 
 if __name__ == '__main__':
@@ -1685,12 +1686,18 @@ class GearSectionTests(unittest.TestCase):
 
     def test_in_the_speed_section(self):
         sections = race.car_sections(self.car(4, 0.75))
-        self.assertEqual([row.text for row in sections['speed']], ['4', '108 km/h'])
+        self.assertEqual([row.text + row.tail for row in sections['speed']], ['4', '108 km/h'])
         self.assertEqual(sections['speed'][0].color, 'text')
         self.assertIsInstance(sections['levels']['speed'], race.Sectors)  # the rev lights below
         shifting = race.car_sections(self.car(4, race.REVS_TOP))
         self.assertEqual(shifting['speed'][0].color, 'behind')  # red: about to shift up
         without = race.car_sections(self.car(None, None))
-        self.assertEqual([row.text for row in without['speed']], ['108 km/h'])  # as before
+        self.assertEqual([row.text + row.tail for row in without['speed']], ['108 km/h'])  # as before
         self.assertNotIn('speed', without.get('levels', {}))
         self.assertNotIn('gear', without)
+
+    def test_the_speed_stays_put_as_it_changes(self):
+        # Asked for by the user on 2026-11-13: the number in a three-digit slot, the unit after it.
+        for kmh in (8, 98, 171):
+            row = race.car_sections(dataclasses.replace(self.car(None, None), speed=kmh / 3.6))['speed'][0]
+            self.assertEqual((row.slot, row.tail), (race.SPEED_SLOT, ' km/h'))

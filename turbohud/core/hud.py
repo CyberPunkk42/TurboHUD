@@ -433,7 +433,7 @@ RACE_SECTIONS = (
         ),
         level=True,
     ),
-    Section('speed', 'Speed', ((Row('000 km/h', 'medium'),),), pedals=True),
+    Section('speed', 'Speed', ((Row('000', 'medium', tail=' km/h', slot='000'),),), pedals=True),
     Section('localtime', 'Local time', ((Row('00:00', 'medium'),),)),
     Section(
         'players',
