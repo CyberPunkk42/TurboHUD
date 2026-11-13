@@ -453,6 +453,10 @@ QUICK_LOOK_EVERY = 2.0
 CLIENT_SPECTATE_EVERY = 30.0  # the same while the race last watched has its clock standing
 SPECTATE_STILL = 5.0  # seconds a watched race's clock may stand before it counts as over
 REPLAY_STILL = 10.0  # seconds a replay's clock may stand, not paused, before it counts as closed
+# A replay lost (rewound: TSU rebuilds its race for a moment; or standing) is looked at again at every
+# read for this long before only a search can find a replay: a search takes about 10 s on Windows, and
+# the HUD came back about 30 s after a rewind (reported by the user on 2026-11-13).
+REPLAY_BACK_FOR = 60.0
 # Other cars' slowly changing state (pit area, hit points, respawns, tire compound, the surfaces under
 # their wheels) is read once a second, not at every read: a tester's TSU in CrossOver stuttered as
 # the reads grew to about 80 of the game's memory each, ten a second (2026-11-12). The player's own
@@ -569,6 +573,7 @@ class LapReader:
         self._followed = None  # the TS.EventPlayer its camera follows: the HUD's "you"
         self._replay_clock, self._replay_moved = None, 0.0  # its race clock, and when it last moved
         self._let_go = None  # (replay player, its clock) of a replay taken as closed: not taken again so
+        self._last_replay = None  # (replay player, when it was lost): looked at again (_replay_back)
         self._planned = None  # whether the coming read is a full one (plan_read)
         self._last_full = None  # when the last full read was planned
         self._full = True  # whether this read reads every car's slow state (FULL_READ_EVERY)
@@ -614,7 +619,7 @@ class LapReader:
         except NotFound as error:
             if 'm_activeServer is null' not in str(error):
                 raise
-            state = self._replay_event_state() or self._online_event_state(error)
+            state = self._replay_event_state() or self._replay_back() or self._online_event_state(error)
             if self._replay is None:
                 self._listener = self._online_controller
             return state
@@ -659,6 +664,7 @@ class LapReader:
             clock = memory.i32(times + TIMES_NOW)
         except (NotFound, OSError) as gone:
             log.info('the replay is gone (%s)', gone)
+            self._last_replay = (self._replay, self._clock())
             self._replay = self._followed = None
             self._next_search = 0.0
             return None
@@ -668,6 +674,7 @@ class LapReader:
         elif now - self._replay_moved > REPLAY_STILL:
             log.info('the replay stands: taken as closed')
             self._let_go = (self._replay, clock)
+            self._last_replay = (self._replay, now)
             self._replay = self._followed = None
             self._next_search = 0.0
             return None
@@ -680,6 +687,31 @@ class LapReader:
             )
             self._followed = followed
         return state
+
+    def _replay_back(self):
+        """The event state of the replay last lost, where it plays again: rewound (its race
+        rebuilt), or going on after standing. Looked at for REPLAY_BACK_FOR after it was lost,
+        at the cost of a few small reads, so it shows again within a read, not after searches.
+        None while it does not play (closing, being rebuilt, still standing where it stood)."""
+        if self._last_replay is None or self._replay is not None:
+            return None
+        player, lost = self._last_replay
+        if self._clock() - lost > REPLAY_BACK_FOR:
+            self._last_replay = None
+            return None
+        try:
+            if self.il.memory.u64(player) != self._replay_class:
+                self._last_replay = None  # freed: another object there now
+                return None
+            state = self._replay_race(player)[0]
+            if self._let_go == (player, self._clock_of(state)):
+                return None  # still standing where it was taken as closed
+        except (NotFound, OSError):
+            return None  # closing, or its race not rebuilt yet
+        log.info('the replay plays again')
+        self._replay, self._replay_clock, self._replay_moved = player, None, self._clock()
+        self._last_replay = self._let_go = None
+        return self._replay_event_state()
 
     def _clock_of(self, state):
         """An event state's race clock."""
@@ -909,6 +941,7 @@ class LapReader:
                     except (NotFound, OSError):
                         continue  # the replay player of an earlier replay
                     self._replay, self._replay_clock, self._replay_moved = candidate, None, self._clock()
+                    self._last_replay = None
                     self._spectated = None
                     self._replay_wait, self._next_replay_search = CLIENT_SEARCH_EVERY, None
                     result = 'replay found'
