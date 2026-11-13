@@ -18,6 +18,15 @@ through Wine, and one read about every 30 s took 100 to 230 ms. Done (`fix/light
 slow state once a second, with a page plan per kind of read; in build 2026.11.12.7 for him (and 2026.11.13). Left: measure the reads before and after in a race;
 what the slow read every 30 s is; TSU's log not found in his bottle ("not known"), so between races it searches
 every 10 s for 10 s (Spanish Windows in the bottle?); the search every 10 s after a race could rely on quick looks.
+Stutter again with 2026.11.13.3 (2026-11-13): reads cheap, but about once a minute a read and a frame stop
+together for 0.15 to 0.35 s (already in the .6 log); drawing 19 to 21% locked. Build 2026.11.13.4 logs each such
+freeze with its time and the garbage collection in it, slow collections, and the costliest sections to draw. Next:
+his log and stutter times from it; if the freezes are collections, `gc.freeze()` after start (and fewer kept objects);
+if the reader's side, CrossOver; whether the stutter stays with TurboHUD closed.
+His log with 2026.11.13.4: not garbage collection; one read stalls 140 to 190 ms on an exact 30 s beat from the
+reader's start (mostly in reading TSU's memory through Wine), none for 10 minutes in the second race. Next: his
+stutter times against :07 and :37; the same track with TurboHUD closed; if only with TurboHUD, fewer reads a second;
+why the fuel section costs the most to draw (1.5 to 1.9 ms a frame).
 
 ## 1. Windows: the overlay, then live data
 Over TSU on Windows, in windowed, Fullscreen and Fullscreen Exclusive: the built app

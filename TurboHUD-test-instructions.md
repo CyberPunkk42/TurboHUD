@@ -1,6 +1,16 @@
 # TurboHUD: test for the Mac, step by step
 
-Nov 13, 2026 · build 2026.11.13.3 · about 65 minutes
+Nov 13, 2026 · build 2026.11.13.4 · about 65 minutes
+
+> **The stutter, first (about 15 minutes).** Build 2026.11.13.4 writes down in its log every moment TurboHUD freezes for a split second, and why. Please:
+>
+> 1. Install it (Part 2), start TSU and TurboHUD, and drive **one race** (offline is fine) of at least **10 minutes**.
+> 2. Every time you feel a stutter, look at the Mac's clock and **✏️ write down the time** (hours, minutes, seconds if you can): ______
+> 3. Was it a **short hitch** (a jump, then smooth again) or the game **slow for a while**? ______
+> 4. Right after the race, copy the log as in **Part 7** and send it with the times.
+> 5. Then drive a few minutes of the **same track with TurboHUD closed** (**Control + Shift + Q**). **✏️ Write down:** did the stutter still come? ______
+>
+> If you only have time for this part, that's already a big help.
 
 Thank you for testing again. This build has everything from 2026.11.11.4 (the fixes for races joined online, yellow flags, the gliding delta bar, the tidier panel), and much more:
 
@@ -63,9 +73,13 @@ New since 2026.11.13:
 - **Layouts for screen sizes**: the move-mode panel has **Load screen default** (a ready-made layout for your screen size), **Export…** and **Import…** (a layout as a file, to share), and **Redo** beside **Undo**.
 - **The lap title**: with the leader a lap ahead it is no longer cut off; the leader's lap fades in at its end, and shows for 6 seconds as the leader crosses the line ("Final lap" on the last one).
 
-New since 2026.11.13.2 (this build is 2026.11.13.3):
+New since 2026.11.13.2:
 
 - **The move-mode panel fits your screen**: on a smaller screen, the list of sections scrolls, and the buttons at the bottom (**Lock**, **Settings…**, **Quit TurboHUD**) always show.
+
+New since 2026.11.13.3 (this build is 2026.11.13.4):
+
+- Nothing new to see: the log now notes each moment TurboHUD freezes for a split second, and which parts of the HUD take the longest to draw. This is for the stutter.
 
 This test checks those, and measures which of two ways of drawing TurboHUD costs TSU fewer frames. If you already did the measurements with 2026.11.11.4, send those too and you can skip Part 3.
 
@@ -79,7 +93,7 @@ TurboHUD only reads what the game shows. It changes nothing in TSU or in CrossOv
 
 You need:
 
-- [ ] The file `TurboHUD-2026.11.13.3-macos-arm64.dmg`
+- [ ] The file `TurboHUD-2026.11.13.4-macos-arm64.dmg`
 - [ ] TSU in CrossOver, as last time
 - [ ] The same way of reading TSU's FPS as last time
 - [ ] The Terminal app (in **Applications > Utilities**)
@@ -100,7 +114,7 @@ For fair FPS numbers: keep the Mac on its **power adapter**, with **Low Power Mo
 In our session TurboHUD ran straight from the disk image. Please install it, as below.
 
 1. If TurboHUD is running, quit it: press **Control + Shift + Q**.
-2. Double-click `TurboHUD-2026.11.13.3-macos-arm64.dmg`. A window opens.
+2. Double-click `TurboHUD-2026.11.13.4-macos-arm64.dmg`. A window opens.
 3. Drag **TurboHUD** onto **Applications**. If asked, choose **Replace**.
 4. Close the window. In Finder, click the eject button next to **TurboHUD** in the sidebar. **Always eject it**: TurboHUD must start from Applications, never from the disk image.
 5. **Don't open TurboHUD yet.** The first measurement is without it.
@@ -203,7 +217,7 @@ Always close move mode (**Control + Shift + L**) before you drive.
 22. **Move mode**: open it, click on the desktop or the game. It should stay open. Then start a race: it should close by itself when the race begins.
 23. **Gear and revs** (on unless you turned off **Gear and revs in the speed section** in **Settings…**): while driving, does the gear change and the rev lights fill up to red before each shift? In reverse, does it show **R**?
 24. **Pits**: stop in your pit box. Does the stop timer run only while you stand in the box?
-25. **About**: open **About TurboHUD…** from the TurboHUD icon's menu. Does it show the new icon and **2026.11.13.3**? Then try to start TurboHUD a second time from Applications: no second copy should open.
+25. **About**: open **About TurboHUD…** from the TurboHUD icon's menu. Does it show the new icon and **2026.11.13.4**? Then try to start TurboHUD a second time from Applications: no second copy should open.
 26. **Arrow keys** (in move mode): click one section, then press the arrow keys, and **Shift** + an arrow key. Does it move a little, and more with Shift? Press **Undo**: does it go back?
 27. **Lap title**: when the leader is a lap ahead of you, can you read the whole lap title? When the leader crosses the line, does their lap show for a few seconds?
 28. **The panel on your screen** (in move mode): can you see the whole panel, down to **Quit TurboHUD**? If the list of sections scrolls, can you scroll it to **Local time** at the bottom?
@@ -238,7 +252,7 @@ Always close move mode (**Control + Shift + L**) before you drive.
 
 **✏️ Write down:** Gear and rev lights right? R in reverse? Pit stop timer only in the box? ______
 
-**✏️ Write down:** About showed the icon and 2026.11.13.3? No second copy? ______
+**✏️ Write down:** About showed the icon and 2026.11.13.4? No second copy? ______
 
 **✏️ Write down:** Arrow keys moved the section (more with Shift)? Undo worked? Lap title whole, leader's lap shown? ______
 
@@ -299,6 +313,7 @@ echo "--- reader"; grep -E 'reading TSU through|canvas' "$T/turbohud.log" | head
 echo "--- race"; grep -E "TSU:|TSU's log|search|quick look|watching|event type|track map|connection dropped" "$T/turbohud.log" | tail -40
 echo "--- reads"; grep -E 'race reads|race pages' "$T/turbohud.log" | tail -10
 echo "--- frames"; grep 'HUD frames' "$T/turbohud.log" | tail -15
+echo "--- freezes"; grep -E 'slow |garbage collections|drawing by section' "$T/turbohud.log" | tail -60
 echo "--- reader errors"; tail -20 "$T/bottle_reader.log" 2>/dev/null
 ```
 
@@ -335,6 +350,7 @@ If TSU freezes: quit it with **Stop** in Steam, as last time.
 
 - [ ] This sheet with everything you wrote down (or just the answers)
 - [ ] The Terminal text from Part 7
+- [ ] The times you felt a stutter, and whether it still came with TurboHUD closed (the part at the top)
 
 ### Summary (copy your answers here)
 

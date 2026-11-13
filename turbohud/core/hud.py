@@ -3,7 +3,10 @@
 import colorsys
 import functools
 import math
+import time
 from dataclasses import dataclass, field, replace
+
+from turbohud.core.stalls import STALL, clock_text, slowest_parts
 
 MARGIN = 14  # space between the box's edge and the text, before scaling
 MIN_WIDTH = 380  # the last and best lap line fits at scale 1
@@ -1191,11 +1194,21 @@ class FrameTimes:
     """How smoothly the overlay's frames come and how busy they keep its thread, for the
     log, over FRAMES_EVERY seconds at a time. `frame(worked, drawn, fresh)` at each frame:
     the seconds it spent on the content, on drawing since the last one, and whether it
-    has a new read."""
+    has a new read.
 
-    def __init__(self, clock, log_line):
+    For a tester's stutter (2026-11-13) also: a frame with a new read at least stalls.STALL
+    after the last is logged at once (one without waited for the reader, which logs its slow
+    reads; at a race's end they came every 100 to 150 ms and filled the log), with its time and how much of the wait was garbage collection (`gc_during`,
+    on `clock`); `parts()` gives and clears each section's drawing seconds, logged with the
+    summary as milliseconds a frame; `on_flush` is called with each summary (the collections')."""
+
+    def __init__(self, clock, log_line, gc_during=None, wall=time.time, parts=None, on_flush=None):
         self._clock = clock
         self._log_line = log_line
+        self._gc_during = gc_during
+        self._wall = wall
+        self._parts = parts
+        self._on_flush = on_flush
         self.clear()
 
     def clear(self):
@@ -1206,7 +1219,10 @@ class FrameTimes:
     def frame(self, worked, drawn, fresh=True):
         now = self._clock()
         if self._last is not None:
-            self._gaps.append(now - self._last)
+            gap = now - self._last
+            self._gaps.append(gap)
+            if gap >= STALL and fresh:
+                self._slow(gap, now, worked, drawn)
         else:
             self._since = now
         self._last = now
@@ -1215,6 +1231,18 @@ class FrameTimes:
         self._stale += not fresh
         if now - self._since >= FRAMES_EVERY:
             self.flush()
+
+    def _slow(self, gap, now, worked, drawn):
+        collected = self._gc_during(now - gap, now) if self._gc_during else 0.0
+        self._log_line(
+            'slow frame: %.0f ms after the last, ended %s; garbage collection in it %.0f ms; '
+            'this frame: content %.1f ms, drawing %.1f ms',
+            gap * 1000,
+            clock_text(self._wall()),
+            collected * 1000,
+            worked * 1000,
+            drawn * 1000,
+        )
 
     def flush(self):
         if self._gaps:
@@ -1231,6 +1259,13 @@ class FrameTimes:
                 self._worked / span * 100,
                 self._drawn / span * 100,
             )
+            costliest = slowest_parts(self._parts(), len(gaps) + 1) if self._parts else ''
+            if costliest:
+                self._log_line('drawing by section, ms a frame: %s', costliest)
+            if self._on_flush:
+                self._on_flush()
+        elif self._parts:
+            self._parts()  # what was drawn outside a race does not count for the next one
         self.clear()
 
 

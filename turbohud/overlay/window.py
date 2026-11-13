@@ -14,6 +14,7 @@ import math
 import sys
 import time
 from dataclasses import replace
+from typing import ClassVar
 
 from PySide6.QtCore import QPointF, QRect, QRectF, Qt, Signal
 from PySide6.QtGui import QColor, QFontInfo, QImage, QPainter, QPainterPath, QPen, QPolygonF
@@ -227,6 +228,9 @@ RESIZE_CURSORS = {
 
 class SectionWindow(QWidget):
     drawing_time = 0.0  # seconds all sections have spent drawing, for the log
+    drawing_by: ClassVar[
+        dict
+    ] = {}  # section name -> seconds it spent drawing since taken (take_drawing_by), for the log
     text_resized = Signal(str)  # a text section's name, resized by hand: its text size or width changed
     clicked = Signal(str)  # the section's name, clicked in move mode: the arrow keys nudge it
 
@@ -440,6 +444,7 @@ class SectionWindow(QWidget):
         began = time.perf_counter()
         painter = QPainter(self)
         self.draw(painter)
+        self.drew(time.perf_counter() - began)
         if not self.locked and self.wanted and self.resizable:
             self._paint_corner(painter)
         if not self.locked and self.wanted and self.selected:
@@ -449,6 +454,17 @@ class SectionWindow(QWidget):
             painter.drawRoundedRect(QRectF(self.rect()).adjusted(1, 1, -1, -1), 8, 8)
         painter.end()
         SectionWindow.drawing_time += time.perf_counter() - began
+
+    def drew(self, seconds):
+        """Count `seconds` of drawing for this section (the log's costliest sections)."""
+        name = self.section.name
+        SectionWindow.drawing_by[name] = SectionWindow.drawing_by.get(name, 0.0) + seconds
+
+    @staticmethod
+    def take_drawing_by():
+        """{section name: seconds drawing} since the last call, and start again."""
+        taken, SectionWindow.drawing_by = SectionWindow.drawing_by, {}
+        return taken
 
     def draw(self, painter):
         """Draw the section into `painter`, its top-left corner at (0, 0) and as large as
@@ -1000,7 +1016,9 @@ class HudCanvas(QWidget):
             painter.save()
             painter.translate(place.topLeft())
             painter.setClipRect(QRect(0, 0, place.width(), place.height()))
+            drawing = time.perf_counter()
             window.draw(painter)
+            window.drew(time.perf_counter() - drawing)
             painter.restore()
         painter.end()
         SectionWindow.drawing_time += time.perf_counter() - began

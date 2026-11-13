@@ -14,8 +14,10 @@ import threading
 import time
 from pathlib import Path
 
+from turbohud.core import stalls
 from turbohud.core.il2cpp import Il2Cpp, Memory, NotFound, ReadError
 from turbohud.core.race import RACING, STARTING, WAITING_FOR_GAME, WAITING_FOR_RACE, LapReader, Snapshot
+from turbohud.core.stalls import STALL, clock_text
 from turbohud.tsu.gamelog import EventLog, RecordingWatch, tsu_data
 from turbohud.tsu.probe import receive_message, send_message, socket_path
 
@@ -93,10 +95,17 @@ def connect(path=None):
 
 class ReadTimes:
     """Logs how long race reads take every TIMES_EVERY seconds, so a drive leaves numbers
-    to go by when the HUD lagged. A read longer than READ_INTERVAL misses an update."""
+    to go by when the HUD lagged. A read longer than READ_INTERVAL misses an update.
 
-    def __init__(self, clock):
+    A read at least stalls.STALL long is also logged at once (a tester's stutter, 2026-11-13):
+    its time, how much of it was the game's memory (the reader, in CrossOver's bottle on the
+    Mac) and how much garbage collection (`gc_during`, on `clock`), which tell a pause in the
+    bottle from one in TurboHUD."""
+
+    def __init__(self, clock, gc_during=None, wall=time.time):
         self._clock = clock
+        self._gc_during = gc_during
+        self._wall = wall
         self._times = []
         self._details = []  # (trips, seconds on the game's memory or None, seconds in all, reads of it or None)
         self._since = None
@@ -108,11 +117,24 @@ class ReadTimes:
         if self._since is None:
             self._since = now - seconds
         self._times.append(seconds)
+        if seconds >= STALL:
+            self._slow(seconds, now, detail)
         if detail is not None:
             trips, in_game, *more = detail
             self._details.append((trips, in_game, seconds, more[0] if more else None))
         if now - self._since >= TIMES_EVERY:
             self.flush()
+
+    def _slow(self, seconds, now, detail):
+        trips, in_game = (detail[0], detail[1]) if detail is not None else (None, None)
+        log.info(
+            'slow race read: %.0f ms, ended %s; %s trips, %s on the game\'s memory; garbage collection in it %.0f ms',
+            seconds * 1000,
+            clock_text(self._wall()),
+            '?' if trips is None else trips,
+            '?' if in_game is None else f'{in_game * 1000:.1f} ms',
+            (self._gc_during(now - seconds, now) if self._gc_during else 0.0) * 1000,
+        )
 
     def flush(self):
         if self._times:
@@ -157,7 +179,7 @@ class LiveRace:
         self.read_interval = READ_INTERVAL  # seconds between reads in a race; may change at any time
         self._close = close  # what stays open between connects, to end at stop()
         self.on_read = None  # called from the reading thread after each race read
-        self._times = ReadTimes(clock)
+        self._times = ReadTimes(clock, stalls.watch.during if clock is time.monotonic else None)
         self._lock = threading.Lock()
         self._snapshot = Snapshot()
         self._stop = threading.Event()
