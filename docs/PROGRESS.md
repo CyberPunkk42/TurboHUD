@@ -1589,3 +1589,10 @@ its "Recent changes".
     `race.Retirements` goes by what the yellow flags call idle: not finished, outside the pit area, and slower than
     about 29 km/h for 60 s of race time; driving faster again ends it. Tests: the minute, a speed not read, driving
     on, pits/finished/grid not out, the label in both lists. Not yet seen in a race or replay.
+  - 2026-11-13: The pit stop time only in a pit box, reported by the user: a car stopped in the pit lane outside a
+    box (a surface where TSU services nothing) had its stop timed. Read in a replay on the user's PC: TSU's
+    `CarStateUpdater.inPit` was on while Mike Nike stood in his box (health 342 to 500, then fresh tires) and off
+    the moment he moved, and off when he stood in the lane after it; `VehicleState.inPitArea` stayed on throughout.
+    The reader keeps it as `PlayerState.in_box`, and `PitStops` counts standing only while it is on (where it is
+    not read, standing anywhere in the area counts, as before). The time from pit entry to exit is unchanged.
+    Tests: the reader's flag (on, off, not read), a stop in the box then standing in the lane, a stop outside a box.

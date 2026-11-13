@@ -136,6 +136,7 @@ def build(
     replay=None,
     recording_opened=None,
     hotlapping=None,
+    in_box=None,
 ):
     """A fake race; `car` is the car's (x, z) and `gates` the checkpoint lines, both
     optional like in a game without them."""
@@ -422,9 +423,12 @@ def build(
                     ('m_draftingDownforceFactor', 0x80, False, 0x0C),
                     ('wheels', 0x88, False),
                     ('m_eventSettings', 0x90, False),
+                    *([('inPit', 0x98, False, 0x02)] if in_box is not None else []),
                 ],
             )
         )
+        if in_box is not None:  # CarStateUpdater.inPit: on a pit box
+            g.put(updater + 0x98, bytes([in_box]))
         g.q(updater + 0x88, 0)  # no wheels object unless surfaces are given
         g.q(updater + 0x90, 0)  # no event settings unless the compounds are given
         if compounds is not None:  # the event's number of tire compounds
@@ -1763,6 +1767,20 @@ class CarTests(unittest.TestCase):
         )
         me = next(p for p in reader.read().players if p.local)
         self.assertTrue(me.in_pit)
+
+    def test_the_reader_says_whether_a_car_is_on_its_pit_box(self):
+        # CarStateUpdater.inPit, seen on while a car stood in its box being serviced (2026-11-13).
+        def me(**fields):
+            reader = build(
+                [10_000], laps_completed=0, clock=20_000, limit=0, car=(1.0, 2.0), name='A', **fields
+            )
+            return next(p for p in reader.read().players if p.local)
+
+        boxed = me(pit_area=True, in_box=True)
+        self.assertEqual((boxed.in_pit, boxed.in_box), (True, True))
+        lane = me(pit_area=True, in_box=False)
+        self.assertEqual((lane.in_pit, lane.in_box), (True, False))  # the pit area, not a box
+        self.assertIsNone(me(pit_area=True).in_box)  # not read: not known
 
     def test_reader_follows_a_tire_change(self):
         def change(ticks):

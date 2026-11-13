@@ -185,6 +185,28 @@ class PitStopTests(unittest.TestCase):
         self.assertEqual(pits.update([out], 10 * SECOND - 1)[0].pit_seconds, 4.0)
         self.assertIsNone(pits.update([out], 10 * SECOND)[0].pit_seconds)
 
+    def test_only_standing_in_a_pit_box_counts(self):
+        # Reported by the user on 2026-11-13: a car stopped in the pit lane outside a box had its
+        # stop timed. Seen in that replay: in the box inPit on, then off in the lane.
+        def car(moving, box):
+            return dataclasses.replace(in_pits(moving=moving), in_box=box)
+
+        pits = race.PitStops()
+        pits.update([car(True, False)], 0)  # in the pit lane
+        pits.update([car(False, True)], 5 * SECOND)  # standing in its box ...
+        pits.update([car(True, False)], 13 * SECOND)  # ... 8 s, then off
+        pits.update([car(False, False)], 17 * SECOND)  # standing in the lane, outside a box
+        lane = pits.update([car(False, False)], 22 * SECOND)[0]
+        self.assertEqual((lane.pit_seconds, lane.pit_stopped), (22.0, 8.0))  # the entry timer runs on
+
+    def test_a_stop_outside_a_box_shows_no_stop_time(self):
+        pits = race.PitStops()
+        lane = dataclasses.replace(in_pits(), in_box=False)
+        pits.update([lane], 0)
+        car = pits.update([lane], 6 * SECOND)[0]
+        self.assertEqual((car.pit_seconds, car.pit_stopped), (6.0, 0.0))
+        self.assertEqual(race._pit_bracket(car), '')  # nothing in brackets
+
     def test_standing_over_45_seconds_shows_plain_pit(self):
         pits = race.PitStops()
         pits.update([in_pits()], 0)

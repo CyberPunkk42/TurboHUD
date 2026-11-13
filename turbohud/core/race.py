@@ -501,6 +501,10 @@ class PlayerState:
     tag: str = ''  # the clan tag (TS.PlayerProfile.teamTag: 'FTR' for [FTR]); it may name a class
     car: str = ''  # the car's name (TS.VehicleProperties.name): the class of a driver without a tag
     compound: int | None = None  # its tire compound's index (tireCompoundAndChangeTicks); None: not read
+    # On a pit box, where TSU repairs, refuels and changes tires (CarStateUpdater.inPit; in_pit is the whole
+    # pit area). Seen in a replay on the user's PC (2026-11-13): on while the car stood in its box being
+    # serviced, off as it left, and off for a car stopped in the pit lane outside a box. None: not read.
+    in_box: bool | None = None
 
     @functools.cached_property
     def passed(self):
@@ -1590,7 +1594,7 @@ class LapReader:
             if passed:
                 checkpoints.append(passed)
         in_pit, position, velocity, forward, draft_drag = False, None, None, None, None
-        forward_speed = wheel_grips = wheel_layers = spawns = compound = None
+        forward_speed = wheel_grips = wheel_layers = spawns = compound = in_box = None
         car = ''
         shortcut = jump_start = wrecked = False
         try:
@@ -1602,7 +1606,7 @@ class LapReader:
             updater = None
             try:
                 updater = self._ref('vehicle', vehicle, 'm_stateUpdater')
-                in_pit = bool(memory.u8(updater + self._offset('updater', updater, 'inPit')))
+                in_pit = in_box = bool(memory.u8(updater + self._offset('updater', updater, 'inPit')))
             except (NotFound, ReadError):
                 pass
             # The slow state: every read for the player's own car, else once a second (FULL_READ_EVERY).
@@ -1657,6 +1661,7 @@ class LapReader:
             jump_start=jump_start,
             wrecked=wrecked,
             compound=compound,
+            in_box=in_box,
         )
 
     def _read_compounds(self, updater):
@@ -1963,7 +1968,8 @@ class DeadReckoning:
 
 class PitStops:
     """Two timers for each car in the pits: from pit entry to pit exit, and how long it
-    stood still in all, both live and kept for PIT_TIME_SHOWN after the exit. Standing over
+    stood still in a pit box (PlayerState.in_box), both live and kept for PIT_TIME_SHOWN after
+    the exit. Standing over
     PIT_STOP_MOST shows neither: the driver may have retired. Timed with the race clock
     from the pit area and the velocity, which every car has, online too."""
 
@@ -2002,10 +2008,13 @@ class PitStops:
 
     @staticmethod
     def _stand(visit, player, clock):
-        """Note in `visit` whether the car stands now. Without a velocity it goes on as it was."""
+        """Note in `visit` whether the car stands now in a pit box: standing elsewhere in the
+        pit area, where TSU services nothing, is no stop (reported by the user on 2026-11-13: a
+        car stopped in the pit lane outside a box had its stop timed). Without a velocity it
+        goes on as it was; where the box is not known, standing anywhere in the area counts."""
         if player.velocity is None:
             return
-        standing = math.hypot(*player.velocity) < PIT_STOPPED_SPEED
+        standing = math.hypot(*player.velocity) < PIT_STOPPED_SPEED and player.in_box is not False
         if standing and visit[2] is None:
             visit[2] = clock
         elif not standing and visit[2] is not None:

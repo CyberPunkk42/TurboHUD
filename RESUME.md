@@ -81,6 +81,13 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+  - 2026-11-13: The pit stop time only in a pit box, reported by the user: a car stopped in the pit lane outside a
+    box (a surface where TSU services nothing) had its stop timed. Read in a replay on the user's PC: TSU's
+    `CarStateUpdater.inPit` was on while Mike Nike stood in his box (health 342 to 500, then fresh tires) and off
+    the moment he moved, and off when he stood in the lane after it; `VehicleState.inPitArea` stayed on throughout.
+    The reader keeps it as `PlayerState.in_box`, and `PitStops` counts standing only while it is on (where it is
+    not read, standing anywhere in the area counts, as before). The time from pit entry to exit is unchanged.
+    Tests: the reader's flag (on, off, not read), a stop in the box then standing in the lane, a stop outside a box.
   - 2026-11-13: DNF in the lists, asked for by the user: a car out of the race shows DNF, in the shortcut colour, in
     the lap times where the Last lap is (as CUT does; the rest of the row stays) and in the player list in the gap's
     place (also a spectator's list). TSU keeps no retired mark for a car (only methods and messages by that name), so
