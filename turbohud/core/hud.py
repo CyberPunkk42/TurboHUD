@@ -404,7 +404,8 @@ RACE_SECTIONS = (
         'lap',
         'Lap and time left',
         (
-            (Row('Lap 13/13  -  21:00 left', 'title'),),
+            # The widest it gets, the leader a lap ahead (reported by the user on 2026-11-13: cut off).
+            (Row('Lap 13/13  -  21:00 left', 'title', tail=' · Leader 13'),),
             (Row('Waiting for TSU (launch option)', 'title'),),
         ),
     ),
@@ -869,6 +870,17 @@ def _box_heights(section, ink):
         (font, tight_height(section, font_scale(font), ink))
         for font in range(FONT_SIZES[0], FONT_SIZES[1] + 1)
     )
+
+
+def fitting_scale(rows, scale, width, measure, spacing=1.0, pedals=False):
+    """`scale`, or smaller where `rows` would be wider than `width` at it: a live text wider
+    than the box its text size made (a title longer than the section's sample) is drawn to
+    fit rather than cut off (reported by the user on 2026-11-13). Digits count as zeros."""
+    if not rows or width <= 0:
+        return scale
+    needed = content_size(steady_rows(rows), scale, measure, spacing)[0]
+    needed += pedal_space(scale) if pedals else 0
+    return scale if needed <= width else scale * width / needed
 
 
 def font_of_box(section, place, scale, measure, ink):

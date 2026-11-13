@@ -1691,3 +1691,23 @@ its "Recent changes".
     the speed section (an option). The zip's reader is the one built from `main` (unchanged since .2, checked byte
     for byte). Smoke test passed (a TurboHUD from the source folder was running); the zip and every file in it
     checked for the privacy terms, none; no other players' names in the code. Not yet tried by hand.
+  - 2026-11-13: The lap title no longer cut off, reported by the user: with the leader a lap ahead the title
+    ("Lap 3/13 · Leader 4  -  16:..") was cut after the time's colon. Its box is sized from the section's sample,
+    which had no leader part, and since text sizes a text keeps its size. The sample now has it ("Lap 13/13 · Leader
+    13  -  21:00 left"), so the box is wide enough (a saved box widens by itself: never narrower than its text), and
+    in every text section a live text still wider than its box is drawn just small enough to fit, not cut
+    (`hud.fitting_scale`; the text size is kept otherwise). Tests: the lap box at three sizes, the fit, the pedal bars.
+  - 2026-11-13: The leader's lap fades in at the end of the lap title, asked for by the user (it jumped in): it moved
+    from the middle to the end ("Lap 3/13  -  16:23 left · Leader 4"), so nothing before it moves when it appears,
+    and it fades in over half a second (`LEADER_FADE`) from the moment the leader began that lap, by the race clock
+    (`race.lap_title_row`; no state kept). The painter draws a tail whose colour is 'name@share' at that opacity,
+    outline and all, so no dark outline shows before the text. Tests: the order, the fade at its start, middle and
+    end; checked in an offscreen render.
+  - 2026-11-13: The leader label shows for 6 s as the leader crosses the line, and says "Final lap", reported and
+    asked for by the user (it flickered while shown): the moment it began was taken from whichever car on the
+    leader's lap came first in the list, so it jumped as others crossed; now it is the first car to begin that lap
+    (`_leader_crossed`). The label shows for `LEADER_SHOWN` (6 s) from that crossing, fading in and out over half a
+    second each: the leader's lap where it is ahead of the player's, or "Final lap" as the leader begins the last
+    (the last of the laps set, or in a timed race the lap begun once the time is up), whether or not the leader is
+    the player; none once a car has finished. Tests: the window and fades, final lap (laps and time), the winner in,
+    a second car crossing.
