@@ -204,6 +204,21 @@ class AssetPathTests(unittest.TestCase):
         self.assertEqual(app.asset_path(app.ICON, bundle='/b'), Path('/b') / 'assets' / app.ICON)
 
 
+class AboutTests(unittest.TestCase):
+    def test_name_and_version(self):
+        text = app.about_text('2026.11.13.2')
+        self.assertIn('TurboHUD', text)
+        self.assertIn('Version 2026.11.13.2', text)
+
+    def test_run_from_source(self):
+        self.assertIn('development', app.about_text('dev'))
+
+    def test_the_icon_is_there(self):
+        self.assertEqual(app.ICON, 'tsu_turbo_hud.png')
+        self.assertTrue(app.asset_path(app.ICON).is_file())
+        self.assertEqual(build_app.ICON, ROOT / 'assets' / app.ICON)
+
+
 class AppArgsTests(unittest.TestCase):
     def test_defaults(self):
         args = app.parse_args([])

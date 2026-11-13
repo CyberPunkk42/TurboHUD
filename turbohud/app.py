@@ -41,7 +41,7 @@ from turbohud.core.settings import (
 FRAME_MS = 50  # redraw interval, also what checks a race for a late read (hud.FramePacer)
 MIN_SECTION = 20  # pixels: the smallest a section gets from Smaller in the settings
 PLACEMENT_EVERY = 0.2  # seconds between position checks in move mode
-ICON = 'tsu_turbo_hud_00.png'  # in assets/, also the bundled app's icon
+ICON = 'tsu_turbo_hud.png'  # in assets/, also the bundled app's icon
 # The settings window's switches for the lap times' columns (LAP_COLUMNS): (column, label, tooltip)
 LAP_COLUMN_OPTIONS = (
     ('flag', 'Lap times: flag', "Each driver's country flag before the name"),
@@ -163,6 +163,17 @@ def parse_args(argv):
     return args
 
 
+def about_text(version):
+    """What About shows (asked for by the user on 2026-11-13): the app's name and version (rich
+    text). Run from the source folder the version is 'dev'."""
+    shown = 'development (run from source)' if version == 'dev' else version
+    return (
+        '<p><b style="font-size: 16pt">TurboHUD</b></p>'
+        f'<p>Version {shown}</p>'
+        '<p>A HUD overlay for Turbo Sliders Unlimited.</p>'
+    )
+
+
 def setup_log(folder):
     """Log to the terminal and to turbohud.log in the settings folder, replaced each run."""
     handlers = [logging.StreamHandler()] if sys.stderr else []  # a windowed app has no terminal
@@ -275,7 +286,7 @@ def run(args, folder):
     import PySide6
     from PySide6.QtCore import QObject, Qt, QTimer, Signal
     from PySide6.QtGui import QAction, QGuiApplication, QIcon
-    from PySide6.QtWidgets import QApplication, QMenu, QSystemTrayIcon
+    from PySide6.QtWidgets import QApplication, QMenu, QMessageBox, QSystemTrayIcon
 
     from turbohud.core.flagstack import combined
     from turbohud.core.hud import (
@@ -991,6 +1002,7 @@ def run(args, folder):
                 lambda seconds: set_seconds('radar_seconds', seconds)
             )
             settings_window.resize_requested.connect(resize_all)
+            settings_window.about_requested.connect(lambda: show_about(settings_window))
         if not settings_window.isVisible():
             # Beside the panel where it is (it may have been dragged), and wholly on its screen.
             anchor = panel.geometry().getRect()
@@ -1220,6 +1232,18 @@ def run(args, folder):
     move_action = QAction('Move mode', menu, checkable=True)
     move_action.triggered.connect(lambda checked: set_locked(not checked))
     quit_action = QAction('Quit TurboHUD', menu)
+
+    def show_about(parent=None):
+        """The app's icon, name and version in a small window."""
+        box = QMessageBox(parent)
+        box.setWindowTitle('About TurboHUD')
+        box.setTextFormat(Qt.RichText)
+        box.setText(about_text(__version__))
+        box.setIconPixmap(icon.pixmap(96, 96))
+        box.exec()
+
+    about_action = QAction('About TurboHUD…', menu)
+    about_action.triggered.connect(lambda: show_about())
     quit_action.triggered.connect(app.quit)
     menu.addAction(move_action)
     mph_action = QAction('Speed in mph', menu, checkable=True)
@@ -1276,6 +1300,7 @@ def run(args, folder):
     settings_action = QAction('Settings…', menu)
     settings_action.triggered.connect(lambda: open_settings())
     menu.addAction(settings_action)
+    menu.addAction(about_action)
     menu.addSeparator()
     menu.addAction(quit_action)
     tray.setContextMenu(menu)

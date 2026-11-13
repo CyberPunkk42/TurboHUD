@@ -81,6 +81,13 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+  - 2026-11-13: About, and the new app icon, asked for by the user: "About TurboHUD..." in the icon's menu and an
+    "About..." button in Settings open a small window with the icon, the name and the version ("development (run
+    from source)" when not built; `app.about_text`). The icon is now `assets/tsu_turbo_hud.png` (the user's new one,
+    a neon speedometer with the name), for the tray, the windows and the built app's icon; the old
+    `tsu_turbo_hud_00.png` is gone. The Quick Start mentions About. Tests: the text, the icon file and the build's
+    icon path, the Settings button. Checked offscreen in the app: About from the menu showed icon, name and version.
+    Not tried yet: a build with the new icon (PyInstaller makes the .ico / .icns from it).
   - 2026-11-13: The leader label shows for 6 s as the leader crosses the line, and says "Final lap", reported and
     asked for by the user (it flickered while shown): the moment it began was taken from whichever car on the
     leader's lap came first in the list, so it jumped as others crossed; now it is the first car to begin that lap
