@@ -2572,6 +2572,9 @@ def with_local_time(sections, snapshot, now_struct):
 
 MAX_PLAYER_ROWS = 8  # more players: the leader and those around the local player
 MAX_NAME_SHOWN = 18
+# The lap times' name field: this many letters, a longer name cut with '…' (asked for by the user on
+# 2026-11-13, so the list keeps its width whoever joins; its sample in hud.RACE_SECTIONS is as long).
+LAP_NAME_SHOWN = 20
 
 
 def ranked(players):
@@ -3243,8 +3246,8 @@ def lap_times_rows(
     last_class = None
     for position, player in shown:
         name = player.name or '?'
-        if len(name) > MAX_NAME_SHOWN:
-            name = name[: MAX_NAME_SHOWN - 1] + '…'
+        if len(name) > LAP_NAME_SHOWN:
+            name = name[: LAP_NAME_SHOWN - 1] + '…'
         group = classes.get(id(player))
         if places is not None:
             position = places[id(player)]

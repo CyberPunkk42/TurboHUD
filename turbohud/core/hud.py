@@ -213,12 +213,11 @@ def lines_width(lines, measure):
 
 def snug_width(lines, reserve, width, margin, measure):
     """How wide the box is for the columns of a snug section (Section.snug): up to just
-    after the longest text `lines` show, with the columns `reserve` makes room for, at most
-    `width`. Only `reserve`'s columns count, not its text: a sample's long name would put
-    the columns where they were (asked for by the user on 2026-11-13: the lap times'
-    columns closer to the names, after the longest name in the race)."""
-    columns_only = [replace(line, text='', tail='', slot='') for line in reserve]
-    return min(width, lines_width(list(lines) + columns_only, measure) + 2 * margin)
+    after the text field `reserve` (the section's sample) makes room for, with its columns,
+    at most `width`; only a text in `lines` wider than that field moves them on. Asked for by
+    the user on 2026-11-13: the lap times' columns close to the names, after a field for a
+    20-letter name (LAP_NAME_SHOWN), so the list keeps its width whoever joins."""
+    return min(width, lines_width(list(lines) + list(reserve), measure) + 2 * margin)
 
 
 def middle_right(lines, width, margin, measure):
@@ -423,7 +422,7 @@ RACE_SECTIONS = (
             (Row('Driver', 'small', 'accent', middle='Best', right='Lap'),)
             + tuple(
                 Row(
-                    f'{n}. Playername1234567',
+                    f'{n}. Playername1234567890',  # a 20-letter name (race.LAP_NAME_SHOWN)
                     'small',
                     before='L99',
                     flag='DE',
