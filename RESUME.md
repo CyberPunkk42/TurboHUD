@@ -79,6 +79,13 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+  - 2026-11-13: Qualifying ranked by best lap, reported by the user: in qualifying (run as hotlapping) the player list
+    and lap times kept race order. TSU says so in `EventState.m_eventStats.raceStats.m_hotlappingOnCircuit` (1 in a
+    hotlapping replay on the user's PC; TSU has no "qualifying" of its own). The reader reads it once an event
+    (`LapState.hotlapping`), and `ranked`/`Standings.order` then go by best lap, drivers without a lap after them.
+    Tests: the flag read (on, off, missing), the order by best lap. Checked on the live replay (read only): True. Not
+    changed: the player list's gaps are still race gaps (by best lap would suit qualifying); not yet seen in a race
+    that the flag is 0 there (missing reads as a race, as before).
   - 2026-11-13: Ruff clean again, asked for by the user: the 8 lint errors fixed (`ClassVar` on the yellow-flag
     tests' surface dicts, two `noqa` comments that did nothing removed, the recorder test's gzip file opened in a
     `with`, the "still no race" log check in `tsu/client.py` made one condition) and the 5 unformatted files
