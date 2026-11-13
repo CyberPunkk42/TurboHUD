@@ -89,6 +89,25 @@
     the shipped one only). Checked in the app offscreen on a 5120x1440 screen: Design 3840x2160 (at 59%), then Save
     design, gave the layout back within 5 px and 1 text size (the frame's rounding); the blue flag, delta bar, radar
     and track map, whose boxes set their size, carry no text size of their own.
+  - 2026-11-13: Build 2026.11.13.3 for the tester (`releases/TurboHUD-2026.11.13.3-macos-arm64.dmg`, 33.7 MB, macOS 27,
+    `--any-macos`, built with `.buildtools/build-venv`), asked for by the user: `main` with the move-mode panel that
+    fits small screens, merged and pushed with GitHub's main (the smoke test with settings of its own, the Rust
+    reader's Windows note). Smoke test passed (now with its own settings); the image's 205 files and the 175 Python
+    modules packed in the app checked for the privacy terms, none. The test sheet names it and adds check 28 (the
+    whole panel on the screen). It replaces 2026.11.13.2, still in `releases/`, to be removed by hand. Tests on
+    `main`: all 1158 pass on the Mac.
+  - 2026-11-13: The move-mode panel fits small screens, reported by the user: on the Mac it had grown to 991 px
+    tall (the Size px and Lines % columns, the layout rows), more than a small Mac laptop's usable screen, so Lock,
+    Settings and Quit could be off it. The rows of sections are now in a scroll area (`MovePanel.rows_area`), and
+    before the panel shows, the app fits it to the screen it opens on (`MovePanel.fit_height`, called in
+    `panel_spot`): 16 px of room above and below, the rows scrolling where they do not all fit (at least 160 px of
+    them), the help, presets, layouts and the buttons always shown. On a tall screen nothing changes (991 x 542 px on
+    the Mac, the same as before). The scroll bar's room is the style's width, as the Mac's overlay bar reports none
+    and covered the Lines % column. Tests: a new one for the fitting (none, just enough, 600 px, too short, back);
+    the three panel height tests fit to an 800 px screen first, as the app does; all 1156 pass on the Mac (the four
+    offscreen-only failures are gone). Checked on the Mac (cocoa): 868 px on a 900 px screen, 768 on 800, 668 on 700,
+    the scroll bar beside the last column. Smoke run: move mode showed the panel, no traceback. Not yet tried by hand
+    on a small screen.
   - 2026-11-13: Next steps corrected, asked for by the user: the Rust reader on Windows was still listed as not yet
     run there; it has read the user's races on the Windows PC since 2026-11-11. Left on Windows: the overlay over
     TSU in Fullscreen and Fullscreen Exclusive.

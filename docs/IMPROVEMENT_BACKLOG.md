@@ -94,6 +94,8 @@ presets with their shortcuts, groups, the Centre buttons, Centre text and Undo. 
   a resize ends), and Undo there.
   The move-mode panel's text is held at 13 px there since 2026-11-12 (771 px tall, was 866):
   check it reads well over TSU.
+- Since 2026-11-13 the move-mode panel fits the screen it opens on, its rows of sections scrolling on a short
+  one: try it by hand on a small Mac laptop (or a screen set to a low resolution).
 - Windows has run none of this (its shortcut code has only ever run on a build machine).
 
 ## 4. Builds and release
