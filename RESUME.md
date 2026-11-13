@@ -81,6 +81,12 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+  - 2026-11-13: The six test errors on Windows fixed, asked for by the user: all were tests of macOS and Linux
+    parts run where those cannot work (a file link, which Windows makes only with developer mode; `os.getuid`;
+    `fcntl` for the Linux controller reader; Unix sockets for the control and probe sockets). The link is made where
+    allowed, the control path test passes its user ID, and the socket and controller tests are skipped where the
+    system lacks them (they still run on the Mac and Linux). The app is unchanged. Windows: 1110 tests, all pass
+    (27 skipped).
   - 2026-11-13: The leader label shows for 6 s as the leader crosses the line, and says "Final lap", reported and
     asked for by the user (it flickered while shown): the moment it began was taken from whichever car on the
     leader's lap came first in the list, so it jumped as others crossed; now it is the first car to begin that lap

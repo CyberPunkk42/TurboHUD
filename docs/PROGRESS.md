@@ -1711,3 +1711,9 @@ its "Recent changes".
     (the last of the laps set, or in a timed race the lap begun once the time is up), whether or not the leader is
     the player; none once a car has finished. Tests: the window and fades, final lap (laps and time), the winner in,
     a second car crossing.
+  - 2026-11-13: The six test errors on Windows fixed, asked for by the user: all were tests of macOS and Linux
+    parts run where those cannot work (a file link, which Windows makes only with developer mode; `os.getuid`;
+    `fcntl` for the Linux controller reader; Unix sockets for the control and probe sockets). The link is made where
+    allowed, the control path test passes its user ID, and the socket and controller tests are skipped where the
+    system lacks them (they still run on the Mac and Linux). The app is unchanged. Windows: 1110 tests, all pass
+    (27 skipped).

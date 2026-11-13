@@ -97,7 +97,8 @@ class NamingTests(unittest.TestCase):
             (app / 'windows.exe').write_bytes(b'MZ' + b'x' * 20)
             (app / 'text.txt').write_text('hello')
             (app / 'empty').write_bytes(b'')
-            (app / 'link').symlink_to(app / 'library.dylib')
+            with contextlib.suppress(OSError):  # Windows makes links only with the right to (developer mode)
+                (app / 'link').symlink_to(app / 'library.dylib')
             found = [path.name for path in build_app.mac_programs(app)]
         self.assertEqual(found, ['library.dylib', 'universal'])
 
