@@ -1798,3 +1798,13 @@ its "Recent changes".
     full size), and 5120x1440 the user's newest own layout (bigger blue flag, shortcut warning and local time; lap,
     flags and draft moved). 3840x2160 stays the one fitted from the earlier 5120x1440 layout (none made yet). Each
     has all 19 sections on its screen and holds positions, sizes and text sizes only. Tests pass with them.
+  - 2026-11-13: Build 2026.11.13.2 for the tester (`releases/TurboHUD-2026.11.13.2-macos-arm64.dmg`, 33.7 MB, macOS 27,
+    `--any-macos`, built with `.buildtools/build-venv`), asked for by the user: `main` after merging GitHub's main
+    and `docs/tester-build-2026-11-13`, with what came since 2026.11.13: the new icon and About, one TurboHUD at a
+    time, arrow keys in move mode, layouts per screen size (the five shipped ones bundled in `assets/presets`, Load
+    screen default, Export, Import, Redo, the design screen) and the lap title fixes. Smoke test passed with TurboHUD
+    closed; the image's 205 files and the 175 Python modules packed in the app checked for the privacy terms, none.
+    The test sheet names it, lists what is new and adds checks 25 to 27 (About and one copy, arrow keys, lap title).
+    It replaces 2026.11.13, still in `releases/`, to be removed by hand. Tests on `main` (build-venv): 1151 of 1155
+    pass; the four `MovePanelPresetTests` failures are only under the offscreen platform on the Mac (the panel 844 px
+    there); drawn with cocoa the panel is 991 px tall, more than some Mac laptops' screens (about 900 px), to look at.

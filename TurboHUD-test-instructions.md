@@ -1,6 +1,6 @@
 # TurboHUD: test for the Mac, step by step
 
-Nov 13, 2026 · build 2026.11.13 · about 60 minutes
+Nov 13, 2026 · build 2026.11.13.2 · about 65 minutes
 
 Thank you for testing again. This build has everything from 2026.11.11.4 (the fixes for races joined online, yellow flags, the gliding delta bar, the tidier panel), and much more:
 
@@ -43,7 +43,7 @@ New since 2026.11.12.6:
 - **Replays**: TurboHUD also shows in TSU's replays, around the driver the camera follows.
 - The disk image has a **Quick Start.txt**: a one-page guide for players.
 
-New since 2026.11.12.7 (this build is 2026.11.13):
+New since 2026.11.12.7:
 
 - **Text sizes in pixels**: in move mode, each text section has a **Size px** box (**global** follows the **Global text size** below the list; **All global** puts every section back on it). Dragging a text section's top or bottom edge, or a corner, sizes its text; its left or right edge adds room (longer bars). Sections with several rows have a **Lines %** box for the space between rows. Your saved layout is converted once, so it should look as before.
 - **Resizing at every edge**: the radar, track map, delta bar and blue flag resize at any edge or corner in move mode.
@@ -54,6 +54,14 @@ New since 2026.11.12.7 (this build is 2026.11.13):
 - **Pit stops**: the stop time counts only while a car stands in its pit box; a car standing a minute anywhere in the pits shows plain **PIT** without timers.
 - **Lap times**: names have a fixed 20-letter field with the columns right after it; in a race with classes an **Ovr** column shows the overall place; drivers all in the same car are no longer split into classes; in qualifying the lists go by best lap.
 - **Replays**: a replay watched after a race in the same TSU session shows the HUD, and after a rewind it is back within a moment, without false wrong-way yellow flags.
+
+New since 2026.11.13 (this build is 2026.11.13.2):
+
+- **A new icon**, and **About TurboHUD…** in the TurboHUD icon's menu (also an **About...** button in **Settings…**): it shows the version.
+- **Only one TurboHUD at a time**: starting it a second time no longer opens a second copy.
+- **Arrow keys in move mode**: click a section (it gets a coloured frame), then the arrow keys move it 1 pixel, with **Shift** 10 pixels.
+- **Layouts for screen sizes**: the move-mode panel has **Load screen default** (a ready-made layout for your screen size), **Export…** and **Import…** (a layout as a file, to share), and **Redo** beside **Undo**.
+- **The lap title**: with the leader a lap ahead it is no longer cut off; the leader's lap fades in at its end, and shows for 6 seconds as the leader crosses the line ("Final lap" on the last one).
 
 This test checks those, and measures which of two ways of drawing TurboHUD costs TSU fewer frames. If you already did the measurements with 2026.11.11.4, send those too and you can skip Part 3.
 
@@ -67,7 +75,7 @@ TurboHUD only reads what the game shows. It changes nothing in TSU or in CrossOv
 
 You need:
 
-- [ ] The file `TurboHUD-2026.11.13-macos-arm64.dmg`
+- [ ] The file `TurboHUD-2026.11.13.2-macos-arm64.dmg`
 - [ ] TSU in CrossOver, as last time
 - [ ] The same way of reading TSU's FPS as last time
 - [ ] The Terminal app (in **Applications > Utilities**)
@@ -88,7 +96,7 @@ For fair FPS numbers: keep the Mac on its **power adapter**, with **Low Power Mo
 In our session TurboHUD ran straight from the disk image. Please install it, as below.
 
 1. If TurboHUD is running, quit it: press **Control + Shift + Q**.
-2. Double-click `TurboHUD-2026.11.13-macos-arm64.dmg`. A window opens.
+2. Double-click `TurboHUD-2026.11.13.2-macos-arm64.dmg`. A window opens.
 3. Drag **TurboHUD** onto **Applications**. If asked, choose **Replace**.
 4. Close the window. In Finder, click the eject button next to **TurboHUD** in the sidebar. **Always eject it**: TurboHUD must start from Applications, never from the disk image.
 5. **Don't open TurboHUD yet.** The first measurement is without it.
@@ -191,6 +199,9 @@ Always close move mode (**Control + Shift + L**) before you drive.
 22. **Move mode**: open it, click on the desktop or the game. It should stay open. Then start a race: it should close by itself when the race begins.
 23. **Gear and revs** (on unless you turned off **Gear and revs in the speed section** in **Settings…**): while driving, does the gear change and the rev lights fill up to red before each shift? In reverse, does it show **R**?
 24. **Pits**: stop in your pit box. Does the stop timer run only while you stand in the box?
+25. **About**: open **About TurboHUD…** from the TurboHUD icon's menu. Does it show the new icon and **2026.11.13.2**? Then try to start TurboHUD a second time from Applications: no second copy should open.
+26. **Arrow keys** (in move mode): click one section, then press the arrow keys, and **Shift** + an arrow key. Does it move a little, and more with Shift? Press **Undo**: does it go back?
+27. **Lap title**: when the leader is a lap ahead of you, can you read the whole lap title? When the leader crosses the line, does their lap show for a few seconds?
 
 **✏️ Write down:** Panel buttons readable? None and Undo worked? ______
 
@@ -221,6 +232,10 @@ Always close move mode (**Control + Shift + L**) before you drive.
 **✏️ Write down:** Move mode stayed open on a click, and closed when the race began? ______
 
 **✏️ Write down:** Gear and rev lights right? R in reverse? Pit stop timer only in the box? ______
+
+**✏️ Write down:** About showed the icon and 2026.11.13.2? No second copy? ______
+
+**✏️ Write down:** Arrow keys moved the section (more with Shift)? Undo worked? Lap title whole, leader's lap shown? ______
 
 ---
 
@@ -340,6 +355,8 @@ If TSU freezes: quit it with **Stop** in Steam, as last time.
 | | Text sizes: Size px, edges, global size; layout as before? | |
 | | Move mode: stays on a click, closes when the race begins? | |
 | | Gear and rev lights, R in reverse, pit timer only in the box? | |
+| | About: icon and version right, no second copy? | |
+| | Arrow keys and Undo in move mode? Lap title whole? | |
 | | Online race 1: did the HUD show? After how many seconds? | |
 | | Online races 2, 3 ...: after how many seconds? | |
 | | Online, joined during a race: did it show? | |
