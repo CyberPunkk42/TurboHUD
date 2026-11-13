@@ -64,7 +64,7 @@
   three races in a row in 0.4 s (2026-11-10).
 - The tester has stutter again with build 2026.11.12.4 on macOS (2026-11-12). His log: drawing 20 to 24% of the
   time, most of it new texts; since `fix/lap-list-frame-cost` changing numbers are drawn from kept glyphs (about 20
-  times quicker). Build 2026.11.12.7 has them, the yellow flag fix and the lighter race reads: next, his log's `HUD frames` drawing share (was 20 to 24%) and
+  times quicker). Build 2026.11.12.7 had them, the yellow flag fix and the lighter race reads; 2026.11.13 and .2 add the work of 2026-11-13: next, his log's `HUD frames` drawing share (was 20 to 24%) and
   whether TSU stutters while driving or between races (backlog item 0).
 - Replays after a race (`fix/replays-after-a-race`, 2026-11-13): try in TSU a recording watched after a race in the
   same session, opened from the list and watched again; on the Mac, whether the recordings get an access time.
@@ -81,6 +81,16 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+  - 2026-11-13: Build 2026.11.13.2 for the tester (`releases/TurboHUD-2026.11.13.2-macos-arm64.dmg`, 33.7 MB, macOS 27,
+    `--any-macos`, built with `.buildtools/build-venv`), asked for by the user: `main` after merging GitHub's main
+    and `docs/tester-build-2026-11-13`, with what came since 2026.11.13: the new icon and About, one TurboHUD at a
+    time, arrow keys in move mode, layouts per screen size (the five shipped ones bundled in `assets/presets`, Load
+    screen default, Export, Import, Redo, the design screen) and the lap title fixes. Smoke test passed with TurboHUD
+    closed; the image's 205 files and the 175 Python modules packed in the app checked for the privacy terms, none.
+    The test sheet names it, lists what is new and adds checks 25 to 27 (About and one copy, arrow keys, lap title).
+    It replaces 2026.11.13, still in `releases/`, to be removed by hand. Tests on `main` (build-venv): 1151 of 1155
+    pass; the four `MovePanelPresetTests` failures are only under the offscreen platform on the Mac (the panel 844 px
+    there); drawn with cocoa the panel is 991 px tall, more than some Mac laptops' screens (about 900 px), to look at.
   - 2026-11-13: Windows build 2026.11.13.2 (`releases/`, not tagged): the shipped layouts, design screen, display
     presets folder, one TurboHUD at a time, About and the new icon. Checked: the zip holds the exe (new icon), the
     Quick Start, `customization/display_presets/README.txt` and the five layouts (the repository's), and the smoke
@@ -193,6 +203,18 @@
     the speed section (an option). The zip's reader is the one built from `main` (unchanged since .2, checked byte
     for byte). Smoke test passed (a TurboHUD from the source folder was running); the zip and every file in it
     checked for the privacy terms, none; no other players' names in the code. Not yet tried by hand.
+  - 2026-11-13: Build 2026.11.13 for the tester (`releases/TurboHUD-2026.11.13-macos-arm64.dmg`, 32.7 MB, macOS 27,
+    `--any-macos`, built with `.buildtools/build-venv`), asked for by the user: `main` after merging GitHub's main
+    (fast-forward, no conflicts, nothing to push), with what came since .7: text sizes in pixels with edge and corner
+    resizing and line spacing, resizing at every edge, move mode staying on a click and ending when a race begins,
+    the gear and rev lights, the radar only in cockpit cameras and arrows only behind, DNF, pit stops timed only in
+    the box, the lap times' name field and Ovr column, one class for one car, qualifying by best lap, and the replay
+    fixes. The Rust reader is unchanged since .7. Smoke test passed with TurboHUD closed; the image's 200 files and
+    the 174 Python modules packed in the app checked for the privacy terms, none. The test sheet names it, lists what
+    is new, updates check 13 (radar) and 20 (replay rewind) and adds checks 21 to 24 (text sizes, move mode, gear and
+    revs, pit box). Tests on `main` (build-venv): 1110 of 1113 pass; the three `MovePanelPresetTests` failures are
+    only under the offscreen platform on the Mac (its buttons get an 80 px minimum, the panel 816 px): drawn with
+    cocoa, every button fits and the panel is 950 px tall (915 before the merge, for the Size px and Lines % columns).
   - 2026-11-13: R only while reversing, 1st while standing, asked for by the user: the gear shows R only while TSU's
     reversing flag is on and the car goes backwards (faster than 0.5 units a second, `GEAR_REVERSING`), and 1 while
     the car stands (slower than 0.5 either way, `GEAR_STANDING`), whatever the engine sound's gear and the flag;
