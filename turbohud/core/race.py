@@ -577,6 +577,7 @@ class LapReader:
         self._player_indices = []
         self._recorder_tick, self._recorder_moved = None, 0
         self._client_class = None  # TS.ClientEventController, once looked up
+        self._host_class = None  # TS.HostEventController, once looked up (False: not in the game)
         self._replay_class = None  # TS.EventRecordingPlayer, once looked up (False: not in the game)
         self._replay = None  # the replay playing (a TS.EventRecordingPlayer), once found
         self._followed = None  # the TS.EventPlayer its camera follows: the HUD's "you"
@@ -620,7 +621,9 @@ class LapReader:
         """The race's TS.EventState. A race the game runs itself (offline, hotlap) is
         under TS.Services.m_activeServer. In an online race, also one the player hosts,
         the game is a client: the race is then in a TS.ClientEventController that no
-        static field leads to, so it is found by its class (see _online_event_state)."""
+        static field leads to, so it is found by its class (see _online_event_state). A
+        Custom race or a Single Player event has no active server either: the game runs it
+        in a TS.HostEventController without a server (seen 2026-11-13), found the same way."""
         services = self.il.static_ref(self.services_class, 'sm_instance')
         try:
             self._listener = self.il.ref(services, 'm_activeServer', 'm_eventListener')
@@ -861,7 +864,7 @@ class LapReader:
         il, memory = self.il, self.il.memory
         if self._controller is not None:
             try:
-                if memory.u64(self._controller) == self._client_class:
+                if memory.u64(self._controller) in self._race_classes():
                     state = il.ref(self._controller, 'm_eventState')
                     if il.list_items(il.ref(state, 'players')):
                         return state
@@ -876,7 +879,7 @@ class LapReader:
             # one would hold the reads up for as long as it takes. A look at it each read
             # is cheap, and sees the player join.
             try:
-                if memory.u64(self._spectated) != self._client_class:
+                if memory.u64(self._spectated) not in self._race_classes():
                     raise NotFound('that race is gone')
                 state, driving = self._race_of(self._spectated)
                 if driving:
@@ -923,8 +926,7 @@ class LapReader:
             replays_only = True
         else:
             self._replay_wait, self._next_replay_search = CLIENT_SEARCH_EVERY, None
-        if self._client_class is None:
-            self._client_class = il.find_class('TS', 'ClientEventController')
+        classes = self._race_classes()
         watchable = []  # (controller, event state, hit) of races without the player
         started, hits, result = self._clock(), 0, 'stopped by an error'
         if replays_only:
@@ -942,7 +944,7 @@ class LapReader:
         try:
             for candidate, kind in hits_found:
                 hits += 1
-                if kind != self._client_class:
+                if kind not in classes:
                     try:
                         replay_state = self._replay_race(candidate)[0]
                         if self._let_go == (candidate, self._clock_of(replay_state)):
@@ -1026,6 +1028,20 @@ class LapReader:
         self._found_at = self._spectated
         return state
 
+    def _race_classes(self):
+        """The classes of the race controllers a search looks for: TS.ClientEventController
+        (an online race) and, where the game has it, TS.HostEventController (a Custom race or
+        a Single Player event, which the game runs itself without a server: asked for by the
+        user and seen on their PC on 2026-11-13, with Services.m_activeServer null)."""
+        if self._client_class is None:
+            self._client_class = self.il.find_class('TS', 'ClientEventController')
+        if self._host_class is None:
+            try:
+                self._host_class = self.il.find_class('TS', 'HostEventController') or False
+            except NotFound:
+                self._host_class = False
+        return (self._client_class, self._host_class) if self._host_class else (self._client_class,)
+
     def _replay_may_play(self):
         """While TSU's log says no event runs: whether to search for a replay now. The log
         says nothing of replays: after a race it ends with "Event ended.", and a replay
@@ -1054,15 +1070,15 @@ class LapReader:
         pass through the game's memory; elsewhere the replay players in a second pass, only
         reached when the first gives no race. From about `last` on, where given."""
         memory = self.il.memory
+        classes = self._race_classes()
         replay = self._replay_class_found()
-        if replay is not None and memory.find_pointers_any is not None:
-            yield from memory.find_pointers_any((self._client_class, replay), last)
+        if memory.find_pointers_any is not None:
+            yield from memory.find_pointers_any(classes + ((replay,) if replay is not None else ()), last)
             return
-        hits = (
-            find(self._client_class) if last is None else memory.find_pointers_from(self._client_class, last)
-        )
-        for hit in hits:
-            yield hit, self._client_class
+        # One pass per class: the online race's first, as before; a hosted one only after it.
+        for klass in classes:
+            for hit in find(klass) if last is None else memory.find_pointers_from(klass, last):
+                yield hit, klass
         if replay is not None:
             for hit in find(replay):
                 yield hit, replay
@@ -1085,13 +1101,16 @@ class LapReader:
             return None
         started, found = self._clock(), None
         try:
-            for candidate in memory.find_pointers_near(self._client_class, self._found_at):
-                try:
-                    state, driving = self._race_of(candidate)
-                except (NotFound, OSError):
-                    continue
-                if driving:
-                    found = candidate, state
+            for klass in self._race_classes():
+                for candidate in memory.find_pointers_near(klass, self._found_at):
+                    try:
+                        state, driving = self._race_of(candidate)
+                    except (NotFound, OSError):
+                        continue
+                    if driving:
+                        found = candidate, state
+                        break
+                if found is not None:
                     break
         except OSError:
             pass  # the reader could not look: the next search will
@@ -1141,6 +1160,15 @@ class LapReader:
         """(a controller's event state, whether the player drives in it). Raises NotFound
         or OSError when it holds no race."""
         il, memory = self.il, self.il.memory
+        if self._host_class and memory.u64(controller) == self._host_class:
+            try:
+                server = memory.u64(controller + il.offset(controller, 'm_server'))
+            except NotFound:
+                server = 0
+            if server:
+                # A race hosted for others (online): the game reads it through its
+                # TS.ClientEventController, as before, so that one is the race to read.
+                raise NotFound('a hosted controller with a server')
         state = il.ref(controller, 'm_eventState')
         players = [player for player in il.list_items(il.ref(state, 'players')) if player]
         if not players:
