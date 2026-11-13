@@ -3415,3 +3415,57 @@ class CockpitCameraTests(unittest.TestCase):
         self.assertNotIn('radar', self.sections(False))
         self.assertIn('radar', self.sections(None))  # the camera not read: as before
         self.assertIn('radar', self.sections(False, only=False))  # the setting off
+
+
+class ReplayBackTests(unittest.TestCase):
+    """A replay rewound or going on after standing shows again within a read, not after the
+    searches (reported by the user on 2026-11-13: about 30 s after a rewind)."""
+
+    def build(self):
+        now = [0.0]
+        reader = ReplayTests.build(self, clock=lambda: now[0])
+        reader.read()
+        return reader, now
+
+    def searches(self, reader):
+        return getattr(reader.game, 'searches', 0)
+
+    def test_a_rewound_replay_is_taken_back_without_a_search(self):
+        reader, now = self.build()
+        game = reader.game
+        runner = game.read(game.replay_player + 0x18, 8)
+        game.q(game.replay_player + 0x18, 0)  # rewound: TSU rebuilds its race for a moment
+        with self.assertRaises((race.NotFound, OSError)):
+            reader.read()
+        searches = self.searches(reader)
+        game.put(game.replay_player + 0x18, runner)  # rebuilt
+        now[0] += 1.0
+        self.assertTrue(reader.read().replay)
+        self.assertEqual(self.searches(reader), searches)
+
+    def test_a_replay_going_on_after_standing_is_taken_back_without_a_search(self):
+        reader, now = self.build()
+        now[0] = race.REPLAY_STILL + 1  # stands, not paused: taken as closed
+        with self.assertRaises((race.NotFound, OSError)):
+            reader.read()
+        now[0] += 5
+        with self.assertRaises((race.NotFound, OSError)):
+            reader.read()  # still standing where it stood: not taken back
+        searches = self.searches(reader)
+        reader.game.put(reader.game.replay_state_times + race.TIMES_NOW, struct.pack('<i', 1_100_000))
+        now[0] += 1
+        self.assertTrue(reader.read().replay)
+        self.assertEqual(self.searches(reader), searches)
+
+    def test_after_a_minute_only_a_search_finds_it(self):
+        reader, now = self.build()
+        game = reader.game
+        runner = game.read(game.replay_player + 0x18, 8)
+        game.q(game.replay_player + 0x18, 0)
+        with self.assertRaises((race.NotFound, OSError)):
+            reader.read()
+        now[0] += race.REPLAY_BACK_FOR + 1
+        game.put(game.replay_player + 0x18, runner)
+        searches = self.searches(reader)
+        self.assertTrue(reader.read().replay)  # found again, by a search
+        self.assertGreater(self.searches(reader), searches)

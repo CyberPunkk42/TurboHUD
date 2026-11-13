@@ -1627,3 +1627,11 @@ its "Recent changes".
     radar only in cockpit cameras" in the settings window and the tray menu. Tests: the camera's view (cockpit,
     behind, far, not read), the radar shown or not, the setting saved. Not yet seen in a live race (same path, through
     the host or client controller).
+  - 2026-11-13: A replay shows again within a read after a rewind or a stand, reported by the user (the HUD took long
+    to show in a recording). The log: a rewind makes the replay's race go for a moment (m_eventRunner null), and
+    TurboHUD let it go and searched, about 10 s a search with 10 s between, so the HUD came back after about 30 s;
+    a replay standing 10 s without a pause was taken as closed, and found again only by a search. Now the replay
+    player last lost is looked at again at every read for a minute (`LapReader._replay_back`, `REPLAY_BACK_FOR`):
+    a few small reads, taken back as soon as its race is rebuilt or its clock moves from where it stood ("the replay
+    plays again" in the log); after a minute, or once TSU freed it, only a search finds a replay, as before. Tests:
+    a rewind and a stand taken back without a search, after a minute by a search.

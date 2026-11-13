@@ -81,6 +81,14 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+  - 2026-11-13: A replay shows again within a read after a rewind or a stand, reported by the user (the HUD took long
+    to show in a recording). The log: a rewind makes the replay's race go for a moment (m_eventRunner null), and
+    TurboHUD let it go and searched, about 10 s a search with 10 s between, so the HUD came back after about 30 s;
+    a replay standing 10 s without a pause was taken as closed, and found again only by a search. Now the replay
+    player last lost is looked at again at every read for a minute (`LapReader._replay_back`, `REPLAY_BACK_FOR`):
+    a few small reads, taken back as soon as its race is rebuilt or its clock moves from where it stood ("the replay
+    plays again" in the log); after a minute, or once TSU freed it, only a search finds a replay, as before. Tests:
+    a rewind and a stand taken back without a search, after a minute by a search.
   - 2026-11-13: The proximity radar only in cockpit cameras, asked for by the user (a setting, on by default): TSU's
     camera keys 1 to 9 and 0 give TS.CameraPropertiesUpdater.m_selectedPreset 1 to 10, but a player can make any of
     them first person, so the reader goes by the camera itself: the race controller's m_audio.m_raceCameras
