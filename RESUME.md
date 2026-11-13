@@ -81,6 +81,11 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+  - 2026-11-13: No other players' names in the repository, asked for by the user (a check for private data): the
+    privacy check over all 567 commits found none of the user's own terms; two real drivers' names, from replays
+    read today, were in a note and in tests, and are replaced ("a car", made-up names). They stay in the history
+    of the commits that added them. AGENTS.md now says other players' names never go into tracked files or commit
+    messages (the pre-push hook does not know them).
   - 2026-11-13: No false "wrong way" after a jump, reported by the user: after a recording was started again, drivers
     driving normally were flagged as driving the wrong way. Each car's place on the learnt track is kept and looked
     up next time only near it; after the cars jumped, the search near the old place could take a part of the track
@@ -136,8 +141,8 @@
     between.
   - 2026-11-13: The pit stop time only in a pit box, reported by the user: a car stopped in the pit lane outside a
     box (a surface where TSU services nothing) had its stop timed. Read in a replay on the user's PC: TSU's
-    `CarStateUpdater.inPit` was on while Mike Nike stood in his box (health 342 to 500, then fresh tires) and off
-    the moment he moved, and off when he stood in the lane after it; `VehicleState.inPitArea` stayed on throughout.
+    `CarStateUpdater.inPit` was on while a car stood in its box (health 342 to 500, then fresh tires) and off
+    the moment it moved, and off when it stood in the lane after it; `VehicleState.inPitArea` stayed on throughout.
     The reader keeps it as `PlayerState.in_box`, and `PitStops` counts standing only while it is on (where it is
     not read, standing anywhere in the area counts, as before). The time from pit entry to exit is unchanged.
     Tests: the reader's flag (on, off, not read), a stop in the box then standing in the lane, a stop outside a box.

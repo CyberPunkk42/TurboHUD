@@ -1578,15 +1578,15 @@ class DnfTests(unittest.TestCase):
 
     def test_a_car_standing_for_a_minute_is_out_until_it_drives_again(self):
         out = race.Retirements()
-        stopped, racing = self.car('Mike', 0.0), self.car('Racer', 30.0)
+        stopped, racing = self.car('Stopped', 0.0), self.car('Racer', 30.0)
         self.assertEqual(out.update(self.state(100, stopped, racing)), frozenset())
         self.assertEqual(
             out.update(self.state(100 + race.YELLOW_IDLE_AFTER - 1, stopped, racing)), frozenset()
         )
-        self.assertEqual(out.update(self.state(100 + race.YELLOW_IDLE_AFTER, stopped, racing)), {'Mike'})
-        unread = self.car('Mike', None)  # its speed not read this time: no change
-        self.assertEqual(out.update(self.state(170, unread, racing)), {'Mike'})
-        self.assertEqual(out.update(self.state(171, self.car('Mike', 20.0), racing)), frozenset())
+        self.assertEqual(out.update(self.state(100 + race.YELLOW_IDLE_AFTER, stopped, racing)), {'Stopped'})
+        unread = self.car('Stopped', None)  # its speed not read this time: no change
+        self.assertEqual(out.update(self.state(170, unread, racing)), {'Stopped'})
+        self.assertEqual(out.update(self.state(171, self.car('Stopped', 20.0), racing)), frozenset())
 
     def test_in_the_pits_finished_or_on_the_grid_is_not_out(self):
         out = race.Retirements()
@@ -1599,22 +1599,22 @@ class DnfTests(unittest.TestCase):
         self.assertEqual(out.update(self.state(500, *cars)), frozenset())
 
     def test_dnf_in_the_lap_times_last_column(self):
-        cars = [self.car('Mike', 0.0), self.car('Racer', 30.0)]
-        rows = race.lap_times_rows(cars, order=cars, clock=100_000, retired=frozenset({'Mike'}))
+        cars = [self.car('Stopped', 0.0), self.car('Racer', 30.0)]
+        rows = race.lap_times_rows(cars, order=cars, clock=100_000, retired=frozenset({'Stopped'}))
         self.assertEqual((rows[1].right, rows[1].right_color), ('DNF', race.SHORTCUT_COLOR))
         self.assertNotEqual(rows[2].right, 'DNF')
         plain = race.lap_times_rows(cars, order=cars, clock=100_000)
         self.assertEqual(rows[1].middle, plain[1].middle)  # the rest of the row stays
 
     def test_dnf_in_the_player_list_in_the_gaps_place(self):
-        me, mike = self.car('Me', 30.0, local=True), self.car('Mike', 0.0)
-        rows = race.players_rows([me, mike], [me, mike], 100_000, retired=frozenset({'Mike'}))
-        row = next(r for r in rows if 'Mike' in r.text)
+        me, stopped = self.car('Me', 30.0, local=True), self.car('Stopped', 0.0)
+        rows = race.players_rows([me, stopped], [me, stopped], 100_000, retired=frozenset({'Stopped'}))
+        row = next(r for r in rows if 'Stopped' in r.text)
         self.assertEqual((row.middle, row.middle_color), ('DNF', race.SHORTCUT_COLOR))
         watching = race.players_rows(
-            [me, mike], [me, mike], 100_000, watching=True, retired=frozenset({'Mike'})
+            [me, stopped], [me, stopped], 100_000, watching=True, retired=frozenset({'Stopped'})
         )
-        self.assertEqual(next(r for r in watching if 'Mike' in r.text).right, 'DNF')
+        self.assertEqual(next(r for r in watching if 'Stopped' in r.text).right, 'DNF')
 
 
 class RaceStartTests(unittest.TestCase):

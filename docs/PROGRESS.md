@@ -1591,8 +1591,8 @@ its "Recent changes".
     on, pits/finished/grid not out, the label in both lists. Not yet seen in a race or replay.
   - 2026-11-13: The pit stop time only in a pit box, reported by the user: a car stopped in the pit lane outside a
     box (a surface where TSU services nothing) had its stop timed. Read in a replay on the user's PC: TSU's
-    `CarStateUpdater.inPit` was on while Mike Nike stood in his box (health 342 to 500, then fresh tires) and off
-    the moment he moved, and off when he stood in the lane after it; `VehicleState.inPitArea` stayed on throughout.
+    `CarStateUpdater.inPit` was on while a car stood in its box (health 342 to 500, then fresh tires) and off
+    the moment it moved, and off when it stood in the lane after it; `VehicleState.inPitArea` stayed on throughout.
     The reader keeps it as `PlayerState.in_box`, and `PitStops` counts standing only while it is on (where it is
     not read, standing anywhere in the area counts, as before). The time from pit entry to exit is unchanged.
     Tests: the reader's flag (on, off, not read), a stop in the box then standing in the lane, a stop outside a box.
@@ -1649,3 +1649,8 @@ its "Recent changes".
     race), and a car further from where it was than any car drives (`YELLOW_JUMP_LEAST` 30 units, or 150 a second:
     put back on the track, a replay jump) is looked up on the whole track again, its wrong way count started anew.
     Tests: driving on, a jump, a wrong way building up then a jump, the clock going back.
+  - 2026-11-13: No other players' names in the repository, asked for by the user (a check for private data): the
+    privacy check over all 567 commits found none of the user's own terms; two real drivers' names, from replays
+    read today, were in a note and in tests, and are replaced ("a car", made-up names). They stay in the history
+    of the commits that added them. AGENTS.md now says other players' names never go into tracked files or commit
+    messages (the pre-push hook does not know them).

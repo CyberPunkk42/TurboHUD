@@ -54,6 +54,9 @@ trusts: the repository is on GitHub, and will be public later.
   never commit real liveries or other game data. `samples/` stays local (gitignored).
 - In fixtures, use the placeholder ID `76561197960265728`. In docs and logs, write
   `<SteamID>` and `<user>`, also in file paths. Code reads the real ID at runtime.
+- Other players' names (drivers seen in races, logs and recordings, the testers' in-game
+  names) never go into tracked files or commit messages either: in notes write "a car" or
+  "a driver", in tests made-up names. The pre-push hook does not know them, so check by hand.
 - A Git pre-push hook blocks any push containing the Steam ID, the user name or the
   computer name, including inside `.zip` and `.z` files, in commit messages and in the
   author and committer. It must be installed before any push. Its
