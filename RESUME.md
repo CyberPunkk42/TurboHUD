@@ -81,6 +81,12 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+  - 2026-11-13: Corners size the text, edges add room, asked for by the user (the speed section's pedal bars could
+    not be longer without bigger text): in move mode a text section's corner sets its text size, and every edge adds
+    room: the top or bottom edge height (the text centred and its size kept; the pedal bars run the box's height),
+    the left or right edge width. `hud.text_box` keeps a taller saved box as it kept a wider one; a new text size
+    (Size, global, Match) fits the box tight again. Move-mode help text updated. Tests: a corner, the bottom and top
+    edges (never shorter than the text), a taller box kept, the bars' length.
   - 2026-11-13: A replay shows again within a read after a rewind or a stand, reported by the user (the HUD took long
     to show in a recording). The log: a rewind makes the replay's race go for a moment (m_eventRunner null), and
     TurboHUD let it go and searched, about 10 s a search with 10 s between, so the HUD came back after about 30 s;

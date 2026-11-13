@@ -129,8 +129,8 @@ def help_lines(shortcuts, commands=False, lock_key='Ctrl+Shift+L'):
     the key that switches it (Ctrl+Shift+F12 where another program has Ctrl+Shift+L)."""
     finish = f'{lock_key} or Lock finishes.' if shortcuts else 'Lock finishes.'
     lines = [
-        'Drag a section to move it. At its edges: up or down sizes its text,',
-        'sideways adds room. Size and Lines set them exactly.',
+        'Drag a section to move it. At a corner: sizes its text; at an edge:',
+        'adds room (longer bars). Size and Lines set them exactly.',
         finish,
     ]
     if commands and not shortcuts:
@@ -826,14 +826,18 @@ def font_scale(font):
     return min(max(font, FONT_SIZES[0]), FONT_SIZES[1]) / DEFAULT_FONT
 
 
-def text_box(section, place, font, measure, ink, keep_width=True):
+def text_box(section, place, font, measure, ink, keep_width=True, keep_height=None):
     """The box (x, y, width, height) of a text section at `place` with text size `font`: as
-    tall as its text needs, and as wide, or with `keep_width` as wide as `place` where that
-    is wider (the same width Match gave a group). It keeps its top left corner."""
+    wide and as tall as its text needs, or with `keep_width` and `keep_height` (the same as
+    `keep_width` where not given) as wide and as tall as `place` where that is more: room an
+    edge added (asked for by the user on 2026-11-13: longer pedal bars beside the speed, its
+    text the same size), or the width Match gave a group. It keeps its top left corner."""
+    keep_height = keep_width if keep_height is None else keep_height
     scale = font_scale(font)
-    x, y, width, _height = place
+    x, y, width, height = place
     needed = base_size(section, scale, measure)[0]
-    return x, y, max(width, needed) if keep_width else needed, tight_height(section, scale, ink)
+    tall = tight_height(section, scale, ink)
+    return x, y, max(width, needed) if keep_width else needed, max(height, tall) if keep_height else tall
 
 
 SPACINGS = (0.0, 3.0, 0.25)  # line spacing: least, most and step, as a share of the usual

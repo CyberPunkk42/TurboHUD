@@ -389,20 +389,20 @@ class SectionWindow(QWidget):
         self._resizing = None
 
     def _resize_text(self, edges, box, dx, dy):
-        """A text section dragged at `edges` by (dx, dy) from `box`: the top or bottom edge sets
-        its text size (font_for_height; the box stays tight round it), the left or right edge
-        its width, never narrower than its text (asked for by the user on 2026-11-13). The
-        opposite edges stay put."""
+        """A text section dragged at `edges` by (dx, dy) from `box` (asked for by the user on
+        2026-11-13): a corner sets its text size (font_for_height; the box tight round it in
+        height), an edge adds room: the top or bottom edge height (longer pedal bars beside the
+        speed, the text centred and the same size), the left or right edge width, never less
+        than the text needs. The opposite edges stay put."""
         x, y, width, height = resized(box, edges, dx, dy, (1, 1))
-        if 'top' in edges or 'bottom' in edges:
+        corner = len(edges) == 2
+        if corner:
             font = font_for_height(self.section, height, text_ink)
             if font != self.font:
                 self.font = self.own_font = font
-        if 'left' in edges or 'right' in edges:
-            width = max(width, 1)
-        else:
-            width = box[2]
-        fitted = text_box(self.section, (x, y, width, height), self.font, text_width, text_ink)
+        fitted = text_box(
+            self.section, (x, y, width, height), self.font, text_width, text_ink, keep_height=not corner
+        )
         if 'top' in edges:  # the bottom edge stays put
             fitted = (fitted[0], box[1] + box[3] - fitted[3], *fitted[2:])
         if 'left' in edges:  # the right edge stays put

@@ -1635,3 +1635,9 @@ its "Recent changes".
     a few small reads, taken back as soon as its race is rebuilt or its clock moves from where it stood ("the replay
     plays again" in the log); after a minute, or once TSU freed it, only a search finds a replay, as before. Tests:
     a rewind and a stand taken back without a search, after a minute by a search.
+  - 2026-11-13: Corners size the text, edges add room, asked for by the user (the speed section's pedal bars could
+    not be longer without bigger text): in move mode a text section's corner sets its text size, and every edge adds
+    room: the top or bottom edge height (the text centred and its size kept; the pedal bars run the box's height),
+    the left or right edge width. `hud.text_box` keeps a taller saved box as it kept a wider one; a new text size
+    (Size, global, Match) fits the box tight again. Move-mode help text updated. Tests: a corner, the bottom and top
+    edges (never shorter than the text), a taller box kept, the bars' length.
