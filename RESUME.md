@@ -82,6 +82,13 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+  - 2026-11-13: Build 2026.11.13.3 for the tester (`releases/TurboHUD-2026.11.13.3-macos-arm64.dmg`, 33.7 MB, macOS 27,
+    `--any-macos`, built with `.buildtools/build-venv`), asked for by the user: `main` with the move-mode panel that
+    fits small screens, merged and pushed with GitHub's main (the smoke test with settings of its own, the Rust
+    reader's Windows note). Smoke test passed (now with its own settings); the image's 205 files and the 175 Python
+    modules packed in the app checked for the privacy terms, none. The test sheet names it and adds check 28 (the
+    whole panel on the screen). It replaces 2026.11.13.2, still in `releases/`, to be removed by hand. Tests on
+    `main`: all 1158 pass on the Mac.
   - 2026-11-13: The move-mode panel fits small screens, reported by the user: on the Mac it had grown to 991 px
     tall (the Size px and Lines % columns, the layout rows), more than a small Mac laptop's usable screen, so Lock,
     Settings and Quit could be off it. The rows of sections are now in a scroll area (`MovePanel.rows_area`), and
