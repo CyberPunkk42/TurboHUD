@@ -207,6 +207,27 @@ class AssetPathTests(unittest.TestCase):
         self.assertEqual(app.asset_path(app.ICON, bundle='/b'), Path('/b') / 'assets' / app.ICON)
 
 
+class SmokeEnvTests(unittest.TestCase):
+    """The smoke test's own settings and socket folder: never the player's, never a running TurboHUD."""
+
+    def test_each_system(self):
+        windows = build_app.smoke_env({'APPDATA': 'real'}, 'tmp', 'win32')
+        self.assertEqual(windows['APPDATA'], 'tmp')
+        mac = build_app.smoke_env({'HOME': 'real'}, 'tmp', 'darwin')
+        self.assertEqual((mac['HOME'], mac['XDG_RUNTIME_DIR']), ('tmp', 'tmp'))
+        linux = build_app.smoke_env({'XDG_CONFIG_HOME': 'real'}, 'tmp', 'linux')
+        self.assertEqual((linux['XDG_CONFIG_HOME'], linux['XDG_RUNTIME_DIR']), ('tmp', 'tmp'))
+        self.assertEqual(linux['QT_QPA_PLATFORM'], 'offscreen')  # no display given
+
+    def test_the_log_is_in_that_folder(self):
+        self.assertEqual(build_app.smoke_log('tmp', 'win32'), Path('tmp') / 'TurboHUD' / 'turbohud.log')
+        self.assertEqual(
+            build_app.smoke_log('tmp', 'darwin'),
+            Path('tmp') / 'Library' / 'Application Support' / 'TurboHUD' / 'turbohud.log',
+        )
+        self.assertEqual(build_app.smoke_log('tmp', 'linux'), Path('tmp') / 'TurboHUD' / 'turbohud.log')
+
+
 class AboutTests(unittest.TestCase):
     def test_name_and_version(self):
         text = app.about_text('2026.11.13.2')

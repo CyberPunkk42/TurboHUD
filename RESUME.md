@@ -81,6 +81,13 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+  - 2026-11-13: Windows build 2026.11.13.2 (`releases/`, not tagged): the shipped layouts, design screen, display
+    presets folder, one TurboHUD at a time, About and the new icon. Checked: the zip holds the exe (new icon), the
+    Quick Start, `customization/display_presets/README.txt` and the five layouts (the repository's), and the smoke
+    test passed. The smoke test now runs the built app with settings and command socket in a folder of its own
+    (`build_app.smoke_env`) and passes only when its log ends with "done": before, it used the player's settings, and
+    with a TurboHUD running a built app that only told that one and quit would have passed. Tests: the environment
+    per system and where the log is.
   - 2026-11-13: The user's own layouts shipped, asked for by the user: `assets/presets` 1920x1080, 2560x1440 and
     2560x1600 are now the ones the user arranged on the design screen (exported, then repaired from the frame back to
     full size), and 5120x1440 the user's newest own layout (bigger blue flag, shortcut warning and local time; lap,

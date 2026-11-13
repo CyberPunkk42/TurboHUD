@@ -243,15 +243,49 @@ def executable(dist, system=sys.platform):
     return dist / NAME / (f'{NAME}.exe' if system == 'win32' else NAME)
 
 
-def smoke(program):
-    env = dict(os.environ)
-    if sys.platform.startswith('linux') and not env.get('DISPLAY') and not env.get('WAYLAND_DISPLAY'):
+def smoke_env(environ, folder, system=sys.platform):
+    """The environment for the smoke test: TurboHUD's settings and command socket in `folder`, so
+    the built app neither touches the player's settings nor finds a TurboHUD that is running (it
+    would only tell that one and quit, a pass without having started: one TurboHUD at a time since
+    2026-11-13)."""
+    env = dict(environ)
+    folder = str(folder)
+    if system == 'win32':
+        env['APPDATA'] = folder
+    elif system == 'darwin':
+        env['HOME'] = folder
+    else:
+        env['XDG_CONFIG_HOME'] = folder
+    env['XDG_RUNTIME_DIR'] = folder  # macOS and Linux: the command socket's folder
+    if system.startswith('linux') and not env.get('DISPLAY') and not env.get('WAYLAND_DISPLAY'):
         env['QT_QPA_PLATFORM'] = 'offscreen'
-    result = subprocess.run(
-        [str(program), '--seconds', str(SMOKE_SECONDS)], env=env, timeout=SMOKE_TIMEOUT, check=False
-    )
-    if result.returncode != 0:
-        raise SystemExit(f'smoke test failed: the app quit with {result.returncode}')
+    return env
+
+
+def smoke_log(folder, system=sys.platform):
+    """turbohud.log as the smoke test's run writes it (smoke_env)."""
+    if str(ROOT) not in sys.path:
+        sys.path.insert(0, str(ROOT))
+    from turbohud.core.settings import settings_dir
+
+    env = smoke_env({}, folder, system)
+    return settings_dir(system, env, home=env.get('HOME', folder)) / 'turbohud.log'
+
+
+def smoke(program):
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as folder:
+        result = subprocess.run(
+            [str(program), '--seconds', str(SMOKE_SECONDS)],
+            env=smoke_env(os.environ, folder),
+            timeout=SMOKE_TIMEOUT,
+            check=False,
+        )
+        if result.returncode != 0:
+            raise SystemExit(f'smoke test failed: the app quit with {result.returncode}')
+        log = smoke_log(folder)
+        text = log.read_text(encoding='utf-8', errors='replace') if log.is_file() else ''
+        if 'done' not in text.split():
+            raise SystemExit(f'smoke test failed: the app quit without running (no "done" in {log.name})')
     print('smoke test passed')
 
 
