@@ -1681,3 +1681,13 @@ its "Recent changes".
     reversing flag is on and the car goes backwards (faster than 0.5 units a second, `GEAR_REVERSING`), and 1 while
     the car stands (slower than 0.5 either way, `GEAR_STANDING`), whatever the engine sound's gear and the flag;
     a car sliding backwards after a spin, not in reverse, keeps its gear (`race.shown_gear`). Tests: each case.
+  - 2026-11-13: Windows build 2026.11.13, asked for by the user: `releases/TurboHUD-2026.11.13-windows-x64.zip`
+    (42.2 MB, sha256 in the .sha256 beside it), from `main` (ddc0031) with what came since 2026.11.12.7: text sizes
+    (global and per section, corners size the text, edges add room, line spacing), DNF, the stop time only in a pit
+    box and a minute standing ending a visit's timers, replays after a race and back within a read after a rewind,
+    the radar's edge arrows only behind and only in cockpit cameras (an option), one class when every car is the
+    same, the 20-letter lap times name field and the overall place, qualifying by best lap, move mode staying on a
+    click elsewhere and ending as a race starts, no false wrong-way after a jump, and the gear with rev lights in
+    the speed section (an option). The zip's reader is the one built from `main` (unchanged since .2, checked byte
+    for byte). Smoke test passed (a TurboHUD from the source folder was running); the zip and every file in it
+    checked for the privacy terms, none; no other players' names in the code. Not yet tried by hand.
