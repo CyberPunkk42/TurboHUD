@@ -68,8 +68,9 @@
   whether TSU stutters while driving or between races (backlog item 0).
 - Replays after a race (`fix/replays-after-a-race`, 2026-11-13): try in TSU a recording watched after a race in the
   same session, opened from the list and watched again; on the Mac, whether the recordings get an access time.
-1. Windows: the overlay over TSU (windowed, Fullscreen, Fullscreen Exclusive), and the live data
-   through the Rust reader (built 2026-11-11, not yet run there).
+1. Windows: the overlay over TSU (windowed, Fullscreen, Fullscreen Exclusive). The live data through
+   the Rust reader runs there since 2026-11-11 (first race found once the search hang was fixed; the
+   search measured and threaded on 2026-11-12).
    Also a trial of all of TurboHUD inside the CrossOver bottle (backlog item 1b,
    `docs/WINDOWS_AND_CROSSOVER.md`): first the Qt probe in the bottle.
 2. macOS: live data is connected; check it in races (offline and online), over
@@ -81,6 +82,9 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+  - 2026-11-13: Next steps corrected, asked for by the user: the Rust reader on Windows was still listed as not yet
+    run there; it has read the user's races on the Windows PC since 2026-11-11. Left on Windows: the overlay over
+    TSU in Fullscreen and Fullscreen Exclusive.
   - 2026-11-13: Build 2026.11.13.2 for the tester (`releases/TurboHUD-2026.11.13.2-macos-arm64.dmg`, 33.7 MB, macOS 27,
     `--any-macos`, built with `.buildtools/build-venv`), asked for by the user: `main` after merging GitHub's main
     and `docs/tester-build-2026-11-13`, with what came since 2026.11.13: the new icon and About, one TurboHUD at a

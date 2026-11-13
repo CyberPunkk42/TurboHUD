@@ -1815,3 +1815,6 @@ its "Recent changes".
     It replaces 2026.11.13, still in `releases/`, to be removed by hand. Tests on `main` (build-venv): 1151 of 1155
     pass; the four `MovePanelPresetTests` failures are only under the offscreen platform on the Mac (the panel 844 px
     there); drawn with cocoa the panel is 991 px tall, more than some Mac laptops' screens (about 900 px), to look at.
+  - 2026-11-13: Next steps corrected, asked for by the user: the Rust reader on Windows was still listed as not yet
+    run there; it has read the user's races on the Windows PC since 2026-11-11. Left on Windows: the overlay over
+    TSU in Fullscreen and Fullscreen Exclusive.
