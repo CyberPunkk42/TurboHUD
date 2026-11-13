@@ -82,6 +82,9 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+  - 2026-11-13: Build 2026.11.13.5 for the tester, asked for by the user: as .4, with slow frames logged only when
+    they bring a new read (no end-of-race noise). Smoke test of the built app passed. Build
+    `releases/TurboHUD-2026.11.13.5-macos-arm64.dmg` (33.7 MB, sha256 97cd15c2...); the test sheet names it.
   - 2026-11-13: The tester's log with 2026.11.13.4, and no end-of-race noise, asked for by the user. The log (two
     races, 18:44 to 18:58): garbage collections 0 to 2 ms, none in a freeze, so not the cause; the HUD's slow frames
     follow slow reads (a race frame waits for a read up to 100 ms). One read stalled 143 to 192 ms at 18:46:07.8,
