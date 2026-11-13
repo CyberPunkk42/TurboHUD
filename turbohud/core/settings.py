@@ -26,8 +26,11 @@ MIN_SCALE = 0.5
 MAX_SCALE = 3.0
 # 2: a text section's box fits closely round its text; 3: 20 lap times; 4: the track map's
 # dark square is its tint (on), where its saved tint meant nothing before; 5: the last and
-# best lap has sector bars below its text
-LAYOUT_VERSION = 5
+# best lap has sector bars below its text; 6: text sections have a text size (their own, or the
+# global one), and the box follows it
+LAYOUT_VERSION = 6
+FONT_LIMITS = (6, 120)  # text sizes in pixels (core.hud.FONT_SIZES)
+DEFAULT_FONT = 13  # core.hud.DEFAULT_FONT
 _COLOR = re.compile(r'#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?')
 
 
@@ -58,6 +61,7 @@ class SectionPlace:
     group: str = ''  # sections with the same group (one of GROUPS) move together
     text_centred: bool = False  # its text in the middle of its box, not at the left
     tint: bool = False  # a light tint behind its text while locked; for the track map, its dark square
+    font: int | None = None  # a text section's own text size in pixels; None: the global one
 
 
 # The clan tags that name a car class, for a multi-class race: turbohud.core.class_registry.
@@ -114,6 +118,7 @@ class Settings:
     blue_seconds: float = 2.0  # how far behind a car about to lap the player shows the blue flag
     radar_seconds: float = 0.5  # how far ahead or behind a car shows the proximity radar
     reads_per_second: int = 20  # how often a race is read and its sections updated (READS_PER_SECOND)
+    font_size: int = DEFAULT_FONT  # the global text size in pixels, for text sections without their own
 
 
 def settings_dir(platform=sys.platform, environ=None, home=None):
@@ -213,8 +218,16 @@ def _sections(data, tint=False):
             group,
             entry.get('text_centred') is True,
             entry.get('tint', tint) is True,
+            _font(entry.get('font')),
         )
     return places
+
+
+def _font(value):
+    """A text size from the file, within FONT_LIMITS; None where there is none."""
+    if not isinstance(value, int) or isinstance(value, bool):
+        return None
+    return min(max(value, FONT_LIMITS[0]), FONT_LIMITS[1])
 
 
 def _presets(data, tint=False):
@@ -236,6 +249,7 @@ def _section_data(sections):
             'group': place.group,
             'text_centred': place.text_centred,
             'tint': place.tint,
+            **({'font': place.font} if place.font is not None else {}),
         }
         for name, place in sections.items()
     }
@@ -282,6 +296,7 @@ def load_settings(path):
             if data.get('reads_per_second') in READS_PER_SECOND
             else Settings.reads_per_second
         ),
+        font_size=_font(data.get('font_size')) or DEFAULT_FONT,
     )
 
 
@@ -311,6 +326,7 @@ def save_settings(path, settings):
         'blue_seconds': settings.blue_seconds,
         'radar_seconds': settings.radar_seconds,
         'reads_per_second': settings.reads_per_second,
+        'font_size': settings.font_size,
         'sections': _section_data(settings.sections),
         'presets': {str(number): _section_data(kept) for number, kept in settings.presets.items()},
     }

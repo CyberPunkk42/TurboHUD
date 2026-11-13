@@ -1062,3 +1062,55 @@ class OverallColumnTests(unittest.TestCase):
         without = hud.replace(line, overall='')
         widths = hud.lines_width([line], self.measure), hud.lines_width([without], self.measure)
         self.assertEqual(widths[0] - widths[1], len('P12') + hud.COLUMN_GAP)
+
+
+class TextSizeTests(unittest.TestCase):
+    """A text section's size is its normal text in pixels, and its box follows it (asked for
+    by the user on 2026-11-13)."""
+
+    SECTIONS: ClassVar = {section.name: section for section in hud.RACE_SECTIONS}
+
+    def test_the_normal_text_is_drawn_at_the_size(self):
+        for font in (8, 13, 20, 31):
+            with self.subTest(font=font):
+                sizes = hud.Sizes.for_scale(hud.font_scale(font))
+                self.assertEqual(sizes.small, font)
+                self.assertAlmostEqual(sizes.big / sizes.small, 40 / 13, delta=0.15)  # in proportion
+        self.assertEqual(hud.font_scale(hud.DEFAULT_FONT), 1.0)
+        self.assertEqual(hud.font_scale(1000), hud.FONT_SIZES[1] / hud.DEFAULT_FONT)
+
+    def test_the_box_follows_the_text(self):
+        section = self.SECTIONS['laptimes']
+        small = hud.text_box(section, (5, 6, 0, 0), 10, size_measure, ink)
+        large = hud.text_box(section, (5, 6, 0, 0), 20, size_measure, ink)
+        self.assertEqual(small[:2], (5, 6))
+        self.assertGreater(large[3], small[3] * 1.8)
+        self.assertGreater(large[2], small[2] * 1.8)
+        self.assertEqual(small[3], hud.tight_height(section, hud.font_scale(10), ink))
+
+    def test_a_wider_box_is_kept_only_where_asked(self):
+        section = self.SECTIONS['players']
+        needed = hud.text_box(section, (0, 0, 0, 0), 13, size_measure, ink)[2]
+        self.assertEqual(hud.text_box(section, (0, 0, needed + 50, 9), 13, size_measure, ink)[2], needed + 50)
+        self.assertEqual(
+            hud.text_box(section, (0, 0, needed + 50, 9), 13, size_measure, ink, keep_width=False)[2], needed
+        )
+        self.assertEqual(hud.text_box(section, (0, 0, 10, 9), 13, size_measure, ink)[2], needed)
+
+    def test_a_box_from_before_gives_back_its_text_size(self):
+        for name in ('lap', 'players', 'laptimes', 'speed', 'localtime', 'fuel'):
+            for font in (10, 13, 22):
+                with self.subTest(section=name, font=font):
+                    box = hud.text_box(self.SECTIONS[name], (0, 0, 0, 0), font, size_measure, ink)
+                    # Within a pixel: the old drawing shrank a small text a little to fit its box.
+                    found = hud.font_of_box(self.SECTIONS[name], box, 1.0, size_measure, ink)
+                    self.assertLessEqual(abs(found - font), 1)
+
+    def test_the_common_size(self):
+        self.assertEqual(hud.common_font([16, 16, 20, 13]), 16)
+        self.assertEqual(hud.common_font([12, 20, 14]), 14)  # all once: the middle one
+        self.assertEqual(hud.common_font([]), hud.DEFAULT_FONT)
+
+    def test_only_text_sections_have_a_text_size(self):
+        drawn = {s.name for s in hud.RACE_SECTIONS if not hud.is_text_section(s)}
+        self.assertEqual(drawn, {'deltabar', 'trackmap', 'radar', 'blueflag'})

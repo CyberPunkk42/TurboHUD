@@ -1554,3 +1554,14 @@ its "Recent changes".
     Tests: the flag read (on, off, missing), the order by best lap. Checked on the live replay (read only): True. Not
     changed: the player list's gaps are still race gaps (by best lap would suit qualifying); not yet seen in a race
     that the flag is 0 there (missing reads as a race, as before).
+  - 2026-11-13: Text sizes, asked for by the user (the box no longer sets the text's size): a text section's size is
+    its normal text in whole pixels (the lap times' names; 13 px is the HUD as it was), its headings, big numbers,
+    flags, tire rings and bars in proportion (`hud.font_scale`). One global size (`Settings.font_size`); a section
+    follows it unless it has its own (`SectionPlace.font`). The box follows the text (`hud.text_box`): as tall as it
+    needs and at least as wide; text sections have no resize corner any more, and a box the desktop resized goes
+    back. Move-mode panel: a Size column ("global", or pixels), "Global text size" applied at once, and "All
+    global". Match gives a group the largest text size and one width; Bigger/Smaller in the settings steps the text
+    sizes; presets and Undo keep them (Undo also the global size). Layout 6: each section's size worked out once from
+    its saved box (`hud.font_of_box`), the most common one global (`hud.common_font`), the file kept beside it.
+    Tests: sizes in proportion, the box, the upgrade (also presets), the panel, a section drawn at its size whatever
+    its box. Not yet tried in the running app.

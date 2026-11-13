@@ -81,6 +81,17 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+  - 2026-11-13: Text sizes, asked for by the user (the box no longer sets the text's size): a text section's size is
+    its normal text in whole pixels (the lap times' names; 13 px is the HUD as it was), its headings, big numbers,
+    flags, tire rings and bars in proportion (`hud.font_scale`). One global size (`Settings.font_size`); a section
+    follows it unless it has its own (`SectionPlace.font`). The box follows the text (`hud.text_box`): as tall as it
+    needs and at least as wide; text sections have no resize corner any more, and a box the desktop resized goes
+    back. Move-mode panel: a Size column ("global", or pixels), "Global text size" applied at once, and "All
+    global". Match gives a group the largest text size and one width; Bigger/Smaller in the settings steps the text
+    sizes; presets and Undo keep them (Undo also the global size). Layout 6: each section's size worked out once from
+    its saved box (`hud.font_of_box`), the most common one global (`hud.common_font`), the file kept beside it.
+    Tests: sizes in proportion, the box, the upgrade (also presets), the panel, a section drawn at its size whatever
+    its box. Not yet tried in the running app.
   - 2026-11-13: Qualifying ranked by best lap, reported by the user: in qualifying (run as hotlapping) the player list
     and lap times kept race order. TSU says so in `EventState.m_eventStats.raceStats.m_hotlappingOnCircuit` (1 in a
     hotlapping replay on the user's PC; TSU has no "qualifying" of its own). The reader reads it once an event

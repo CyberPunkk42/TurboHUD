@@ -1072,6 +1072,55 @@ class MovePanelPresetTests(unittest.TestCase):
         self.button(panel, 3, 'Load').click()
         self.assertEqual((saved, loaded), ([2], [3]))
 
+    def test_a_text_section_draws_at_its_text_size_whatever_its_box(self):
+        from turbohud.core.hud import RACE_SECTIONS, Row
+        from turbohud.core.settings import Theme
+        from turbohud.overlay.window import SectionWindow
+
+        class Native:
+            def raise_window(self, window):
+                return 'test'
+
+        def inked(font, size):
+            window = SectionWindow(Native(), Theme(), next(s for s in RACE_SECTIONS if s.name == 'localtime'))
+            self.addCleanup(window.close)
+            window.font = font
+            window.resize(*size)
+            window.show_content([Row('12:34', 'medium')])
+            image = window.grab().toImage()
+            return sum(
+                image.pixelColor(x, y).alpha() > 0
+                for x in range(image.width())
+                for y in range(image.height())
+            )
+
+        self.assertEqual(inked(20, (200, 80)), inked(20, (400, 300)))  # a bigger box: no bigger text
+        self.assertGreater(inked(30, (400, 300)), inked(20, (400, 300)) * 1.5)
+        resizable = {s.name for s in RACE_SECTIONS if SectionWindow(Native(), Theme(), s).resizable}
+        self.assertEqual(resizable, {'deltabar', 'trackmap', 'radar', 'blueflag'})
+
+    def test_text_sizes_per_section_and_global(self):
+        # Asked for by the user on 2026-11-13: a text size per section, or the global one.
+        from turbohud.core.hud import FONT_SIZES, RACE_SECTIONS, is_text_section
+
+        panel = self.panel()
+        self.assertEqual(set(panel.font_sizes), {s.name for s in RACE_SECTIONS if is_text_section(s)})
+        own, every, back = [], [], []
+        panel.font_size_changed.connect(lambda name, px: own.append((name, px)))
+        panel.global_font_changed.connect(every.append)
+        panel.all_global_requested.connect(lambda: back.append(True))
+        box = panel.font_sizes['laptimes']
+        panel.set_font_size('laptimes', None)  # shown: no request back
+        self.assertEqual((box.text(), own), ('global', []))
+        box.setValue(17)
+        box.setValue(FONT_SIZES[0] - 1)  # down to global again
+        self.assertEqual(own, [('laptimes', 17), ('laptimes', 0)])
+        panel.set_global_font(15)
+        self.assertEqual(every, [])
+        panel.global_size.setValue(18)
+        next(b for b in panel.findChildren(type(panel.undo)) if b.text() == 'All global').click()
+        self.assertEqual((every, back), ([18], [True]))
+
     def test_match_works_from_two_text_sections_in_a_group(self):
         panel = self.panel()
         got = []

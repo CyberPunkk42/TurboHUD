@@ -125,8 +125,8 @@ def help_lines(shortcuts, commands=False, lock_key='Ctrl+Shift+L'):
     the key that switches it (Ctrl+Shift+F12 where another program has Ctrl+Shift+L)."""
     finish = f'{lock_key} or Lock finishes.' if shortcuts else 'Lock finishes.'
     lines = [
-        'Drag a section to move it. At its corner: taller or shorter scales',
-        'the text, wider makes room for it.',
+        'Drag a section to move it. Size sets its text size, or global;',
+        'the radar, the map and the flags resize at their corner.',
         finish,
     ]
     if commands and not shortcuts:
@@ -800,6 +800,54 @@ def match_sizes(places, scale, measure, ink):
         section.name: (place[0], place[1], math.ceil(needed), heights[section])
         for section, place in places.items()
     }
+
+
+# Text sizes (asked for by the user on 2026-11-13). A text section's size is that of its normal
+# text (the 'small' style: the lap times' names), in whole pixels; its other text (a heading, a
+# big number) and its flags, tire rings, bars and gaps keep their proportion to it. One global
+# size, which a section follows unless it has its own. The box follows the text: as tall as the
+# text needs, and at least as wide; a box no longer sets the text's size.
+FONT_SIZES = (6, 120)  # the text sizes in pixels one can choose
+DEFAULT_FONT = 13  # the normal text at scale 1: the HUD as it was drawn before text sizes
+
+
+def is_text_section(section):
+    """Whether a section draws text, sized by a text size (not the radar, the track map,
+    the delta bar or the blue flag, whose boxes set their size)."""
+    return not section.drawing and not section.bar
+
+
+def font_scale(font):
+    """The scale a text section is drawn at for a normal text size of `font` pixels."""
+    return min(max(font, FONT_SIZES[0]), FONT_SIZES[1]) / DEFAULT_FONT
+
+
+def text_box(section, place, font, measure, ink, keep_width=True):
+    """The box (x, y, width, height) of a text section at `place` with text size `font`: as
+    tall as its text needs, and as wide, or with `keep_width` as wide as `place` where that
+    is wider (the same width Match gave a group). It keeps its top left corner."""
+    scale = font_scale(font)
+    x, y, width, _height = place
+    needed = base_size(section, scale, measure)[0]
+    return x, y, max(width, needed) if keep_width else needed, tight_height(section, scale, ink)
+
+
+def font_of_box(section, place, scale, measure, ink):
+    """The text size in pixels a text section was drawn at in `place` (x, y, width, height)
+    while its box set its size: to keep a layout as it looked, once, when text sizes came."""
+    rows = list(section.samples[0])
+    drawn = drawn_scale(section, place[2:], rows, tight_height(section, scale, ink), scale, ink, measure)
+    return min(max(round(DEFAULT_FONT * drawn), FONT_SIZES[0]), FONT_SIZES[1])
+
+
+def common_font(fonts):
+    """The text size most of `fonts` have (the one nearest their middle where several are as
+    common): the global size for a layout from before text sizes. DEFAULT_FONT without any."""
+    fonts = sorted(fonts)
+    if not fonts:
+        return DEFAULT_FONT
+    middle = fonts[len(fonts) // 2]
+    return max(set(fonts), key=lambda font: (fonts.count(font), -abs(font - middle), font))
 
 
 def section_scale(size, base_height, needed_width=None, low=0.3, high=8.0):
