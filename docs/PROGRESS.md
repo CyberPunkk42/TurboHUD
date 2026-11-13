@@ -1516,3 +1516,9 @@ its "Recent changes".
     change. `ruff check` and `ruff format --check` pass. Tests on Windows (`.buildtools\venv`): 1017 of 1023 pass;
     the 6 that fail need macOS/Linux (`os.getuid`, `fcntl`, `AF_UNIX`) or the symlink privilege, and fail on `main`
     too.
+  - 2026-11-13: The lap times' columns right after the longest name, asked for by the user: before, they sat at the
+    window's right edge, after room for an 18-letter name. A snug section (`Section.snug`, only the lap times) puts
+    its columns after the longest name shown (`hud.snug_width`; names are still cut at 18 letters), the columns'
+    own widths still from the sample so they do not move as times run. The window keeps its size and text size; the
+    room to the right stays empty. Tests: the width, never wider than the box, only the lap times snug; checked in an
+    offscreen render.

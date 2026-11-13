@@ -211,6 +211,16 @@ def lines_width(lines, measure):
     )
 
 
+def snug_width(lines, reserve, width, margin, measure):
+    """How wide the box is for the columns of a snug section (Section.snug): up to just
+    after the longest text `lines` show, with the columns `reserve` makes room for, at most
+    `width`. Only `reserve`'s columns count, not its text: a sample's long name would put
+    the columns where they were (asked for by the user on 2026-11-13: the lap times'
+    columns closer to the names, after the longest name in the race)."""
+    columns_only = [replace(line, text='', tail='', slot='') for line in reserve]
+    return min(width, lines_width(list(lines) + columns_only, measure) + 2 * margin)
+
+
 def middle_right(lines, width, margin, measure):
     """Where the middle column ends (it is right-aligned there) in a box `width` wide:
     before the widest right column, with a gap."""
@@ -322,6 +332,9 @@ class Section:
     level: bool = False  # a bar below the text showing how much is left (fuel, tires, health)
     sectors: bool = False  # with `level`: the room below the text holds the lap's sector bars
     background: str = ''  # '#rrggbb': a solid box behind its text, in place of the Tint (the yellow flag)
+    snug: bool = (
+        False  # its columns right after the longest text shown, not at the box's right edge (snug_width)
+    )
 
 
 LAP_TIME_ROWS = 20  # how many drivers the lap times section is made for
@@ -422,6 +435,7 @@ RACE_SECTIONS = (
                 for n in range(10, 10 + LAP_TIME_ROWS)
             ),
         ),
+        snug=True,
     ),
     Section(
         'yellowflag',

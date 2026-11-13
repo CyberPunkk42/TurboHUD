@@ -994,3 +994,33 @@ class PanelPlaceTests(unittest.TestCase):
         screens = [self.USABLE, (2056, 0, 1920, 1080)]
         x, _y = hud.panel_place(self.PANEL, [(2500, 300, 200, 50)], screens)
         self.assertGreaterEqual(x, 2056)
+
+
+class SnugColumnsTests(unittest.TestCase):
+    """The lap times' columns right after the longest name in the race (asked for by the
+    user on 2026-11-13), not at the box's right edge after room for an 18-letter name."""
+
+    def line(self, text, **columns):
+        return hud.Line(text, 1, 'text', 10, **columns)
+
+    @staticmethod
+    def measure(text, size):
+        return len(text) * size
+
+    def test_the_columns_follow_the_longest_name_shown(self):
+        lines = [
+            self.line('1. shizo_peak', middle='1:00.000', right='1:01.000'),
+            self.line('2. Bo', middle='-'),
+        ]
+        sample = [self.line('10. Playername1234567', middle='PIT 00.0s', right='CUT 00.0s')]
+        width = hud.snug_width(lines, sample, 400, 5, self.measure)
+        gap = hud.COLUMN_GAP
+        # The longest name, then the sample's widest columns (it keeps them steady), and the margins.
+        self.assertEqual(width, len('1. shizo_peak') + gap + len('PIT 00.0s') + gap + len('CUT 00.0s') + 10)
+
+    def test_never_wider_than_the_box(self):
+        lines = [self.line('1. ' + 'x' * 60, middle='1:00.000', right='1:01.000')]
+        self.assertEqual(hud.snug_width(lines, [], 50, 5, self.measure), 50)
+
+    def test_only_the_lap_times_are_snug(self):
+        self.assertEqual([s.name for s in hud.RACE_SECTIONS if s.snug], ['laptimes'])

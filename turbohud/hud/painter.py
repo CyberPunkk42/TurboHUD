@@ -24,6 +24,7 @@ from turbohud.core.hud import (
     before_right,
     blend,
     middle_right,
+    snug_width,
     steady_text,
     tag_left,
     tyre_right,
@@ -502,12 +503,13 @@ def centred_x(line, width, margin):
     return max(round((width - steady) / 2), margin)
 
 
-def draw_hud(painter, lines, theme, scale=None, left=0, width=None, centre=False, reserve=()):
+def draw_hud(painter, lines, theme, scale=None, left=0, width=None, centre=False, reserve=(), snug=False):
     """Draw the lines from turbohud.core.hud.hud_lines with the theme's colours, at
     `scale` (the theme's own by default). `centre`: each line in the middle of a box
     `width` wide, for lines without columns. `reserve`: lines (the section's usual content)
     whose columns are made room for too, so the columns stay put as the content changes
-    (a longer gap or tag moved the player list's columns: reported by the user on 2026-11-12)."""
+    (a longer gap or tag moved the player list's columns: reported by the user on 2026-11-12).
+    `snug`: the columns right after the longest text, not at the box's right edge (snug_width)."""
     colors = {
         'text': QColor(theme.text_color),
         'accent': QColor(theme.accent_color),
@@ -526,6 +528,8 @@ def draw_hud(painter, lines, theme, scale=None, left=0, width=None, centre=False
             return text_advance(steady_text(text), size)
 
         placed = list(lines) + list(reserve)
+        if snug and not centre:
+            width = snug_width(lines, reserve, width, margin, steady_advance)
         middle_end = middle_right(placed, width, margin, steady_advance)
         tyre_end = tyre_right(placed, middle_end, steady_advance)
         before_end = before_right(placed, middle_end, steady_advance, tyre_end)
