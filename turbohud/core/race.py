@@ -456,6 +456,11 @@ REPLAY_STILL = 10.0  # seconds a replay's clock may stand, not paused, before it
 # car, positions, speeds and laps are read every time.
 FULL_READ_EVERY = 1.0
 CLIENT_LOG_EVERY = 2.0  # seconds between looks at TSU's log while it says no event runs
+# While TSU's log says no event runs, a replay may still play (the log says nothing of replays): a
+# search for one this long after the log first says so, the wait doubling up to REPLAY_SEARCH_MOST
+# (a search reads all of the game's data: on Windows about 8 s of a CPU core). A recording just
+# opened (its access time) brings the search on at once.
+REPLAY_SEARCH_MOST = 60.0
 QUANTIZED_ZERO, QUANTIZED_SCALE = 1 << 20, 1024  # TS.QuantizedVehicleState positions
 RECORDER_STALE = 10_000  # race clock (1 s) without a new recorder tick: it does not run
 PIT_STOPPED_SPEED = 0.5  # game units a second: slower than this in the pits, the car stands
@@ -520,12 +525,18 @@ class LapReader:
     player, finished laps, the track's checkpoint lines) is kept between reads, so a read
     asks the game only for what moves: about twenty small reads."""
 
-    def __init__(self, il2cpp, clock=time.monotonic, event_running=None):
+    def __init__(self, il2cpp, clock=time.monotonic, event_running=None, recording_opened=None):
         """`event_running`: a callable saying whether TSU has an event running (True,
         False, or None for not known), so the game's memory is only searched for an
-        online race while there is one (turbohud.tsu.gamelog)."""
+        online race while there is one (turbohud.tsu.gamelog). `recording_opened`: a
+        callable saying whether TSU opened one of its recordings since it was last asked
+        (gamelog.RecordingWatch), so a replay is looked for at once."""
         self.il = il2cpp
         self._event_running = event_running
+        self._recording_opened = recording_opened
+        self._replay_wait = CLIENT_SEARCH_EVERY  # see _replay_may_play
+        self._next_replay_search = None  # when to look for a replay while the log says no event runs
+        self._replay_reason = ''  # why the coming search looks for a replay, for the log
         self._log_said = 'unasked'  # what TSU's log said last, logged when it changes
         self.services_class = il2cpp.find_class('TS', 'Services')
         self._clock = clock
@@ -840,23 +851,38 @@ class LapReader:
             if state is None:
                 raise error
             return state
+        replays_only = False
         if self._event_running is not None and self._log_says() is False:
             # Menus and lobbies: no event, nothing to search for (a search reads all
-            # of the game's data and keeps a CPU core busy for over a second).
+            # of the game's data and keeps a CPU core busy for over a second). Only a
+            # replay may play, which the log says nothing of.
             self._search_wait, self._empty_since = CLIENT_SEARCH_EVERY, None
             self._next_search = self._clock() + CLIENT_LOG_EVERY
-            raise error
+            if not self._replay_may_play():
+                if self._next_replay_search is not None:  # not held past it by the log's looks
+                    self._next_search = min(self._next_search, self._next_replay_search)
+                raise error
+            replays_only = True
+        else:
+            self._replay_wait, self._next_replay_search = CLIENT_SEARCH_EVERY, None
         if self._client_class is None:
             self._client_class = il.find_class('TS', 'ClientEventController')
         watchable = []  # (controller, event state, hit) of races without the player
         started, hits, result = self._clock(), 0, 'stopped by an error'
-        # The game tends to put a new race's objects where the last one's were, so the
-        # search begins there, where the reader can (a search from the lowest address had
-        # the race at 18% of the data, 6 s in).
-        last = self._found_at if memory.find_pointers_from is not None else None
-        log.info('searching for the online race%s', '' if last is None else ', from where the last one was')
+        if replays_only:
+            hits_found = ((hit, self._replay_class) for hit in find(self._replay_class))
+            log.info('searching for a replay (%s)', self._replay_reason)
+        else:
+            # The game tends to put a new race's objects where the last one's were, so the
+            # search begins there, where the reader can (a search from the lowest address had
+            # the race at 18% of the data, 6 s in).
+            last = self._found_at if memory.find_pointers_from is not None else None
+            hits_found = self._search_hits(find, last)
+            log.info(
+                'searching for the online race%s', '' if last is None else ', from where the last one was'
+            )
         try:
-            for candidate, kind in self._search_hits(find, last):
+            for candidate, kind in hits_found:
                 hits += 1
                 if kind != self._client_class:
                     try:
@@ -867,6 +893,7 @@ class LapReader:
                         continue  # the replay player of an earlier replay
                     self._replay, self._replay_clock, self._replay_moved = candidate, None, self._clock()
                     self._spectated = None
+                    self._replay_wait, self._next_replay_search = CLIENT_SEARCH_EVERY, None
                     result = 'replay found'
                     state = self._replay_event_state()
                     if state is None:
@@ -892,13 +919,22 @@ class LapReader:
                     # The first race to watch: the rest of the game's data stays unread (the
                     # race was at 18% of it in one search, which takes about 20 s in all).
                     break
-            result = 'a race to watch, no local player' if watchable else 'no race'
+            result = (
+                'a race to watch, no local player'
+                if watchable
+                else 'no replay'
+                if replays_only
+                else 'no race'
+            )
         finally:
             # Counted from the search's end: in a CrossOver bottle a search of all the
             # data takes longer than the wait, and would start again at once.
             wait = CLIENT_SPECTATE_EVERY if watchable else self._search_wait
             ended = self._clock()
             self._next_search = ended + wait
+            if replays_only and self._replay is None:
+                self._next_replay_search = ended + self._replay_wait
+                self._replay_wait = min(self._replay_wait * 2, REPLAY_SEARCH_MOST)
             # An event may hold no race to read at all (a custom session), and in a bottle
             # a search takes over 20 s: over and over, it would never leave the game alone.
             # Not at first, though: a race joined in progress is set up a little later.
@@ -930,6 +966,28 @@ class LapReader:
         )
         self._found_at = self._spectated
         return state
+
+    def _replay_may_play(self):
+        """While TSU's log says no event runs: whether to search for a replay now. The log
+        says nothing of replays: after a race it ends with "Event ended.", and a replay
+        watched later was never looked for (seen 2026-11-13). So at once when a recording
+        was just opened (`recording_opened`), else CLIENT_SEARCH_EVERY after the log first
+        says so, then at waits doubling up to REPLAY_SEARCH_MOST (from each search's end),
+        as an opening does not always leave an access time."""
+        if self._replay_class_found() is None:
+            return False
+        now = self._clock()
+        if self._recording_opened is not None and self._recording_opened():
+            self._replay_reason = 'a recording was opened'
+            self._replay_wait = CLIENT_SEARCH_EVERY
+            return True
+        if self._next_replay_search is None:
+            self._next_replay_search = now + self._replay_wait
+            return False
+        if now < self._next_replay_search:
+            return False
+        self._replay_reason = "TSU's log says no event runs, but a replay may play"
+        return True
 
     def _search_hits(self, find, last):
         """(address, class) of the objects a search finds: online race controllers and, where

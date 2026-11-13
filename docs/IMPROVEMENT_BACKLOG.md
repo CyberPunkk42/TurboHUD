@@ -141,8 +141,10 @@ Built 2026-11-12 (`feature/replays`, asked for by the user): the race under TSU'
 kept while a replay is paused. Still to see in a replay: every section with the followed driver (lap times, player
 list, fuel, tires, health, track map, flags, shortcuts, jump starts, pit times), switching drivers, pausing, and
 the end of a replay. Left: on the Mac the Rust reader searches one value a pass, so a replay costs a second pass
-there when no online race is found (teach it several values, as `winmemory.search` does); and the Mac's check of
-TSU's log may say no event runs during a replay, which would stop the search there (to try).
+there when no online race is found (teach it several values, as `winmemory.search` does). TSU's log saying no event
+runs did stop the search (seen on Windows 2026-11-13, a replay after a race); fixed on `fix/replays-after-a-race`
+(a recording's access time, else a search for replays now and then). To see: on the Mac, whether CrossOver's files
+get an access time when TSU opens a recording (if not, the slower searches find it).
 
 ## Design notes for the real overlay
 - Move mode is a short, deliberate step: while the overlay takes the mouse, the game gets

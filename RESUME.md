@@ -66,6 +66,8 @@
   time, most of it new texts; since `fix/lap-list-frame-cost` changing numbers are drawn from kept glyphs (about 20
   times quicker). Build 2026.11.12.7 has them, the yellow flag fix and the lighter race reads: next, his log's `HUD frames` drawing share (was 20 to 24%) and
   whether TSU stutters while driving or between races (backlog item 0).
+- Replays after a race (`fix/replays-after-a-race`, 2026-11-13): try in TSU a recording watched after a race in the
+  same session, opened from the list and watched again; on the Mac, whether the recordings get an access time.
 1. Windows: the overlay over TSU (windowed, Fullscreen, Fullscreen Exclusive), and the live data
    through the Rust reader (built 2026-11-11, not yet run there).
    Also a trial of all of TurboHUD inside the CrossOver bottle (backlog item 1b,
@@ -79,6 +81,16 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+  - 2026-11-13: Replays after a race, reported by the user: a recording watched after a race in the same TSU session
+    showed only the local time. TSU writes nothing to its log for a replay, so the log still ended with "Event
+    ended." and TurboHUD, taking it that no event ran, never searched. Now, while the log says no event runs,
+    TurboHUD looks for a replay (replay players only): at once when a recording was opened (`gamelog.RecordingWatch`:
+    a .tsz in `Recordings/` or its subfolders read after it was written, from the folder listing; 9 ms for 1924
+    recordings), else 10 s after the log first says so, then at waits doubling up to 60 s. Wired for Windows, the Mac
+    (the bottle's `drive_c/users/*/AppData/LocalLow`) and Linux. Tests: the watch on placeholder files, and the
+    replay found after a race with and without an access time, the growing waits, replays only, a game without
+    replays. 1027 of 1033 pass on Windows; the 6 that fail need macOS/Linux or the symlink privilege, as on `main`.
+    Checked on the real folder (read only): it finds the recording opened at 01:29. Not yet seen in TSU itself.
   - 2026-11-13: Ruff clean again, asked for by the user: the 8 lint errors fixed (`ClassVar` on the yellow-flag
     tests' surface dicts, two `noqa` comments that did nothing removed, the recorder test's gzip file opened in a
     `with`, the "still no race" log check in `tsu/client.py` made one condition) and the 5 unformatted files
