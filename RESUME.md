@@ -81,6 +81,12 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+  - 2026-11-13: Move mode stays on a click elsewhere, asked for by the user: it ends only by its shortcut or the
+    panel's Lock (or the tray menu). Before, when another app became active (a click on the game or the desktop)
+    TurboHUD locked itself, on Windows, the Mac and Linux without Hyprland (`on_state`, `Native.auto_lock`, both
+    gone). The reason it was there: on the Mac the game's mouse handling got out of step if it was played while the
+    overlay was in move mode (experiments/README.md); to watch for. Tests: the Linux native's test of the old rule
+    removed.
   - 2026-11-13: A minute standing in the pits stops the timers, asked for by the user: the driver is taken as away
     (AFK) or out of the race. A car standing still anywhere in the pit area, in a box or not, for over a minute
     (`PIT_IDLE_AFTER`, was 45 s of stop time in `PIT_STOP_MOST`) shows plain PIT without timers for the rest of that

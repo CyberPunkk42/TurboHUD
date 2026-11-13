@@ -37,9 +37,6 @@ class Native:
         # Wayland: switching click-through must not re-create the window, which would
         # make Hyprland tile it again.
         self.input_in_place = False
-        # Lock move mode when another window becomes active (the Mac's way)? Not on
-        # Hyprland: there the focus follows the mouse, which would end move mode at once.
-        self.auto_lock = self.hypr is None
         self.last_placements = {}  # id(widget) -> where it was last seen
 
     def prepare_app(self):

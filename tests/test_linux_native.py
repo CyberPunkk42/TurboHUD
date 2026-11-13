@@ -59,13 +59,8 @@ class LinuxNativeTests(unittest.TestCase):
 
         return Native(hypr)
 
-    def test_without_hyprland_qt_does_it_and_move_mode_locks_as_before(self):
-        native = self.native(None)
-        self.assertTrue(native.auto_lock)
-        self.assertIsNone(native.placement(FakeWidget()))
-
-    def test_on_hyprland_move_mode_does_not_lock_when_focus_moves(self):
-        self.assertFalse(self.native(FakeHypr()).auto_lock)
+    def test_without_hyprland_qt_does_it(self):
+        self.assertIsNone(self.native(None).placement(FakeWidget()))
 
     def test_the_last_known_place_is_kept_once_the_window_is_gone(self):
         hypr = FakeHypr()
