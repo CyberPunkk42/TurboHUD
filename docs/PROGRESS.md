@@ -1516,3 +1516,13 @@ its "Recent changes".
     change. `ruff check` and `ruff format --check` pass. Tests on Windows (`.buildtools\venv`): 1017 of 1023 pass;
     the 6 that fail need macOS/Linux (`os.getuid`, `fcntl`, `AF_UNIX`) or the symlink privilege, and fail on `main`
     too.
+  - 2026-11-13: Replays after a race, reported by the user: a recording watched after a race in the same TSU session
+    showed only the local time. TSU writes nothing to its log for a replay, so the log still ended with "Event
+    ended." and TurboHUD, taking it that no event ran, never searched. Now, while the log says no event runs,
+    TurboHUD looks for a replay (replay players only): at once when a recording was opened (`gamelog.RecordingWatch`:
+    a .tsz in `Recordings/` or its subfolders read after it was written, from the folder listing; 9 ms for 1924
+    recordings), else 10 s after the log first says so, then at waits doubling up to 60 s. Wired for Windows, the Mac
+    (the bottle's `drive_c/users/*/AppData/LocalLow`) and Linux. Tests: the watch on placeholder files, and the
+    replay found after a race with and without an access time, the growing waits, replays only, a game without
+    replays. 1027 of 1033 pass on Windows; the 6 that fail need macOS/Linux or the symlink privilege, as on `main`.
+    Checked on the real folder (read only): it finds the recording opened at 01:29. Not yet seen in TSU itself.

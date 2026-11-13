@@ -30,7 +30,8 @@ from turbohud.core.il2cpp import Il2Cpp, Memory, NotFound, ReadError
 from turbohud.core.race import LapReader
 from turbohud.core.settings import settings_dir
 from turbohud.tsu.bottle_reader import HEADER, READY, pack
-from turbohud.tsu.winmemory import PAGE, CachedReader, PageCache, near, search_start, searchable
+from turbohud.tsu.gamelog import RecordingWatch
+from turbohud.tsu.winmemory import PAGE, CachedReader, PageCache, near, search_start, searchable, tsu_data
 
 START_TIMEOUT = 30.0  # seconds for a reader to start: a sleeping bottle wakes up slowly
 TIMEOUT = 5.0  # seconds before a silent reader counts as stuck
@@ -344,6 +345,7 @@ class Bottle:
         self.start = start or self._start
         self.clock = clock
         self.pipe = None
+        self.bottle = None  # the bottle the reader was started in
         self.failed = None  # (when to try again, why the last start failed)
         self.warning = None  # what to tell the player about the bottle, for the tray icon
         self.reader_kind = None  # 'Rust' or 'Python', once a reader was started
@@ -420,8 +422,21 @@ class Bottle:
         )
         self.failed = None
         self.pipe = pipe
+        self.bottle = bottle
         self._check_graphics(bottle)
         return pipe
+
+    def tsu_data(self):
+        """TSU's data folder inside the bottle (one folder per Steam account), for its
+        recordings; None where it is not found."""
+        if self.bottle is None:
+            return None
+        users = self.home / BOTTLES / self.bottle / 'drive_c' / 'users'
+        try:
+            found = sorted(users.glob('*/AppData/LocalLow/Turbo Sliders/Unlimited'))
+        except OSError:
+            return None
+        return found[0] if found else None
 
     def connect(self):
         """(race reader, this Bottle) for `LiveRace`. Raises OSError while TSU does not
@@ -438,7 +453,11 @@ class Bottle:
                 find_pointers_from=pipe.find_pointers_from,
                 find_pointers_near=pipe.find_pointers_near,
             )
-            reader = LapReader(Il2Cpp(memory, metadata, base), event_running=pipe.event_running)
+            reader = LapReader(
+                Il2Cpp(memory, metadata, base),
+                event_running=pipe.event_running,
+                recording_opened=RecordingWatch(self.tsu_data(), clock=self.clock).opened,
+            )
             return CachedReader(reader, cache, lambda: pipe.in_game, lambda: pipe.game_reads), self
         except (NotFound, ReadError):
             raise  # the game is loading: the same reader tries again
@@ -471,6 +490,9 @@ class LocalReader(Bottle):
 
     def _start(self, _bottle=None):
         return spawn_reader([str(self.reader)], dict(self.environ))
+
+    def tsu_data(self):
+        return tsu_data(self.environ)
 
     def _open(self):
         if self.pipe is not None:

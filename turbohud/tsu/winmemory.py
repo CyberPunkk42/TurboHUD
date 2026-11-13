@@ -505,7 +505,7 @@ def connect(name='TSU.exe'):
     does not run, NotFound while its metadata is not mapped yet."""
     from turbohud.core.il2cpp import Il2Cpp, Memory, NotFound
     from turbohud.core.race import LapReader
-    from turbohud.tsu.gamelog import EventLog
+    from turbohud.tsu.gamelog import EventLog, RecordingWatch
 
     pid = find_process(name)
     if pid is None:
@@ -540,7 +540,11 @@ def connect(name='TSU.exe'):
             find_pointers_near=lambda value, address: paced(near(data(), address), value),
         )
         il2cpp = Il2Cpp(memory, metadata, base)
-        reader = LapReader(il2cpp, event_running=EventLog(tsu_data(), since=process.started()).running)
+        reader = LapReader(
+            il2cpp,
+            event_running=EventLog(tsu_data(), since=process.started()).running,
+            recording_opened=RecordingWatch(tsu_data()).opened,
+        )
         return CachedReader(reader, cache), process
     except BaseException:
         process.close()

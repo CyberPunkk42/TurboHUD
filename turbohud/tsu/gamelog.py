@@ -11,14 +11,21 @@ A TSU may also stop writing them: on a tester's Mac (seen 2026-11-11) the newest
 old and held only "Log started." and "Log ended.", so TurboHUD took it that no event ever ran
 and never looked for a race joined online. So a log says something only when it was written
 since TSU started and holds an event line; else it is not known, and the search goes ahead.
+
+A replay leaves no line in the log at all, so a log that last said "Event ended." says nothing
+of one playing. Opening a recording does leave its access time on the file, though, which
+`RecordingWatch` looks at (only listing the folders, never opening or changing a file).
 """
 
+import os
 import time
 from pathlib import Path
 
 TAIL = 64 * 1024  # the end of the log that is read: the latest lines
 SINCE_SLACK = 2.0  # seconds a log may seem older than TSU's start and still count (clock steps)
 STARTED, ENDED = b'Event started.', b'Event ended.'
+RECORDINGS, RECORDING_SUFFIX = 'Recordings', '.tsz'  # TSU's replays, in each account's folder
+OPENED_SLACK = 2.0  # seconds a recording's access may follow its last write and still be that write
 
 
 def tsu_data(home=None):
@@ -80,3 +87,64 @@ class EventLog:
             return self._running
         except OSError:
             return None
+
+
+def last_opened(folder):
+    """When a recording was last opened after it was written: the latest access time of
+    the .tsz files in each account's Recordings folder and the folders in it (Saved,
+    Demo), counting only accesses later than the file's last write (as recording it
+    leaves them). 0.0 when none was; None when TSU's data folder cannot be listed."""
+    newest = 0.0
+    try:
+        accounts = [entry.path for entry in os.scandir(folder) if entry.is_dir()]
+    except OSError:
+        return None
+    folders = [(os.path.join(account, RECORDINGS), 0) for account in accounts]
+    while folders:
+        path, depth = folders.pop()
+        try:
+            entries = list(os.scandir(path))
+        except OSError:
+            continue
+        for entry in entries:
+            try:
+                if entry.is_dir():
+                    if depth == 0:  # the folders TSU makes in it (Saved, Demo), not deeper
+                        folders.append((entry.path, 1))
+                    continue
+                if not entry.name.lower().endswith(RECORDING_SUFFIX):
+                    continue
+                info = entry.stat()
+            except OSError:
+                continue
+            if info.st_atime > info.st_mtime + OPENED_SLACK:
+                newest = max(newest, info.st_atime)
+    return newest
+
+
+class RecordingWatch:
+    """`opened()`: True when TSU opened one of its recordings since the look before, from
+    the recordings' access times (last_opened); the first look only notes them. It plays
+    a replay then, which TSU's log says nothing of (seen 2026-11-13). Only a hint: Windows
+    writes an access time at most about once an hour, Linux (relatime) and macOS more
+    rarely still, and a PC may have them turned off. Looks at most every LOOK_EVERY
+    seconds, listing the folders without opening a file."""
+
+    LOOK_EVERY = 2.0
+
+    def __init__(self, folder, clock=time.monotonic):
+        self.folder = folder
+        self._clock = clock
+        self._looked = None
+        self._newest = None  # the latest opening seen so far
+
+    def opened(self):
+        now = self._clock()
+        if self._looked is not None and now - self._looked < self.LOOK_EVERY:
+            return False
+        self._looked = now
+        newest = last_opened(self.folder) if self.folder is not None else None
+        if newest is None:
+            return False
+        before, self._newest = self._newest, newest if self._newest is None else max(self._newest, newest)
+        return before is not None and newest > before

@@ -1,4 +1,5 @@
 import dataclasses
+import itertools
 import struct
 import sys
 import time
@@ -133,6 +134,7 @@ def build(
     compounds=None,
     track=None,
     replay=None,
+    recording_opened=None,
 ):
     """A fake race; `car` is the car's (x, z) and `gates` the checkpoint lines, both
     optional like in a game without them."""
@@ -494,7 +496,12 @@ def build(
     g.laps = laps
 
     runtime = il.Il2Cpp(g.memory(), g.strings, METADATA_BASE)
-    reader = race.LapReader(runtime, clock=clock_fn or time.monotonic, event_running=event_running)
+    reader = race.LapReader(
+        runtime,
+        clock=clock_fn or time.monotonic,
+        event_running=event_running,
+        recording_opened=recording_opened,
+    )
     reader.game = g
     return reader
 
@@ -3193,6 +3200,90 @@ class ReplayTests(unittest.TestCase):
         reader.game.put(times + race.TIMES_NOW, struct.pack('<i', 1_100_000))  # it plays on
         now[0] += 60
         self.assertTrue(reader.read().replay)
+
+
+class ReplayAfterARaceTests(unittest.TestCase):
+    """A replay watched after a race in the same TSU session (reported by the user on
+    2026-11-13): TSU's log then ends with "Event ended." and says nothing of the replay, so
+    a log that says no event runs must not keep the replay from being looked for."""
+
+    def build(self, opened=None, exiting=False):
+        now = [100.0]
+        reader = build(
+            [10_000, 944_595],
+            laps_completed=1,
+            clock=1_000_000,
+            limit=0,
+            name='Followed',
+            car=(5.0, 6.0),
+            replay='playing',
+            clock_fn=lambda: now[0],
+            event_running=lambda: False,
+            recording_opened=opened,
+        )
+        if exiting:  # no replay plays: the one there is closing
+            reader.game.put(reader.game.replay_player + 0x21, bytes([1]))
+        return reader, now
+
+    def test_a_recording_opened_brings_the_search_on_at_once(self):
+        opened = [False]
+        reader, now = self.build(lambda: opened[0])
+        searches = getattr(reader.game, 'searches', 0)
+        with self.assertRaises(race.NotFound):
+            reader.read()
+        self.assertEqual(
+            getattr(reader.game, 'searches', 0), searches
+        )  # the log says no event: no search yet
+        opened[0] = True
+        now[0] += race.CLIENT_LOG_EVERY  # the next look, long before a search would come
+        with self.assertLogs('turbohud.core.race', 'INFO') as logs:
+            self.assertTrue(reader.read().replay)
+        self.assertIn('searching for a replay (a recording was opened)', logs.output[0])
+
+    def test_without_an_access_time_the_replay_is_found_a_little_later(self):
+        reader, now = self.build()
+        with self.assertRaises(race.NotFound):
+            reader.read()
+        now[0] += race.CLIENT_SEARCH_EVERY - 1
+        with self.assertRaises(race.NotFound):
+            reader.read()
+        now[0] += 1
+        self.assertTrue(reader.read().replay)
+
+    def test_the_searches_for_a_replay_grow_further_apart(self):
+        reader, now = self.build(exiting=True)
+        searched = []
+        for _ in range(400):
+            searches = getattr(reader.game, 'searches', 0)
+            with self.assertRaises((race.NotFound, OSError)):
+                reader.read()
+            if getattr(reader.game, 'searches', 0) != searches:
+                searched.append(now[0])
+            now[0] += 1.0
+        gaps = [b - a for a, b in itertools.pairwise(searched)]
+        self.assertEqual(searched[0], 100.0 + race.CLIENT_SEARCH_EVERY)
+        self.assertEqual(gaps[:5], [10.0, 20.0, 40.0, 60.0, 60.0])
+
+    def test_only_replays_are_searched_for(self):
+        reader, now = self.build()
+        looked_for = []
+        find = reader.il.memory.find_pointers
+        reader.il.memory.find_pointers = lambda value: looked_for.append(value) or find(value)
+        with self.assertRaises(race.NotFound):
+            reader.read()
+        now[0] += race.CLIENT_SEARCH_EVERY
+        self.assertTrue(reader.read().replay)
+        self.assertEqual(looked_for, [reader._replay_class])
+
+    def test_a_game_without_replays_is_left_alone(self):
+        reader, now = self.build(lambda: True)
+        reader._replay_class = False  # TS.EventRecordingPlayer not in the game
+        searches = getattr(reader.game, 'searches', 0)
+        for _ in range(3):
+            with self.assertRaises(race.NotFound):
+                reader.read()
+            now[0] += race.REPLAY_SEARCH_MOST
+        self.assertEqual(getattr(reader.game, 'searches', 0), searches)
 
 
 if __name__ == '__main__':

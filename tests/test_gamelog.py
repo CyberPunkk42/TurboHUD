@@ -80,3 +80,61 @@ class EventLogTests(unittest.TestCase):
 
     def test_no_log_is_not_known(self):
         self.assertIsNone(gamelog.EventLog(Path(tempfile.mkdtemp())).running())
+
+
+class RecordingWatchTests(unittest.TestCase):
+    """A recording TSU opened, from its access time: TSU's log says nothing of replays
+    (reported by the user on 2026-11-13). Placeholder files only, never real recordings."""
+
+    def setUp(self):
+        folder = tempfile.TemporaryDirectory()
+        self.addCleanup(folder.cleanup)
+        self.folder = Path(folder.name)
+        self.recordings = self.folder / ID / gamelog.RECORDINGS
+        (self.recordings / 'Saved').mkdir(parents=True)
+        self.now = [0.0]
+        self.written = time.time() - 3600
+
+    def recording(self, name, opened=None, inside=''):
+        path = self.recordings / inside / name
+        path.write_bytes(b'placeholder')
+        os.utime(path, (self.written if opened is None else opened, self.written))
+        return path
+
+    def watch(self):
+        return gamelog.RecordingWatch(self.folder, clock=lambda: self.now[0])
+
+    def test_only_a_recording_read_after_it_was_written_counts(self):
+        self.recording('20261113.0018.Track.tsz')  # as recording it leaves it
+        self.assertEqual(gamelog.last_opened(self.folder), 0.0)
+        self.recording('20261112.2138.Track.tsz', opened=self.written + 600)
+        self.recording('notes.txt', opened=self.written + 900)  # not a recording
+        self.assertAlmostEqual(gamelog.last_opened(self.folder), self.written + 600, places=0)
+
+    def test_the_saved_recordings_count_too(self):
+        self.recording('Kept.tsz', opened=self.written + 60, inside='Saved')
+        self.assertAlmostEqual(gamelog.last_opened(self.folder), self.written + 60, places=0)
+
+    def test_no_data_folder_says_nothing(self):
+        self.assertIsNone(gamelog.last_opened(self.folder / 'missing'))
+        self.assertFalse(gamelog.RecordingWatch(None).opened())
+
+    def test_the_first_look_only_notes_what_is_there(self):
+        self.recording('Old.tsz', opened=self.written + 60)
+        watch = self.watch()
+        self.assertFalse(watch.opened())
+        self.now[0] += watch.LOOK_EVERY
+        self.assertFalse(watch.opened())
+
+    def test_an_opening_is_told_once(self):
+        watch = self.watch()
+        self.assertFalse(watch.opened())  # no recording opened yet
+        path = self.recording('Watched.tsz', opened=self.written + 600)
+        self.assertFalse(watch.opened())  # within LOOK_EVERY: not looked at again
+        self.now[0] += watch.LOOK_EVERY
+        self.assertTrue(watch.opened())
+        self.now[0] += watch.LOOK_EVERY
+        self.assertFalse(watch.opened())
+        os.utime(path, (self.written + 1200, self.written))  # watched again
+        self.now[0] += watch.LOOK_EVERY
+        self.assertTrue(watch.opened())
