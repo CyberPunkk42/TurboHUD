@@ -3479,7 +3479,7 @@ class YellowFlagJumpTests(unittest.TestCase):
     def car(self, position, velocity=(30.0, 0.0)):
         lap = tuple(1000 * i for i in range(5))
         return race.PlayerState(
-            'Mike',
+            'Car',
             0,
             1,
             ((0,), lap),

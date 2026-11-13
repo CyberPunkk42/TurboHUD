@@ -1018,7 +1018,7 @@ class SnugColumnsTests(unittest.TestCase):
         gap = hud.COLUMN_GAP
         # The field, then the sample's widest columns (it keeps them steady), and the margins.
         expected = len(self.SAMPLE) + gap + len('PIT 00.0s') + gap + len('CUT 00.0s') + 10
-        self.assertEqual(self.width('1. shizo_peak', '2. Bo'), expected)
+        self.assertEqual(self.width('1. Racer_ten', '2. Bo'), expected)
 
     def test_the_same_width_whoever_joins(self):
         self.assertEqual(self.width('1. Bo'), self.width('1. Bo', '2. ' + 'x' * race.LAP_NAME_SHOWN))
