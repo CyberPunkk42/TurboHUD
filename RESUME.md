@@ -81,6 +81,13 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+  - 2026-11-13: Review fixes after the push. Export... on the design screen saved the shrunken layout in the frame
+    as a layout for the screen one is on (found in the user's exported files: three named for other sizes all said
+    5120x1440); now it saves the design, as Save design does, and Load screen default and Import... are off while
+    designing (they would put a full-size layout over it). The arrow keys no longer nudge a section while a dialog is
+    open or a file list has the keyboard (Linux's Qt file dialog). `customization/display_presets/README.txt` had been
+    committed by mistake (on a branch made before the ignore rule): no longer tracked. Tests: the panel's buttons
+    while designing. Checked offscreen in the app: Design 1920x1080, then Export..., wrote a file for 1920x1080.
   - 2026-11-13: About, and the new app icon, asked for by the user: "About TurboHUD..." in the icon's menu and an
     "About..." button in Settings open a small window with the icon, the name and the version ("development (run
     from source)" when not built; `app.about_text`). The icon is now `assets/tsu_turbo_hud.png` (the user's new one,
