@@ -66,6 +66,7 @@ from turbohud.core.race import (
     radar_arrow,
     radar_car_size,
     radar_edge_blips,
+    rev_lights,
 )
 from turbohud.core.settings import GROUPS, PRESETS
 from turbohud.core.trackmap import MapDot, TrackMapView, map_transform, outline_from_path, road_width
@@ -99,6 +100,7 @@ BLUE_SAMPLE = 0.6  # the bar's opacity in move mode, to place it
 DELTA_BAR_SAMPLE = DeltaBarView(0.4, -1.0, '\u22120.40')  # the delta bar in move mode: ahead, gaining
 LEVEL_SAMPLE = (0.7, 'ahead')  # a level bar in move mode, to place the section
 SECTORS_SAMPLE = Sectors(('#c77dff', '#5ee07a', None))  # the sector bars in move mode
+REVS_SAMPLE = Sectors(rev_lights(0.75))  # the gear's rev lights in move mode
 PANEL_LINES_WIDTH = 50  # the move-mode panel's line spacing boxes: three digits and the arrows
 PANEL_COMBO_WIDTH = 56  # the move-mode panel's group lists: wide enough for '-' and A to D
 PANEL_SMALL_BUTTON = 32  # its one-character buttons (centre, match a group, delete a preset)
@@ -478,7 +480,7 @@ class SectionWindow(QWidget):
             throttle, brake = self.pedals or (None, None)
             draw_bars(painter, pedal_bars(self.width(), self.height(), scale, throttle, brake))
             # The bars keep to the window's edges however small the text gets.
-            left, down = centred_text(
+            left, centred_down = centred_text(
                 (self.width(), self.height()),
                 rows,
                 scale,
@@ -487,6 +489,8 @@ class SectionWindow(QWidget):
                 pedal_space(scale) // 2,
                 self.section.spacing,
             )
+            if not self.section.level:  # with the rev lights below, those are centred with the text
+                down = centred_down
         painter.translate(0, down)
         centre = self.text_centred and text_can_centre(self.section)
         theme = self.theme
@@ -496,6 +500,11 @@ class SectionWindow(QWidget):
         # The usual content's columns are made room for too, so they stay put (draw_hud).
         spacing = self.section.spacing
         reserve = hud_lines(steady_rows(self.section.samples[0]), scale, spacing) if self.rows else ()
+        if self.section.pedals:
+            # Between the pedal bars every line in the middle of the box, each measured with its digits
+            # as zeros: the gear above the speed, and the speed in its slot, stay put (asked for by the
+            # user on 2026-11-13).
+            left, centre = 0, True
         draw_hud(
             painter,
             hud_lines(rows, scale, spacing),
@@ -508,19 +517,28 @@ class SectionWindow(QWidget):
             snug=self.section.snug,
         )
         if self.section.level and rows:
-            sample = SECTORS_SAMPLE if self.section.sectors else LEVEL_SAMPLE
+            sample = (
+                SECTORS_SAMPLE
+                if self.section.sectors
+                else REVS_SAMPLE
+                if self.section.name == 'speed'
+                else LEVEL_SAMPLE
+            )
             level = self.level or (None if self.locked else sample)
             if self.section.sectors and not self.sector_bars:
                 level = None  # turned off: the room stays, so the text keeps its size
             if level is not None:
                 content_height = content_size(rows, scale, text_width, self.section.spacing)[1]
+                # Between the pedal bars where the section has them (the speed's rev lights).
+                inner = pedal_space(scale) // 2 if self.section.pedals else 0
+                painter.translate(inner, 0)
                 if isinstance(level, Sectors):
                     count = len(level.colours)
-                    draw_sectors(
-                        painter, sector_bars(self.width(), content_height, scale, count), level.colours
-                    )
+                    bars = sector_bars(self.width() - 2 * inner, content_height, scale, count)
+                    draw_sectors(painter, bars, level.colours)
                 else:
-                    draw_level(painter, level_bar(self.width(), content_height, scale, *level))
+                    draw_level(painter, level_bar(self.width() - 2 * inner, content_height, scale, *level))
+                painter.translate(-inner, 0)
         painter.translate(0, -down)
 
     def _paint_backdrop(self, painter, rows, scale, bars, down=0, color=None):

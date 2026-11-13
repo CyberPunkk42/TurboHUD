@@ -81,6 +81,33 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+  - 2026-11-13: R only while reversing, 1st while standing, asked for by the user: the gear shows R only while TSU's
+    reversing flag is on and the car goes backwards (faster than 0.5 units a second, `GEAR_REVERSING`), and 1 while
+    the car stands (slower than 0.5 either way, `GEAR_STANDING`), whatever the engine sound's gear and the flag;
+    a car sliding backwards after a spin, not in reverse, keeps its gear (`race.shown_gear`). Tests: each case.
+  - 2026-11-13: Reverse shows R, and the speed section's lines stay put, reported and asked for by the user: the
+    engine sound has no reverse gear (reversing showed its gear 2), so the reader also reads
+    `TS.VehicleState.reversing` (`CarState.reversing`) and the gear shows R. The speed is a number right-aligned in a
+    three-digit slot with the unit after it (`SPEED_SLOT`), and in a section with pedal bars every line is in the
+    middle of the box, measured with its digits as zeros: the gear centred above the speed, neither moving as the
+    numbers change (also without the gear). Tests: R from the reader, the speed's slot and unit; checked in an
+    offscreen render (8, 98 and 171 km/h end at the same place, the gear in the middle).
+  - 2026-11-13: The gear and rev lights in the speed section, asked for by the user (like a race car's dash), the
+    separate Gear section dropped: with the option ("Gear and revs in the speed section") the speed section shows the
+    gear in large digits above the speed and the rev lights below it, between the pedal bars (`hud.speed_section`;
+    a level bar in a section with pedal bars keeps between them, and the text and lights are centred together).
+    Off, the section is as it was and nothing of it is read. Drawing: inside the speed section, redrawn anyway as the
+    speed changes, the lights cost next to nothing more. Tests: the section with and without, the rows and lights;
+    checked in an offscreen render.
+  - 2026-11-13: Gear and revs, asked for by the user: TSU's cars have no gearbox of their own, but the engine sound
+    has one (`TS.EngineAudio`, through `VehicleModel.m_engineAudio`): `m_gear`, counted from 0 (it picks the gear's
+    ratio from `m_gearRatios`: a replay matched the ratios that way), and `m_enginePitch`, which rose from about 0.55
+    to 0.9 in each gear and dropped at each upshift. A new Gear section (car group) shows the gear (`CarState.gear`,
+    1 the lowest) and below it rev lights in 10 segments, green, yellow and red as in a GT or F1 car, lit one by one
+    (`race.rev_lights`, `rev_share`); the gear turns red near the shift. An option, "Gear and revs" (settings window
+    and tray, on by default): off, or with the section hidden, nothing of it is read (`LapReader.read_gear`), for a
+    slower PC. Tests: the reader (counted from 1, none, a wrong gear, turned off), the lights, the section, the
+    setting; checked in an offscreen render.
   - 2026-11-13: No other players' names in the repository, asked for by the user (a check for private data): the
     privacy check over all 567 commits found none of the user's own terms; two real drivers' names, from replays
     read today, were in a note and in tests, and are replaced ("a car", made-up names). They stay in the history
