@@ -81,6 +81,13 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+  - 2026-11-13: A minute standing in the pits stops the timers, asked for by the user: the driver is taken as away
+    (AFK) or out of the race. A car standing still anywhere in the pit area, in a box or not, for over a minute
+    (`PIT_IDLE_AFTER`, was 45 s of stop time in `PIT_STOP_MOST`) shows plain PIT without timers for the rest of that
+    visit, and nothing is kept after its exit; moving in between starts the minute again, and its next visit is timed
+    afresh. Standing outside a box counts for this too, else a car left in the pit lane (whose stop is no longer
+    timed) would show its entry timer running on. Tests: in a box, outside a box, the rest of the visit, moving in
+    between.
   - 2026-11-13: The pit stop time only in a pit box, reported by the user: a car stopped in the pit lane outside a
     box (a surface where TSU services nothing) had its stop timed. Read in a replay on the user's PC: TSU's
     `CarStateUpdater.inPit` was on while Mike Nike stood in his box (health 342 to 500, then fresh tires) and off

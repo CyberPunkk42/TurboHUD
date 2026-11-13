@@ -466,7 +466,10 @@ QUANTIZED_ZERO, QUANTIZED_SCALE = 1 << 20, 1024  # TS.QuantizedVehicleState posi
 RECORDER_STALE = 10_000  # race clock (1 s) without a new recorder tick: it does not run
 PIT_STOPPED_SPEED = 0.5  # game units a second: slower than this in the pits, the car stands
 PIT_STOP_LEAST = 0.25  # seconds standing before the bracket shows: less is a passing hold-up
-PIT_STOP_MOST = 45.0  # seconds standing: longer shows plain PIT, the driver may have retired
+# Seconds standing still anywhere in the pit area, box or not: longer, the driver is taken as away
+# (AFK) or out of the race, and that visit shows plain PIT without timers (asked for by the user on
+# 2026-11-13; 45 s of stop time before).
+PIT_IDLE_AFTER = 60.0
 PIT_TIME_SHOWN = 6  # seconds the times stay next to PIT once the car has left the pits
 STRING_LENGTH, STRING_CHARS = 0x10, 0x14  # System.String: length, then UTF-16 text
 MAX_NAME = 64
@@ -1969,12 +1972,14 @@ class DeadReckoning:
 class PitStops:
     """Two timers for each car in the pits: from pit entry to pit exit, and how long it
     stood still in a pit box (PlayerState.in_box), both live and kept for PIT_TIME_SHOWN after
-    the exit. Standing over
-    PIT_STOP_MOST shows neither: the driver may have retired. Timed with the race clock
+    the exit. A car standing still anywhere in the pit area for over PIT_IDLE_AFTER shows
+    neither for the rest of that visit: its driver is away or out. Timed with the race clock
     from the pit area and the velocity, which every car has, online too."""
 
     def __init__(self):
-        self._visits = {}  # name: [race clock at entry, seconds stood, race clock when it stopped or None]
+        # name: [race clock at entry, seconds stood in a box, race clock when it stopped there or None,
+        # race clock since when it stands anywhere or None, whether it stood too long (PIT_IDLE_AFTER)]
+        self._visits = {}
         self._kept = {}  # name: (seconds in the pits, seconds stood, race clock when to stop showing them)
 
     def update(self, players, clock):
@@ -1987,16 +1992,16 @@ class PitStops:
         if player.in_pit:
             self._kept.pop(name, None)
             if visit is None:
-                visit = self._visits[name] = [clock, 0.0, None]
+                visit = self._visits[name] = [clock, 0.0, None, None, False]
             self._stand(visit, player, clock)
+            if visit[4]:
+                return player  # stood too long: plain PIT for the rest of the visit
             seconds, stood = (clock - visit[0]) / UNITS_PER_SECOND, _stood(visit, clock)
-            if stood > PIT_STOP_MOST:
-                return player
             return dataclasses.replace(player, pit_seconds=seconds, pit_stopped=stood)
         if visit is not None:
             del self._visits[name]
             seconds, stood = (clock - visit[0]) / UNITS_PER_SECOND, _stood(visit, clock)
-            if stood <= PIT_STOP_MOST:
+            if not visit[4]:
                 self._kept[name] = (seconds, stood, clock + PIT_TIME_SHOWN * UNITS_PER_SECOND)
         kept = self._kept.get(name)
         if kept is None:
@@ -2014,7 +2019,14 @@ class PitStops:
         goes on as it was; where the box is not known, standing anywhere in the area counts."""
         if player.velocity is None:
             return
-        standing = math.hypot(*player.velocity) < PIT_STOPPED_SPEED and player.in_box is not False
+        still = math.hypot(*player.velocity) < PIT_STOPPED_SPEED
+        if still and visit[3] is None:
+            visit[3] = clock
+        elif not still:
+            visit[3] = None
+        if visit[3] is not None and (clock - visit[3]) / UNITS_PER_SECOND > PIT_IDLE_AFTER:
+            visit[4] = True  # away or out: no timers for the rest of this visit
+        standing = still and player.in_box is not False
         if standing and visit[2] is None:
             visit[2] = clock
         elif not standing and visit[2] is not None:

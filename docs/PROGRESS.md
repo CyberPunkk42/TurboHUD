@@ -1596,3 +1596,10 @@ its "Recent changes".
     The reader keeps it as `PlayerState.in_box`, and `PitStops` counts standing only while it is on (where it is
     not read, standing anywhere in the area counts, as before). The time from pit entry to exit is unchanged.
     Tests: the reader's flag (on, off, not read), a stop in the box then standing in the lane, a stop outside a box.
+  - 2026-11-13: A minute standing in the pits stops the timers, asked for by the user: the driver is taken as away
+    (AFK) or out of the race. A car standing still anywhere in the pit area, in a box or not, for over a minute
+    (`PIT_IDLE_AFTER`, was 45 s of stop time in `PIT_STOP_MOST`) shows plain PIT without timers for the rest of that
+    visit, and nothing is kept after its exit; moving in between starts the minute again, and its next visit is timed
+    afresh. Standing outside a box counts for this too, else a car left in the pit lane (whose stop is no longer
+    timed) would show its entry timer running on. Tests: in a box, outside a box, the rest of the visit, moving in
+    between.
