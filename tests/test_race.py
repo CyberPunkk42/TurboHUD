@@ -3415,3 +3415,76 @@ class CockpitCameraTests(unittest.TestCase):
         self.assertNotIn('radar', self.sections(False))
         self.assertIn('radar', self.sections(None))  # the camera not read: as before
         self.assertIn('radar', self.sections(False, only=False))  # the setting off
+
+
+class YellowFlagJumpTests(unittest.TestCase):
+    """No false "wrong way" after a jump (reported by the user on 2026-11-13: drivers shown as
+    driving the wrong way after a recording was started again). Where on the track a car was is
+    kept to look it up quickly; after a jump it is looked up on the whole track again."""
+
+    def car(self, position, velocity=(30.0, 0.0)):
+        lap = tuple(1000 * i for i in range(5))
+        return race.PlayerState(
+            'Mike',
+            0,
+            1,
+            ((0,), lap),
+            position=position,
+            velocity=velocity,
+            forward_speed=30.0,
+            wheel_grips=(1.0,) * 4,
+        )
+
+    def update(self, flags, seconds, car, heading):
+        state = race.LapState(
+            clock=round(seconds * race.UNITS_PER_SECOND),
+            time_limit=0,
+            laps_completed=1,
+            laps_to_finish=0,
+            lap_starts=[0],
+            players=(car,),
+        )
+        return flags.update(state, heading)
+
+    def recorder(self, direction=(1.0, 0.0)):
+        asked = []
+
+        def heading(position, hint):
+            asked.append(hint)
+            return direction, 7  # the race goes this way there; the learnt point found: 7
+
+        return heading, asked
+
+    def test_a_car_driving_on_is_looked_up_near_where_it_was(self):
+        flags = race.YellowFlags()
+        heading, asked = self.recorder()
+        self.update(flags, 10.0, self.car((0.0, 0.0)), heading)
+        self.update(flags, 10.1, self.car((3.0, 0.0)), heading)
+        self.assertEqual(asked, [None, 7])
+
+    def test_a_car_that_jumps_is_looked_up_on_the_whole_track(self):
+        flags = race.YellowFlags()
+        heading, asked = self.recorder()
+        self.update(flags, 10.0, self.car((0.0, 0.0)), heading)
+        self.update(flags, 10.1, self.car((400.0, 250.0)), heading)  # put back elsewhere
+        self.assertEqual(asked, [None, None])
+
+    def test_a_wrong_way_building_up_ends_with_a_jump(self):
+        flags = race.YellowFlags()
+        heading, _asked = self.recorder(direction=(-1.0, 0.0))  # the car seems to go against the race
+        self.update(flags, 10.0, self.car((0.0, 0.0)), heading)
+        self.update(flags, 11.0, self.car((30.0, 0.0)), heading)
+        self.update(flags, 11.2, self.car((900.0, 0.0)), heading)  # jumps
+        right_way, _ = self.recorder(direction=(1.0, 0.0))
+        incidents = self.update(flags, 11.8, self.car((918.0, 0.0)), right_way)
+        self.assertEqual(incidents, ())
+
+    def test_the_clock_going_back_forgets_the_cars(self):
+        flags = race.YellowFlags()
+        heading, asked = self.recorder(direction=(-1.0, 0.0))
+        for second in (100.0, 101.0, 102.0):
+            incidents = self.update(flags, second, self.car((30.0 * second, 0.0)), heading)
+        self.assertEqual([i.kind for i in incidents], ['wrong way'])
+        right_way, asked = self.recorder()
+        self.assertEqual(self.update(flags, 5.0, self.car((10.0, 0.0)), right_way), ())  # started again
+        self.assertEqual(asked, [None])  # looked up anew

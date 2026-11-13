@@ -81,6 +81,14 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+  - 2026-11-13: No false "wrong way" after a jump, reported by the user: after a recording was started again, drivers
+    driving normally were flagged as driving the wrong way. Each car's place on the learnt track is kept and looked
+    up next time only near it; after the cars jumped, the search near the old place could take a part of the track
+    running close by the other way. A read of the same replay from fresh (no kept places) showed no flag at all.
+    Now the yellow flags forget every car when the race clock goes back (a replay started again or rewound, a new
+    race), and a car further from where it was than any car drives (`YELLOW_JUMP_LEAST` 30 units, or 150 a second:
+    put back on the track, a replay jump) is looked up on the whole track again, its wrong way count started anew.
+    Tests: driving on, a jump, a wrong way building up then a jump, the clock going back.
   - 2026-11-13: The proximity radar only in cockpit cameras, asked for by the user (a setting, on by default): TSU's
     camera keys 1 to 9 and 0 give TS.CameraPropertiesUpdater.m_selectedPreset 1 to 10, but a player can make any of
     them first person, so the reader goes by the camera itself: the race controller's m_audio.m_raceCameras
