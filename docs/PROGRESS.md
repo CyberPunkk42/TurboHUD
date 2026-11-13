@@ -1844,3 +1844,18 @@ its "Recent changes".
     the shipped one only). Checked in the app offscreen on a 5120x1440 screen: Design 3840x2160 (at 59%), then Save
     design, gave the layout back within 5 px and 1 text size (the frame's rounding); the blue flag, delta bar, radar
     and track map, whose boxes set their size, carry no text size of their own.
+  - 2026-11-13: Freezes in the log, and build 2026.11.13.4 to find them, asked for by the user: the tester's log with
+    2026.11.13.3 (one race, 7 minutes, stutter again) had reads of 3 ms in one trip and frames 53 ms apart, but about
+    once a minute a read and a frame stopped together for 0.15 to 0.35 s (in every 30 s with a slow read, a slow
+    frame), so something held all of TurboHUD; his log with 2026.11.12.6 already had them, before the day's changes.
+    Drawing was 7 to 8% early on, in move mode, then 19 to 21% locked, as with .4. Now (`turbohud.core.stalls`):
+    each read or frame of 100 ms or more is logged at once with its time to the millisecond and how much of it was
+    Python's garbage collection (`GcWatch`, through `gc.callbacks`), and for a read how much was the game's memory (the
+    reader in the bottle), to tell a pause in TurboHUD from one in the bottle or the system; each collection of
+    20 ms or more is logged, with a summary every 30 s in a race; and the costliest sections to draw, in ms a frame
+    (`SectionWindow.drawing_by`, on the canvas and in the sections' own windows). Nothing else changed. Tests: the
+    collections (slow, summary, overlap, Python's own), the slow frame and read lines, the sections' line; all 1169
+    pass. Smoke runs (source and built) clean. Build `releases/TurboHUD-2026.11.13.4-macos-arm64.dmg` (33.7 MB, from
+    the branch); the image's 205 files and the 176 packed modules checked for the privacy terms, none. The test sheet
+    starts with a stutter part: one race of 10 minutes with the clock times of each stutter, then the same track
+    with TurboHUD closed; Part 7's command also prints the new lines.
