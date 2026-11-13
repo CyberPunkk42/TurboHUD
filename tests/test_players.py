@@ -1321,14 +1321,16 @@ class ClassTests(unittest.TestCase):
             ['GT3', 'GT3', 'GT3', 'LMP', 'LMP', 'GT3', race.OTHER_CLASS, race.OTHER_CLASS],
         )
         # Most of the tagged drivers in a car name its class; a tie: the one seen first.
+        other = driver('E', 'GT4', 'Y')  # another car, so the race is not all one car
         mixed = [
             driver('A', 'LMP', 'X'),
             driver('B', 'GT3', 'X'),
             driver('C', 'GT3', 'X'),
             driver('D', '', 'X'),
+            other,
         ]
         self.assertEqual(race.car_classes(mixed, self.TAGS)[id(mixed[3])], 'GT3')
-        tie = [driver('A', 'LMP', 'X'), driver('B', 'GT3', 'X'), driver('D', '', 'X')]
+        tie = [driver('A', 'LMP', 'X'), driver('B', 'GT3', 'X'), driver('D', '', 'X'), other]
         self.assertEqual(race.car_classes(tie, self.TAGS)[id(tie[2])], 'LMP')
         one_class = [
             driver('A', 'GT3', 'X'),
@@ -1341,6 +1343,25 @@ class ClassTests(unittest.TestCase):
         self.assertEqual([row.rule for row in rows], [''] * len(rows))
         untagged = [driver('A', '', 'X'), driver('B', '', 'Y')]
         self.assertEqual(race.car_classes(untagged, self.TAGS), {})  # no tags: no classes
+
+    def test_class_tags_in_one_car_for_all_are_no_classes(self):
+        # Reported by the user on 2026-11-13: LMP and GT4 tags, every car the same, split in two.
+        def driver(name, tag, car):
+            return dataclasses.replace(self.driver(name, tag, 60_000), car=car)
+
+        same = [
+            driver('A', 'LMP', 'X'),
+            driver('B', 'GT4', 'X'),
+            driver('C', 'LMP', 'X'),
+            driver('D', '', 'X'),
+        ]
+        self.assertEqual(race.car_classes(same, self.TAGS), {})
+        rows = race.lap_times_rows(same, clock=2_000_000, class_tags=self.TAGS)
+        self.assertEqual([row.rule for row in rows], [''] * len(rows))  # no class lines
+        two_cars = [driver('A', 'LMP', 'X'), driver('B', 'GT4', 'Y')]
+        self.assertEqual(sorted(race.car_classes(two_cars, self.TAGS).values()), ['GT4', 'LMP'])
+        unread = [driver('A', 'LMP', 'X'), driver('B', 'GT4', '')]  # a car not read: by the tags, as before
+        self.assertEqual(sorted(race.car_classes(unread, self.TAGS).values()), ['GT4', 'LMP'])
 
     def test_by_class_with_places_in_each_its_fastest_lap_purple(self):
         drivers = [

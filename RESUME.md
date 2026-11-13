@@ -79,6 +79,11 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+  - 2026-11-13: One class when every car is the same, reported by the user: drivers tagged LMP and GT4, all in one
+    car, were split into two classes in the lap times (and coloured as two on the radar). `race.car_classes` now gives
+    no classes when every driver is in the same car (car names read); different cars split by the tags as before,
+    and a car not read keeps the tags' classes. Tests: the user's case, two cars, a car not read; the "most tagged
+    drivers in a car" tests got a second car.
   - 2026-11-13: Ruff clean again, asked for by the user: the 8 lint errors fixed (`ClassVar` on the yellow-flag
     tests' surface dicts, two `noqa` comments that did nothing removed, the recorder test's gzip file opened in a
     `with`, the "still no race" log check in `tsu/client.py` made one condition) and the 5 unformatted files

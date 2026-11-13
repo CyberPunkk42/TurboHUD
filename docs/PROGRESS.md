@@ -1516,3 +1516,8 @@ its "Recent changes".
     change. `ruff check` and `ruff format --check` pass. Tests on Windows (`.buildtools\venv`): 1017 of 1023 pass;
     the 6 that fail need macOS/Linux (`os.getuid`, `fcntl`, `AF_UNIX`) or the symlink privilege, and fail on `main`
     too.
+  - 2026-11-13: One class when every car is the same, reported by the user: drivers tagged LMP and GT4, all in one
+    car, were split into two classes in the lap times (and coloured as two on the radar). `race.car_classes` now gives
+    no classes when every driver is in the same car (car names read); different cars split by the tags as before,
+    and a car not read keeps the tags' classes. Tests: the user's case, two cars, a car not read; the "most tagged
+    drivers in a car" tests got a second car.
