@@ -16,7 +16,10 @@ from turbohud import __version__
 from turbohud.core.hud import (
     CLOCK_SECTIONS,
     RACE_SECTIONS,
+    common_font,
     default_tint,
+    font_of_box,
+    is_text_section,
     more_lap_rows_place,
     sector_bar_place,
     tight_place,
@@ -57,9 +60,11 @@ LAP_COLUMN_OPTIONS = (
 log = logging.getLogger('turbohud')
 
 
-def upgrade_layout(settings, path, ink):
+def upgrade_layout(settings, path, ink, measure=None):
     """The settings with sections saved in an older layout converted, once, and written
-    back; the file as it was stays beside it. `ink` is turbohud.hud.painter.text_ink."""
+    back; the file as it was stays beside it. `ink` is turbohud.hud.painter.text_ink and
+    `measure` its text_width (a rough one where not given)."""
+    measure = measure or (lambda text, size: len(text) * size * 0.6)
     version = settings.layout_version
     if version >= LAYOUT_VERSION:
         return settings
@@ -84,11 +89,33 @@ def upgrade_layout(settings, path, ink):
             places[name] = place
         return places
 
+    sections = converted(settings.sections)
+    presets = {number: converted(kept) for number, kept in settings.presets.items()}
+    font_size = settings.font_size
+    if version < 6:
+        # Text sizes: each text section keeps the size its box drew it at; the size most of
+        # them have becomes the global one, which those follow; the others keep their own.
+        def font(name, place):
+            return font_of_box(
+                known[name], (place.x, place.y, place.width, place.height), scale, measure, ink
+            )
+
+        def text(places):
+            return {n: p for n, p in places.items() if n in known and is_text_section(known[n])}
+
+        font_size = common_font([font(n, p) for n, p in text(sections).items()])
+
+        def with_fonts(places):
+            fonts = {n: font(n, p) for n, p in text(places).items()}
+            return {
+                n: replace(p, font=fonts[n] if fonts.get(n, font_size) != font_size else None)
+                for n, p in places.items()
+            }
+
+        sections = with_fonts(sections)
+        presets = {number: with_fonts(kept) for number, kept in presets.items()}
     settings = replace(
-        settings,
-        sections=converted(settings.sections),
-        presets={number: converted(kept) for number, kept in settings.presets.items()},
-        layout_version=LAYOUT_VERSION,
+        settings, sections=sections, presets=presets, font_size=font_size, layout_version=LAYOUT_VERSION
     )
     if settings.sections or settings.presets:
         try:
@@ -253,6 +280,7 @@ def run(args, folder):
     from turbohud.core.flagstack import combined
     from turbohud.core.hud import (
         CLOCK_SECTIONS,
+        FONT_SIZES,
         RACE_SECTIONS,
         FramePacer,
         FrameTimes,
@@ -266,10 +294,10 @@ def run(args, folder):
         has_tint,
         local_time_rows,
         main_screen,
-        match_sizes,
         panel_place,
         screen_of,
         session_rows,
+        text_box,
     )
     from turbohud.hud.painter import text_ink, text_width, use_game_flags
     from turbohud.overlay import (
@@ -397,7 +425,7 @@ def run(args, folder):
     screens = [screen.geometry().getRect() for screen in QGuiApplication.screens()]
     # Where TurboHUD's own windows (the panel, the settings) go: not under the menu bar or Dock.
     usable = [screen.availableGeometry().getRect() for screen in QGuiApplication.screens()]
-    settings = upgrade_layout(settings, path, text_ink)
+    settings = upgrade_layout(settings, path, text_ink, text_width)
     windows = {section.name: SectionWindow(native, settings.theme, section) for section in layout}
     canvas = None
     if one_window_wanted(native):
@@ -426,6 +454,12 @@ def run(args, folder):
     for name, window in windows.items():
         saved = settings.sections.get(name)
         place = (saved.x, saved.y, saved.width, saved.height) if saved else defaults[name]
+        if is_text_section(window.section):
+            window.own_font = saved.font if saved else None
+            window.font = window.own_font or settings.font_size
+            window.section = replace(window.section, spacing=saved.spacing if saved else 1.0)
+            window.text_resized.connect(lambda name: resized_by_hand(name))
+            place = text_box(window.section, place, window.font, text_width, text_ink)
         place = fit_on_screens(place, screens)
         window.setGeometry(*place)
         window.backdrop = saved.tint if saved else default_tint(window.section, settings.backdrop)
@@ -444,12 +478,25 @@ def run(args, folder):
         nonlocal settings
         places = {}
         for name, window in windows.items():
-            x, y, width, height = window.placement()
-            places[name] = SectionPlace(
-                x, y, width, height, window.wanted, window.group, window.text_centred, window.backdrop
-            )
+            places[name] = section_place(window, window.placement())
         settings = replace(settings, sections=places, backdrop=all_tinted())
         write_settings()
+
+    def section_place(window, box):
+        """A section's SectionPlace in `box` (x, y, width, height), with its options."""
+        x, y, width, height = box
+        return SectionPlace(
+            x,
+            y,
+            width,
+            height,
+            window.wanted,
+            window.group,
+            window.text_centred,
+            window.backdrop,
+            getattr(window, 'own_font', None),
+            window.section.spacing,
+        )
 
     def all_tinted():
         return all(w.backdrop for w in windows.values() if has_tint(w.section))
@@ -688,11 +735,8 @@ def run(args, folder):
         found = placements()
         sections = {}
         for name, window in windows.items():
-            x, y, width, height = found.get(name) or window.placement()
-            sections[name] = SectionPlace(
-                x, y, width, height, window.wanted, window.group, window.text_centred, window.backdrop
-            )
-        return sections, settings.presets
+            sections[name] = section_place(window, found.get(name) or window.placement())
+        return sections, settings.presets, settings.font_size
 
     def undoable(action):
         """A change from a button or a shortcut: one step for Undo. A drag it comes right
@@ -821,8 +865,24 @@ def run(args, folder):
 
     @undoable
     def resize_all(factor):
-        """Every section bigger or smaller by `factor`, from its top-left corner."""
+        """Every section bigger or smaller by `factor`, from its top-left corner: the text
+        sections by their text sizes, the drawings by their boxes."""
+        nonlocal settings
+
+        def stepped(font):
+            moved = round(font * factor)
+            moved = moved if moved != font else font + (1 if factor > 1 else -1)
+            return min(max(moved, FONT_SIZES[0]), FONT_SIZES[1])
+
+        settings = replace(settings, font_size=stepped(settings.font_size))
+        for window in text_windows().values():
+            window.own_font = stepped(window.own_font) if window.own_font else None
+            window.font = window.own_font or settings.font_size
+        resize_sections({name: fitted(window) for name, window in text_windows().items()})
+        show_fonts()
         for name, window in windows.items():
+            if is_text_section(window.section):
+                continue
             x, y, width, height = window.placement()
             place = (x, y, max(MIN_SECTION, round(width * factor)), max(MIN_SECTION, round(height * factor)))
             move_window(window, place, settle=True)
@@ -884,28 +944,123 @@ def run(args, folder):
     def match_group(group):
         """The group's text sections get the same text size and width (the panel's Match).
         The settings take these places, not what the desktop says yet (see load_preset)."""
-        nonlocal settings
-        sized = {
-            window.section: tuple(window.placement())
-            for window in windows.values()
-            if window.group == group and not window.section.drawing
-        }
-        if len(sized) < 2:
+        members = [w for w in windows.values() if w.group == group and is_text_section(w.section)]
+        if len(members) < 2:
             return
+        font = max(window.font for window in members)
+        for window in members:
+            window.own_font = None if font == settings.font_size else font
+            window.font = font
+        boxes = {
+            window.section.name: text_box(
+                window.section, tuple(window.placement()), font, text_width, text_ink, keep_width=False
+            )
+            for window in members
+        }
+        widest = max(box[2] for box in boxes.values())
+        resize_sections({name: (x, y, widest, height) for name, (x, y, _w, height) in boxes.items()})
+        show_fonts()
+        log.info('group %s: text size %d px, one width', group, font)
+
+    def resize_sections(boxes):
+        """Put sections in `boxes` {name: (x, y, width, height)}, resized by TurboHUD (Match,
+        a text size); the settings take these places, not what the desktop says yet."""
+        nonlocal settings
         until = time.monotonic() + 1.0
         places = dict(settings.sections)
-        for name, box in match_sizes(sized, settings.theme.scale, text_width, text_ink).items():
+        for name, box in boxes.items():
             window = windows[name]
             move_window(window, box, settle=True)
+            window.update()
             mover.known[name] = box  # TurboHUD resized it: not a drag
             mover.pending[name] = (box, until)
-            x, y, width, height = box
-            places[name] = SectionPlace(
-                x, y, width, height, window.wanted, window.group, window.text_centred, window.backdrop
-            )
+            places[name] = section_place(window, box)
         settings = replace(settings, sections=places)
         write_settings()
-        log.info('group %s: same text size and width', group)
+
+    def fitted(window, keep_width=False):
+        """A text section's box at its text size, where it is now."""
+        return text_box(
+            window.section, tuple(window.placement()), window.font, text_width, text_ink, keep_width
+        )
+
+    def text_windows():
+        return {name: w for name, w in windows.items() if is_text_section(w.section)}
+
+    @undoable
+    def set_own_font(name, font):
+        """A section's own text size from the move-mode panel, 0 for the global one (asked
+        for by the user on 2026-11-13)."""
+        window = windows[name]
+        window.own_font = font or None
+        window.font = window.own_font or settings.font_size
+        resize_sections({name: fitted(window)})
+        log.info('section %s: text size %s', name, f'{font} px' if font else 'global')
+
+    @undoable
+    def set_global_font(font):
+        """The global text size, for every text section without its own."""
+        nonlocal settings
+        settings = replace(settings, font_size=font)
+        following = {n: w for n, w in text_windows().items() if w.own_font is None}
+        for window in following.values():
+            window.font = font
+        resize_sections({name: fitted(window) for name, window in following.items()})
+        log.info('global text size %d px', font)
+
+    @undoable
+    def all_global():
+        """Every text section follows the global text size."""
+        for window in text_windows().values():
+            window.own_font = None
+            window.font = settings.font_size
+        resize_sections({name: fitted(window) for name, window in text_windows().items()})
+        show_fonts()
+        log.info('every section: the global text size')
+
+    def show_fonts():
+        if panel is None:
+            return
+        panel.set_global_font(settings.font_size)
+        for name, window in text_windows().items():
+            panel.set_font_size(name, window.own_font)
+            panel.set_spacing(name, window.section.spacing)
+
+    @undoable
+    def set_spacing(name, percent):
+        """A section's line spacing from the move-mode panel (asked for by the user on 2026-11-13)."""
+        window = windows[name]
+        window.section = replace(window.section, spacing=percent / 100)
+        resize_sections({name: fitted(window, keep_width=True)})
+        log.info('section %s: line spacing %d%%', name, percent)
+
+    def resized_by_hand(name):
+        """A text section dragged at its edge: its text size or width is kept (Undo takes the
+        drag as a step of its own, as any drag)."""
+        window = windows[name]
+        saved = settings.sections.get(name)
+        if window.own_font == settings.font_size and saved is not None and saved.font is None:
+            window.own_font = None  # dragged back to the global size: it follows it again
+        save()
+        show_fonts()
+        log.info('section %s resized by hand: text size %s', name, window.own_font or 'global')
+
+    def keep_text_boxes(found, now):
+        """Move mode: a text section's box follows its text, so one the desktop resized
+        (Hyprland lets one) goes back to its height, and to its width where it got narrower."""
+        for name, window in text_windows().items():
+            box = found.get(name)
+            pending = mover.pending.get(name)
+            if box is None or (pending is not None and now < pending[1]):
+                continue
+            right = text_box(window.section, box, window.font, text_width, text_ink)
+            off = max(abs(a - b) for a, b in zip(box[2:], right[2:]))
+            # Once per size: a desktop that keeps a box a pixel or two off is left alone.
+            if off > 1 and refits.get(name) != tuple(box[2:]):
+                refits[name] = tuple(box[2:])
+                resize_sections({name: right})
+
+    refits = {}  # section name -> the size keep_text_boxes last put back
 
     @undoable
     def save_preset(number):
@@ -955,6 +1110,15 @@ def run(args, folder):
             window.group = place.group
             window.text_centred = place.text_centred
             window.backdrop = place.tint
+            if is_text_section(window.section):
+                window.own_font = place.font
+                window.font = place.font or settings.font_size
+                window.section = replace(window.section, spacing=place.spacing)
+                fixed = text_box(window.section, box, window.font, text_width, text_ink)
+                if fixed != box:
+                    move_window(window, fixed, settle=True)
+                    mover.known[name] = fixed
+                    mover.pending[name] = (fixed, until)
             window.update()
             panel.set_wanted(name, place.visible)
             panel.set_group(name, place.group)
@@ -969,8 +1133,10 @@ def run(args, folder):
         previous = history.undo(layout_state())
         if previous is None:
             return
-        sections, presets = previous
+        sections, presets, font_size = previous
+        settings = replace(settings, font_size=font_size)
         apply_places(sections)
+        show_fonts()
         settings = replace(settings, sections={**settings.sections, **sections}, presets=presets)
         write_settings()
         panel.set_presets_saved(presets)
@@ -1097,6 +1263,10 @@ def run(args, folder):
     panel.preset_load_requested.connect(load_preset)
     panel.preset_delete_requested.connect(delete_preset)
     panel.match_requested.connect(match_group)
+    panel.font_size_changed.connect(set_own_font)
+    panel.global_font_changed.connect(set_global_font)
+    panel.all_global_requested.connect(all_global)
+    panel.spacing_changed.connect(set_spacing)
     panel.undo_requested.connect(undo)
     panel.relearn_requested.connect(relearn_track)
     menu.aboutToShow.connect(relearn_available)
@@ -1111,6 +1281,7 @@ def run(args, folder):
     panel.all_wanted.connect(set_all_wanted)
     panel.group_changed.connect(set_group)
     panel.align_requested.connect(align)
+    show_fonts()
     for name, window in windows.items():
         panel.set_group(name, window.group)
         panel.set_text_centred(name, window.text_centred)
@@ -1204,6 +1375,7 @@ def run(args, folder):
             if any(w.group for w in windows.values()):
                 follow_groups(last_seen)
             state = layout_state()
+            keep_text_boxes({n: (p.x, p.y, p.width, p.height) for n, p in state[0].items()}, last_seen)
             history.look(state, last_seen)
             panel.set_undo_available(history.can_undo(state))
         if args.seconds is not None and time.monotonic() - started >= args.seconds:

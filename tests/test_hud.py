@@ -1062,3 +1062,120 @@ class OverallColumnTests(unittest.TestCase):
         without = hud.replace(line, overall='')
         widths = hud.lines_width([line], self.measure), hud.lines_width([without], self.measure)
         self.assertEqual(widths[0] - widths[1], len('P12') + hud.COLUMN_GAP)
+
+
+class TextSizeTests(unittest.TestCase):
+    """A text section's size is its normal text in pixels, and its box follows it (asked for
+    by the user on 2026-11-13)."""
+
+    SECTIONS: ClassVar = {section.name: section for section in hud.RACE_SECTIONS}
+
+    def test_the_normal_text_is_drawn_at_the_size(self):
+        for font in (8, 13, 20, 31):
+            with self.subTest(font=font):
+                sizes = hud.Sizes.for_scale(hud.font_scale(font))
+                self.assertEqual(sizes.small, font)
+                self.assertAlmostEqual(sizes.big / sizes.small, 40 / 13, delta=0.15)  # in proportion
+        self.assertEqual(hud.font_scale(hud.DEFAULT_FONT), 1.0)
+        self.assertEqual(hud.font_scale(1000), hud.FONT_SIZES[1] / hud.DEFAULT_FONT)
+
+    def test_the_box_follows_the_text(self):
+        section = self.SECTIONS['laptimes']
+        small = hud.text_box(section, (5, 6, 0, 0), 10, size_measure, ink)
+        large = hud.text_box(section, (5, 6, 0, 0), 20, size_measure, ink)
+        self.assertEqual(small[:2], (5, 6))
+        self.assertGreater(large[3], small[3] * 1.8)
+        self.assertGreater(large[2], small[2] * 1.8)
+        self.assertEqual(small[3], hud.tight_height(section, hud.font_scale(10), ink))
+
+    def test_a_wider_box_is_kept_only_where_asked(self):
+        section = self.SECTIONS['players']
+        needed = hud.text_box(section, (0, 0, 0, 0), 13, size_measure, ink)[2]
+        self.assertEqual(hud.text_box(section, (0, 0, needed + 50, 9), 13, size_measure, ink)[2], needed + 50)
+        self.assertEqual(
+            hud.text_box(section, (0, 0, needed + 50, 9), 13, size_measure, ink, keep_width=False)[2], needed
+        )
+        self.assertEqual(hud.text_box(section, (0, 0, 10, 9), 13, size_measure, ink)[2], needed)
+
+    def test_a_box_from_before_gives_back_its_text_size(self):
+        for name in ('lap', 'players', 'laptimes', 'speed', 'localtime', 'fuel'):
+            for font in (10, 13, 22):
+                with self.subTest(section=name, font=font):
+                    box = hud.text_box(self.SECTIONS[name], (0, 0, 0, 0), font, size_measure, ink)
+                    # Within a pixel: the old drawing shrank a small text a little to fit its box.
+                    found = hud.font_of_box(self.SECTIONS[name], box, 1.0, size_measure, ink)
+                    self.assertLessEqual(abs(found - font), 1)
+
+    def test_the_common_size(self):
+        self.assertEqual(hud.common_font([16, 16, 20, 13]), 16)
+        self.assertEqual(hud.common_font([12, 20, 14]), 14)  # all once: the middle one
+        self.assertEqual(hud.common_font([]), hud.DEFAULT_FONT)
+
+    def test_only_text_sections_have_a_text_size(self):
+        drawn = {s.name for s in hud.RACE_SECTIONS if not hud.is_text_section(s)}
+        self.assertEqual(drawn, {'deltabar', 'trackmap', 'radar', 'blueflag'})
+
+
+class ResizeEdgeTests(unittest.TestCase):
+    """Resizing the radar, the map and the flags at any edge or corner (reported by the user on
+    2026-11-13: only a corner grip, which pointed and pulled the wrong way at times)."""
+
+    def test_the_edge_under_the_pointer(self):
+        self.assertEqual(hud.resize_edges(100, 50, 200, 100), ())
+        self.assertEqual(hud.resize_edges(2, 50, 200, 100), ('left',))
+        self.assertEqual(hud.resize_edges(197, 50, 200, 100), ('right',))
+        self.assertEqual(hud.resize_edges(100, 1, 200, 100), ('top',))
+        self.assertEqual(hud.resize_edges(100, 99, 200, 100), ('bottom',))
+        self.assertEqual(hud.resize_edges(199, 99, 200, 100), ('right', 'bottom'))
+        self.assertEqual(hud.resize_edges(0, 0, 200, 100), ('left', 'top'))
+        self.assertEqual(hud.resize_edges(195, 3, 200, 100), ('right', 'top'))
+
+    def test_a_small_box_keeps_a_middle_to_move_it_by(self):
+        self.assertEqual(hud.resize_edges(10, 10, 21, 21), ())
+        self.assertEqual(hud.resize_edges(0, 10, 21, 21), ('left',))
+
+    def test_the_opposite_edges_stay_put(self):
+        box = (100, 200, 300, 150)
+        self.assertEqual(hud.resized(box, ('right', 'bottom'), 20, 10), (100, 200, 320, 160))
+        self.assertEqual(hud.resized(box, ('left',), 30, 99), (130, 200, 270, 150))
+        self.assertEqual(hud.resized(box, ('top',), 0, -20), (100, 180, 300, 170))
+
+    def test_never_smaller_than_the_least(self):
+        box = (100, 200, 300, 150)
+        self.assertEqual(hud.resized(box, ('right',), -500, 0, (40, 10)), (100, 200, 40, 150))
+        self.assertEqual(hud.resized(box, ('left',), 500, 0, (40, 10)), (360, 200, 40, 150))
+
+
+class HeightAndSpacingTests(unittest.TestCase):
+    """Height sets the text size, and line spacing per section (asked for by the user on 2026-11-13)."""
+
+    SECTIONS: ClassVar = {section.name: section for section in hud.RACE_SECTIONS}
+
+    def test_a_height_gives_the_largest_size_that_fits(self):
+        for name in ('players', 'speed', 'lap'):
+            section = self.SECTIONS[name]
+            for font in (9, 16, 30):
+                with self.subTest(section=name, font=font):
+                    height = hud.text_box(section, (0, 0, 0, 0), font, size_measure, ink)[3]
+                    found = hud.font_for_height(section, height, ink)
+                    self.assertGreaterEqual(found, font)  # a bigger one may have the same height
+
+                    def tall(size, section=section):
+                        return hud.text_box(section, (0, 0, 0, 0), size, size_measure, ink)[3]
+
+                    self.assertLessEqual(tall(found), height)
+                    self.assertTrue(all(tall(size) > height for size in range(found + 1, found + 4)))
+        self.assertEqual(hud.font_for_height(self.SECTIONS['players'], 1, ink), hud.FONT_SIZES[0])
+
+    def test_line_spacing_changes_the_room_between_rows_only(self):
+        players = self.SECTIONS['players']
+        normal = hud.text_box(players, (0, 0, 0, 0), 13, size_measure, ink)
+        roomy = hud.text_box(hud.replace(players, spacing=2.0), (0, 0, 0, 0), 13, size_measure, ink)
+        none = hud.text_box(hud.replace(players, spacing=0.0), (0, 0, 0, 0), 13, size_measure, ink)
+        rows = len(players.samples[0])
+        gap = hud.Sizes.for_scale(1.0).gap
+        self.assertEqual(roomy[3] - normal[3], (rows - 1) * gap)
+        self.assertEqual(normal[3] - none[3], (rows - 1) * gap)
+        self.assertEqual(roomy[2], normal[2])  # as wide
+        lines = hud.hud_lines(list(players.samples[0]), 1.0, 2.0)
+        self.assertEqual(lines[1].baseline - lines[0].baseline - lines[1].size, 2 * gap)

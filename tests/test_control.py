@@ -34,7 +34,8 @@ class UpgradeLayoutTests(unittest.TestCase):
         self.assertEqual(place.height, 50)
         self.assertEqual((place.visible, place.group), (False, 'A'))
         self.assertEqual(settings.load_settings(self.path), upgraded)
-        self.assertEqual(self.path.with_name('settings.before-layout-5.json').read_bytes(), old)
+        backup = f'settings.before-layout-{settings.LAYOUT_VERSION}.json'
+        self.assertEqual(self.path.with_name(backup).read_bytes(), old)
         # A second start finds them converted.
         self.assertEqual(app.upgrade_layout(upgraded, self.path, self.ink), upgraded)
 
@@ -114,6 +115,39 @@ class UpgradeLayoutTests(unittest.TestCase):
         settings.save_settings(self.path, settings.Settings(sections={'unknown': place}))
         upgraded = app.upgrade_layout(settings.load_settings(self.path), self.path, self.ink)
         self.assertEqual(upgraded.sections['unknown'], place)
+
+    def test_text_sizes_come_from_the_boxes_the_common_one_global(self):
+        # Asked for by the user on 2026-11-13: a global text size, a section's own where it differs.
+        sections = {s.name: s for s in hud.RACE_SECTIONS}
+
+        def box_for(name, font):
+            return hud.text_box(sections[name], (0, 0, 0, 0), font, self.measure, self.ink)
+
+        def place(name, font):
+            x, y, width, height = box_for(name, font)
+            return settings.SectionPlace(x, y, width, height)
+
+        old = settings.Settings(
+            sections={
+                'lap': place('lap', 16),
+                'players': place('players', 16),
+                'laptimes': place('laptimes', 20),
+                'trackmap': settings.SectionPlace(5, 5, 240, 240, tint=True),
+            },
+            presets={1: {'players': place('players', 26)}},
+            layout_version=5,
+        )
+        settings.save_settings(self.path, old)
+        upgraded = app.upgrade_layout(old, self.path, self.ink, self.measure)
+        self.assertEqual(upgraded.font_size, 16)  # what most have
+        fonts = {name: p.font for name, p in upgraded.sections.items()}
+        self.assertEqual(fonts, {'lap': None, 'players': None, 'laptimes': 20, 'trackmap': None})
+        self.assertEqual(upgraded.presets[1]['players'].font, 26)
+        self.assertEqual(settings.load_settings(self.path), upgraded)  # kept in the file
+
+    @staticmethod
+    def measure(text, size):
+        return len(text) * size * 0.6
 
     def test_a_file_that_cannot_be_written_still_gives_the_converted_sizes(self):
         missing = self.path.parent / 'none' / settings.SETTINGS_FILE

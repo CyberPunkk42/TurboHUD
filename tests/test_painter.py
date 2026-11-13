@@ -1072,6 +1072,56 @@ class MovePanelPresetTests(unittest.TestCase):
         self.button(panel, 3, 'Load').click()
         self.assertEqual((saved, loaded), ([2], [3]))
 
+    def test_a_text_section_draws_at_its_text_size_whatever_its_box(self):
+        from turbohud.core.hud import RACE_SECTIONS, Row
+        from turbohud.core.settings import Theme
+        from turbohud.overlay.window import SectionWindow
+
+        class Native:
+            def raise_window(self, window):
+                return 'test'
+
+        def inked(font, size):
+            window = SectionWindow(Native(), Theme(), next(s for s in RACE_SECTIONS if s.name == 'localtime'))
+            self.addCleanup(window.close)
+            window.font = font
+            window.resize(*size)
+            window.show_content([Row('12:34', 'medium')])
+            image = window.grab().toImage()
+            return sum(
+                image.pixelColor(x, y).alpha() > 0
+                for x in range(image.width())
+                for y in range(image.height())
+            )
+
+        self.assertEqual(inked(20, (200, 80)), inked(20, (400, 300)))  # a bigger box: no bigger text
+        self.assertGreater(inked(30, (400, 300)), inked(20, (400, 300)) * 1.5)
+        drawn = {'deltabar', 'trackmap', 'radar', 'blueflag'}
+        by_text = {s.name for s in RACE_SECTIONS if SectionWindow(Native(), Theme(), s).text}
+        self.assertEqual(by_text, {s.name for s in RACE_SECTIONS} - drawn)
+
+    def test_text_sizes_per_section_and_global(self):
+        # Asked for by the user on 2026-11-13: a text size per section, or the global one.
+        from turbohud.core.hud import FONT_SIZES, RACE_SECTIONS, is_text_section
+
+        panel = self.panel()
+        self.assertEqual(set(panel.font_sizes), {s.name for s in RACE_SECTIONS if is_text_section(s)})
+        own, every, back = [], [], []
+        panel.font_size_changed.connect(lambda name, px: own.append((name, px)))
+        panel.global_font_changed.connect(every.append)
+        panel.all_global_requested.connect(lambda: back.append(True))
+        box = panel.font_sizes['laptimes']
+        panel.set_font_size('laptimes', None)  # shown: no request back
+        self.assertEqual((box.text(), own), ('global', []))
+        box.setValue(17)
+        box.setValue(FONT_SIZES[0] - 1)  # down to global again
+        self.assertEqual(own, [('laptimes', 17), ('laptimes', 0)])
+        panel.set_global_font(15)
+        self.assertEqual(every, [])
+        panel.global_size.setValue(18)
+        next(b for b in panel.findChildren(type(panel.undo)) if b.text() == 'All global').click()
+        self.assertEqual((every, back), ([18], [True]))
+
     def test_match_works_from_two_text_sections_in_a_group(self):
         panel = self.panel()
         got = []
@@ -1446,3 +1496,84 @@ class CanvasTests(unittest.TestCase):
         colors = [image.pixelColor(x, top.y() + 20) for x in range(top.x(), top.x() + top.width())]
         self.assertTrue(any(c.alpha() == 255 and c.green() > c.red() for c in colors))  # green: drawn
         self.assertEqual(image.pixelColor(middle.x() + 20, middle.y() + 20).alpha(), 0)  # not drawn again
+
+
+class ResizeCursorTests(unittest.TestCase):
+    def test_every_edge_and_corner_has_its_cursor(self):
+        from turbohud.overlay.window import RESIZE_CURSORS, RESIZE_FLAGS
+
+        corners = {
+            frozenset(c) for c in (('left', 'top'), ('left', 'bottom'), ('right', 'top'), ('right', 'bottom'))
+        }
+        self.assertEqual(set(RESIZE_CURSORS), {frozenset({e}) for e in RESIZE_FLAGS} | corners)
+
+
+class TextResizeTests(unittest.TestCase):
+    """A text section dragged at its edges (asked for by the user on 2026-11-13): height sets
+    its text size, width adds room, never narrower than its text."""
+
+    @classmethod
+    def setUpClass(cls):
+        MovePanelPresetTests.setUpClass()
+
+    def window(self, name='players', font=13):
+        from turbohud.core.hud import RACE_SECTIONS, text_box
+        from turbohud.core.settings import Theme
+        from turbohud.hud.painter import text_ink, text_width
+        from turbohud.overlay.window import SectionWindow
+
+        class Native:
+            def raise_window(self, window):
+                return 'test'
+
+        window = SectionWindow(Native(), Theme(), next(s for s in RACE_SECTIONS if s.name == name))
+        self.addCleanup(window.close)
+        window.font = font
+        box = text_box(window.section, (100, 100, 0, 0), font, text_width, text_ink)
+        window.setGeometry(*box)
+        return window, box
+
+    def test_the_bottom_edge_sets_the_text_size_and_the_box_stays_tight(self):
+        window, box = self.window()
+        window._resize_text(('bottom',), box, 0, box[3])  # twice as tall
+        self.assertGreater(window.font, 20)
+        self.assertEqual(window.own_font, window.font)
+        self.assertEqual(window.geometry().getRect()[:2], box[:2])
+        from turbohud.core.hud import text_box
+        from turbohud.hud.painter import text_ink, text_width
+
+        self.assertEqual(window.height(), text_box(window.section, box, window.font, text_width, text_ink)[3])
+
+    def test_the_top_edge_keeps_the_bottom_in_place(self):
+        window, box = self.window()
+        window._resize_text(('top',), box, 0, -box[3])
+        _x, y, _width, height = window.geometry().getRect()
+        self.assertEqual(y + height, box[1] + box[3])
+
+    def test_the_side_edges_add_room_and_keep_the_text_size(self):
+        window, box = self.window()
+        window._resize_text(('right',), box, 80, 0)
+        self.assertEqual((window.font, window.width(), window.height()), (13, box[2] + 80, box[3]))
+        window._resize_text(('right',), box, -500, 0)  # never narrower than its text
+        self.assertEqual(window.width(), box[2])
+        window._resize_text(('left',), box, -40, 0)
+        self.assertEqual(window.geometry().getRect()[0] + window.width(), box[0] + box[2])
+
+    def test_lines_boxes_for_sections_of_several_rows(self):
+        from turbohud.core.hud import RACE_SECTIONS, is_text_section
+        from turbohud.overlay.window import MovePanel
+
+        class Native:
+            def raise_window(self, window):
+                return 'test'
+
+        panel = MovePanel(Native(), RACE_SECTIONS, True)
+        self.addCleanup(panel.close)
+        several = {s.name for s in RACE_SECTIONS if is_text_section(s) and len(s.samples[0]) > 1}
+        self.assertEqual(set(panel.spacings), several)
+        self.assertIn('laptimes', several)
+        got = []
+        panel.spacing_changed.connect(lambda name, pct: got.append((name, pct)))
+        panel.spacings['laptimes'].setValue(150)
+        panel.set_spacing('laptimes', 2.0)  # shown: no request back
+        self.assertEqual((got, panel.spacings['laptimes'].value()), ([('laptimes', 150)], 200))

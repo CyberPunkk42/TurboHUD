@@ -1,6 +1,7 @@
 """What the HUD shows and where, as plain data that turbohud.hud draws."""
 
 import colorsys
+import functools
 import math
 from dataclasses import dataclass, field, replace
 
@@ -81,11 +82,14 @@ class Sizes:
     hint_gap: int  # between the content and the hint, and between hint lines
 
     @classmethod
-    def for_scale(cls, scale):
+    def for_scale(cls, scale, spacing=1.0):
+        """`spacing`: the room between rows, as a share of the usual (Section.spacing)."""
+
         def scaled(value):
             return max(1, round(value * scale))
 
-        return cls(scaled(MARGIN), scaled(16), scaled(40), scaled(20), scaled(13), scaled(8), scaled(6))
+        gap = max(0, round(8 * scale * spacing))
+        return cls(scaled(MARGIN), scaled(16), scaled(40), scaled(20), scaled(13), gap, scaled(6))
 
 
 def blend(start, end, share):
@@ -125,8 +129,8 @@ def help_lines(shortcuts, commands=False, lock_key='Ctrl+Shift+L'):
     the key that switches it (Ctrl+Shift+F12 where another program has Ctrl+Shift+L)."""
     finish = f'{lock_key} or Lock finishes.' if shortcuts else 'Lock finishes.'
     lines = [
-        'Drag a section to move it. At its corner: taller or shorter scales',
-        'the text, wider makes room for it.',
+        'Drag a section to move it. At its edges: up or down sizes its text,',
+        'sideways adds room. Size and Lines set them exactly.',
         finish,
     ]
     if commands and not shortcuts:
@@ -168,9 +172,9 @@ def _content(rows, sizes):
     return lines, baseline
 
 
-def hud_lines(rows, scale=1.0):
-    """The lines of a section's content `rows`, top to bottom."""
-    return _content(rows, Sizes.for_scale(scale))[0]
+def hud_lines(rows, scale=1.0, spacing=1.0):
+    """The lines of a section's content `rows`, top to bottom (`spacing`: Section.spacing)."""
+    return _content(rows, Sizes.for_scale(scale, spacing))[0]
 
 
 def _left_width(line, measure):
@@ -298,10 +302,10 @@ def overall_right(lines, middle_end, tyre_end, before_end, tag_start, measure):
     return start - max(COLUMN_GAP * line.size for line in lines)
 
 
-def content_size(rows, scale, measure):
+def content_size(rows, scale, measure, spacing=1.0):
     """(width, height) a section needs for `rows` at `scale`. `measure(text, size)` gives
-    a text's width in pixels (Qt knows the font)."""
-    sizes = Sizes.for_scale(scale)
+    a text's width in pixels (Qt knows the font). `spacing`: Section.spacing."""
+    sizes = Sizes.for_scale(scale, spacing)
     lines, bottom = _content(rows, sizes)
     width = lines_width(lines, measure)
     # Below the last baseline: room for letters such as g and p, then the margin.
@@ -335,7 +339,7 @@ def steady_rows(rows):
     ]
 
 
-def centred_text(size, rows, scale, measure, cap_height, least_left=0):
+def centred_text(size, rows, scale, measure, cap_height, least_left=0, spacing=1.0):
     """(left, down) that centre `rows` in a box of `size`: where the content starts
     across (at least `least_left`, to keep clear of what is at the side), and how far to
     move it down. `cap_height(font_size)` gives how tall a capital letter is.
@@ -346,9 +350,9 @@ def centred_text(size, rows, scale, measure, cap_height, least_left=0):
     def steady(text, font_size):
         return measure(steady_text(text), font_size)
 
-    lines = hud_lines(rows, scale)
+    lines = hud_lines(rows, scale, spacing)
     top = lines[0].baseline - cap_height(lines[0].size)
-    left = max((size[0] - content_size(rows, scale, steady)[0]) // 2, least_left)
+    left = max((size[0] - content_size(rows, scale, steady, spacing)[0]) // 2, least_left)
     return left, round((size[1] - top - lines[-1].baseline) / 2)
 
 
@@ -365,9 +369,9 @@ class Section:
     level: bool = False  # a bar below the text showing how much is left (fuel, tires, health)
     sectors: bool = False  # with `level`: the room below the text holds the lap's sector bars
     background: str = ''  # '#rrggbb': a solid box behind its text, in place of the Tint (the yellow flag)
-    snug: bool = (
-        False  # its columns right after the longest text shown, not at the box's right edge (snug_width)
-    )
+    # Its columns right after the longest text shown, not at the box's right edge (snug_width).
+    snug: bool = False
+    spacing: float = 1.0  # the room between its rows, as a share of the usual (a section's own option)
 
 
 LAP_TIME_ROWS = 20  # how many drivers the lap times section is made for
@@ -534,7 +538,7 @@ def base_size(section, scale, measure):
     (the first sample, and its pedal bars) and as tall as its tallest."""
     if section.bar:
         return round(section.bar[0] * scale), round(section.bar[1] * scale)
-    sizes = [content_size(rows, scale, measure) for rows in section.samples]
+    sizes = [content_size(rows, scale, measure, section.spacing) for rows in section.samples]
     extra = pedal_space(scale) if section.pedals else 0
     below = level_space(scale) if section.level else 0
     return sizes[0][0] + extra, max(h for _w, h in sizes) + below
@@ -642,7 +646,7 @@ def ink_span(section, scale, ink):
     from its tallest sample, so that it stays put as the text changes. Where the sample
     has letters, room for those that hang below the line, as the live text may have
     them. `ink(text, size)` gives how far a text reaches (above, below) its baseline."""
-    sizes = Sizes.for_scale(scale)
+    sizes = Sizes.for_scale(scale, section.spacing)
     lines, bottom_baseline = max(
         (_content(rows, sizes) for rows in section.samples), key=lambda content: content[1]
     )
@@ -800,6 +804,115 @@ def match_sizes(places, scale, measure, ink):
         section.name: (place[0], place[1], math.ceil(needed), heights[section])
         for section, place in places.items()
     }
+
+
+# Text sizes (asked for by the user on 2026-11-13). A text section's size is that of its normal
+# text (the 'small' style: the lap times' names), in whole pixels; its other text (a heading, a
+# big number) and its flags, tire rings, bars and gaps keep their proportion to it. One global
+# size, which a section follows unless it has its own. The box follows the text: as tall as the
+# text needs, and at least as wide; a box no longer sets the text's size.
+FONT_SIZES = (6, 120)  # the text sizes in pixels one can choose
+DEFAULT_FONT = 13  # the normal text at scale 1: the HUD as it was drawn before text sizes
+
+
+def is_text_section(section):
+    """Whether a section draws text, sized by a text size (not the radar, the track map,
+    the delta bar or the blue flag, whose boxes set their size)."""
+    return not section.drawing and not section.bar
+
+
+def font_scale(font):
+    """The scale a text section is drawn at for a normal text size of `font` pixels."""
+    return min(max(font, FONT_SIZES[0]), FONT_SIZES[1]) / DEFAULT_FONT
+
+
+def text_box(section, place, font, measure, ink, keep_width=True):
+    """The box (x, y, width, height) of a text section at `place` with text size `font`: as
+    tall as its text needs, and as wide, or with `keep_width` as wide as `place` where that
+    is wider (the same width Match gave a group). It keeps its top left corner."""
+    scale = font_scale(font)
+    x, y, width, _height = place
+    needed = base_size(section, scale, measure)[0]
+    return x, y, max(width, needed) if keep_width else needed, tight_height(section, scale, ink)
+
+
+SPACINGS = (0.0, 3.0, 0.25)  # line spacing: least, most and step, as a share of the usual
+
+
+def font_for_height(section, height, ink):
+    """The largest text size whose box (text_box) is at most `height` tall: what dragging a
+    text section's top or bottom edge sets (asked for by the user on 2026-11-13: height
+    changes the size, width adds room); at least the smallest size."""
+    fitting = [font for font, tall in _box_heights(section, ink) if tall <= height]
+    return max(fitting, default=FONT_SIZES[0])
+
+
+@functools.lru_cache(maxsize=64)
+def _box_heights(section, ink):
+    """((text size, its box's height), ...) for every text size: worked out once per section
+    and line spacing, as a drag asks at every move. Not always rising by one size to the
+    next: a big number rounds to whole pixels on its own."""
+    return tuple(
+        (font, tight_height(section, font_scale(font), ink))
+        for font in range(FONT_SIZES[0], FONT_SIZES[1] + 1)
+    )
+
+
+def font_of_box(section, place, scale, measure, ink):
+    """The text size in pixels a text section was drawn at in `place` (x, y, width, height)
+    while its box set its size: to keep a layout as it looked, once, when text sizes came."""
+    rows = list(section.samples[0])
+    drawn = drawn_scale(section, place[2:], rows, tight_height(section, scale, ink), scale, ink, measure)
+    return min(max(round(DEFAULT_FONT * drawn), FONT_SIZES[0]), FONT_SIZES[1])
+
+
+def common_font(fonts):
+    """The text size most of `fonts` have (the one nearest their middle where several are as
+    common): the global size for a layout from before text sizes. DEFAULT_FONT without any."""
+    fonts = sorted(fonts)
+    if not fonts:
+        return DEFAULT_FONT
+    middle = fonts[len(fonts) // 2]
+    return max(set(fonts), key=lambda font: (fonts.count(font), -abs(font - middle), font))
+
+
+RESIZE_EDGE = 8  # pixels along a resizable section's edges that resize it in move mode
+
+
+def resize_edges(x, y, width, height, edge=RESIZE_EDGE):
+    """Which edges of a box `width` by `height` the point (x, y) in it is on, for resizing
+    (reported by the user on 2026-11-13: only a corner grip, which pointed and pulled the
+    wrong way at times): a tuple of 'left', 'right', 'top', 'bottom', two of them at a
+    corner; () in the middle. In a box too small for both, the nearer edge wins."""
+    edge = max(1, min(edge, width // 3 or 1, height // 3 or 1))
+    found = []
+    if x < edge:
+        found.append('left')
+    elif x >= width - edge:
+        found.append('right')
+    if y < edge:
+        found.append('top')
+    elif y >= height - edge:
+        found.append('bottom')
+    return tuple(found)
+
+
+def resized(box, edges, dx, dy, least=(40, 10)):
+    """`box` (x, y, width, height) dragged by (dx, dy) at `edges` (resize_edges), where the
+    desktop cannot resize it itself: the opposite edges stay put, and it keeps at least
+    `least` in size."""
+    x, y, width, height = box
+    if 'left' in edges:
+        moved = min(dx, width - least[0])
+        x, width = x + moved, width - moved
+    if 'right' in edges:
+        width = max(width + dx, least[0])
+    if 'top' in edges:
+        moved = min(dy, height - least[1])
+        y, height = y + moved, height - moved
+    if 'bottom' in edges:
+        height = max(height + dy, least[1])
+    return x, y, width, height
 
 
 def section_scale(size, base_height, needed_width=None, low=0.3, high=8.0):

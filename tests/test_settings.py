@@ -335,3 +335,21 @@ class GroupSettingTests(unittest.TestCase):
             data['sections']['lap']['group'] = 'Z'
             path.write_text(json.dumps(data))
             self.assertEqual(s.load_settings(path).sections['lap'].group, '')
+
+
+class LineSpacingTests(unittest.TestCase):
+    def test_kept_in_the_file_only_where_it_is_not_the_usual(self):
+        path = Path(tempfile.mkdtemp()) / s.SETTINGS_FILE
+        places = {
+            'players': s.SectionPlace(1, 2, 300, 100, spacing=1.5),
+            'lap': s.SectionPlace(1, 2, 300, 40),
+        }
+        s.save_settings(path, s.Settings(sections=places))
+        self.assertEqual(s.load_settings(path).sections, places)
+        text = path.read_text(encoding='utf-8')
+        self.assertEqual(text.count('"spacing"'), 1)
+
+    def test_a_wrong_value_is_the_usual_or_held_within_limits(self):
+        self.assertEqual(s._spacing('wide'), 1.0)
+        self.assertEqual(s._spacing(9), 3.0)
+        self.assertEqual(s._spacing(-1), 0.0)

@@ -24,29 +24,37 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QPushButton,
-    QSizeGrip,
+    QSpinBox,
     QVBoxLayout,
     QWidget,
 )
 
 from turbohud.core.hud import (
+    FONT_SIZES,
     MARGIN,
+    SPACINGS,
     Sectors,
     base_size,
     centred_text,
     content_shift,
     content_size,
     drawn_scale,
+    font_for_height,
+    font_scale,
     has_tint,
     help_lines,
     hud_lines,
+    is_text_section,
     level_bar,
     level_space,
     panel_categories,
     pedal_bars,
     pedal_space,
+    resize_edges,
+    resized,
     sector_bars,
     steady_rows,
+    text_box,
     text_can_centre,
     tight_height,
 )
@@ -91,6 +99,7 @@ BLUE_SAMPLE = 0.6  # the bar's opacity in move mode, to place it
 DELTA_BAR_SAMPLE = DeltaBarView(0.4, -1.0, '\u22120.40')  # the delta bar in move mode: ahead, gaining
 LEVEL_SAMPLE = (0.7, 'ahead')  # a level bar in move mode, to place the section
 SECTORS_SAMPLE = Sectors(('#c77dff', '#5ee07a', None))  # the sector bars in move mode
+PANEL_LINES_WIDTH = 50  # the move-mode panel's line spacing boxes: three digits and the arrows
 PANEL_COMBO_WIDTH = 56  # the move-mode panel's group lists: wide enough for '-' and A to D
 PANEL_SMALL_BUTTON = 32  # its one-character buttons (centre, match a group, delete a preset)
 # Its word buttons (All, None, Save, Load, Delete) are at least this wide, and wider where the
@@ -185,8 +194,28 @@ def _set_input(widget, native, transparent):
     return False
 
 
+# The edges resize_edges names, as Qt has them, and the cursor for each edge or corner.
+RESIZE_FLAGS = {
+    'left': Qt.LeftEdge,
+    'right': Qt.RightEdge,
+    'top': Qt.TopEdge,
+    'bottom': Qt.BottomEdge,
+}
+RESIZE_CURSORS = {
+    frozenset({'left'}): Qt.SizeHorCursor,
+    frozenset({'right'}): Qt.SizeHorCursor,
+    frozenset({'top'}): Qt.SizeVerCursor,
+    frozenset({'bottom'}): Qt.SizeVerCursor,
+    frozenset({'top', 'left'}): Qt.SizeFDiagCursor,
+    frozenset({'bottom', 'right'}): Qt.SizeFDiagCursor,
+    frozenset({'top', 'right'}): Qt.SizeBDiagCursor,
+    frozenset({'bottom', 'left'}): Qt.SizeBDiagCursor,
+}
+
+
 class SectionWindow(QWidget):
     drawing_time = 0.0  # seconds all sections have spent drawing, for the log
+    text_resized = Signal(str)  # a text section's name, resized by hand: its text size or width changed
 
     def __init__(self, native, theme, section):
         super().__init__(None, window_flags())
@@ -207,6 +236,12 @@ class SectionWindow(QWidget):
         self.delta_view = None  # the delta bar's content (a DeltaBarView)
         self.radar_cone = True  # the radar's sample in move mode shows slipstream cones (an option)
         self.sector_bars = True  # a section with sector bars shows them (an option)
+        # A text section's text size in pixels (core.hud.font_scale): the app sets it, and its box
+        # follows (text_box). None: the box sets the size, as before text sizes.
+        self.font = None
+        self.text = is_text_section(section)  # sized by a text size, not by its box
+        self.resizable = True  # at its edges in move mode: a text section by its text size (_resize_text)
+        self.own_font = None  # a text section's own text size; None: the global one (the app sets it)
         # While locked, a HudCanvas may draw this section with every other in one window per
         # screen, and this window stays hidden: 17 windows above the game cost it frames.
         self.canvas = None
@@ -223,14 +258,15 @@ class SectionWindow(QWidget):
             height = tight_height(section, theme.scale, text_ink)
             self.setToolTip(section.label)  # no room for its name in the box (move mode)
         self.base = (width, height)
-        self.grip = QSizeGrip(self)
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.addStretch()
-        layout.addWidget(self.grip, 0, Qt.AlignBottom | Qt.AlignRight)
-        self.grip.setVisible(False)
+        # Resized at any edge or corner in move mode (resize_edges), by the desktop where it can:
+        # Qt's size grip pointed and pulled the wrong way at times (reported by the user on 2026-11-13).
+        self._resizing = None  # (edges, where the drag began on the screen, the box then): resized here
+        self.setMouseTracking(True)  # the cursor shows the edge under it
         lowest = round(self.base[1] * 0.3)
-        self.setMinimumSize(MIN_WIDTH, lowest if section.bar else max(lowest, MIN_HEIGHT))
+        if self.text:
+            self.setMinimumSize(1, 1)  # its box follows its text size, however small
+        else:
+            self.setMinimumSize(MIN_WIDTH, lowest if section.bar else max(lowest, MIN_HEIGHT))
 
     def placement(self):
         # On Wayland only the desktop knows where the window is; ask it where possible.
@@ -280,7 +316,6 @@ class SectionWindow(QWidget):
         movable = getattr(self.native, 'set_movable', None)
         if movable is not None:
             movable(self, not locked)
-        self.grip.setVisible(not locked)
         self.setCursor(Qt.ArrowCursor if locked else Qt.OpenHandCursor)
         if not in_place or self.canvas is not None:
             self.show_on_top()  # changing a window flag hides the window; the canvas hides it
@@ -299,7 +334,6 @@ class SectionWindow(QWidget):
         movable = getattr(self.native, 'set_movable', None)
         if movable is not None:
             movable(self, wanted and not self.locked)
-        self.grip.setVisible(wanted and not self.locked)
         if not wanted and getattr(self.native, 'hides_windows', False):
             self.hide()
             if self.on_canvas:
@@ -309,14 +343,89 @@ class SectionWindow(QWidget):
             self.show_on_top()
         self.update()
 
+    def _edges_at(self, event):
+        """The edges under the pointer that resize this section (resize_edges); () where none."""
+        if self.locked or not self.resizable:
+            return ()
+        point = event.position()
+        return resize_edges(point.x(), point.y(), self.width(), self.height())
+
     def mousePressEvent(self, event):
-        if not self.locked and event.button() == Qt.LeftButton:
+        if self.locked or event.button() != Qt.LeftButton:
+            return
+        edges = self._edges_at(event)
+        if not edges:
             self.windowHandle().startSystemMove()
+            return
+        if self.text:
+            # Height sets its text size, width adds room: followed here, to size the text live.
+            self._resizing = (edges, event.globalPosition(), self.geometry().getRect())
+            return
+        flags = Qt.Edges()
+        for name in edges:
+            flags |= RESIZE_FLAGS[name]
+        if not self.windowHandle().startSystemResize(flags):
+            # The desktop cannot (macOS): resize it here, following the pointer.
+            self._resizing = (edges, event.globalPosition(), self.geometry().getRect())
+
+    def mouseMoveEvent(self, event):
+        if self._resizing is not None and self.text:
+            edges, start, box = self._resizing
+            moved = event.globalPosition() - start
+            self._resize_text(edges, box, round(moved.x()), round(moved.y()))
+            return
+        if self._resizing is not None:
+            edges, start, box = self._resizing
+            moved = event.globalPosition() - start
+            least = (self.minimumWidth(), self.minimumHeight())
+            self.setGeometry(*resized(box, edges, round(moved.x()), round(moved.y()), least))
+            return
+        if not self.locked:
+            self.setCursor(RESIZE_CURSORS.get(frozenset(self._edges_at(event)), Qt.OpenHandCursor))
+
+    def mouseReleaseEvent(self, _event):
+        if self._resizing is not None and self.text:
+            self.text_resized.emit(self.section.name)
+        self._resizing = None
+
+    def _resize_text(self, edges, box, dx, dy):
+        """A text section dragged at `edges` by (dx, dy) from `box`: the top or bottom edge sets
+        its text size (font_for_height; the box stays tight round it), the left or right edge
+        its width, never narrower than its text (asked for by the user on 2026-11-13). The
+        opposite edges stay put."""
+        x, y, width, height = resized(box, edges, dx, dy, (1, 1))
+        if 'top' in edges or 'bottom' in edges:
+            font = font_for_height(self.section, height, text_ink)
+            if font != self.font:
+                self.font = self.own_font = font
+        if 'left' in edges or 'right' in edges:
+            width = max(width, 1)
+        else:
+            width = box[2]
+        fitted = text_box(self.section, (x, y, width, height), self.font, text_width, text_ink)
+        if 'top' in edges:  # the bottom edge stays put
+            fitted = (fitted[0], box[1] + box[3] - fitted[3], *fitted[2:])
+        if 'left' in edges:  # the right edge stays put
+            fitted = (box[0] + box[2] - fitted[2], fitted[1], *fitted[2:])
+        self.setGeometry(*fitted)
+        self.update()
+
+    def _paint_corner(self, painter):
+        """Move mode: two short lines in the bottom right corner of a resizable section,
+        where it can be resized (and at every edge)."""
+        painter.save()
+        painter.setPen(QPen(QColor(*BORDER), 2))
+        right, bottom = self.width() - 4, self.height() - 4
+        for step in (6, 11):
+            painter.drawLine(QPointF(right - step, bottom), QPointF(right, bottom - step))
+        painter.restore()
 
     def paintEvent(self, _event):
         began = time.perf_counter()
         painter = QPainter(self)
         self.draw(painter)
+        if not self.locked and self.wanted and self.resizable:
+            self._paint_corner(painter)
         painter.end()
         SectionWindow.drawing_time += time.perf_counter() - began
 
@@ -345,15 +454,18 @@ class SectionWindow(QWidget):
             painter.drawRoundedRect(QRectF(self.rect()).adjusted(1, 1, -1, -1), 8, 8)
             rows = rows or list(self.section.samples[0])  # something to place, also before a race
         bars = pedal_space(self.theme.scale) if self.section.pedals else 0
-        scale = drawn_scale(
-            self.section,
-            (self.width(), self.height()),
-            rows,
-            self.base[1],
-            self.theme.scale,
-            text_ink,
-            text_width,
-        )
+        if self.font is not None:
+            scale = font_scale(self.font)  # its text size, whatever the box (text_box fits it)
+        else:
+            scale = drawn_scale(
+                self.section,
+                (self.width(), self.height()),
+                rows,
+                self.base[1],
+                self.theme.scale,
+                text_ink,
+                text_width,
+            )
         left = 0
         down = content_shift(self.section, self.height(), scale, text_ink)
         if self.section.background and rows:  # its own colour, also in move mode, to see it
@@ -367,7 +479,13 @@ class SectionWindow(QWidget):
             draw_bars(painter, pedal_bars(self.width(), self.height(), scale, throttle, brake))
             # The bars keep to the window's edges however small the text gets.
             left, down = centred_text(
-                (self.width(), self.height()), rows, scale, text_width, cap_height, pedal_space(scale) // 2
+                (self.width(), self.height()),
+                rows,
+                scale,
+                text_width,
+                cap_height,
+                pedal_space(scale) // 2,
+                self.section.spacing,
             )
         painter.translate(0, down)
         centre = self.text_centred and text_can_centre(self.section)
@@ -376,10 +494,11 @@ class SectionWindow(QWidget):
             # On a solid box the text needs no dark edge: on the yellow flag it smudged the letters.
             theme = dataclasses.replace(theme, outline_color='#00000000')
         # The usual content's columns are made room for too, so they stay put (draw_hud).
-        reserve = hud_lines(steady_rows(self.section.samples[0]), scale) if self.rows else ()
+        spacing = self.section.spacing
+        reserve = hud_lines(steady_rows(self.section.samples[0]), scale, spacing) if self.rows else ()
         draw_hud(
             painter,
-            hud_lines(rows, scale),
+            hud_lines(rows, scale, spacing),
             theme,
             scale,
             left,
@@ -394,7 +513,7 @@ class SectionWindow(QWidget):
             if self.section.sectors and not self.sector_bars:
                 level = None  # turned off: the room stays, so the text keeps its size
             if level is not None:
-                content_height = content_size(rows, scale, text_width)[1]
+                content_height = content_size(rows, scale, text_width, self.section.spacing)[1]
                 if isinstance(level, Sectors):
                     count = len(level.colours)
                     draw_sectors(
@@ -418,7 +537,7 @@ class SectionWindow(QWidget):
             painter.drawRoundedRect(QRectF(self.rect()), 6, 6)
             return
         # Digits as zeros: a tint that follows them would flicker as a number runs.
-        width, height = content_size(steady_rows(rows), scale, text_width)
+        width, height = content_size(steady_rows(rows), scale, text_width, self.section.spacing)
         pad = round(MARGIN * scale / 2)
         if self.section.level:
             height += level_space(scale) + pad // 2  # the level bar, with a little room below
@@ -880,6 +999,10 @@ class MovePanel(QWidget):
     relearn_requested = Signal()  # forget the current track's map and learn it again
     tint_changed = Signal(str, bool)  # section name, a tint behind its text
     text_centred_changed = Signal(str, bool)  # section name, its text in the middle of its box
+    font_size_changed = Signal(str, int)  # section name, its own text size in pixels; 0: the global one
+    global_font_changed = Signal(int)  # the global text size in pixels
+    all_global_requested = Signal()  # every text section follows the global text size
+    spacing_changed = Signal(str, int)  # section name, its line spacing in percent of the usual
 
     focusable = True  # it takes clicks on its tick boxes and buttons
 
@@ -902,6 +1025,8 @@ class MovePanel(QWidget):
         self.groups = {}
         self.centres = {}
         self.tints = {}
+        self.font_sizes = {}
+        self.spacings = {}
         grid = QGridLayout()
         grid.setHorizontalSpacing(6)
         grid.setVerticalSpacing(0)
@@ -924,6 +1049,13 @@ class MovePanel(QWidget):
             (2, 2, 'Centre', 'Centre the section across (↔) or down (↕) the screen'),
             (4, 1, 'Mid text', 'Put the text in the middle of the box, not at its left'),
             (5, 1, 'Tint', 'A light tint behind the text while locked; on the track map, its dark square'),
+            (
+                6,
+                1,
+                'Size px',
+                'Its text size in pixels, or the global one; flags, tire rings and bars go with it',
+            ),
+            (7, 1, 'Lines %', 'The room between its rows, in percent of the usual'),
         ):
             grid.addWidget(self._heading(text, tip), 0, column_, 1, span, Qt.AlignHCenter | Qt.AlignBottom)
         row = 0
@@ -932,11 +1064,11 @@ class MovePanel(QWidget):
                 row += 1
                 label = self._heading(heading.upper(), '')
                 label.setContentsMargins(0, 3, 0, 0)
-                grid.addWidget(label, row, 0, 1, 6)
+                grid.addWidget(label, row, 0, 1, 8)
             for section in listed:
                 row += 1
                 self._section_row(grid, row, section)
-        grid.setColumnStretch(6, 1)
+        grid.setColumnStretch(8, 1)
         column.addLayout(grid)
         self._finish(column, sections, shortcuts, saved_presets)
 
@@ -1026,6 +1158,42 @@ class MovePanel(QWidget):
             self.tints[section.name] = tint
         else:
             grid.addWidget(self._empty(), row, 5, Qt.AlignHCenter)
+        if is_text_section(section):
+            size = self._size_box(f'The text size of {section.label.lower()}: its own, or the global one')
+            size.setMinimum(FONT_SIZES[0] - 1)
+            size.setSpecialValueText('global')  # the lowest step: it follows the global size
+            size.valueChanged.connect(
+                lambda px, name=section.name: self.font_size_changed.emit(
+                    name, 0 if px < FONT_SIZES[0] else px
+                )
+            )
+            grid.addWidget(size, row, 6)
+            self.font_sizes[section.name] = size
+        else:
+            grid.addWidget(self._empty(), row, 6, Qt.AlignHCenter)
+        if is_text_section(section) and len(section.samples[0]) > 1:
+            lines = QSpinBox()
+            low, high, step = SPACINGS
+            lines.setRange(round(low * 100), round(high * 100))
+            lines.setSingleStep(round(step * 100))
+            lines.setValue(100)
+            lines.setKeyboardTracking(False)
+            lines.setFixedWidth(PANEL_LINES_WIDTH)
+            lines.setToolTip(f'The room between the rows of {section.label.lower()}, in percent of the usual')
+            lines.valueChanged.connect(lambda pct, name=section.name: self.spacing_changed.emit(name, pct))
+            grid.addWidget(lines, row, 7)
+            self.spacings[section.name] = lines
+        else:
+            grid.addWidget(self._empty(), row, 7, Qt.AlignHCenter)
+
+    @staticmethod
+    def _size_box(tip):
+        """A text size in pixels (FONT_SIZES)."""
+        box = QSpinBox()
+        box.setRange(*FONT_SIZES)
+        box.setKeyboardTracking(False)  # the size typed, not each digit on the way
+        box.setToolTip(tip)
+        return box
 
     def _finish(self, column, sections, shortcuts, saved_presets):
         """Below the sections: matching a group, the presets, and the buttons."""
@@ -1046,6 +1214,17 @@ class MovePanel(QWidget):
         matches.addStretch()
         column.addLayout(matches)
         self._update_matches()
+        every = QHBoxLayout()
+        every.addWidget(QLabel('Global text size (px):'))
+        self.global_size = self._size_box('The text size of every section set to global')
+        self.global_size.valueChanged.connect(self.global_font_changed)
+        every.addWidget(self.global_size)
+        follow = QPushButton('All global')
+        follow.setToolTip('Every text section follows the global text size (one step for Undo)')
+        follow.clicked.connect(self.all_global_requested)
+        every.addWidget(follow)
+        every.addStretch()
+        column.addLayout(every)
         presets = QGridLayout()
         presets.setHorizontalSpacing(4)
         presets.setVerticalSpacing(3)
@@ -1145,6 +1324,30 @@ class MovePanel(QWidget):
             box.blockSignals(True)
             box.setChecked(centred)
             box.blockSignals(False)
+
+    def set_font_size(self, name, font):
+        """Show a section's own text size (None: global), saying nothing back."""
+        box = self.font_sizes.get(name)
+        value = FONT_SIZES[0] - 1 if font is None else font
+        if box is not None and box.value() != value:
+            box.blockSignals(True)
+            box.setValue(value)
+            box.blockSignals(False)
+
+    def set_spacing(self, name, spacing):
+        """Show a section's line spacing (a share of the usual), saying nothing back."""
+        box = self.spacings.get(name)
+        if box is not None and box.value() != round(spacing * 100):
+            box.blockSignals(True)
+            box.setValue(round(spacing * 100))
+            box.blockSignals(False)
+
+    def set_global_font(self, font):
+        """Show the global text size, saying nothing back."""
+        if self.global_size.value() != font:
+            self.global_size.blockSignals(True)
+            self.global_size.setValue(font)
+            self.global_size.blockSignals(False)
 
     def set_presets_saved(self, numbers):
         for number, load in self.preset_loads.items():
