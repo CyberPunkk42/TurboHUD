@@ -185,15 +185,61 @@ class PitStopTests(unittest.TestCase):
         self.assertEqual(pits.update([out], 10 * SECOND - 1)[0].pit_seconds, 4.0)
         self.assertIsNone(pits.update([out], 10 * SECOND)[0].pit_seconds)
 
-    def test_standing_over_45_seconds_shows_plain_pit(self):
+    def test_only_standing_in_a_pit_box_counts(self):
+        # Reported by the user on 2026-11-13: a car stopped in the pit lane outside a box had its
+        # stop timed. Seen in that replay: in the box inPit on, then off in the lane.
+        def car(moving, box):
+            return dataclasses.replace(in_pits(moving=moving), in_box=box)
+
+        pits = race.PitStops()
+        pits.update([car(True, False)], 0)  # in the pit lane
+        pits.update([car(False, True)], 5 * SECOND)  # standing in its box ...
+        pits.update([car(True, False)], 13 * SECOND)  # ... 8 s, then off
+        pits.update([car(False, False)], 17 * SECOND)  # standing in the lane, outside a box
+        lane = pits.update([car(False, False)], 22 * SECOND)[0]
+        self.assertEqual((lane.pit_seconds, lane.pit_stopped), (22.0, 8.0))  # the entry timer runs on
+
+    def test_a_stop_outside_a_box_shows_no_stop_time(self):
+        pits = race.PitStops()
+        lane = dataclasses.replace(in_pits(), in_box=False)
+        pits.update([lane], 0)
+        car = pits.update([lane], 6 * SECOND)[0]
+        self.assertEqual((car.pit_seconds, car.pit_stopped), (6.0, 0.0))
+        self.assertEqual(race._pit_bracket(car), '')  # nothing in brackets
+
+    def test_standing_over_a_minute_shows_plain_pit(self):
+        # Asked for by the user on 2026-11-13: the driver is away (AFK) or out of the race.
         pits = race.PitStops()
         pits.update([in_pits()], 0)
-        self.assertEqual(pits.update([in_pits()], 45 * SECOND)[0].pit_stopped, 45.0)
-        car = pits.update([in_pits()], 46 * SECOND)[0]
+        self.assertEqual(pits.update([in_pits()], 60 * SECOND)[0].pit_stopped, 60.0)
+        car = pits.update([in_pits()], 61 * SECOND)[0]
         self.assertIsNone(car.pit_seconds)
         self.assertTrue(car.in_pit)
         self.assertEqual(race.players_rows([car])[0].tail, '  PIT')
-        self.assertIsNone(pits.update([in_pits(moving=True, in_pit=False)], 47 * SECOND)[0].pit_seconds)
+
+    def test_a_minute_standing_outside_a_box_also_stops_the_timers(self):
+        lane = dataclasses.replace(in_pits(), in_box=False)
+        pits = race.PitStops()
+        pits.update([lane], 0)
+        self.assertEqual(pits.update([lane], 60 * SECOND)[0].pit_seconds, 60.0)
+        self.assertIsNone(pits.update([lane], 61 * SECOND)[0].pit_seconds)
+
+    def test_after_standing_too_long_no_timers_for_the_rest_of_the_visit(self):
+        pits = race.PitStops()
+        pits.update([in_pits()], 0)
+        pits.update([in_pits()], 61 * SECOND)
+        self.assertIsNone(pits.update([in_pits(moving=True)], 70 * SECOND)[0].pit_seconds)  # drives on
+        out = pits.update([in_pits(moving=True, in_pit=False)], 75 * SECOND)[0]
+        self.assertIsNone(out.pit_seconds)  # nothing kept after the exit either
+        pits.update([in_pits(moving=True)], 200 * SECOND)  # its next visit is timed again
+        self.assertEqual(pits.update([in_pits(moving=True)], 203 * SECOND)[0].pit_seconds, 3.0)
+
+    def test_moving_in_between_starts_the_minute_again(self):
+        pits = race.PitStops()
+        pits.update([in_pits()], 0)
+        pits.update([in_pits(moving=True)], 50 * SECOND)  # rolls a little after 50 s
+        pits.update([in_pits()], 51 * SECOND)
+        self.assertIsNotNone(pits.update([in_pits()], 100 * SECOND)[0].pit_seconds)
 
     def test_a_new_visit_starts_afresh(self):
         pits = race.PitStops()

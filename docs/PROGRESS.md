@@ -1589,3 +1589,17 @@ its "Recent changes".
     `race.Retirements` goes by what the yellow flags call idle: not finished, outside the pit area, and slower than
     about 29 km/h for 60 s of race time; driving faster again ends it. Tests: the minute, a speed not read, driving
     on, pits/finished/grid not out, the label in both lists. Not yet seen in a race or replay.
+  - 2026-11-13: The pit stop time only in a pit box, reported by the user: a car stopped in the pit lane outside a
+    box (a surface where TSU services nothing) had its stop timed. Read in a replay on the user's PC: TSU's
+    `CarStateUpdater.inPit` was on while Mike Nike stood in his box (health 342 to 500, then fresh tires) and off
+    the moment he moved, and off when he stood in the lane after it; `VehicleState.inPitArea` stayed on throughout.
+    The reader keeps it as `PlayerState.in_box`, and `PitStops` counts standing only while it is on (where it is
+    not read, standing anywhere in the area counts, as before). The time from pit entry to exit is unchanged.
+    Tests: the reader's flag (on, off, not read), a stop in the box then standing in the lane, a stop outside a box.
+  - 2026-11-13: A minute standing in the pits stops the timers, asked for by the user: the driver is taken as away
+    (AFK) or out of the race. A car standing still anywhere in the pit area, in a box or not, for over a minute
+    (`PIT_IDLE_AFTER`, was 45 s of stop time in `PIT_STOP_MOST`) shows plain PIT without timers for the rest of that
+    visit, and nothing is kept after its exit; moving in between starts the minute again, and its next visit is timed
+    afresh. Standing outside a box counts for this too, else a car left in the pit lane (whose stop is no longer
+    timed) would show its entry timer running on. Tests: in a box, outside a box, the rest of the visit, moving in
+    between.
