@@ -353,3 +353,13 @@ class LineSpacingTests(unittest.TestCase):
         self.assertEqual(s._spacing('wide'), 1.0)
         self.assertEqual(s._spacing(9), 3.0)
         self.assertEqual(s._spacing(-1), 0.0)
+
+
+class RadarCockpitSettingTests(unittest.TestCase):
+    def test_on_unless_turned_off(self):
+        path = Path(tempfile.mkdtemp()) / s.SETTINGS_FILE
+        self.assertTrue(s.Settings().radar_cockpit_only)
+        s.save_settings(path, s.Settings(radar_cockpit_only=False))
+        self.assertFalse(s.load_settings(path).radar_cockpit_only)
+        path.write_text('{}', encoding='utf-8')
+        self.assertTrue(s.load_settings(path).radar_cockpit_only)

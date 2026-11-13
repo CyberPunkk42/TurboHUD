@@ -81,6 +81,18 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+  - 2026-11-13: The proximity radar only in cockpit cameras, asked for by the user (a setting, on by default): TSU's
+    camera keys 1 to 9 and 0 give TS.CameraPropertiesUpdater.m_selectedPreset 1 to 10, but a player can make any of
+    them first person, so the reader goes by the camera itself: the race controller's m_audio.m_raceCameras
+    .m_cameras[0] .m_cameraPropertiesUpdater .m_properties, a TS.RaceCameraProperties whose cameraPosition
+    (TS.CameraPositionMode) is AlignTarget (3, a camera that turns with the car) and whose distance is within a car
+    length (`LapState.cockpit`, `LapReader.cockpit_camera`). Read in a replay on the user's PC: their first-person
+    keys 4 to 7 AlignTarget at 1.5 to 2.2, the others FixedAngle, BehindVelocity or FullPlayableArea at 12 to 80;
+    the reader's check followed every switch. The radar hides only with the setting on and the camera known to be
+    outside the car (where it is not read it shows, as before), and follows the cars meanwhile. Setting "Proximity
+    radar only in cockpit cameras" in the settings window and the tray menu. Tests: the camera's view (cockpit,
+    behind, far, not read), the radar shown or not, the setting saved. Not yet seen in a live race (same path, through
+    the host or client controller).
   - 2026-11-13: Move mode ends when a race begins, asked for by the user (option 1 of two): with a click elsewhere
     no longer ending it, a forgotten move mode would last into the race. `race.RaceStarts` tells once when a race
     the player drives begins (the grid is set and its clock starts: `on_grid` turns on), not in a replay nor while

@@ -1615,3 +1615,15 @@ its "Recent changes".
     spectating; the app then locks ("a race began: locking" in the log). A race already running when TurboHUD
     starts or when move mode begins is no start, so move mode can be used mid-race. Tests: once at the start, a race
     already running, the next race, replays and spectating. Run once offscreen: no error.
+  - 2026-11-13: The proximity radar only in cockpit cameras, asked for by the user (a setting, on by default): TSU's
+    camera keys 1 to 9 and 0 give TS.CameraPropertiesUpdater.m_selectedPreset 1 to 10, but a player can make any of
+    them first person, so the reader goes by the camera itself: the race controller's m_audio.m_raceCameras
+    .m_cameras[0] .m_cameraPropertiesUpdater .m_properties, a TS.RaceCameraProperties whose cameraPosition
+    (TS.CameraPositionMode) is AlignTarget (3, a camera that turns with the car) and whose distance is within a car
+    length (`LapState.cockpit`, `LapReader.cockpit_camera`). Read in a replay on the user's PC: their first-person
+    keys 4 to 7 AlignTarget at 1.5 to 2.2, the others FixedAngle, BehindVelocity or FullPlayableArea at 12 to 80;
+    the reader's check followed every switch. The radar hides only with the setting on and the camera known to be
+    outside the car (where it is not read it shows, as before), and follows the cars meanwhile. Setting "Proximity
+    radar only in cockpit cameras" in the settings window and the tray menu. Tests: the camera's view (cockpit,
+    behind, far, not read), the radar shown or not, the setting saved. Not yet seen in a live race (same path, through
+    the host or client controller).

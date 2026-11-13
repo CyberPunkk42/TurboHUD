@@ -398,6 +398,7 @@ def run(args, folder):
                 settings.clan_tags,
                 settings.lap_columns,
                 retirements,
+                settings.radar_cockpit_only,
             )
             if not settings.yellow_flags:
                 yellow_flags.reset()  # turned on again, it starts afresh
@@ -599,6 +600,17 @@ def run(args, folder):
                     'The slipstream behind each car ahead on the radar',
                 )
             )
+            listed.append(
+                (
+                    'radar_cockpit_only',
+                    'Proximity radar only in cockpit cameras',
+                    settings.radar_cockpit_only,
+                    (
+                        'Shows the radar only while the camera sits at the driver (a first-person view, "CAM 5");'
+                        ' hidden in the views from outside the car'
+                    ),
+                )
+            )
         if any(section.drawing == 'map' for section in layout):
             listed.append(
                 (
@@ -668,6 +680,14 @@ def run(args, folder):
                 window.update()
         save()
         log.info('slipstream cones on the radar %s', 'on' if cone else 'off')
+
+    def set_radar_cockpit_only(only):
+        nonlocal settings
+        settings = replace(settings, radar_cockpit_only=only)
+        radar_cockpit_action.setChecked(only)
+        show_option('radar_cockpit_only', only)
+        save()
+        log.info('proximity radar %s', 'only in cockpit cameras' if only else 'in every camera')
 
     def set_sector_bars(shown):
         nonlocal settings
@@ -913,6 +933,7 @@ def run(args, folder):
                 'mph': set_mph,
                 'backdrop': set_backdrop,
                 'radar_cone': set_radar_cone,
+                'radar_cockpit_only': set_radar_cockpit_only,
                 'map_others': set_map_others,
                 'sector_bars': set_sector_bars,
                 'yellow_flags': set_yellow_flags,
@@ -1170,8 +1191,12 @@ def run(args, folder):
     radar_cone_action = QAction('Slipstream cones on the proximity radar', menu, checkable=True)
     radar_cone_action.setChecked(settings.radar_cone)
     radar_cone_action.triggered.connect(lambda checked: set_radar_cone(checked))
+    radar_cockpit_action = QAction('Proximity radar only in cockpit cameras', menu, checkable=True)
+    radar_cockpit_action.setChecked(settings.radar_cockpit_only)
+    radar_cockpit_action.triggered.connect(lambda checked: set_radar_cockpit_only(checked))
     if any(section.drawing == 'radar' for section in layout):
         menu.addAction(radar_cone_action)
+        menu.addAction(radar_cockpit_action)
     sector_bars_action = QAction('Sector bars below the last and best lap', menu, checkable=True)
     sector_bars_action.setChecked(settings.sector_bars)
     sector_bars_action.triggered.connect(lambda checked: set_sector_bars(checked))
