@@ -1024,6 +1024,10 @@ class MovePanel(QWidget):
     preset_delete_requested = Signal(int)
     match_requested = Signal(str)  # the group
     undo_requested = Signal()
+    redo_requested = Signal()  # forward again after Undo (asked for by the user on 2026-11-13)
+    screen_default_requested = Signal()  # the shipped layout for this screen
+    export_requested = Signal()  # the layout to a file, to share
+    import_requested = Signal()  # a layout from a file, fitted to this screen
     relearn_requested = Signal()  # forget the current track's map and learn it again
     tint_changed = Signal(str, bool)  # section name, a tint behind its text
     text_centred_changed = Signal(str, bool)  # section name, its text in the middle of its box
@@ -1287,12 +1291,39 @@ class MovePanel(QWidget):
             self.preset_deletes[number] = delete
         presets.setColumnStretch(5, 1)
         column.addLayout(presets)
+        files = QHBoxLayout()
+        files.addWidget(QLabel('Layout:'))
+        for text, tip, signal in (
+            (
+                'Screen default',
+                "The layout TurboHUD comes with for this screen's size (fitted where none is made for it)",
+                self.screen_default_requested,
+            ),
+            ('Export…', 'Save the layout to a file, to share it or keep it', self.export_requested),
+            (
+                'Import…',
+                'Load a layout from a file, fitted to this screen if made for another',
+                self.import_requested,
+            ),
+        ):
+            button = QPushButton(text)
+            button.setMinimumWidth(PANEL_WORD_BUTTON)
+            button.setToolTip(tip + ' (one step for Undo)' if signal is not self.export_requested else tip)
+            button.clicked.connect(signal)
+            files.addWidget(button)
+        files.addStretch()
+        column.addLayout(files)
         row = QHBoxLayout()
         self.undo = QPushButton('Undo')
         self.undo.setToolTip('Go back one change to the layout, as often as there are changes')
         self.undo.setEnabled(False)
         self.undo.clicked.connect(self.undo_requested)
         row.addWidget(self.undo)
+        self.redo = QPushButton('Redo')
+        self.redo.setToolTip('Go forward again to the change Undo went back from')
+        self.redo.setEnabled(False)
+        self.redo.clicked.connect(self.redo_requested)
+        row.addWidget(self.redo)
         self.relearn = None  # only with a track map
         if any(section.drawing == 'map' for section in sections):
             self.relearn = QPushButton('Relearn map')
@@ -1384,6 +1415,9 @@ class MovePanel(QWidget):
 
     def set_undo_available(self, available):
         self.undo.setEnabled(available)
+
+    def set_redo_available(self, available):
+        self.redo.setEnabled(available)
 
     def set_relearn_available(self, available):
         """Relearn map works only while a track is known (in a race)."""

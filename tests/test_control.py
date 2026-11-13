@@ -295,3 +295,41 @@ class HelpTests(unittest.TestCase):
     def test_the_panel_says_how_to_switch_without_shortcuts(self):
         self.assertIn('--toggle', ' '.join(hud.help_lines(shortcuts=False, commands=True)))
         self.assertNotIn('--toggle', ' '.join(hud.help_lines(shortcuts=True, commands=True)))
+
+
+class FirstStartLayoutTests(unittest.TestCase):
+    """A first start gets the shipped layout for its screen (asked for by the user on 2026-11-13)."""
+
+    @staticmethod
+    def measure(text, size):
+        return len(text) * size * 0.6
+
+    @staticmethod
+    def ink(_text, size):
+        return size * 0.7, size * 0.2
+
+    def layout(self, screen):
+        return app.first_start_layout(settings.Settings(), screen, hud.RACE_SECTIONS, self.measure, self.ink)
+
+    def test_every_section_placed_on_the_screen(self):
+        for screen in ((0, 0, 1920, 1080), (0, 0, 5120, 1440), (1920, 0, 2560, 1440), (0, 0, 1366, 768)):
+            with self.subTest(screen=screen):
+                result = self.layout(screen)
+                self.assertEqual(set(result.sections), {s.name for s in hud.RACE_SECTIONS})
+                for name, place in result.sections.items():
+                    inside = screen[0] <= place.x and place.x + place.width <= screen[0] + screen[2]
+                    self.assertTrue(inside and screen[1] <= place.y <= screen[1] + screen[3], name)
+
+    def test_the_common_text_size_is_the_global_one(self):
+        result = self.layout((0, 0, 5120, 1440))
+        fonts = [p.font for p in result.sections.values()]
+        self.assertIn(None, fonts)  # those with the common size follow the global one
+        self.assertNotIn(result.font_size, fonts)
+
+    def test_without_shipped_layouts_nothing_changes(self):
+        empty = Path(tempfile.mkdtemp())
+        before = settings.Settings()
+        after = app.first_start_layout(
+            before, (0, 0, 1920, 1080), hud.RACE_SECTIONS, self.measure, self.ink, empty
+        )
+        self.assertEqual(after, before)

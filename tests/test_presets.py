@@ -152,7 +152,11 @@ class DefaultTests(unittest.TestCase):
 
     def test_a_default_for_every_screen(self):
         exact = presets.default_for((2560, 1440), FOLDER, SECTIONS, measure, ink)
-        self.assertEqual(exact, presets.load_file(FOLDER / '2560x1440.json')[1])
+        self.assertEqual(
+            exact, presets.on_screen(presets.load_file(FOLDER / '2560x1440.json')[1], (2560, 1440))
+        )
+        wide = presets.default_for((5120, 1440), FOLDER, SECTIONS, measure, ink)
+        self.assertTrue(all(p.x >= 0 and p.y >= 0 for p in wide.values()))  # wholly on the screen
         other = presets.default_for((1366, 768), FOLDER, SECTIONS, measure, ink)
         for name, (x, y, w, h) in boxes(other).items():
             self.assertTrue(x + w <= 1366 and y + h <= 768, name)

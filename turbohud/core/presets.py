@@ -216,8 +216,20 @@ def default_for(size, folder, sections, measure, ink):
         return None
     made_for, places = presets[source]
     if made_for == tuple(size):
-        return places
+        return on_screen(places, size)
     return fit_layout(places, made_for, size, sections, measure, ink)
+
+
+def on_screen(places, size):
+    """`places` each moved, where it sticks out, wholly onto a screen of `size` (from its top left)."""
+    return {
+        name: replace(
+            p,
+            x=min(max(p.x, 0), max(size[0] - p.width, 0)),
+            y=min(max(p.y, 0), max(size[1] - p.height, 0)),
+        )
+        for name, p in places.items()
+    }
 
 
 def kept_sections(places, known):
@@ -236,6 +248,7 @@ __all__ = [
     'kept_sections',
     'load_file',
     'nearest',
+    'on_screen',
     'preset_data',
     'read_preset',
     'relative',

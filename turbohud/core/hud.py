@@ -1233,14 +1233,16 @@ class LayoutHistory:
     def __init__(self, state):
         self.current = state
         self.past = []
+        self.future = []  # the layouts Undo went back from, for Redo (asked for by the user on 2026-11-13)
         self._seen = state
         self._changed = None
 
     def record(self, state):
-        """The layout is now `state`: one change, if it differs."""
+        """The layout is now `state`: one change, if it differs. A change after Undo ends Redo."""
         if state != self.current:
             self.past.append(self.current)
             self.current = state
+            self.future.clear()
         self._seen = state
 
     def look(self, state, now):
@@ -1268,7 +1270,21 @@ class LayoutHistory:
         self.record(state)
         if not self.past:
             return None
+        self.future.append(self.current)
         self.current = self._seen = self.past.pop()
+        return self.current
+
+    def can_redo(self, state):
+        return bool(self.future) and state == self.current
+
+    def redo(self, state):
+        """The layout the last Undo went back from; None if there is none, or the layout was
+        changed since (a drag after Undo)."""
+        self.record(state)
+        if not self.future:
+            return None
+        self.past.append(self.current)
+        self.current = self._seen = self.future.pop()
         return self.current
 
 
