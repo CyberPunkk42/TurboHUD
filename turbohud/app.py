@@ -1284,7 +1284,12 @@ def run(args, folder):
     def export_layout():
         """The layout to a file, for the screen the sections are on."""
         target = busiest_screen()
-        suggested = Path.home() / f'TurboHUD layout {target[2]}x{target[3]}.json'
+        # Run from the source folder, the shipped layouts' folder: saved there, it ships with the next build.
+        shipped_folder = asset_path('presets')
+        if os.access(shipped_folder, os.W_OK):
+            suggested = shipped_folder / layout_presets.file_name(target[2:])
+        else:
+            suggested = Path.home() / f'TurboHUD layout {target[2]}x{target[3]}.json'
         chosen, _ = QFileDialog.getSaveFileName(
             panel, 'Export layout', str(suggested), 'TurboHUD layouts (*.json)'
         )

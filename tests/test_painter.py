@@ -1145,7 +1145,7 @@ class MovePanelPresetTests(unittest.TestCase):
         self.assertFalse(panel.redo.isEnabled())
         panel.set_redo_available(True)
         panel.redo.click()
-        for text in ('Screen default', 'Export…', 'Import…'):
+        for text in ('Load screen default', 'Export…', 'Import…'):
             next(b for b in panel.findChildren(type(panel.undo)) if b.text() == text).click()
         self.assertFalse(panel.design_save.isEnabled())  # only while designing
         panel.design_size.setCurrentText('3840x2160')

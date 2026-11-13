@@ -1332,7 +1332,7 @@ class MovePanel(QWidget):
         for line, (text, tip, signal) in enumerate(
             (
                 (
-                    'Screen default',
+                    'Load screen default',
                     (
                         "The layout TurboHUD comes with for this screen's size (fitted where none is made for it);"
                         ' one step for Undo'

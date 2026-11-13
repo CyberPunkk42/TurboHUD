@@ -1734,3 +1734,8 @@ its "Recent changes".
     while a number, list or text box has the keyboard (there the arrows change its value); locking clears the
     selection. Move-mode help text says so. Tests: the steps; driven in the app offscreen (move mode, the radar
     clicked, right and Shift+down: moved 1 and 10 px, no error).
+  - 2026-11-13: "Load screen default", and Export offers the shipped folder, asked for by the user: the button that
+    loads the shipped layout for the screen is named so (it read as if it saved). Export, run from the source folder,
+    now offers `assets/presets/<width>x<height>.json`, as Save design does: saved there, the layout is the shipped
+    one for that size with the next build (once committed to `main`); the packaged app offers the home folder.
+    Checked in the app offscreen: Export offered assets/presets, nothing written.
