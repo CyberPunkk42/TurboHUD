@@ -13,6 +13,7 @@ from functools import partial
 from pathlib import Path
 
 from turbohud import __version__
+from turbohud.core import stalls
 from turbohud.core.hud import (
     CLOCK_SECTIONS,
     RACE_SECTIONS,
@@ -1729,7 +1730,16 @@ def run(args, folder):
 
     shown_status = None
 
-    frames = FrameTimes(time.monotonic, log.info)
+    # The tester's stutter (2026-11-13): slow frames and reads with their time and the garbage
+    # collections in them, and which sections cost the drawing (turbohud.core.stalls).
+    stalls.watch.install()
+    frames = FrameTimes(
+        time.monotonic,
+        log.info,
+        gc_during=stalls.watch.during,
+        parts=SectionWindow.take_drawing_by,
+        on_flush=stalls.watch.flush,
+    )
     pacer = FramePacer()
     drawn_before = 0.0
 
