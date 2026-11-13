@@ -2497,7 +2497,7 @@ def _watching_sections(
     """What a spectator sees: the race, with the leader's lap, the player list with the
     gaps to the leader, the lap times and the map; nothing about a car of their own."""
     state = snapshot.state
-    sections = {'lap': [Row(f'Spectating  -  {_lap_title(state)}', 'title')]}
+    sections = {'lap': [lap_title_row(state, 'Spectating  -  ')]}
     if state.players:
         order = (
             standings.order(state.players, now, state.hotlapping)
@@ -2533,25 +2533,74 @@ def leader_lap(state):
     return min(lap, state.laps_to_finish) if state.laps_to_finish else lap
 
 
-def _lap_title(state):
-    title = (
+# The label at the end of the lap title as the leader crosses the line (asked for by the user on
+# 2026-11-13): the leader's lap where it is ahead of the player's, or "Final lap" as the leader begins
+# the last; shown this long from the crossing, fading in and out.
+LEADER_SHOWN = 6.0  # seconds
+LEADER_FADE = 0.5  # seconds of fading in, and of fading out at the end
+
+
+def lap_title_row(state, prefix=''):
+    """The lap title: the lap and the time left, and at the end, for LEADER_SHOWN after the leader
+    crossed the line, the leader's lap where it is ahead of the player's, or "Final lap" as the
+    leader begins the last. At the end, so nothing before it moves, and fading in and out."""
+    title = prefix + (
         f'Lap {state.lap_number}/{state.laps_to_finish}'
         if state.laps_to_finish
         else f'Lap {state.lap_number}'
     )
-    leader = leader_lap(state)
-    if leader is not None and leader > state.lap_number:  # the player's own lap says it otherwise
-        title += f' · Leader {leader}'
     left = state.time_left
     if left is not None:
         title += f'  -  {clock(math.ceil(left / UNITS_PER_SECOND))} left' if left > 0 else '  -  time is up'
-    return title
+    label = _leader_label(state)
+    if label is None:
+        return Row(title, 'title')
+    text, share = label
+    return Row(title, 'title', tail=f' · {text}', tail_color=f'text@{share:.2f}')
+
+
+def _leader_label(state):
+    """(the label's text, how far it is faded in, 0 to 1) while it shows, else None."""
+    if any(player.finished for player in state.players):
+        return None  # the race is ending: the winner is in
+    lap = leader_lap(state)
+    began = _leader_crossed(state, lap)
+    if lap is None or began is None:
+        return None
+    seconds = (state.clock - began) / UNITS_PER_SECOND
+    if not 0 <= seconds < LEADER_SHOWN:
+        return None
+    final = (state.laps_to_finish and lap >= state.laps_to_finish) or (
+        not state.laps_to_finish and state.time_limit > 0 and began >= state.time_limit
+    )
+    if final:
+        text = 'Final lap'
+    elif lap > state.lap_number:  # the player's own lap says it otherwise
+        text = f'Leader {lap}'
+    else:
+        return None
+    share = min(seconds / LEADER_FADE, (LEADER_SHOWN - seconds) / LEADER_FADE, 1.0)
+    return text, max(share, 0.0)
+
+
+def _leader_crossed(state, lap):
+    """When the leader began lap `lap` (race clock): the first car to begin it, so the moment stays
+    the same as the others follow (taking whichever car was first in the list made the label
+    flicker: reported by the user on 2026-11-13). None where not known."""
+    if lap is None:
+        return None
+    began = [
+        player.checkpoints[-1][0]
+        for player in state.players
+        if player_lap_number(player) == lap and player.checkpoints and player.checkpoints[-1]
+    ]
+    began = [time for time in began if time != NO_CHECKPOINT]
+    return min(began) if began else None
 
 
 def _racing_sections(snapshot, now):
     """The lap sections while the local player races."""
     state = snapshot.state
-    title = _lap_title(state)
     delta = state.delta_to_best
     if delta is None:
         delta_row = Row('vs best  -', 'medium')
@@ -2561,7 +2610,7 @@ def _racing_sections(snapshot, now):
         number = format_delta(delta, DELTA_PLACES).replace('-', '\u2212')
         delta_row = Row(number, 'medium', color, tail=' vs best', tail_color=color, slot=DELTA_SLOT)
     return {
-        'lap': [Row(title, 'title')],
+        'lap': [lap_title_row(state)],
         'current': [Row(format_tenths(current_lap_now(snapshot, now)), 'big', 'accent')],
         'delta': [delta_row],
         'times': [times_row(state)],

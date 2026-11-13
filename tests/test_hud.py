@@ -1224,3 +1224,30 @@ class SpeedWithGearTests(unittest.TestCase):
 
     def test_no_separate_gear_section(self):
         self.assertNotIn('gear', [s.name for s in hud.RACE_SECTIONS])
+
+
+class WideTextTests(unittest.TestCase):
+    """No text cut off at its box's edge (reported by the user on 2026-11-13: the lap title with the
+    leader's lap was cut after the time's colon)."""
+
+    def test_the_lap_box_fits_the_title_with_the_leader(self):
+        lap = next(s for s in hud.RACE_SECTIONS if s.name == 'lap')
+        for font in (13, 22, 41):
+            with self.subTest(font=font):
+                box = hud.text_box(lap, (0, 0, 0, 0), font, size_measure, ink)
+                title = [hud.Row('Lap 3/13  -  16:23 left', 'title', tail=' · Leader 4')]
+                needed = hud.content_size(title, hud.font_scale(font), size_measure)[0]
+                self.assertLessEqual(needed, box[2])
+
+    def test_a_wider_text_is_drawn_to_fit(self):
+        rows = [hud.Row('A rather long title that does not fit', 'title')]
+        wide = hud.content_size(rows, 1.0, size_measure)[0]
+        self.assertEqual(hud.fitting_scale(rows, 1.0, wide + 10, size_measure), 1.0)  # fits: its size
+        smaller = hud.fitting_scale(rows, 1.0, wide // 2, size_measure)
+        self.assertLess(smaller, 1.0)
+        self.assertLessEqual(hud.content_size(rows, smaller, size_measure)[0], wide // 2 + 2)
+
+    def test_room_for_the_pedal_bars_too(self):
+        rows = [hud.Row('000 km/h', 'medium')]
+        wide = hud.content_size(rows, 1.0, size_measure)[0]
+        self.assertLess(hud.fitting_scale(rows, 1.0, wide + 5, size_measure, pedals=True), 1.0)

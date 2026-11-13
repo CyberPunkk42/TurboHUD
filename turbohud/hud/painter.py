@@ -600,9 +600,12 @@ def draw_hud(painter, lines, theme, scale=None, left=0, width=None, centre=False
         if line.tail:
             # From the width with digits as zeros, so that the tail stays as a number runs.
             tail_x = text_x + (slot if line.slot else text_advance(steady_text(line.text), line.size))
-            outlined_text(
-                painter, tail_x, line.baseline, line.tail, line.size, _pick(colors, line.tail_color), outline
-            )
+            # 'name@share': the tail faded in that far, outline and all (the leader's lap in the lap title).
+            name, _at, share = line.tail_color.partition('@')
+            painter.save()
+            painter.setOpacity(painter.opacity() * (float(share) if share else 1.0))
+            outlined_text(painter, tail_x, line.baseline, line.tail, line.size, _pick(colors, name), outline)
+            painter.restore()
 
 
 def delta_bar_parts(width, height, fill):
