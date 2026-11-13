@@ -220,6 +220,7 @@ RESIZE_CURSORS = {
 class SectionWindow(QWidget):
     drawing_time = 0.0  # seconds all sections have spent drawing, for the log
     text_resized = Signal(str)  # a text section's name, resized by hand: its text size or width changed
+    clicked = Signal(str)  # the section's name, clicked in move mode: the arrow keys nudge it
 
     def __init__(self, native, theme, section):
         super().__init__(None, window_flags())
@@ -246,6 +247,7 @@ class SectionWindow(QWidget):
         self.text = is_text_section(section)  # sized by a text size, not by its box
         self.resizable = True  # at its edges in move mode: a text section by its text size (_resize_text)
         self.own_font = None  # a text section's own text size; None: the global one (the app sets it)
+        self.selected = False  # clicked last in move mode: the arrow keys nudge it
         # While locked, a HudCanvas may draw this section with every other in one window per
         # screen, and this window stays hidden: 17 windows above the game cost it frames.
         self.canvas = None
@@ -357,6 +359,8 @@ class SectionWindow(QWidget):
     def mousePressEvent(self, event):
         if self.locked or event.button() != Qt.LeftButton:
             return
+        self.clicked.emit(self.section.name)
+        self.activateWindow()  # the keyboard to TurboHUD: the arrow keys nudge it
         edges = self._edges_at(event)
         if not edges:
             self.windowHandle().startSystemMove()
@@ -430,6 +434,11 @@ class SectionWindow(QWidget):
         self.draw(painter)
         if not self.locked and self.wanted and self.resizable:
             self._paint_corner(painter)
+        if not self.locked and self.wanted and self.selected:
+            # The section the arrow keys nudge: a frame in the highlight colour.
+            painter.setPen(QPen(QColor(LIFT_COLOR), 2))
+            painter.setBrush(Qt.NoBrush)
+            painter.drawRoundedRect(QRectF(self.rect()).adjusted(1, 1, -1, -1), 8, 8)
         painter.end()
         SectionWindow.drawing_time += time.perf_counter() - began
 
@@ -1323,7 +1332,7 @@ class MovePanel(QWidget):
         for line, (text, tip, signal) in enumerate(
             (
                 (
-                    'Screen default',
+                    'Load screen default',
                     (
                         "The layout TurboHUD comes with for this screen's size (fitted where none is made for it);"
                         ' one step for Undo'

@@ -1282,3 +1282,14 @@ class RedoTests(unittest.TestCase):
         history.undo('b')
         self.assertFalse(history.can_redo('dragged'))  # the layout moved since
         self.assertIsNone(history.redo('dragged'))
+
+
+class NudgeTests(unittest.TestCase):
+    """The arrow keys nudge the section clicked last (asked for by the user on 2026-11-13)."""
+
+    def test_one_pixel_and_ten_with_shift(self):
+        self.assertEqual(hud.nudge('right', False), (1, 0))
+        self.assertEqual(hud.nudge('left', False), (-1, 0))
+        self.assertEqual(hud.nudge('up', True), (0, -10))
+        self.assertEqual(hud.nudge('down', True), (0, 10))
+        self.assertIsNone(hud.nudge('a', False))

@@ -1728,3 +1728,14 @@ its "Recent changes".
     first start and with the user's settings, no error. The panel's buttons and the design screen not yet tried by
     hand. The shipped 1920x1080 layout's smallest text is 8 px: the user's layout is wide, to be redone in the design
     screen.
+  - 2026-11-13: Arrow keys nudge a section in move mode, asked for by the user (fine adjustments): clicking a section
+    selects it (a frame in the highlight colour) and gives TurboHUD the keyboard; the arrow keys then move it 1 px,
+    with Shift 10 px (`hud.nudge`), as a drag, so its group follows and a run of nudges is one step for Undo. Not
+    while a number, list or text box has the keyboard (there the arrows change its value); locking clears the
+    selection. Move-mode help text says so. Tests: the steps; driven in the app offscreen (move mode, the radar
+    clicked, right and Shift+down: moved 1 and 10 px, no error).
+  - 2026-11-13: "Load screen default", and Export offers the shipped folder, asked for by the user: the button that
+    loads the shipped layout for the screen is named so (it read as if it saved). Export, run from the source folder,
+    now offers `assets/presets/<width>x<height>.json`, as Save design does: saved there, the layout is the shipped
+    one for that size with the next build (once committed to `main`); the packaged app offers the home folder.
+    Checked in the app offscreen: Export offered assets/presets, nothing written.
