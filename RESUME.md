@@ -68,8 +68,9 @@
   whether TSU stutters while driving or between races (backlog item 0).
 - Replays after a race (`fix/replays-after-a-race`, 2026-11-13): try in TSU a recording watched after a race in the
   same session, opened from the list and watched again; on the Mac, whether the recordings get an access time.
-1. Windows: the overlay over TSU (windowed, Fullscreen, Fullscreen Exclusive), and the live data
-   through the Rust reader (built 2026-11-11, not yet run there).
+1. Windows: the overlay over TSU (windowed, Fullscreen, Fullscreen Exclusive). The live data through
+   the Rust reader runs there since 2026-11-11 (first race found once the search hang was fixed; the
+   search measured and threaded on 2026-11-12).
    Also a trial of all of TurboHUD inside the CrossOver bottle (backlog item 1b,
    `docs/WINDOWS_AND_CROSSOVER.md`): first the Qt probe in the bottle.
 2. macOS: live data is connected; check it in races (offline and online), over
@@ -93,6 +94,9 @@
     offscreen-only failures are gone). Checked on the Mac (cocoa): 868 px on a 900 px screen, 768 on 800, 668 on 700,
     the scroll bar beside the last column. Smoke run: move mode showed the panel, no traceback. Not yet tried by hand
     on a small screen.
+  - 2026-11-13: Next steps corrected, asked for by the user: the Rust reader on Windows was still listed as not yet
+    run there; it has read the user's races on the Windows PC since 2026-11-11. Left on Windows: the overlay over
+    TSU in Fullscreen and Fullscreen Exclusive.
   - 2026-11-13: Build 2026.11.13.2 for the tester (`releases/TurboHUD-2026.11.13.2-macos-arm64.dmg`, 33.7 MB, macOS 27,
     `--any-macos`, built with `.buildtools/build-venv`), asked for by the user: `main` after merging GitHub's main
     and `docs/tester-build-2026-11-13`, with what came since 2026.11.13: the new icon and About, one TurboHUD at a
@@ -103,6 +107,13 @@
     It replaces 2026.11.13, still in `releases/`, to be removed by hand. Tests on `main` (build-venv): 1151 of 1155
     pass; the four `MovePanelPresetTests` failures are only under the offscreen platform on the Mac (the panel 844 px
     there); drawn with cocoa the panel is 991 px tall, more than some Mac laptops' screens (about 900 px), to look at.
+  - 2026-11-13: Windows build 2026.11.13.2 (`releases/`, not tagged): the shipped layouts, design screen, display
+    presets folder, one TurboHUD at a time, About and the new icon. Checked: the zip holds the exe (new icon), the
+    Quick Start, `customization/display_presets/README.txt` and the five layouts (the repository's), and the smoke
+    test passed. The smoke test now runs the built app with settings and command socket in a folder of its own
+    (`build_app.smoke_env`) and passes only when its log ends with "done": before, it used the player's settings, and
+    with a TurboHUD running a built app that only told that one and quit would have passed. Tests: the environment
+    per system and where the log is.
   - 2026-11-13: The user's own layouts shipped, asked for by the user: `assets/presets` 1920x1080, 2560x1440 and
     2560x1600 are now the ones the user arranged on the design screen (exported, then repaired from the frame back to
     full size), and 5120x1440 the user's newest own layout (bigger blue flag, shortcut warning and local time; lap,

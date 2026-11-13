@@ -1798,6 +1798,13 @@ its "Recent changes".
     full size), and 5120x1440 the user's newest own layout (bigger blue flag, shortcut warning and local time; lap,
     flags and draft moved). 3840x2160 stays the one fitted from the earlier 5120x1440 layout (none made yet). Each
     has all 19 sections on its screen and holds positions, sizes and text sizes only. Tests pass with them.
+  - 2026-11-13: Windows build 2026.11.13.2 (`releases/`, not tagged): the shipped layouts, design screen, display
+    presets folder, one TurboHUD at a time, About and the new icon. Checked: the zip holds the exe (new icon), the
+    Quick Start, `customization/display_presets/README.txt` and the five layouts (the repository's), and the smoke
+    test passed. The smoke test now runs the built app with settings and command socket in a folder of its own
+    (`build_app.smoke_env`) and passes only when its log ends with "done": before, it used the player's settings, and
+    with a TurboHUD running a built app that only told that one and quit would have passed. Tests: the environment
+    per system and where the log is.
   - 2026-11-13: Build 2026.11.13.2 for the tester (`releases/TurboHUD-2026.11.13.2-macos-arm64.dmg`, 33.7 MB, macOS 27,
     `--any-macos`, built with `.buildtools/build-venv`), asked for by the user: `main` after merging GitHub's main
     and `docs/tester-build-2026-11-13`, with what came since 2026.11.13: the new icon and About, one TurboHUD at a
@@ -1808,6 +1815,9 @@ its "Recent changes".
     It replaces 2026.11.13, still in `releases/`, to be removed by hand. Tests on `main` (build-venv): 1151 of 1155
     pass; the four `MovePanelPresetTests` failures are only under the offscreen platform on the Mac (the panel 844 px
     there); drawn with cocoa the panel is 991 px tall, more than some Mac laptops' screens (about 900 px), to look at.
+  - 2026-11-13: Next steps corrected, asked for by the user: the Rust reader on Windows was still listed as not yet
+    run there; it has read the user's races on the Windows PC since 2026-11-11. Left on Windows: the overlay over
+    TSU in Fullscreen and Fullscreen Exclusive.
   - 2026-11-13: The move-mode panel fits small screens, reported by the user: on the Mac it had grown to 991 px
     tall (the Size px and Lines % columns, the layout rows), more than a small Mac laptop's usable screen, so Lock,
     Settings and Quit could be off it. The rows of sections are now in a scroll area (`MovePanel.rows_area`), and
