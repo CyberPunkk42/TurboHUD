@@ -1428,7 +1428,8 @@ def run(args, folder):
             design_end()
         size = (width, height)
         known = {section.name: section for section in layout}
-        laid = layout_presets.default_for(size, asset_path('presets'), known, text_width, text_ink)
+        # One's own layout for that size first (customization/display_presets), else the shipped one.
+        laid = layout_presets.layout_for(size, own_folder, asset_path('presets'), known, text_width, text_ink)
         if not laid:
             return
         frame, scale = layout_presets.design_frame(size, busiest_screen())

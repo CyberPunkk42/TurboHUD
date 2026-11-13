@@ -82,6 +82,13 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+  - 2026-11-13: A 3840x2160 layout from the user's own design, asked for by the user: `assets/presets/3840x2160.json`
+    is the user's 2560x1440 design (the same 16:9 shape) at 1.5 times, every position, size and text size, so the
+    arrangement is exactly theirs; a copy is in the user's `customization/display_presets` to adjust on the design
+    screen. The design screen now starts from one's own layout for that size there, else the shipped one (it took
+    the shipped one only). Checked in the app offscreen on a 5120x1440 screen: Design 3840x2160 (at 59%), then Save
+    design, gave the layout back within 5 px and 1 text size (the frame's rounding); the blue flag, delta bar, radar
+    and track map, whose boxes set their size, carry no text size of their own.
   - 2026-11-13: Build 2026.11.13.3 for the tester (`releases/TurboHUD-2026.11.13.3-macos-arm64.dmg`, 33.7 MB, macOS 27,
     `--any-macos`, built with `.buildtools/build-venv`), asked for by the user: `main` with the move-mode panel that
     fits small screens, merged and pushed with GitHub's main (the smoke test with settings of its own, the Rust
