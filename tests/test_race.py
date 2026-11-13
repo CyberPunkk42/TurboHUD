@@ -138,6 +138,7 @@ def build(
     hotlapping=None,
     in_box=None,
     camera=None,
+    gear=None,
 ):
     """A fake race; `car` is the car's (x, z) and `gates` the checkpoint lines, both
     optional like in a game without them."""
@@ -403,7 +404,19 @@ def build(
             )
         )
         g.put(vehicle + 0x64, struct.pack('<3f', car[0], 10.0, car[1]))
-        model = g.alloc_obj(g.klass('TS', 'VehicleModel', [('m_properties', 0x18, False)]))
+        model = g.alloc_obj(
+            g.klass('TS', 'VehicleModel', [('m_properties', 0x18, False), ('m_engineAudio', 0x28, False)])
+        )
+        g.q(model + 0x28, 0)  # no engine sound unless the gear is given
+        if gear is not None:  # (TS.EngineAudio.m_gear from 0, m_enginePitch)
+            audio = g.alloc_obj(
+                g.klass(
+                    'TS', 'EngineAudio', [('m_enginePitch', 0x2C, False, 0x0C), ('m_gear', 0x38, False, 0x08)]
+                )
+            )
+            g.put(audio + 0x2C, struct.pack('<f', gear[1]))
+            g.put(audio + 0x38, struct.pack('<i', gear[0]))
+            g.q(model + 0x28, audio)
         properties = g.alloc_obj(g.klass('TS', 'VehicleProperties', [('name', 0x20, False)]))
         car_name = 'Ligier JS320'
         text = g.alloc_obj(0, 0x14 + 2 * len(car_name) + 2)
@@ -3542,3 +3555,29 @@ class YellowFlagJumpTests(unittest.TestCase):
         right_way, asked = self.recorder()
         self.assertEqual(self.update(flags, 5.0, self.car((10.0, 0.0)), right_way), ())  # started again
         self.assertEqual(asked, [None])  # looked up anew
+
+
+class GearTests(unittest.TestCase):
+    """The engine sound's gear and revs (asked for by the user on 2026-11-13)."""
+
+    def car(self, gear):
+        reader = build([10_000], laps_completed=0, clock=20_000, limit=0, car=(1.0, 2.0), name='A', gear=gear)
+        return reader.read().car
+
+    def test_the_gear_counts_from_one(self):
+        car = self.car((3, 0.8))  # TSU's gear 3 picks the fourth gear's ratio
+        self.assertEqual(car.gear, 4)
+        self.assertAlmostEqual(car.revs, 0.8, places=5)
+        first = self.car((0, 0.7))
+        self.assertEqual(first.gear, 1)
+
+    def test_none_without_an_engine_sound_or_with_a_wrong_gear(self):
+        self.assertIsNone(self.car(None).gear)
+        self.assertIsNone(self.car((race.MAX_GEARS, 0.8)).gear)
+        self.assertIsNone(self.car((-1, 0.8)).gear)
+
+    def test_not_read_while_turned_off(self):
+        race.LapReader.read_gear = False
+        self.addCleanup(setattr, race.LapReader, 'read_gear', True)
+        car = self.car((3, 0.8))
+        self.assertEqual((car.gear, car.revs), (None, None))

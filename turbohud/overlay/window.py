@@ -66,6 +66,7 @@ from turbohud.core.race import (
     radar_arrow,
     radar_car_size,
     radar_edge_blips,
+    rev_lights,
 )
 from turbohud.core.settings import GROUPS, PRESETS
 from turbohud.core.trackmap import MapDot, TrackMapView, map_transform, outline_from_path, road_width
@@ -99,6 +100,7 @@ BLUE_SAMPLE = 0.6  # the bar's opacity in move mode, to place it
 DELTA_BAR_SAMPLE = DeltaBarView(0.4, -1.0, '\u22120.40')  # the delta bar in move mode: ahead, gaining
 LEVEL_SAMPLE = (0.7, 'ahead')  # a level bar in move mode, to place the section
 SECTORS_SAMPLE = Sectors(('#c77dff', '#5ee07a', None))  # the sector bars in move mode
+REVS_SAMPLE = Sectors(rev_lights(0.75))  # the gear's rev lights in move mode
 PANEL_LINES_WIDTH = 50  # the move-mode panel's line spacing boxes: three digits and the arrows
 PANEL_COMBO_WIDTH = 56  # the move-mode panel's group lists: wide enough for '-' and A to D
 PANEL_SMALL_BUTTON = 32  # its one-character buttons (centre, match a group, delete a preset)
@@ -508,7 +510,13 @@ class SectionWindow(QWidget):
             snug=self.section.snug,
         )
         if self.section.level and rows:
-            sample = SECTORS_SAMPLE if self.section.sectors else LEVEL_SAMPLE
+            sample = (
+                SECTORS_SAMPLE
+                if self.section.sectors
+                else REVS_SAMPLE
+                if self.section.name == 'gear'
+                else LEVEL_SAMPLE
+            )
             level = self.level or (None if self.locked else sample)
             if self.section.sectors and not self.sector_bars:
                 level = None  # turned off: the room stays, so the text keeps its size

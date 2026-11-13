@@ -343,6 +343,10 @@ class CarState:
     draft_downforce_loss: float = 0.0  # 0 to 1: downforce lost to the slipstream now
     draft_last_lap: float | None = None  # 0 to 1: share of the last lap spent in a slipstream
     tire_change: float = 0.0  # 0 to 1: how far a tire change in the pits has come
+    # The engine sound's gear (1 the lowest) and pitch, which rises with the revs: TSU's cars have no
+    # gearbox of their own, the sound has one (TS.EngineAudio). None where not read.
+    gear: int | None = None
+    revs: float | None = None
 
     @property
     def damage_effect(self):
@@ -543,6 +547,10 @@ class LapReader:
     """Reads the race. What does not change during a race (field positions, the local
     player, finished laps, the track's checkpoint lines) is kept between reads, so a read
     asks the game only for what moves: about twenty small reads."""
+
+    # Whether the engine sound's gear and revs are read (the app sets it: off with its option or with
+    # the Gear section hidden, asked for by the user on 2026-11-13, so they cost no reads then).
+    read_gear = True
 
     def __init__(self, il2cpp, clock=time.monotonic, event_running=None, recording_opened=None):
         """`event_running`: a callable saying whether TSU has an event running (True,
@@ -1463,7 +1471,25 @@ class LapReader:
             draft=draft,
             draft_downforce_loss=downforce_loss,
             tire_change=self._tire_change(state),
+            **(self._gear(vehicle) if self.read_gear else {}),
         )
+
+    def _gear(self, vehicle):
+        """{'gear', 'revs'} of the car's engine sound: TS.VehicleModel.m_engineAudio
+        (TS.EngineAudio) .m_gear, from 0 for the first (it picks the gear's ratio from
+        m_gearRatios: a replay on the user's PC, 2026-11-13, matched the ratios that way), and
+        .m_enginePitch (about 0.55 to 0.9 driving, up to the shift at about 0.9). {} where
+        not read (asked for by the user on 2026-11-13: the gear and the revs)."""
+        try:
+            model = self._ref('vehicle', vehicle, 'm_vehicleModel')
+            audio = self._ref('vehicle model', model, 'm_engineAudio')
+            gear = self.il.memory.i32(audio + self._offset('engine audio', audio, 'm_gear'))
+            pitch = self._number('engine audio', audio, 'm_enginePitch')
+        except (NotFound, OSError):
+            return {}
+        if not 0 <= gear < MAX_GEARS or not math.isfinite(pitch):
+            return {}
+        return {'gear': gear + 1, 'revs': pitch}
 
     def _tire_change(self, state):
         """How far a tire change has come, 0 to 1: the ticks of tireCompoundAndChangeTicks
@@ -2708,6 +2734,30 @@ def _balance_text(car):
     return f'  {"+" if balance >= 0 else "-"}{abs(balance):.2f}%'
 
 
+# The gear's rev bar (asked for by the user on 2026-11-13), from the engine sound's pitch: read in a
+# replay, it rose from about 0.55 to 0.9 in each gear and dropped to about 0.75 at each upshift.
+MAX_GEARS = 12  # a gear read beyond this is no gear: not read right
+REVS_LOW, REVS_TOP = 0.55, 0.9  # the pitch at the bar's start and where the sound shifts up
+REVS_SHIFT = 0.95  # share of the bar from which the gear is red: about to shift up
+# The rev bar's segments, lit one by one as the revs rise, like a GT car's or an F1 car's lights (asked
+# for by the user on 2026-11-13): green, then yellow, then red.
+REV_LIGHTS = ('#5ee07a',) * 5 + ('#ffe14d',) * 3 + ('#ff6b6b',) * 2
+
+
+def rev_lights(share):
+    """The rev bar's segment colours for a bar `share` full (rev_share): the lit ones in their
+    colour, the rest None (unlit, grey)."""
+    lit = round(min(max(share, 0.0), 1.0) * len(REV_LIGHTS))
+    return tuple(colour if index < lit else None for index, colour in enumerate(REV_LIGHTS))
+
+
+def rev_share(pitch):
+    """How full the rev bar is, 0 to 1, for an engine sound pitch (REVS_LOW to REVS_TOP)."""
+    if pitch is None:
+        return 0.0
+    return min(max((pitch - REVS_LOW) / (REVS_TOP - REVS_LOW), 0.0), 1.0)
+
+
 def car_sections(car, laps_to_go=None, speed_unit='kmh'):
     """{section: rows} for fuel, tires and speed; empty where the event has none.
     `laps_to_go` (LapState.laps_to_go) gives the fuel margin to the finish."""
@@ -2716,6 +2766,10 @@ def car_sections(car, laps_to_go=None, speed_unit='kmh'):
     speed_color = 'lift' if car.lifting else 'text'
     speed = f'{car.kmh / KMH_PER_MPH:.0f} mph' if speed_unit == 'mph' else f'{car.kmh:.0f} km/h'
     sections = {'speed': [Row(speed, 'medium', speed_color)], 'pedals': (car.throttle, car.brake)}
+    if car.gear is not None:
+        sections['gear'] = [
+            Row(str(car.gear), 'big', 'behind' if rev_share(car.revs) >= REVS_SHIFT else 'text')
+        ]
     if car.fuel_left is not None:
         color = {True: 'ahead', False: 'behind', None: 'text'}[car.saving]
         tail = _laps_text(car.fuel_laps) + _balance_text(car)
@@ -2754,6 +2808,8 @@ def car_sections(car, laps_to_go=None, speed_unit='kmh'):
             Row(f'Draft {car.draft * 100:.0f}%', 'medium', color, tail=tail, tail_color='lift')
         ]
         levels['draft'] = (car.draft, 'draft')
+    if car.gear is not None and car.revs is not None:
+        levels['gear'] = Sectors(rev_lights(rev_share(car.revs)))
     if levels:
         sections['levels'] = levels  # {section: (0 to 1, colour)} for the bars below the text
     return sections

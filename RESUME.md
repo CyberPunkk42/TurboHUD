@@ -81,6 +81,15 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+  - 2026-11-13: Gear and revs, asked for by the user: TSU's cars have no gearbox of their own, but the engine sound
+    has one (`TS.EngineAudio`, through `VehicleModel.m_engineAudio`): `m_gear`, counted from 0 (it picks the gear's
+    ratio from `m_gearRatios`: a replay matched the ratios that way), and `m_enginePitch`, which rose from about 0.55
+    to 0.9 in each gear and dropped at each upshift. A new Gear section (car group) shows the gear (`CarState.gear`,
+    1 the lowest) and below it rev lights in 10 segments, green, yellow and red as in a GT or F1 car, lit one by one
+    (`race.rev_lights`, `rev_share`); the gear turns red near the shift. An option, "Gear and revs" (settings window
+    and tray, on by default): off, or with the section hidden, nothing of it is read (`LapReader.read_gear`), for a
+    slower PC. Tests: the reader (counted from 1, none, a wrong gear, turned off), the lights, the section, the
+    setting; checked in an offscreen render.
   - 2026-11-13: No false "wrong way" after a jump, reported by the user: after a recording was started again, drivers
     driving normally were flagged as driving the wrong way. Each car's place on the learnt track is kept and looked
     up next time only near it; after the cars jumped, the search near the old place could take a part of the track

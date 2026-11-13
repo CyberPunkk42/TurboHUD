@@ -344,6 +344,7 @@ def run(args, folder):
         from turbohud.core.race import (
             RACING,
             DeltaBar,
+            LapReader,
             RaceStarts,
             Radar,
             Retirements,
@@ -375,6 +376,8 @@ def run(args, folder):
         retirements = Retirements()
 
         def contents():
+            gear = windows.get('gear')
+            LapReader.read_gear = settings.gear and gear is not None and gear.wanted
             snapshot = live.snapshot()
             if race_starts.started(snapshot, time.monotonic()) and not locked:
                 log.info('a race began: locking')
@@ -641,6 +644,15 @@ def run(args, folder):
                     ),
                 )
             )
+        if any(section.name == 'gear' for section in layout):
+            listed.append(
+                (
+                    'gear',
+                    'Gear and revs',
+                    settings.gear,
+                    'The gear and a rev bar, from the engine sound; off, they are not read at all',
+                )
+            )
         if any(section.name == 'laptimes' for section in layout):
             listed.append(
                 (
@@ -708,6 +720,20 @@ def run(args, folder):
         show_option('yellow_flags', shown)
         save()
         log.info('yellow flags %s', 'on' if shown else 'off')
+
+    def set_gear(shown):
+        """The Gear section on or off (asked for by the user on 2026-11-13: off, nothing of it is
+        read, for a slower PC)."""
+        nonlocal settings
+        settings = replace(settings, gear=shown)
+        gear_action.setChecked(shown)
+        show_option('gear', shown)
+        window = windows.get('gear')
+        if window is not None:
+            window.show_content([])  # nothing until it is read again
+            window.update()
+        save()
+        log.info('gear and revs %s', 'on' if shown else 'off')
 
     def set_classes(shown):
         nonlocal settings
@@ -937,6 +963,7 @@ def run(args, folder):
                 'map_others': set_map_others,
                 'sector_bars': set_sector_bars,
                 'yellow_flags': set_yellow_flags,
+                'gear': set_gear,
                 'classes': set_classes,
                 'clan_tags': set_clan_tags,
                 **{f'column_{c}': (lambda shown, c=c: set_lap_column(c, shown)) for c in LAP_COLUMNS},
@@ -1207,6 +1234,11 @@ def run(args, folder):
     yellow_flags_action.triggered.connect(lambda checked: set_yellow_flags(checked))
     if any(section.name == 'yellowflag' for section in layout):
         menu.addAction(yellow_flags_action)
+    gear_action = QAction('Gear and revs', menu, checkable=True)
+    gear_action.setChecked(settings.gear)
+    gear_action.triggered.connect(lambda checked: set_gear(checked))
+    if any(section.name == 'gear' for section in layout):
+        menu.addAction(gear_action)
     classes_action = QAction('Classes in the lap times', menu, checkable=True)
     classes_action.setChecked(settings.classes)
     classes_action.triggered.connect(lambda checked: set_classes(checked))

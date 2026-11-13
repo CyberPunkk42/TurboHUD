@@ -111,6 +111,7 @@ class Settings:
     radar_cockpit_only: bool = True  # the proximity radar only while the camera sits at the driver
     sector_bars: bool = True  # the sector bars below the last and best lap
     yellow_flags: bool = True  # the yellow flag section and the yellow rings on the track map
+    gear: bool = True  # the Gear section: the engine sound's gear and revs (read only while on and shown)
     clan_tags: bool = True  # the lap times show each driver's clan tag, outside a multi-class race
     classes: bool = True  # the lap times grouped by class, from the drivers' clan tags (see class_tags)
     class_tags: tuple = CLASS_TAGS  # the clan tags that name a class (upper case, without brackets)
@@ -295,6 +296,7 @@ def load_settings(path):
         radar_cockpit_only=data.get('radar_cockpit_only') is not False,
         sector_bars=data.get('sector_bars') is not False,
         yellow_flags=data.get('yellow_flags') is not False,
+        gear=data.get('gear') is not False,
         classes=data.get('classes') is not False,
         clan_tags=data.get('clan_tags') is not False,
         class_tags=_class_tags(data.get('class_tags')),
@@ -332,6 +334,7 @@ def save_settings(path, settings):
         'radar_cockpit_only': settings.radar_cockpit_only,
         'sector_bars': settings.sector_bars,
         'yellow_flags': settings.yellow_flags,
+        'gear': settings.gear,
         'classes': settings.classes,
         'clan_tags': settings.clan_tags,
         'lap_columns': list(settings.lap_columns),

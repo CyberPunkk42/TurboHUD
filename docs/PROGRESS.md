@@ -1649,3 +1649,12 @@ its "Recent changes".
     race), and a car further from where it was than any car drives (`YELLOW_JUMP_LEAST` 30 units, or 150 a second:
     put back on the track, a replay jump) is looked up on the whole track again, its wrong way count started anew.
     Tests: driving on, a jump, a wrong way building up then a jump, the clock going back.
+  - 2026-11-13: Gear and revs, asked for by the user: TSU's cars have no gearbox of their own, but the engine sound
+    has one (`TS.EngineAudio`, through `VehicleModel.m_engineAudio`): `m_gear`, counted from 0 (it picks the gear's
+    ratio from `m_gearRatios`: a replay matched the ratios that way), and `m_enginePitch`, which rose from about 0.55
+    to 0.9 in each gear and dropped at each upshift. A new Gear section (car group) shows the gear (`CarState.gear`,
+    1 the lowest) and below it rev lights in 10 segments, green, yellow and red as in a GT or F1 car, lit one by one
+    (`race.rev_lights`, `rev_share`); the gear turns red near the shift. An option, "Gear and revs" (settings window
+    and tray, on by default): off, or with the section hidden, nothing of it is read (`LapReader.read_gear`), for a
+    slower PC. Tests: the reader (counted from 1, none, a wrong gear, turned off), the lights, the section, the
+    setting; checked in an offscreen render.

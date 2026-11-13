@@ -363,3 +363,11 @@ class RadarCockpitSettingTests(unittest.TestCase):
         self.assertFalse(s.load_settings(path).radar_cockpit_only)
         path.write_text('{}', encoding='utf-8')
         self.assertTrue(s.load_settings(path).radar_cockpit_only)
+
+
+class GearSettingTests(unittest.TestCase):
+    def test_on_unless_turned_off(self):
+        path = Path(tempfile.mkdtemp()) / s.SETTINGS_FILE
+        self.assertTrue(s.Settings().gear)
+        s.save_settings(path, s.Settings(gear=False))
+        self.assertFalse(s.load_settings(path).gear)

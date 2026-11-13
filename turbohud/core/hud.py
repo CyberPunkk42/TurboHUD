@@ -434,6 +434,8 @@ RACE_SECTIONS = (
         level=True,
     ),
     Section('speed', 'Speed', ((Row('000 km/h', 'medium'),),), pedals=True),
+    # The engine sound's gear and a rev bar below it (asked for by the user on 2026-11-13).
+    Section('gear', 'Gear', ((Row('6', 'big'),),), level=True),
     Section('localtime', 'Local time', ((Row('00:00', 'medium'),),)),
     Section(
         'players',
@@ -503,7 +505,7 @@ RACE_SECTIONS = (
 # 2026-11-11); a section not named here comes under the last.
 PANEL_CATEGORIES = (
     ('Timing', ('lap', 'current', 'delta', 'deltabar', 'times', 'laptimes')),
-    ('Car', ('fuel', 'fuelfinish', 'tires', 'health', 'draft', 'speed')),
+    ('Car', ('fuel', 'fuelfinish', 'tires', 'health', 'draft', 'speed', 'gear')),
     ('Race', ('players', 'trackmap', 'radar', 'blueflag', 'yellowflag', 'shortcut')),
     ('Other', ('localtime', 'clock')),
 )

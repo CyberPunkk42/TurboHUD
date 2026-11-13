@@ -1651,3 +1651,43 @@ class RaceStartTests(unittest.TestCase):
                 starts = race.RaceStarts()
                 starts.started(self.snapshot(racing=False), 0.0)
                 self.assertFalse(starts.started(self.snapshot(moved_at=1.0, **kind), 1.0))
+
+
+class GearSectionTests(unittest.TestCase):
+    """The Gear section: the gear and its rev lights, green, yellow and red (asked for by the user
+    on 2026-11-13)."""
+
+    def car(self, gear, revs):
+        return race.CarState(
+            fuel_on=False,
+            fuel_used=0,
+            fuel_tank=1,
+            tires_on=False,
+            tire_wear=0,
+            speed=30.0,
+            gear=gear,
+            revs=revs,
+        )
+
+    def test_the_lights_light_up_one_by_one(self):
+        self.assertEqual(race.rev_lights(0.0), (None,) * len(race.REV_LIGHTS))
+        self.assertEqual(race.rev_lights(1.0), race.REV_LIGHTS)
+        half = race.rev_lights(0.5)
+        self.assertEqual(sum(colour is not None for colour in half), len(race.REV_LIGHTS) // 2)
+        self.assertEqual(set(race.REV_LIGHTS[:5]), {'#5ee07a'})  # green, then yellow, then red
+        self.assertEqual(race.REV_LIGHTS[-1], '#ff6b6b')
+
+    def test_the_revs_fill_from_low_to_the_shift(self):
+        self.assertEqual(race.rev_share(race.REVS_LOW), 0.0)
+        self.assertEqual(race.rev_share(race.REVS_TOP), 1.0)
+        self.assertEqual(race.rev_share(0.2), 0.0)  # below: empty
+        self.assertEqual(race.rev_share(None), 0.0)
+
+    def test_the_section(self):
+        sections = race.car_sections(self.car(4, 0.75))
+        self.assertEqual(sections['gear'][0].text, '4')
+        self.assertEqual(sections['gear'][0].color, 'text')
+        self.assertIsInstance(sections['levels']['gear'], race.Sectors)
+        shifting = race.car_sections(self.car(4, race.REVS_TOP))
+        self.assertEqual(shifting['gear'][0].color, 'behind')  # red: about to shift up
+        self.assertNotIn('gear', race.car_sections(self.car(None, None)))
