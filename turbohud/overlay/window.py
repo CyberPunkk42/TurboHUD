@@ -20,11 +20,14 @@ from PySide6.QtGui import QColor, QFontInfo, QImage, QPainter, QPainterPath, QPe
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
+    QFrame,
     QGridLayout,
     QHBoxLayout,
     QLabel,
     QPushButton,
+    QScrollArea,
     QSpinBox,
+    QStyle,
     QVBoxLayout,
     QWidget,
 )
@@ -114,6 +117,11 @@ PANEL_EMPTY = '#5d7799'  # the dot where a section has no such option
 # The panel's text is at most this many pixels: the Mac's own size. Linux desktops use about
 # 15 px (Adwaita Sans 11 pt), which made the panel 866 px tall with a row per section.
 PANEL_FONT_PX = 13
+# The panel fits the screen it opens on (reported on 2026-11-13: 991 px tall on the Mac, more than a
+# small Mac laptop's screen): it keeps this much room above and below, and where it would not fit,
+# the rows of sections scroll, never fewer than PANEL_LEAST_ROWS px of them shown.
+PANEL_SCREEN_ROOM = 16
+PANEL_LEAST_ROWS = 160
 RADAR_ARROW_PEN = (0, 0, 0, 220), 2.0  # the outline of an arrow at the radar's edge (radar_arrow)
 RADAR_CLASS_WARNING = 2.5  # a car of another class: the width of its red or yellow warning outline
 RADAR_CAR_AT = 0.5  # the local car's height in the radar, from the top: the middle
@@ -1088,7 +1096,7 @@ class MovePanel(QWidget):
         self.setStyleSheet('QLabel, QCheckBox { color: white; }' + self._font_cap())
         column = QVBoxLayout(self)
         column.setContentsMargins(14, 8, 14, 8)
-        column.setSpacing(3)  # tight: the panel is held under 800 px, with a row per section
+        column.setSpacing(3)  # tight, with a row per section
         column.addWidget(QLabel('<b>TurboHUD - move mode</b>'))
         for line in help_lines(shortcuts, commands, lock_key):
             column.addWidget(QLabel(line))
@@ -1101,6 +1109,7 @@ class MovePanel(QWidget):
         grid = QGridLayout()
         grid.setHorizontalSpacing(6)
         grid.setVerticalSpacing(0)
+        grid.setContentsMargins(0, 0, 0, 0)  # in its own widget (rows_area): no extra room round it
         show = QHBoxLayout()
         show.setSpacing(4)
         show.addWidget(self._heading('Show', 'Tick to show the section'))
@@ -1140,8 +1149,21 @@ class MovePanel(QWidget):
                 row += 1
                 self._section_row(grid, row, section)
         grid.setColumnStretch(8, 1)
-        column.addLayout(grid)
+        # The rows scroll where the screen is too short for them all (fit_height).
+        self.rows = QWidget()
+        self.rows.setLayout(grid)
+        self.rows_area = QScrollArea()
+        self.rows_area.setWidget(self.rows)
+        self.rows_area.setWidgetResizable(True)
+        self.rows_area.setFrameShape(QFrame.NoFrame)
+        self.rows_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.rows_area.setStyleSheet(
+            'QScrollArea, QScrollArea > QWidget > QWidget { background: transparent; }'
+        )
+        self.rows_area.viewport().setAutoFillBackground(False)
+        column.addWidget(self.rows_area)
         self._finish(column, sections, shortcuts, saved_presets)
+        self.fit_height(None)
 
     def _font_cap(self):
         """A style rule holding the text at PANEL_FONT_PX where the system's is larger, so the
@@ -1413,7 +1435,28 @@ class MovePanel(QWidget):
         row.addWidget(quit_)
         row.addStretch()
         column.addLayout(row)
+
+    def fit_height(self, available):
+        """Make the panel at most `available` px tall (a screen's usable height; None: no limit),
+        with room to spare: the rows of sections scroll where they do not all fit, the rest of
+        the panel (help, presets, Lock, Quit) always shown."""
+        full = self.rows.sizeHint().height()
+        self.rows_area.setFixedHeight(full)
+        rest = self.layout().sizeHint().height() - full
+        room = full if available is None else available - 2 * PANEL_SCREEN_ROOM - rest
+        shown = max(min(full, PANEL_LEAST_ROWS), min(full, room))
+        scrolls = shown < full
+        self.rows_area.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn if scrolls else Qt.ScrollBarAlwaysOff)
+        # The style's width: macOS gives its overlay scroll bar's hint as 0, and it then covered the
+        # last column.
+        bar = self.rows_area.style().pixelMetric(QStyle.PM_ScrollBarExtent) + 4 if scrolls else 0
+        self.rows_area.setFixedSize(self.rows.sizeHint().width() + bar, shown)
         self.adjustSize()
+        self.resize(self.sizeHint())
+
+    def rows_scroll(self):
+        """Whether the rows of sections scroll (the screen is too short for them all)."""
+        return self.rows_area.verticalScrollBarPolicy() == Qt.ScrollBarAlwaysOn
 
     def set_wanted(self, name, wanted):
         box = self.boxes.get(name)

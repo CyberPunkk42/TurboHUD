@@ -1808,3 +1808,15 @@ its "Recent changes".
     It replaces 2026.11.13, still in `releases/`, to be removed by hand. Tests on `main` (build-venv): 1151 of 1155
     pass; the four `MovePanelPresetTests` failures are only under the offscreen platform on the Mac (the panel 844 px
     there); drawn with cocoa the panel is 991 px tall, more than some Mac laptops' screens (about 900 px), to look at.
+  - 2026-11-13: The move-mode panel fits small screens, reported by the user: on the Mac it had grown to 991 px
+    tall (the Size px and Lines % columns, the layout rows), more than a small Mac laptop's usable screen, so Lock,
+    Settings and Quit could be off it. The rows of sections are now in a scroll area (`MovePanel.rows_area`), and
+    before the panel shows, the app fits it to the screen it opens on (`MovePanel.fit_height`, called in
+    `panel_spot`): 16 px of room above and below, the rows scrolling where they do not all fit (at least 160 px of
+    them), the help, presets, layouts and the buttons always shown. On a tall screen nothing changes (991 x 542 px on
+    the Mac, the same as before). The scroll bar's room is the style's width, as the Mac's overlay bar reports none
+    and covered the Lines % column. Tests: a new one for the fitting (none, just enough, 600 px, too short, back);
+    the three panel height tests fit to an 800 px screen first, as the app does; all 1156 pass on the Mac (the four
+    offscreen-only failures are gone). Checked on the Mac (cocoa): 868 px on a 900 px screen, 768 on 800, 668 on 700,
+    the scroll bar beside the last column. Smoke run: move mode showed the panel, no traceback. Not yet tried by hand
+    on a small screen.
