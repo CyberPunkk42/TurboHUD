@@ -3752,6 +3752,13 @@ def radar_view(speed, within=RADAR_FROM):
     return min(radar_reach(speed, within), RADAR_VIEW_MAX)
 
 
+def radar_edge_blips(view):
+    """The cars beyond the radar's reach shown as an arrow at its edge: only those behind
+    (asked for by the user on 2026-11-13: the arrows to cars ahead go, those to cars behind,
+    coming up, stay). A car ahead beyond the reach is not shown at all."""
+    return tuple(blip for blip in view.blips if blip.ahead < -view.view)
+
+
 # A car past the radar's edge is an arrow there (asked for bigger and clearer by the user on
 # 2026-11-12: before, 1.2 car widths each side, at least 7 px, fading by 0.6).
 RADAR_ARROW = 2.0  # this many times a car's width each side of its tip, and as long

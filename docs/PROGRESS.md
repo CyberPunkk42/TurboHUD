@@ -1516,3 +1516,7 @@ its "Recent changes".
     change. `ruff check` and `ruff format --check` pass. Tests on Windows (`.buildtools\venv`): 1017 of 1023 pass;
     the 6 that fail need macOS/Linux (`os.getuid`, `fcntl`, `AF_UNIX`) or the symlink privilege, and fail on `main`
     too.
+  - 2026-11-13: The radar's arrows only to cars behind, asked for by the user: a car ahead beyond the radar's reach
+    no longer gets an arrow at the top edge; a car behind beyond it keeps its arrow at the bottom
+    (`race.radar_edge_blips`). Tests: which cars get an arrow, and the painter test now checks the bottom arrow and
+    no top one.

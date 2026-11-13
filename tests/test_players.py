@@ -692,6 +692,14 @@ class RadarArrowTests(unittest.TestCase):
         self.assertEqual(unknown, far)
         self.assertGreaterEqual(far, 0.75)
 
+    def test_only_cars_behind_get_an_arrow(self):
+        # Asked for by the user on 2026-11-13: no arrows to the cars ahead.
+        ahead = race.Blip(30.0, 0.0, 0.0, 1.0)
+        behind = race.Blip(-30.0, 1.0, 0.0, 1.0)
+        on_it = race.Blip(-10.0, 0.0, 0.0, 0.5)  # within reach: drawn as a car, no arrow
+        view = race.RadarView(1.0, (ahead, behind, on_it), view=20.0)
+        self.assertEqual(race.radar_edge_blips(view), (behind,))
+
 
 class RadarClassTests(unittest.TestCase):
     """Asked for by the user on 2026-11-11: in a multi-class race, cars of another class show on

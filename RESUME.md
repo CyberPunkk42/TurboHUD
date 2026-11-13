@@ -79,6 +79,10 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+  - 2026-11-13: The radar's arrows only to cars behind, asked for by the user: a car ahead beyond the radar's reach
+    no longer gets an arrow at the top edge; a car behind beyond it keeps its arrow at the bottom
+    (`race.radar_edge_blips`). Tests: which cars get an arrow, and the painter test now checks the bottom arrow and
+    no top one.
   - 2026-11-13: Ruff clean again, asked for by the user: the 8 lint errors fixed (`ClassVar` on the yellow-flag
     tests' surface dicts, two `noqa` comments that did nothing removed, the recorder test's gzip file opened in a
     `with`, the "still no race" log check in `tsu/client.py` made one condition) and the 5 unformatted files

@@ -50,7 +50,15 @@ from turbohud.core.hud import (
     text_can_centre,
     tight_height,
 )
-from turbohud.core.race import RADAR_FULL, Blip, DeltaBarView, RadarView, radar_arrow, radar_car_size
+from turbohud.core.race import (
+    RADAR_FULL,
+    Blip,
+    DeltaBarView,
+    RadarView,
+    radar_arrow,
+    radar_car_size,
+    radar_edge_blips,
+)
 from turbohud.core.settings import GROUPS, PRESETS
 from turbohud.core.trackmap import MapDot, TrackMapView, map_transform, outline_from_path, road_width
 from turbohud.hud.painter import (
@@ -517,8 +525,8 @@ class SectionWindow(QWidget):
             return RADAR_OTHER
 
         def edge(blip, color):
-            """A car past the top (ahead) or bottom (behind) edge: an arrow pointing its way,
-            fainter the further off it is."""
+            """A car past the bottom edge (behind; radar_edge_blips): an arrow pointing its
+            way, fainter the further off it is."""
             points, opacity = radar_arrow(
                 centre.x() + blip.side * per_unit,
                 blip.ahead > 0,
@@ -566,10 +574,9 @@ class SectionWindow(QWidget):
                 painter.restore()
         car(0.0, 0.0, 0.0, RADAR_ME)
         painter.setClipping(False)
-        for blip in view.blips:  # beyond the radar's reach (RADAR_VIEW_MAX): an arrow at its edge
-            if abs(blip.ahead) > view.view:
-                color = blip.class_color or blip_color(blip)  # another class: its colour
-                edge(blip, RADAR_ARROW_OTHER if color == RADAR_OTHER else color)
+        for blip in radar_edge_blips(view):  # behind, beyond the radar's reach: an arrow at its edge
+            color = blip.class_color or blip_color(blip)  # another class: its colour
+            edge(blip, RADAR_ARROW_OTHER if color == RADAR_OTHER else color)
         painter.setOpacity(1.0)
         if not self.locked:
             painter.setPen(QPen(QColor(*BORDER), 2))
