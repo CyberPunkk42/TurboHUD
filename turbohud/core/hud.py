@@ -30,6 +30,9 @@ class Line:
     rule_color: str = ''  # the rule's own colour; '' for the accent
     tyre: str = ''  # a tire compound's letter, in a ring, just before `middle` (the lap times)
     tyre_color: str = ''  # its ring's colour, '#rrggbb'
+    overall: str = (
+        ''  # a column lined up on the right just after the text (the overall place in the lap times)
+    )
 
 
 @dataclass(frozen=True)
@@ -55,6 +58,9 @@ class Row:
     rule_color: str = ''  # the rule's own colour; '' for the accent
     tyre: str = ''  # a tire compound's letter, in a ring, just before `middle` (the lap times)
     tyre_color: str = ''  # its ring's colour, '#rrggbb'
+    overall: str = (
+        ''  # a column lined up on the right just after the text (the overall place in the lap times)
+    )
 
 
 FLAG_WIDTH = 1.5  # a flag's room before the text, in font sizes
@@ -156,6 +162,7 @@ def _content(rows, sizes):
                 row.rule_color,
                 row.tyre,
                 row.tyre_color,
+                row.overall,
             )
         )
     return lines, baseline
@@ -177,6 +184,8 @@ def _left_width(line, measure):
 def line_width(line, measure):
     """How wide a line is with its flag and its columns."""
     width = _left_width(line, measure)
+    if line.overall:
+        width += COLUMN_GAP * line.size + measure(line.overall, line.size)
     if line.tag:
         width += COLUMN_GAP * line.size + measure(line.tag, line.size)
     if line.before:
@@ -198,9 +207,11 @@ def lines_width(lines, measure):
     gap = max(COLUMN_GAP * line.size for line in lines)
     before = max((measure(line.before, line.size) for line in lines if line.before), default=None)
     tag = max((measure(line.tag, line.size) for line in lines if line.tag), default=None)
+    overall = max((measure(line.overall, line.size) for line in lines if line.overall), default=None)
     tyre = tyre_width(lines)
     return (
         max(_left_width(line, measure) for line in lines)
+        + (overall + gap if overall is not None else 0)
         + (tag + gap if tag is not None else 0)
         + (before + gap if before is not None else 0)
         + (tyre + gap if tyre is not None else 0)
@@ -265,6 +276,28 @@ def tag_left(lines, before_end, measure):
     return start - tag
 
 
+def overall_right(lines, middle_end, tyre_end, before_end, tag_start, measure):
+    """Where the `overall` column ends (it is right-aligned there): a gap before the leftmost
+    of the other columns (the tag, `before`, the tire, the middle one); None without it."""
+    if not any(line.overall for line in lines):
+        return None
+
+    def widest(name):
+        return max(
+            (measure(getattr(line, name), line.size) for line in lines if getattr(line, name)), default=None
+        )
+
+    if tag_start is not None:
+        start = tag_start
+    elif widest('before') is not None:
+        start = before_end - widest('before')
+    elif tyre_width(lines) is not None:
+        start = tyre_end - tyre_width(lines)
+    else:
+        start = middle_end - (widest('middle') or 0)
+    return start - max(COLUMN_GAP * line.size for line in lines)
+
+
 def content_size(rows, scale, measure):
     """(width, height) a section needs for `rows` at `scale`. `measure(text, size)` gives
     a text's width in pixels (Qt knows the font)."""
@@ -294,6 +327,7 @@ def steady_rows(rows):
             tail=steady_text(row.tail),
             middle=steady_text(row.middle),
             before=steady_text(row.before),
+            overall=steady_text(row.overall),
             tag=steady_text(row.tag),
             right=steady_text(row.right),
         )
@@ -430,6 +464,7 @@ RACE_SECTIONS = (
                     right='CUT 00.0s',  # the widest there: wider than (00.00s), JUMP and 0:00.0
                     tag='PROAM',  # a clan tag or class has up to 5 letters
                     tyre='M',
+                    overall='P20',  # the overall place, in a multi-class race
                 )
                 for n in range(10, 10 + LAP_TIME_ROWS)
             ),

@@ -1449,3 +1449,35 @@ class JumpStartTests(ShortcutTests):
         table = race.lap_times_rows([me, other], clock=60_000, jumped={'Other'})
         row = next(r for r in table if 'Other' in r.text)
         self.assertEqual((row.right, row.right_color), ('JUMP', race.SHORTCUT_COLOR))
+
+
+class OverallPlaceTests(unittest.TestCase):
+    """The overall place beside the class place in a multi-class lap times list (asked for
+    by the user on 2026-11-13)."""
+
+    TAGS = ('LMP', 'GT3')
+
+    def driver(self, name, tag, start, car):
+        laps = [lap(start), lap(start + 60_000, step=15_000), lap(start + 121_000, count=1)]
+        return dataclasses.replace(player(name, laps, laps=2), tag=tag, car=car)
+
+    def test_each_driver_has_its_overall_place(self):
+        # Race order: GT3 leads, then LMP, GT3, LMP; grouped LMP first, numbered in the class.
+        order = [
+            self.driver('Gt one', 'GT3', 0, 'Porsche'),
+            self.driver('Proto one', 'LMP', 100, 'Ligier'),
+            self.driver('Gt two', 'GT3', 200, 'Porsche'),
+            self.driver('Proto two', 'LMP', 300, 'Ligier'),
+        ]
+        rows = race.lap_times_rows(order, order=order, clock=200_000, class_tags=self.TAGS)
+        self.assertEqual(rows[0].overall, 'Ovr')
+        shown = [(row.text, row.overall) for row in rows[1:]]
+        self.assertEqual(
+            shown,
+            [('1. Proto one', 'P2'), ('2. Proto two', 'P4'), ('1. Gt one', 'P1'), ('2. Gt two', 'P3')],
+        )
+
+    def test_none_in_a_one_class_race(self):
+        order = [self.driver('A', '', 0, 'X'), self.driver('B', '', 100, 'Y')]
+        rows = race.lap_times_rows(order, order=order, clock=200_000, class_tags=self.TAGS)
+        self.assertEqual([row.overall for row in rows], ['', '', ''])

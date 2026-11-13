@@ -1039,3 +1039,26 @@ class SnugColumnsTests(unittest.TestCase):
 
     def test_only_the_lap_times_are_snug(self):
         self.assertEqual([s.name for s in hud.RACE_SECTIONS if s.snug], ['laptimes'])
+
+
+class OverallColumnTests(unittest.TestCase):
+    """The overall place's column: right after the text, before the other columns."""
+
+    @staticmethod
+    def measure(text, size):
+        return len(text) * size
+
+    def test_it_ends_a_gap_before_the_tag_or_the_next_column(self):
+        line = hud.Line('1. Name', 1, 'text', 10, overall='P12', tag='GT3', before='L4', middle='1:00.0')
+        self.assertEqual(hud.overall_right([line], 100, 100, 90, 80, self.measure), 80 - hud.COLUMN_GAP)
+        no_tag = hud.replace(line, tag='')
+        self.assertEqual(
+            hud.overall_right([no_tag], 100, 100, 90, None, self.measure), 90 - 2 - hud.COLUMN_GAP
+        )
+        self.assertIsNone(hud.overall_right([hud.replace(line, overall='')], 100, 100, 90, 80, self.measure))
+
+    def test_it_counts_in_the_width(self):
+        line = hud.Line('1. Name', 1, 'text', 10, overall='P12', middle='1:00.0')
+        without = hud.replace(line, overall='')
+        widths = hud.lines_width([line], self.measure), hud.lines_width([without], self.measure)
+        self.assertEqual(widths[0] - widths[1], len('P12') + hud.COLUMN_GAP)

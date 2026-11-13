@@ -1522,3 +1522,9 @@ its "Recent changes".
     an ellipsis), so the list keeps its width whoever joins. The window keeps its size; the text may be a little
     smaller in it for the longer sample, and the room to the right of the columns stays empty. Tests: the field,
     the same width whoever joins, the sample's length, the cut; checked in an offscreen render.
+  - 2026-11-13: The overall place in the lap times, asked for by the user: in a multi-class race, where the number in
+    front of a name is the place in the class, a column right after the name field shows the overall place (P5),
+    headed "Ovr". None in a one-class race (the number is the overall place there). A new `overall` column in
+    `Row`/`Line`, right-aligned a gap before the other columns (`hud.overall_right`), counted in the width; no switch
+    in the settings window yet. Tests: the places with classes grouped, none in one class, the column's place and
+    width; checked in an offscreen render. On top of `feature/lap-times-name-width`.
