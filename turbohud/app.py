@@ -431,7 +431,14 @@ def run(args, folder):
         native_for,
     )
     from turbohud.overlay.settings_window import SettingsWindow
-    from turbohud.overlay.window import DesignFrame, HudCanvases, MovePanel, SectionWindow, window_flags
+    from turbohud.overlay.window import (
+        DesignFrame,
+        GridWindow,
+        HudCanvases,
+        MovePanel,
+        SectionWindow,
+        window_flags,
+    )
 
     platform = choose_platform()
     if platform is not None:
@@ -659,15 +666,37 @@ def run(args, folder):
         panel.fit_height(screen[3] if screen else None)  # rows scroll on a short screen
         return panel_place((panel.width(), panel.height()), boxes, usable)
 
+    grid_windows = []  # move mode's grid, one window per screen, made the first time
+
+    def show_grid(shown):
+        """Move mode's grid on every screen, beneath the sections; gone while locked."""
+        if not shown:
+            for grid in grid_windows:
+                grid.hide()
+            return
+        if not grid_windows:
+            grid_windows.extend(GridWindow(native, number) for number in range(1, len(screens) + 1))
+        for grid, place in zip(grid_windows, screens):
+            grid.setGeometry(*place)
+            grid.show()
+            log.info('grid: %s', native.raise_window(grid))
+        for window in windows.values():
+            if window.wanted:
+                window.show_on_top()  # above the grid
+
     def set_locked(value):
         nonlocal locked
         if value == locked:
             return
         locked = value
+        if value:
+            show_grid(False)
         for window in windows.values():
             window.set_locked(value)
         if canvas is not None:
             canvas.set_shown(value)  # locked: the canvas; move mode: the sections' own windows
+        if not value:
+            show_grid(True)
         move_action.setChecked(not value)
         if value:
             design_end()  # locking leaves the design screen

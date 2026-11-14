@@ -1933,3 +1933,11 @@ its "Recent changes".
     new lap starts afresh as before. The per-read history is gone. Tests: a slow loss turns it red, a slow gain green,
     the turn counts from the best reached, a jumpy delta keeps its colour; three of them fail on the old rule. All
     tests pass. Not yet: seen in a race.
+  - 2026-11-14: The tint filled only part of some sections, reported by the user (`fix/tint-fills-section`): it
+    followed the text, half a margin inside it, so the player list's stopped below its last driver and others fell short
+    of their box's edges. The tint now fills the section's whole box, as a section's own colour does (the yellow flag).
+    Also asked for: a grid in move mode to line the sections up (`GridWindow`, one see-through, click-through window per
+    screen beneath the sections, shown only in move mode): a faint line every 20 px, a stronger one every 100 px and the
+    screen's middle in yellow. Tests: the tint reaches the box's edges in the player list, the running lap and the fuel
+    (they fail on the old code), none without the option, the grid's lines and its window. All 1196 tests pass. Not
+    yet: seen on the screen, and the grid beneath the sections on Hyprland, the Mac and Windows.
