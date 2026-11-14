@@ -36,6 +36,8 @@ see: the HUD through a whole race, offline and hosting, and the overlay over Ful
 Also: a spare shortcut when another app holds Ctrl+Shift+L, and the 9 tests that fail on Windows.
 The race search reads with 4 threads on Windows since 2026-11-12 (about 6 s for all of TSU's data, from 19 s):
 listen for stutter in those seconds at the start of an online race.
+A Custom race is read since 2026-11-13 (its `TS.HostEventController` found by the search); a Single Player
+event is still to see.
 What is built and what is left on Windows: `docs/WINDOWS_AND_CROSSOVER.md`.
 
 ## 1b. CrossOver: all of TurboHUD inside the bottle (a trial)

@@ -1844,3 +1844,13 @@ its "Recent changes".
     the shipped one only). Checked in the app offscreen on a 5120x1440 screen: Design 3840x2160 (at 59%), then Save
     design, gave the layout back within 5 px and 1 text size (the frame's rounding); the blue flag, delta bar, radar
     and track map, whose boxes set their size, carry no text size of their own.
+  - 2026-11-13: TurboHUD in a Custom race and in Single Player, asked for by the user (both main-menu entries): TSU
+    has no active server there (`Services.m_activeServer` null), so the HUD found nothing and showed only the clock.
+    Read on the user's PC during a Custom race (20 players, 19 AI): the race is in a `TS.HostEventController` whose
+    `m_server` is null, with the same fields at the same places as the online `TS.ClientEventController`. The race
+    search now looks for both classes (one pass on Windows, a second pass after the online one elsewhere), and the
+    quick look near the last race too; a host controller with a server (a race hosted for others) is passed over, as
+    the game reads that through its client controller. Checked live with the branch's reader: the race found in one
+    search (23.2 s), then each read at once, 20 players, lap 4 of 61, the player driving. Tests: 5 new (found and read,
+    kept without a search, one pass with several values, a controller with a server, a game without the class); the
+    fake game counts a search's passes as one search. Not seen yet: a Single Player event (expected to be the same).

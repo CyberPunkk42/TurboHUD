@@ -12,8 +12,8 @@
   lap, delta to the best lap, last and best lap, fuel, fuel to finish, tires, health,
   draft, speed with pedal bars, the player list (flags, PIT with its timers, live gaps), the lap times
   list (lap number, best and running lap of every driver, PIT with its timers), blue flag,
-  proximity radar, track map and local time. It works offline, in hotlaps, hosting online and as
-  an online client (guest, or hosting with only AI). How it works and what it does to
+  proximity radar, track map and local time. It works offline, in hotlaps, in a Custom race (2026-11-13), hosting online
+  and as an online client (guest, or hosting with only AI). How it works and what it does to
   RAM and the game: `docs/HOW_IT_WORKS.md`. On macOS, with TSU in CrossOver, the same HUD
   reads the race through a reader in the bottle (`turbohud/tsu/bottle.py`), with no setup; since
   2026-11-10 that reader is a Windows program in Rust (`reader/`), the Python one kept as a fallback;
@@ -66,6 +66,8 @@
   time, most of it new texts; since `fix/lap-list-frame-cost` changing numbers are drawn from kept glyphs (about 20
   times quicker). Build 2026.11.12.7 had them, the yellow flag fix and the lighter race reads; 2026.11.13 and .2 add the work of 2026-11-13: next, his log's `HUD frames` drawing share (was 20 to 24%) and
   whether TSU stutters while driving or between races (backlog item 0).
+- Custom race and Single Player (`fix/custom-and-single-player`, 2026-11-13): found in a Custom race on Windows;
+  try a Single Player event, and a Custom race on the Mac and on Linux (a second search pass there).
 - Replays after a race (`fix/replays-after-a-race`, 2026-11-13): try in TSU a recording watched after a race in the
   same session, opened from the list and watched again; on the Mac, whether the recordings get an access time.
 1. Windows: the overlay over TSU (windowed, Fullscreen, Fullscreen Exclusive). The live data through
@@ -82,6 +84,16 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+  - 2026-11-13: TurboHUD in a Custom race and in Single Player, asked for by the user (both main-menu entries): TSU
+    has no active server there (`Services.m_activeServer` null), so the HUD found nothing and showed only the clock.
+    Read on the user's PC during a Custom race (20 players, 19 AI): the race is in a `TS.HostEventController` whose
+    `m_server` is null, with the same fields at the same places as the online `TS.ClientEventController`. The race
+    search now looks for both classes (one pass on Windows, a second pass after the online one elsewhere), and the
+    quick look near the last race too; a host controller with a server (a race hosted for others) is passed over, as
+    the game reads that through its client controller. Checked live with the branch's reader: the race found in one
+    search (23.2 s), then each read at once, 20 players, lap 4 of 61, the player driving. Tests: 5 new (found and read,
+    kept without a search, one pass with several values, a controller with a server, a game without the class); the
+    fake game counts a search's passes as one search. Not seen yet: a Single Player event (expected to be the same).
   - 2026-11-13: A 3840x2160 layout from the user's own design, asked for by the user: `assets/presets/3840x2160.json`
     is the user's 2560x1440 design (the same 16:9 shape) at 1.5 times, every position, size and text size, so the
     arrangement is exactly theirs; a copy is in the user's `customization/display_presets` to adjust on the design

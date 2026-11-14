@@ -101,7 +101,10 @@ class FakeGame:
         return bytes(self.mem.get(address + i, 0) for i in range(size))
 
     def find_pointers(self, value):
-        self.searches = getattr(self, 'searches', 0) + 1
+        # A search makes one pass per class it looks for, a hosted race's (a Custom race, Single
+        # Player) after the online race's: that pass is part of the same search.
+        if value != getattr(self, 'host_class', None):
+            self.searches = getattr(self, 'searches', 0) + 1
         pattern = struct.pack('<Q', value)
         return sorted(a for a in self.mem if a % 8 == 0 and self.read(a, 8) == pattern)
 
@@ -122,6 +125,7 @@ def build(
     pedals=None,
     name=None,
     online=False,
+    hosted=False,
     clock_fn=None,
     health=None,
     pit_area=False,
@@ -160,6 +164,7 @@ def build(
         [('m_server', 0x60, False), ('m_eventLogic', 0x70, False)],
         parent=base_controller,
     )
+    g.host_class = controller_class
     state_class = g.klass(
         'TS',
         'EventState',
@@ -194,6 +199,13 @@ def build(
     g.q(services + 0x10, server)
     controller = g.alloc_obj(controller_class)
     g.q(server + 0x18, controller)
+    g.services, g.host_controller = services, controller
+    if hosted:
+        # A Custom race or Single Player (seen 2026-11-13): no active server; the race is in
+        # the TS.HostEventController, without a server. The game has the online class too.
+        g.q(services + 0x10, 0)
+        g.q(controller + 0x60, 0)  # m_server
+        g.client_class = g.klass('TS', 'ClientEventController', [], parent=base_controller)
     if online:
         # An online race: no active server; the race is in a TS.ClientEventController.
         g.q(services + 0x10, 0)
@@ -203,6 +215,7 @@ def build(
             [('m_client', 0x60, False), ('m_eventRecorder', 0x68, False)],
             parent=base_controller,
         )
+        g.client_class = client_class
         g.alloc_obj(client_class)  # a stale one, of an earlier race: no event state
         controller = g.alloc_obj(client_class)
         g.client_controller = controller
@@ -322,7 +335,9 @@ def build(
         # under a TS.EventRecordingPlayer, its camera following the local car's player.
         g.q(services + 0x10, 0)
         g.put(local + 0x50, struct.pack('<i', -1))
-        g.klass('TS', 'ClientEventController', [('m_client', 0x60, False)], parent=base_controller)
+        g.client_class = g.klass(
+            'TS', 'ClientEventController', [('m_client', 0x60, False)], parent=base_controller
+        )
         replay_controller = g.alloc_obj(
             g.klass('TS', 'EventRecordingController', [('m_recording', 0x60, False)], parent=base_controller)
         )
@@ -1254,7 +1269,8 @@ class CarTests(unittest.TestCase):
         find = memory.find_pointers
 
         def near(value, address):
-            looks.append(address)
+            if value == g.client_class:  # one look, through each race class
+                looks.append(address)
             return find(value)
 
         memory.find_pointers_near = near
@@ -1313,12 +1329,16 @@ class CarTests(unittest.TestCase):
         memory, begun = reader.il.memory, []
         find = memory.find_pointers
 
+        client = reader.game.client_class  # where each search began: its first pass
+
         def from_the_lowest(value):
-            begun.append(None)
+            if value == client:
+                begun.append(None)
             return find(value)
 
         def from_there(value, address):
-            begun.append(address)
+            if value == client:
+                begun.append(address)
             hits = find(value)
             return [h for h in hits if h >= address] + [h for h in hits if h < address]
 
@@ -1689,7 +1709,8 @@ class CarTests(unittest.TestCase):
         searches = []
 
         def slow(value):
-            searches.append(value)
+            if value == g.client_class:  # a search's first pass
+                searches.append(value)
             now[0] += 30.0  # longer than the wait, as in a CrossOver bottle
             return []
 
@@ -3363,6 +3384,65 @@ class ReplayAfterARaceTests(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class HostedRaceTests(unittest.TestCase):
+    """A Custom race or a Single Player event (asked for by the user on 2026-11-13): TSU has
+    no active server then, and runs the race in a TS.HostEventController without one, which
+    a search finds by its class, as an online race's controller."""
+
+    def build(self):
+        return build([10_000, 944_595], laps_completed=1, clock=1_000_000, limit=0, name='Me', hosted=True)
+
+    def test_the_race_is_found_and_read(self):
+        reader = self.build()
+        state = reader.read()
+        self.assertEqual(state.laps_completed, 1)
+        self.assertFalse(state.spectating)
+        self.assertFalse(state.replay)
+        self.assertEqual(next(p for p in state.players if p.local).name, 'Me')
+        self.assertEqual(reader._controller, reader.game.host_controller)
+
+    def test_found_again_without_a_search(self):
+        reader = self.build()
+        reader.read()
+        searches = reader.game.searches
+        reader.read()
+        self.assertEqual(reader.game.searches, searches)
+
+    def test_one_pass_where_the_memory_searches_several_values(self):
+        reader = self.build()
+        game, calls = reader.game, []
+
+        def any_of(values, address=None):
+            calls.append(values)
+            return sorted((hit, value) for value in values for hit in game.find_pointers(value))
+
+        reader.il.memory.find_pointers_any = any_of
+        self.assertEqual(reader.read().laps_completed, 1)
+        self.assertEqual(len(calls), 1)
+        self.assertIn(game.host_class, calls[0])
+
+    def test_a_controller_with_a_server_is_not_the_race(self):
+        # A race hosted for others online: the game reads it through its client controller.
+        reader = self.build()
+        reader.game.q(reader.game.host_controller + 0x60, reader.game.alloc_obj(0))
+        with self.assertRaises(race.NotFound):
+            reader.read()
+
+    def test_a_game_without_the_class_searches_for_online_races_only(self):
+        reader = self.build()
+        find_class = reader.il.find_class
+
+        def without_host(namespace, name):
+            if name == 'HostEventController':
+                raise race.NotFound('no such class')
+            return find_class(namespace, name)
+
+        reader.il.find_class = without_host
+        with self.assertRaises(race.NotFound):
+            reader.read()
+        self.assertFalse(reader._host_class)
 
 
 class HotlappingTests(unittest.TestCase):
