@@ -776,7 +776,8 @@ class FrameTimesTests(unittest.TestCase):
         self.now += 0.2
         self.run_frames(0.05, 3)
         self.frames.flush()
-        self.assertIn('slowest 250 ms', self.lines[0])
+        self.assertIn('slow frame: 250 ms after the last', self.lines[0])  # logged at once too
+        self.assertIn('slowest 250 ms', self.lines[-1])
 
     def test_no_line_without_frames_and_after_the_race_it_starts_afresh(self):
         self.frames.flush()
