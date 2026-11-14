@@ -1014,6 +1014,15 @@ def main_screen(screens):
     return max(screens, key=lambda s: s[2] * s[3], default=None)
 
 
+def grid_screen(screens, primary=None):
+    """The one screen move mode's grid goes on: the system's main screen (`primary`, as Qt
+    reports it), else the largest (main_screen). A grid on every screen reached across all the
+    monitors (reported by the user on 2026-11-14). None without screens."""
+    if primary is not None and tuple(primary) in [tuple(screen) for screen in screens]:
+        return tuple(primary)
+    return main_screen(screens)
+
+
 def first_launch(sections, sizes, origin=(0, 0), reference=REFERENCE_SCREEN, margin=LAYOUT_MARGIN, gap=8):
     """{name: (x, y, width, height)} for a first launch: the sections one below the other
     at the left of a `reference`-sized screen whose top-left corner is `origin`,

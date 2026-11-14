@@ -208,6 +208,15 @@ class TintTests(unittest.TestCase):
         self.assertTrue(hud.default_tint(sections['fuel'], backdrop=True))
 
 
+class GridScreenTests(unittest.TestCase):
+    def test_the_grid_goes_on_the_main_screen_only(self):
+        wide, above = (0, 0, 5120, 1440), (1280, -1440, 2560, 1440)
+        self.assertEqual(hud.grid_screen([wide, above], primary=above), above)  # the system's main one
+        self.assertEqual(hud.grid_screen([above, wide]), wide)  # none known: the largest
+        self.assertEqual(hud.grid_screen([above, wide], primary=(9, 9, 9, 9)), wide)  # not a screen
+        self.assertIsNone(hud.grid_screen([]))
+
+
 class PanelCategoryTests(unittest.TestCase):
     def test_every_race_section_comes_under_one_heading_in_order(self):
         found = hud.panel_categories(hud.RACE_SECTIONS)

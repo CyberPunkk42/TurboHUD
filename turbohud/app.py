@@ -410,6 +410,7 @@ def run(args, folder):
         centred,
         drawing_place,
         first_launch,
+        grid_screen,
         has_tint,
         local_time_rows,
         main_screen,
@@ -666,20 +667,24 @@ def run(args, folder):
         panel.fit_height(screen[3] if screen else None)  # rows scroll on a short screen
         return panel_place((panel.width(), panel.height()), boxes, usable)
 
-    grid_windows = []  # move mode's grid, one window per screen, made the first time
+    grid_window = None  # move mode's grid, on the main screen only, made the first time
 
     def show_grid(shown):
-        """Move mode's grid on every screen, beneath the sections; gone while locked."""
+        """Move mode's grid on the main screen, beneath the sections; gone while locked."""
+        nonlocal grid_window
         if not shown:
-            for grid in grid_windows:
-                grid.hide()
+            if grid_window is not None:
+                grid_window.hide()
             return
-        if not grid_windows:
-            grid_windows.extend(GridWindow(native, number) for number in range(1, len(screens) + 1))
-        for grid, place in zip(grid_windows, screens):
-            grid.setGeometry(*place)
-            grid.show()
-            log.info('grid: %s', native.raise_window(grid))
+        primary = QGuiApplication.primaryScreen()
+        place = grid_screen(screens, primary.geometry().getRect() if primary else None)
+        if place is None:
+            return
+        if grid_window is None:
+            grid_window = GridWindow(native)
+        grid_window.setGeometry(*place)
+        grid_window.show()
+        log.info('grid on %s: %s', place, native.raise_window(grid_window))
         for window in windows.values():
             if window.wanted:
                 window.show_on_top()  # above the grid

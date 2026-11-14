@@ -1941,3 +1941,7 @@ its "Recent changes".
     screen's middle in yellow. Tests: the tint reaches the box's edges in the player list, the running lap and the fuel
     (they fail on the old code), none without the option, the grid's lines and its window. All 1196 tests pass. Not
     yet: seen on the screen, and the grid beneath the sections on Hyprland, the Mac and Windows.
+  - 2026-11-14: Move mode's grid reached across all the monitors, reported by the user (`fix/grid-main-screen`): it
+    had a window on every screen. Now it is one window on the main screen only: the one Qt reports as the system's
+    primary, else the largest (`hud.grid_screen`). A test for the choice. All 1197 tests pass. Not yet: seen on the
+    user's two monitors.

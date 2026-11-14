@@ -88,6 +88,10 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+  - 2026-11-14: Move mode's grid reached across all the monitors, reported by the user (`fix/grid-main-screen`): it
+    had a window on every screen. Now it is one window on the main screen only: the one Qt reports as the system's
+    primary, else the largest (`hud.grid_screen`). A test for the choice. All 1197 tests pass. Not yet: seen on the
+    user's two monitors.
   - 2026-11-14: The tint filled only part of some sections, reported by the user (`fix/tint-fills-section`): it
     followed the text, half a margin inside it, so the player list's stopped below its last driver and others fell short
     of their box's edges. The tint now fills the section's whole box, as a section's own colour does (the yellow flag).
