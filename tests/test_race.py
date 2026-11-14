@@ -1485,6 +1485,36 @@ class CarTests(unittest.TestCase):
         self.assertEqual(reader._next_search - now[0], race.CLIENT_LOG_EVERY)
         self.assertEqual(reader._search_wait, race.CLIENT_SEARCH_EVERY)
 
+    def test_the_log_saying_an_event_began_ends_a_long_wait(self):
+        # 2026-11-14 online: the log said "an event runs" with the next search 60 s away, and
+        # the HUD came late into the race.
+        running = [None]  # not known at first, as when TurboHUD started before the event
+        reader, now = self.backing_off(lambda: running[0])
+        self.waits_of(reader, now, self.QUICK + 3)
+        with self.assertRaises(race.NotFound):
+            reader.read()
+        self.assertGreater(reader._next_search - now[0], race.CLIENT_SEARCH_EVERY)
+        running[0] = True
+        reader.game.put(reader.game.client_controller + 0x48, reader.race_there)
+        now[0] += 1.0
+        with self.assertRaises(race.NotFound):
+            reader.read()  # the wait ends here; the search comes with the next read
+        self.assertEqual(reader._next_search, now[0])
+        self.assertEqual(reader._search_wait, race.CLIENT_SEARCH_EVERY)
+        self.assertIsNotNone(reader.read())
+
+    def test_a_log_that_keeps_saying_an_event_runs_keeps_the_wait(self):
+        running = [True]
+        reader, now = self.backing_off(lambda: running[0])
+        self.waits_of(reader, now, self.QUICK + 3)
+        with self.assertRaises(race.NotFound):
+            reader.read()
+        due = reader._next_search
+        now[0] += 1.0
+        with self.assertRaises(race.NotFound):
+            reader.read()
+        self.assertEqual(reader._next_search, due)
+
     def test_a_race_found_ends_the_long_waits(self):
         reader, now = self.backing_off()
         self.waits_of(reader, now, self.QUICK + 2)

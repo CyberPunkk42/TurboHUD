@@ -88,6 +88,13 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+  - 2026-11-14: The HUD came late into an online race, reported by the user with build 2026.11.14.3
+    (`fix/search-when-event-begins`): on a server from about 15:09 with no race, the searches found nothing, so after a
+    minute the wait between them grew to 20, 40 and 60 s. TSU's log said "an event runs" at 15:11:49 with the next
+    search 60 s away; the race was found at 15:12:50. A long wait ended only when the log said the event was over. Now
+    it also ends when the log newly says an event runs (from not known or no event): the search comes with the next
+    read. A log that keeps saying so keeps the wait. Two tests in `tests/test_race.py` (the first fails without the
+    change: the search stayed 59 s away). All tests pass. Not yet: tried online.
   - 2026-11-14: Linux build 2026.11.14.2 pinned no section on Hyprland, found by the user running it
     (`fix/linux-bundle-child-env`): its 19 sections came up tiled as normal windows, hard to close, with "TurboHUD window
     not found" for each. hyprctl, started by TurboHUD, got PyInstaller's LD_LIBRARY_PATH and loaded the app's libstdc++

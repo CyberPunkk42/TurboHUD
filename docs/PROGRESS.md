@@ -1918,3 +1918,10 @@ its "Recent changes".
     `_internal`: hyprctl fails with its LD_LIBRARY_PATH and answers with `system_env`'s. `tools/build_linux.sh` also
     gives `releases/` back to the user (under sudo it was root's). Not yet: a new container build tried on Hyprland.
     All 1189 tests pass.
+  - 2026-11-14: The HUD came late into an online race, reported by the user with build 2026.11.14.3
+    (`fix/search-when-event-begins`): on a server from about 15:09 with no race, the searches found nothing, so after a
+    minute the wait between them grew to 20, 40 and 60 s. TSU's log said "an event runs" at 15:11:49 with the next
+    search 60 s away; the race was found at 15:12:50. A long wait ended only when the log said the event was over. Now
+    it also ends when the log newly says an event runs (from not known or no event): the search comes with the next
+    read. A log that keeps saying so keeps the wait. Two tests in `tests/test_race.py` (the first fails without the
+    change: the search stayed 59 s away). All tests pass. Not yet: tried online.
