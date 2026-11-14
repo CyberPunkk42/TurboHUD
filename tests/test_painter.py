@@ -866,7 +866,7 @@ class RedrawTests(unittest.TestCase):
 
         from turbohud.overlay.window import GridWindow
 
-        grid = GridWindow(None, 1)
+        grid = GridWindow(None)
         self.addCleanup(grid.close)
         grid.resize(400, 300)
         self.assertTrue(grid.windowFlags() & Qt.WindowTransparentForInput)

@@ -1062,15 +1062,15 @@ def grid_lines(length, step=GRID_STEP, major=GRID_MAJOR):
 
 
 class GridWindow(QWidget):
-    """Move mode's grid over a whole screen, beneath the sections: see-through and click-through,
+    """Move mode's grid over the main screen, beneath the sections: see-through and click-through,
     so the sections are dragged over it as before; a window of its own, never on the HUD canvas."""
 
     on_canvas = False
 
-    def __init__(self, native, number):
+    def __init__(self, native):
         super().__init__(None, window_flags())
         self.native = native
-        self.setWindowTitle(f'TurboHUD - grid {number}')  # Hyprland finds each window by its title
+        self.setWindowTitle('TurboHUD - grid')  # Hyprland finds each window by its title
         self.setAttribute(Qt.WA_TranslucentBackground)
         self.setAttribute(Qt.WA_ShowWithoutActivating)
         self.setWindowFlag(Qt.WindowTransparentForInput, True)
