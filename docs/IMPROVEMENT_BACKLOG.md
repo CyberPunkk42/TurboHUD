@@ -120,6 +120,8 @@ presets with their shortcuts, groups, the Centre buttons, Centre text and Undo. 
 - Since 2026-11-13 the move-mode panel fits the screen it opens on, its rows of sections scrolling on a short
   one: try it by hand on a small Mac laptop (or a screen set to a low resolution).
 - Windows has run none of this (its shortcut code has only ever run on a build machine).
+- Since 2026-11-14 the tint fills each section's whole box, and move mode has a grid on every screen: check
+  that the grid stays beneath the sections and lets clicks through, on Hyprland, the Mac and Windows.
 
 ## 4. Builds and release
 The Mac app for a tester (2026-11-06): build with `sh tools/get_mac_python.sh`, then

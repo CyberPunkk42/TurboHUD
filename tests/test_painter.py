@@ -829,6 +829,52 @@ class RedrawTests(unittest.TestCase):
 
         self.assertEqual(tint_right('1:11.1'), tint_right('8:88.8'))
 
+    def test_the_tint_fills_the_whole_section(self):
+        # The player list with two drivers in a box made for more: the tint reached only to the
+        # last driver (reported by the user on 2026-11-14).
+        from turbohud.core.hud import Row
+
+        rows = [Row('1. Somebody', 'small', right='+1.000'), Row('2. Another', 'small', right='+2.000')]
+        for name, size in (('players', (260, 300)), ('current', (400, 120)), ('fuel', (300, 200))):
+            with self.subTest(section=name):
+                image = self.drawn(name, rows, size, backdrop=True)
+                w, h = image.width(), image.height()
+                for x, y in ((w // 2, 1), (w // 2, h - 2), (1, h // 2), (w - 2, h // 2), (w // 2, h - 8)):
+                    self.assertGreater(image.pixelColor(x, y).alpha(), 0, (x, y))
+
+    def test_no_tint_without_the_option(self):
+        from turbohud.core.hud import Row
+
+        image = self.drawn('players', [Row('1. Somebody', 'small', right='+1.000')], (260, 300))
+        self.assertEqual(image.pixelColor(130, 290).alpha(), 0)
+
+    def test_the_move_mode_grid(self):
+        from turbohud.overlay.window import grid_lines
+
+        lines = grid_lines(1920)
+        self.assertIn((960, 'centre'), lines)
+        self.assertEqual([at for at, kind in lines if kind == 'centre'], [960])
+        self.assertIn((100, 'major'), lines)
+        self.assertIn((20, 'minor'), lines)
+        self.assertNotIn(0, [at for at, _ in lines])  # no line on the screen's edge
+        self.assertEqual(len(lines), 1920 // 20 - 1)  # 960 is a grid line and the centre once
+        self.assertEqual([at for at, _ in lines], sorted(at for at, _ in lines))
+        self.assertIn((541, 'centre'), grid_lines(1083))  # an odd size: the centre between lines
+
+    def test_the_grid_window_draws_lines_and_lets_clicks_through(self):
+        from PySide6.QtCore import Qt
+
+        from turbohud.overlay.window import GridWindow
+
+        grid = GridWindow(None, 1)
+        self.addCleanup(grid.close)
+        grid.resize(400, 300)
+        self.assertTrue(grid.windowFlags() & Qt.WindowTransparentForInput)
+        image = grid.grab().toImage()
+        self.assertGreater(image.pixelColor(200, 10).alpha(), 0)  # the centre line
+        self.assertGreater(image.pixelColor(100, 37).alpha(), 0)  # a major line
+        self.assertEqual(image.pixelColor(110, 37).alpha(), 0)  # between the lines
+
     def test_each_line_is_centred_on_its_own(self):
         from turbohud.core.hud import Row
 

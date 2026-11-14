@@ -51,7 +51,6 @@ from turbohud.core.hud import (
     hud_lines,
     is_text_section,
     level_bar,
-    level_space,
     panel_categories,
     pedal_bars,
     pedal_space,
@@ -100,7 +99,6 @@ BLUE_FLAG = (0, 0, 128)  # navy
 BLUE_FLAG_EDGE = (0, 0, 64)  # its outline, a darker blue
 BLUE_FLAG_EDGE_WIDTH = 2
 BLUE_FRAME_EDGE = 3  # the blue frame's top and bottom on the yellow box, in pixels at scale 1
-PEDAL_INSET = 4  # pedal_bars' default inset
 BACKDROP = (0, 0, 0, 40)  # the light tint behind a section's text (option), RGBA
 BLUE_SAMPLE = 0.6  # the bar's opacity in move mode, to place it
 DELTA_BAR_SAMPLE = DeltaBarView(0.4, -1.0, '\u22120.40')  # the delta bar in move mode: ahead, gaining
@@ -515,11 +513,11 @@ class SectionWindow(QWidget):
         left = 0
         down = content_shift(self.section, self.height(), scale, text_ink)
         if self.section.background and rows:  # its own colour, also in move mode, to see it
-            self._paint_backdrop(painter, rows, scale, bars, down, self.section.background)
+            self._paint_backdrop(painter, self.section.background)
             if self.opacity is not None:  # the blue flag too (turbohud.core.flagstack): a blue frame
                 self._paint_blue_frame(painter, scale)
         elif self.locked and self.backdrop and rows:
-            self._paint_backdrop(painter, rows, scale, bars, down)
+            self._paint_backdrop(painter)
         if self.section.pedals and rows:  # no bars without a speed (menu, no game)
             throttle, brake = self.pedals or (None, None)
             draw_bars(painter, pedal_bars(self.width(), self.height(), scale, throttle, brake))
@@ -585,43 +583,16 @@ class SectionWindow(QWidget):
                 painter.translate(-inner, 0)
         painter.translate(0, -down)
 
-    def _paint_backdrop(self, painter, rows, scale, bars, down=0, color=None):
-        """The light tint, only as large as the text (and pedal bars): half the margin
-        round it, moved `down` with the text and kept inside the window. A section with a
-        right-hand column (the player list) is as wide as its window, where that column
-        is drawn. `color` ('#rrggbb'): a solid box of that colour instead (Section.background),
-        as large as the section's window, whatever its text: a box that followed the text
-        changed its size with each incident (the yellow flag, reported by the user on
-        2026-11-11). Its size is the one given it in move mode, and the text keeps its size in it."""
-        if color:
-            painter.setPen(Qt.NoPen)
-            painter.setBrush(QColor(color))
-            painter.drawRoundedRect(QRectF(self.rect()), 6, 6)
-            return
-        # Digits as zeros: a tint that follows them would flicker as a number runs.
-        width, height = content_size(steady_rows(rows), scale, text_width, self.section.spacing)
-        pad = round(MARGIN * scale / 2)
-        if self.section.level:
-            height += level_space(scale) + pad // 2  # the level bar, with a little room below
-            width = self.width()  # the level bar spans the section
-        if any(row.right or row.middle for row in rows):  # columns at the right edge (the player list)
-            width = self.width()
-        else:
-            width = min(width + (bars or 0), self.width())
-        top = max(pad + down, 0)
-        left, tall = pad, min(height - pad + down, self.height()) - top
-        if self.section.pedals:
-            # From the throttle bar to the brake bar, as tall as they are: the bars sit
-            # at the window's edges, however wide it is.
-            left, top, tall = PEDAL_INSET, PEDAL_INSET, self.height() - 2 * PEDAL_INSET
-            width = self.width()
-        x = left
-        if self.text_centred and text_can_centre(self.section):
-            x = (self.width() - width) / 2 + left  # round the text in the middle of the box
-        rect = QRectF(x, top, max(width - 2 * left, 1), max(tall, 1))
+    def _paint_backdrop(self, painter, color=None):
+        """The light tint behind a section's text, filling the section's whole box: one that
+        followed the text left part of a box bare, such as the player list's below its last
+        driver (reported by the user on 2026-11-14). `color` ('#rrggbb'): a solid box of that
+        colour instead (Section.background): a box that followed the text changed its size
+        with each incident (the yellow flag, reported by the user on 2026-11-11). Either way
+        its size is the one given it in move mode, and the text keeps its size in it."""
         painter.setPen(Qt.NoPen)
         painter.setBrush(QColor(color) if color else QColor(*BACKDROP))
-        painter.drawRoundedRect(rect, 6, 6)
+        painter.drawRoundedRect(QRectF(self.rect()), 6, 6)
 
     def _paint_blue_frame(self, painter, scale):
         """The blue flag as a frame round this section's box, at the flag's fade: wide at the
@@ -1065,6 +1036,56 @@ class DesignFrame(QWidget):
         painter.drawRect(QRectF(self.rect()).adjusted(1, 1, -1, -1))
         painter.setPen(QColor(LIFT_COLOR))
         painter.drawText(QRectF(self.rect()).adjusted(8, 6, -8, -6), Qt.AlignTop | Qt.AlignRight, self.label)
+        painter.end()
+
+
+GRID_STEP = 20  # move mode's grid: a line every this many pixels
+GRID_MAJOR = 5  # every fifth line (100 px) stronger
+GRID_COLORS = {
+    'minor': (255, 255, 255, 22),
+    'major': (255, 255, 255, 55),
+    'centre': (255, 225, 77, 110),  # the screen's middle, in the highlight colour (LIFT_COLOR)
+}
+
+
+def grid_lines(length, step=GRID_STEP, major=GRID_MAJOR):
+    """[(position, kind)] of the grid's lines across `length` pixels, from 0: kind 'minor',
+    every `major`-th one 'major', and the line through the middle 'centre' (asked for by the
+    user on 2026-11-14, to line the sections up in move mode)."""
+    middle = length // 2
+    lines = [
+        (at, 'major' if (at // step) % major == 0 else 'minor')
+        for at in range(step, length, step)
+        if at != middle
+    ]
+    return sorted(lines + [(middle, 'centre')])
+
+
+class GridWindow(QWidget):
+    """Move mode's grid over a whole screen, beneath the sections: see-through and click-through,
+    so the sections are dragged over it as before; a window of its own, never on the HUD canvas."""
+
+    on_canvas = False
+
+    def __init__(self, native, number):
+        super().__init__(None, window_flags())
+        self.native = native
+        self.setWindowTitle(f'TurboHUD - grid {number}')  # Hyprland finds each window by its title
+        self.setAttribute(Qt.WA_TranslucentBackground)
+        self.setAttribute(Qt.WA_ShowWithoutActivating)
+        self.setWindowFlag(Qt.WindowTransparentForInput, True)
+
+    def paintEvent(self, _event):
+        painter = QPainter(self)
+        width, height = self.width(), self.height()
+        for kind in ('minor', 'major', 'centre'):  # the stronger lines over the fainter ones
+            painter.setPen(QPen(QColor(*GRID_COLORS[kind]), 1))
+            for at, line in grid_lines(width):
+                if line == kind:
+                    painter.drawLine(QPointF(at + 0.5, 0), QPointF(at + 0.5, height))
+            for at, line in grid_lines(height):
+                if line == kind:
+                    painter.drawLine(QPointF(0, at + 0.5), QPointF(width, at + 0.5))
         painter.end()
 
 
