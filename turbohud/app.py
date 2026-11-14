@@ -474,7 +474,9 @@ def run(args, folder):
 
         layout = RACE_SECTIONS
         if sys.platform.startswith('linux'):  # the Linux joystick interface
-            from turbohud.tsu.controller import Pad, combined
+            # Not `combined`: in run() that is the flags' one (turbohud.core.flagstack).
+            from turbohud.tsu.controller import Pad
+            from turbohud.tsu.controller import combined as with_pad
 
             pad = Pad()
             pad.start()
@@ -522,7 +524,7 @@ def run(args, folder):
             if not settings.yellow_flags:
                 yellow_flags.reset()  # turned on again, it starts afresh
             if pad is not None and 'pedals' in current:
-                current['pedals'] = combined(current['pedals'], pad.pedals())
+                current['pedals'] = with_pad(current['pedals'], pad.pedals())
             return with_local_time(current, snapshot, time.localtime())
 
     else:
