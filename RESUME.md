@@ -86,6 +86,13 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+  - 2026-11-14: Linux HUD frames failed since 2026-11-11 (`fix/linux-flags-combined`), found while building for
+    Linux players: in `run()` the Linux pedals' `from turbohud.tsu.controller import Pad, combined` replaced the
+    flags' `combined` (turbohud.core.flagstack, from `23ae315`), so with the yellow and blue flag sections there every
+    tick raised a TypeError after reading the race, before any section or the tray text was updated (about 200 a
+    second in the built app's log; its smoke test never quit). The pedals' one is imported as `with_pad` now. New
+    `tests/test_import_names.py`: no function in `turbohud/` imports one name from two places (one per branch of an
+    if is fine); it finds this clash in the old `app.py`. All 1179 tests pass.
   - 2026-11-14: Build 2026.11.14 for the tester, asked for by the user: 2026.11.13.5 with Custom race and Single
     Player (`fix/custom-and-single-player`, from the Windows PC). All 1175 tests pass; smoke test of the built app
     passed. Build `releases/TurboHUD-2026.11.14-macos-arm64.dmg` (33.7 MB, sha256 b0f12642...). The test sheet names
