@@ -19,6 +19,7 @@ fi
 image=turbohud-linux-build:22.04
 owner="${SUDO_UID:-$(id -u)}:${SUDO_GID:-$(id -g)}"
 mkdir -p releases
+chown "$owner" releases 2>/dev/null || true  # under sudo mkdir made it root's
 
 # Python 3.13 from deadsnakes; the libraries Qt's X11 and Wayland plugins load, which
 # PyInstaller packs into the app (as in .github/workflows/build.yml); binutils for PyInstaller.

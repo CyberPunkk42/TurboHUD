@@ -1910,3 +1910,11 @@ its "Recent changes".
     glibc 2.34; this PC has 2.44). Checked with a build on this PC: smoke test passed; `--probe` with a stand-in game
     got Steam's LD_LIBRARY_PATH back, no PyInstaller variables, all its arguments, and its exit code passed on;
     `--probe --self-test` read its child and was refused the terminal. All tests pass.
+  - 2026-11-14: Linux build 2026.11.14.2 pinned no section on Hyprland, found by the user running it
+    (`fix/linux-bundle-child-env`): its 19 sections came up tiled as normal windows, hard to close, with "TurboHUD window
+    not found" for each. hyprctl, started by TurboHUD, got PyInstaller's LD_LIBRARY_PATH and loaded the app's libstdc++
+    and libgcc_s from Ubuntu 22.04, too old for it (`GLIBCXX_3.4.32 not found`), so every call failed. The reset the
+    probe did for TSU is now `turbohud/core/system_env.py`, used for hyprctl and the game. Checked with the build's own
+    `_internal`: hyprctl fails with its LD_LIBRARY_PATH and answers with `system_env`'s. `tools/build_linux.sh` also
+    gives `releases/` back to the user (under sudo it was root's). Not yet: a new container build tried on Hyprland.
+    All 1189 tests pass.
