@@ -86,6 +86,10 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+  - 2026-11-14: Build 2026.11.14 for the tester, asked for by the user: 2026.11.13.5 with Custom race and Single
+    Player (`fix/custom-and-single-player`, from the Windows PC). All 1175 tests pass; smoke test of the built app
+    passed. Build `releases/TurboHUD-2026.11.14-macos-arm64.dmg` (33.7 MB, sha256 b0f12642...). The test sheet names
+    it, asks for one Custom race and one Single Player event, and first for 20 to 30 GB of disk freed (backlog item 0).
   - 2026-11-13: The tester's stutter, most likely his Mac, asked for by the user (backlog item 0, on hold). With
     2026.11.13.5 his log through an evening of huge stutters has no slow read, no slow frame and collections of 0 to
     10 ms; 5 reads a second stuttered as 20; in a later online race with the user (both logs clean) at most one

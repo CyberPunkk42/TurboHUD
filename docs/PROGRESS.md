@@ -1887,3 +1887,7 @@ its "Recent changes".
     search (23.2 s), then each read at once, 20 players, lap 4 of 61, the player driving. Tests: 5 new (found and read,
     kept without a search, one pass with several values, a controller with a server, a game without the class); the
     fake game counts a search's passes as one search. Not seen yet: a Single Player event (expected to be the same).
+  - 2026-11-14: Build 2026.11.14 for the tester, asked for by the user: 2026.11.13.5 with Custom race and Single
+    Player (`fix/custom-and-single-player`, from the Windows PC). All 1175 tests pass; smoke test of the built app
+    passed. Build `releases/TurboHUD-2026.11.14-macos-arm64.dmg` (33.7 MB, sha256 b0f12642...). The test sheet names
+    it, asks for one Custom race and one Single Player event, and first for 20 to 30 GB of disk freed (backlog item 0).

@@ -1,8 +1,10 @@
 # TurboHUD: test for the Mac, step by step
 
-Nov 13, 2026 · build 2026.11.13.5 · about 65 minutes
+Nov 14, 2026 · build 2026.11.14 · about 65 minutes
 
-> **The stutter, first (about 15 minutes).** Build 2026.11.13.5 writes down in its log every moment TurboHUD freezes for a split second, and why. Please:
+> **Before you start:** please free at least **20 to 30 GB** on the Mac's disk (System Settings → General → Storage) and restart the Mac. With only 2 to 3 GB free, macOS has no room to swap when memory runs out, and games stutter badly.
+>
+> **The stutter, first (about 15 minutes).** Build 2026.11.14 writes down in its log every moment TurboHUD freezes for a split second, and why. Please:
 >
 > 1. Install it (Part 2), start TSU and TurboHUD, and drive **one race** (offline is fine) of at least **10 minutes**.
 > 2. Every time you feel a stutter, look at the Mac's clock and **✏️ write down the time** (hours, minutes, seconds if you can): ______
@@ -81,9 +83,13 @@ New since 2026.11.13.3:
 
 - Nothing new to see: the log now notes each moment TurboHUD freezes for a split second, and which parts of the HUD take the longest to draw. This is for the stutter.
 
-New since 2026.11.13.4 (this build is 2026.11.13.5):
+New since 2026.11.13.4:
 
 - Nothing new to see: the log no longer fills up with slow frames at the end of a race, so the real freezes stand out.
+
+New since 2026.11.13.5 (this build is 2026.11.14):
+
+- **Custom race and Single Player**: TurboHUD now shows in both (from TSU's main menu), not only online and in offline races. Please try one of each for a lap or two: do the lap, the times and the player list show? **✏️ Write down:** ______
 
 This test checks those, and measures which of two ways of drawing TurboHUD costs TSU fewer frames. If you already did the measurements with 2026.11.11.4, send those too and you can skip Part 3.
 
@@ -97,7 +103,7 @@ TurboHUD only reads what the game shows. It changes nothing in TSU or in CrossOv
 
 You need:
 
-- [ ] The file `TurboHUD-2026.11.13.5-macos-arm64.dmg`
+- [ ] The file `TurboHUD-2026.11.14-macos-arm64.dmg`
 - [ ] TSU in CrossOver, as last time
 - [ ] The same way of reading TSU's FPS as last time
 - [ ] The Terminal app (in **Applications > Utilities**)
@@ -118,7 +124,7 @@ For fair FPS numbers: keep the Mac on its **power adapter**, with **Low Power Mo
 In our session TurboHUD ran straight from the disk image. Please install it, as below.
 
 1. If TurboHUD is running, quit it: press **Control + Shift + Q**.
-2. Double-click `TurboHUD-2026.11.13.5-macos-arm64.dmg`. A window opens.
+2. Double-click `TurboHUD-2026.11.14-macos-arm64.dmg`. A window opens.
 3. Drag **TurboHUD** onto **Applications**. If asked, choose **Replace**.
 4. Close the window. In Finder, click the eject button next to **TurboHUD** in the sidebar. **Always eject it**: TurboHUD must start from Applications, never from the disk image.
 5. **Don't open TurboHUD yet.** The first measurement is without it.
@@ -221,7 +227,7 @@ Always close move mode (**Control + Shift + L**) before you drive.
 22. **Move mode**: open it, click on the desktop or the game. It should stay open. Then start a race: it should close by itself when the race begins.
 23. **Gear and revs** (on unless you turned off **Gear and revs in the speed section** in **Settings…**): while driving, does the gear change and the rev lights fill up to red before each shift? In reverse, does it show **R**?
 24. **Pits**: stop in your pit box. Does the stop timer run only while you stand in the box?
-25. **About**: open **About TurboHUD…** from the TurboHUD icon's menu. Does it show the new icon and **2026.11.13.5**? Then try to start TurboHUD a second time from Applications: no second copy should open.
+25. **About**: open **About TurboHUD…** from the TurboHUD icon's menu. Does it show the new icon and **2026.11.14**? Then try to start TurboHUD a second time from Applications: no second copy should open.
 26. **Arrow keys** (in move mode): click one section, then press the arrow keys, and **Shift** + an arrow key. Does it move a little, and more with Shift? Press **Undo**: does it go back?
 27. **Lap title**: when the leader is a lap ahead of you, can you read the whole lap title? When the leader crosses the line, does their lap show for a few seconds?
 28. **The panel on your screen** (in move mode): can you see the whole panel, down to **Quit TurboHUD**? If the list of sections scrolls, can you scroll it to **Local time** at the bottom?
@@ -256,7 +262,7 @@ Always close move mode (**Control + Shift + L**) before you drive.
 
 **✏️ Write down:** Gear and rev lights right? R in reverse? Pit stop timer only in the box? ______
 
-**✏️ Write down:** About showed the icon and 2026.11.13.5? No second copy? ______
+**✏️ Write down:** About showed the icon and 2026.11.14? No second copy? ______
 
 **✏️ Write down:** Arrow keys moved the section (more with Shift)? Undo worked? Lap title whole, leader's lap shown? ______
 
