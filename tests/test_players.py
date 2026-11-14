@@ -351,9 +351,26 @@ class DeltaColourTests(unittest.TestCase):
         for delta, colour in ((-0.5, -1.0), (0.5, 1.0)):
             self.assertEqual(feed(race.DeltaBar(), 10, 4, lambda t, d=delta: d).trend, colour)
 
-    def test_a_slow_drift_the_other_way_does_not_turn_it(self):
-        view = feed(race.DeltaBar(), 10, 4, lambda t: -0.5 + 0.03 * t)  # losing 0.03 s a second
+    def test_a_slow_loss_turns_it_red(self):
+        # 2026-11-14: losing a few hundredths a second the bar stayed green, and turned only when
+        # the delta jumped from +0.3 to +0.7 (a turn then needed 0.05 s lost a second).
+        bar = race.DeltaBar()
+        view = feed(bar, 10, 1, lambda t: -0.1)
         self.assertEqual(view.trend, -1.0)
+        view = feed(bar, 11, 4, lambda t: -0.1 + 0.03 * t)  # losing 0.03 s a second
+        self.assertGreater(view.trend, 0.9)
+
+    def test_and_a_slow_gain_turns_it_green(self):
+        view = feed(race.DeltaBar(), 10, 5, lambda t: 0.5 - 0.02 * t)  # 0.02 s won back a second
+        self.assertLess(view.trend, -0.9)
+
+    def test_a_turn_counts_from_the_best_it_reached(self):
+        bar = race.DeltaBar()
+        feed(bar, 10, 2, lambda t: -0.2 - 0.1 * t)  # gaining, down to -0.4
+        view = feed(bar, 12, 2, lambda t: -0.4 + 0.04)  # 0.04 s back from the best: still green
+        self.assertEqual(view.trend, -1.0)
+        view = feed(bar, 14, 1, lambda t: -0.4 + 0.06)  # 0.06 s back: red
+        self.assertGreater(view.trend, 0.9)
 
     def test_a_short_wobble_does_not_turn_it(self):
         bar = race.DeltaBar()
@@ -418,6 +435,7 @@ class DeltaBarTests(unittest.TestCase):
         jumpy = feed(bar, 10, 2, lambda t: -0.3 + (0.1 if round(t * 20) % 2 else -0.1))
         shown = float(jumpy.text.replace('−', '-'))
         self.assertAlmostEqual(shown, -0.3, delta=0.06)  # +-0.1 at each read: the number moves far less
+        self.assertEqual(jumpy.trend, -1.0)  # and the colour stays: each jump is undone at the next read
 
     def test_a_steady_change_is_followed_closely(self):
         bar = race.DeltaBar()
@@ -459,13 +477,7 @@ class DeltaBarTests(unittest.TestCase):
         bar.update(Lapping(10 * SEC, 1 * SEC, laps=2))
         view = bar.update(Lapping(11 * SEC, -1 * SEC, laps=3))
         self.assertEqual(view.trend, -1.0)  # green for ahead: the 2 s jump is not the driver gaining
-        self.assertEqual(len(bar._history), 1)
-
-    def test_the_history_stays_small(self):
-        bar = race.DeltaBar()
-        for i in range(10_000):
-            bar.update(Lapping(i * 500, 0))
-        self.assertLessEqual(len(bar._history), 21)  # a second of reads at 20 a second
+        self.assertEqual(bar._extreme, -1 * SEC)  # the turn counts from this lap's delta only
 
     def test_it_works_once_a_read(self):
         bar = race.DeltaBar()

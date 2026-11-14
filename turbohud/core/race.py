@@ -20,7 +20,6 @@ they are passed, so comparing the same checkpoint with the best lap gives the de
 against the game's own lap times on 2026-11-01: they match exactly.
 """
 
-import collections
 import dataclasses
 import functools
 import itertools
@@ -2202,10 +2201,11 @@ def format_delta(units, places=3):
 
 
 DELTA_BAR_FULL = 1.0  # seconds of delta that fill the bar to its end
-DELTA_TREND_WINDOW = 1.0  # seconds over which the bar's colour looks at how the delta moves
-DELTA_TREND_LEAST = 0.2  # seconds of this lap's delta before that counts
-DELTA_SWITCH = 0.05  # seconds gained or lost a second, the other way, that can turn the colour
-DELTA_SWITCH_HOLD = 0.25  # seconds the rate has to stay past DELTA_SWITCH before it does
+# The colour turns once the delta is this many seconds the other way from the best it reached in
+# its colour (the lowest while green, the highest while red), however slowly it got there: a turn
+# that needed 0.05 s a second kept a slow loss green until a big jump (the user, 2026-11-14).
+DELTA_SWITCH = 0.05
+DELTA_SWITCH_HOLD = 0.25  # seconds it has to stay past DELTA_SWITCH before it does: no flicker
 DELTA_COLOUR_EASE = 0.15  # the fade between green and red: most of the way in about 0.4 s
 # The fill glides towards the delta instead of jumping at each read (asked for by the user on
 # 2026-11-11): most of the way in about 0.2 s, trailing a steady change by under 0.1 s.
@@ -2227,17 +2227,18 @@ class DeltaBarView:
 class DeltaBar:
     """Follows the live delta through a lap to give the delta bar (a DeltaBarView), or None
     without a delta. The colour is green while gaining and red while losing, and keeps its
-    colour while steady: it turns only once the delta has moved the other way by at least
-    DELTA_SWITCH a second for DELTA_SWITCH_HOLD, then fades over (asked for by the user on
-    2026-11-11: white while steady hid the text and showed more than the colours). A new lap
+    colour while steady: it turns only once the delta has gone DELTA_SWITCH the other way from
+    the best it reached in its colour, and stayed there for DELTA_SWITCH_HOLD, then fades over
+    (asked for by the user on 2026-11-11: white while steady hid the text and showed more than
+    the colours; on 2026-11-14 a slow loss stayed green). A new lap
     starts afresh, green when ahead and red when behind: the delta jumps there, which is not
     the driver gaining or losing."""
 
     def __init__(self):
         self._lap = self._clock = self._view = None
-        self._history = collections.deque()  # (race clock, delta) over DELTA_TREND_WINDOW
+        self._extreme = None  # the best delta in this colour: the lowest while green, highest while red
         self._side = None  # -1 green, 1 red: the colour the bar goes towards
-        self._against = None  # the race clock since when the rate has pointed the other way
+        self._against = None  # the race clock since when the delta has been DELTA_SWITCH the other way
         self._trend = 0.0  # the colour shown, easing towards the side
         self._fill = None  # the fill shown, gliding towards the delta
         self._shown = None  # the number shown (0.1 ms), gliding towards the delta
@@ -2248,26 +2249,22 @@ class DeltaBar:
             return self._view
         delta = state.delta_to_best
         if state.laps_completed != self._lap or delta is None:
-            self._history.clear()
-            self._side = self._against = self._fill = self._shown = None
-        last_clock = self._clock if self._history else None
+            self._side = self._extreme = self._against = self._fill = self._shown = None
+        last_clock = self._clock if self._side is not None else None
         self._lap, self._clock, self._view = state.laps_completed, state.clock, None
         if delta is None:
             return None
         if self._side is None:
             self._side = 1 if delta > 0 else -1
             self._trend = float(self._side)
-        history = self._history
-        history.append((state.clock, delta))
-        while state.clock - history[0][0] > DELTA_TREND_WINDOW * UNITS_PER_SECOND:
-            history.popleft()
-        span = (state.clock - history[0][0]) / UNITS_PER_SECOND
-        rate = (delta - history[0][1]) / UNITS_PER_SECOND / span if span >= DELTA_TREND_LEAST else 0.0
-        if rate * -self._side >= DELTA_SWITCH:  # moving the other way, clearly
+            self._extreme = delta
+        # Green (-1) keeps the lowest delta, red (1) the highest: losing raises the delta.
+        self._extreme = min(self._extreme, delta) if self._side < 0 else max(self._extreme, delta)
+        if (delta - self._extreme) * -self._side >= DELTA_SWITCH * UNITS_PER_SECOND:  # gone the other way
             if self._against is None:
                 self._against = state.clock
             if state.clock - self._against >= DELTA_SWITCH_HOLD * UNITS_PER_SECOND:
-                self._side, self._against = -self._side, None
+                self._side, self._extreme, self._against = -self._side, delta, None
         else:
             self._against = None
         seconds = delta / UNITS_PER_SECOND
