@@ -76,6 +76,40 @@ class DescendantTests(unittest.TestCase):
         self.assertLess(time.monotonic() - started, 1)
 
 
+class GameEnvTests(unittest.TestCase):
+    BUNDLE = '/home/a/TurboHUD/_internal'
+
+    def test_from_the_source_folder_the_game_gets_the_same(self):
+        env = {'LD_LIBRARY_PATH': '/steam/lib', 'HOME': '/home/a'}
+        self.assertEqual(probe.game_env(env, frozen=False), env)
+
+    def test_the_bundled_app_gives_back_steams_library_path(self):
+        env = {
+            'LD_LIBRARY_PATH': f'{self.BUNDLE}:/steam/lib',
+            'LD_LIBRARY_PATH_ORIG': '/steam/lib',
+            '_PYI_APPLICATION_HOME_DIR': self.BUNDLE,
+            '_PYI_PARENT_PROCESS_LEVEL': '1',
+            'SteamAppId': '1234',
+        }
+        self.assertEqual(
+            probe.game_env(env, frozen=True, bundle=self.BUNDLE),
+            {'LD_LIBRARY_PATH': '/steam/lib', 'SteamAppId': '1234'},
+        )
+
+    def test_a_path_only_pyinstaller_set_is_dropped(self):
+        env = {'LD_LIBRARY_PATH': self.BUNDLE, 'HOME': '/home/a'}
+        self.assertEqual(probe.game_env(env, frozen=True, bundle=self.BUNDLE), {'HOME': '/home/a'})
+        env = {'LD_LIBRARY_PATH': f'{self.BUNDLE}:/other/lib'}
+        self.assertEqual(
+            probe.game_env(env, frozen=True, bundle=self.BUNDLE), {'LD_LIBRARY_PATH': '/other/lib'}
+        )
+
+    def test_the_input_is_left_alone(self):
+        env = {'LD_LIBRARY_PATH': self.BUNDLE, 'LD_LIBRARY_PATH_ORIG': '/steam/lib'}
+        probe.game_env(env, frozen=True, bundle=self.BUNDLE)
+        self.assertEqual(env, {'LD_LIBRARY_PATH': self.BUNDLE, 'LD_LIBRARY_PATH_ORIG': '/steam/lib'})
+
+
 @unittest.skipUnless(sys.platform.startswith('linux'), 'Linux only')
 class LiveReadTests(unittest.TestCase):
     def test_reads_own_child(self):

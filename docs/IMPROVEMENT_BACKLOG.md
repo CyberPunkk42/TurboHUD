@@ -126,8 +126,11 @@ The Mac app for a tester (2026-11-06): build with `sh tools/get_mac_python.sh`, 
 `.buildtools/mac-build-venv/bin/python tools/build_app.py --version YYYY.MM.DD --smoke`. That Python has
 not been tried yet; with Homebrew's, the app needs macOS 27 (`--any-macos`). A Developer ID
 certificate and notarisation would remove the Open Anyway step.
-Bundled apps from `tools/build_app.py` with the probe and clear launch-option steps for
-Linux; an AppImage instead of the `.tar.gz`. Before the repository goes public for the
+Linux (2026-11-14, `feature/linux-bundle-probe`): the bundled app is its own probe (Steam's launch
+option `"…/TurboHUD" --probe %command%`, printed by `TurboHUD --launch-option`), the `.tar.gz` holds
+`Read Me First.txt` with the steps, and `sh tools/build_linux.sh <version>` builds it in Ubuntu 22.04
+(Docker or Podman) so it starts on glibc 2.35 and newer. Still open: tried by players on other distros
+and desktops; an AppImage instead of the `.tar.gz`. Before the repository goes public for the
 TSU community: the privacy check (pre-push hook), a licence, a README for players (begun: the
 one-page `QUICK_START.md`, in every download as `Quick Start.txt`, since 2026-11-12).
 
