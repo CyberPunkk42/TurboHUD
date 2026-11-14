@@ -17,6 +17,8 @@ import os
 import shutil
 import subprocess
 
+from turbohud.core.system_env import system_env
+
 log = logging.getLogger(__name__)
 TIMEOUT = 2.0  # seconds for one hyprctl call
 # Properties of TurboHUD's own window: (Lua name, classic name, value). No keyboard
@@ -40,7 +42,10 @@ def available(environ=None, which=shutil.which):
 
 
 def _run(args):
-    result = subprocess.run(['hyprctl', *args], capture_output=True, text=True, timeout=TIMEOUT, check=False)
+    # Not the bundled app's library path: hyprctl would load its old libstdc++ and not start.
+    result = subprocess.run(
+        ['hyprctl', *args], capture_output=True, text=True, timeout=TIMEOUT, check=False, env=system_env()
+    )
     return result.stdout.strip()
 
 

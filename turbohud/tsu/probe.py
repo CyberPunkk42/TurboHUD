@@ -45,6 +45,8 @@ import threading
 import time
 from pathlib import Path
 
+from turbohud.core.system_env import system_env
+
 GAME_EXE = 'TSU.x64'
 GAME_CODE = 'GameAssembly.so'
 FIND_TIMEOUT = 180.0
@@ -342,34 +344,10 @@ def log(lines, path):
             file.write(f'{stamp}: {line}\n')
 
 
-def game_env(environ, frozen=None, bundle=None):
-    """The environment to start the game with. Inside the bundled app PyInstaller points
-    LD_LIBRARY_PATH at the app's own libraries (keeping Steam's in LD_LIBRARY_PATH_ORIG) and adds
-    variables of its own; the game gets the environment Steam gave, or it could load TurboHUD's
-    libraries in place of its own."""
-    env = dict(environ)
-    if not (getattr(sys, 'frozen', False) if frozen is None else frozen):
-        return env
-    bundle = bundle or getattr(sys, '_MEIPASS', None)
-    for name in [name for name in env if name.startswith('_PYI_') or name == '_MEIPASS2']:
-        del env[name]
-    original = env.pop('LD_LIBRARY_PATH_ORIG', None)
-    if original is not None:
-        env['LD_LIBRARY_PATH'] = original
-    elif 'LD_LIBRARY_PATH' in env and bundle:  # set by PyInstaller with nothing before it
-        kept = [
-            part for part in env['LD_LIBRARY_PATH'].split(os.pathsep) if part and not part.startswith(bundle)
-        ]
-        if kept:
-            env['LD_LIBRARY_PATH'] = os.pathsep.join(kept)
-        else:
-            del env['LD_LIBRARY_PATH']
-    return env
-
-
 def run_game(command):
     """Start the game as our child, check the read once, then wait for the game."""
-    game = subprocess.Popen(command, env=game_env(os.environ))
+    # The environment Steam gave, not the bundled app's (turbohud.core.system_env).
+    game = subprocess.Popen(command, env=system_env())
     for sig in (signal.SIGTERM, signal.SIGINT, signal.SIGHUP):
         signal.signal(sig, lambda number, _frame: game.send_signal(number))
     path = log_path()
