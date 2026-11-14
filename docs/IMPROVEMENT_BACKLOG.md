@@ -120,9 +120,12 @@ presets with their shortcuts, groups, the Centre buttons, Centre text and Undo. 
 - Since 2026-11-13 the move-mode panel fits the screen it opens on, its rows of sections scrolling on a short
   one: try it by hand on a small Mac laptop (or a screen set to a low resolution).
 - Windows has run none of this (its shortcut code has only ever run on a build machine).
-- Since 2026-11-14 the tint fills each section's whole box, and move mode has a grid on the main screen (only there since
-  `fix/grid-main-screen`): check
-  that the grid stays beneath the sections and lets clicks through, on Hyprland, the Mac and Windows.
+- Since 2026-11-14 the tint fills each section's whole box, and move mode has a grid on the main screen only: the
+  grid confirmed by the user on Hyprland on 2026-11-14; check that it stays beneath the sections and lets clicks
+  through on the Mac and Windows.
+- Since 2026-11-14 the tray menu's on/off options are in an Options submenu, so Quit shows in omarchy's bar
+  (it cut the menu off at about 13 rows; confirmed there by the user on 2026-11-14): check the submenu in the
+  Mac's menu bar and in Windows' tray.
 
 ## 4. Builds and release
 The Mac app for a tester (2026-11-06): build with `sh tools/get_mac_python.sh`, then
