@@ -903,11 +903,18 @@ class LapReader:
         if find is None:
             raise error
         if self._clock() < self._next_search:
-            # A long wait ends with the event, so that the next race is found soon.
+            # A long wait ends with the event, so that the next race is found soon; and when the
+            # log newly says an event runs, the race may be on: a search now, not at the end of a
+            # wait of up to a minute (2026-11-14: the race found 61 s after the log said so).
             long_wait = self._search_wait > CLIENT_SEARCH_EVERY and self._event_running is not None
-            if long_wait and self._log_says() is False:
+            said_before = self._log_said
+            said = self._log_says() if long_wait else None
+            if said is False:
                 self._search_wait, self._empty_since = CLIENT_SEARCH_EVERY, None
                 self._next_search = self._clock() + CLIENT_LOG_EVERY
+            elif said is True and said_before is not True:
+                self._search_wait, self._empty_since = CLIENT_SEARCH_EVERY, None
+                self._next_search = self._clock()
             state = self._quick_look()
             if state is None:
                 raise error
