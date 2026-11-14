@@ -1941,3 +1941,9 @@ its "Recent changes".
     screen's middle in yellow. Tests: the tint reaches the box's edges in the player list, the running lap and the fuel
     (they fail on the old code), none without the option, the grid's lines and its window. All 1196 tests pass. Not
     yet: seen on the screen, and the grid beneath the sections on Hyprland, the Mac and Windows.
+  - 2026-11-14: "Quit TurboHUD" was missing from the tray menu on Linux, reported by the user
+    (`fix/tray-quit-in-sight`): TurboHUD offered it (seen in the menu it gives the desktop over D-Bus), but omarchy's bar
+    shows a tray menu up to 420 px, about 13 rows, and scrolls the rest; with every option the menu had 15 rows and a
+    separator, so Quit was out of sight. The ten on/off options, all in Settings too, are now in an Options submenu: the
+    menu is Move mode, Options, Relearn this track's map, Settings, About and Quit. All tests pass. Not yet: seen in
+    omarchy's bar, the Mac's menu bar and Windows' tray.
