@@ -202,6 +202,11 @@ def parse_args(argv):
         '--preset', type=int, choices=PRESETS, help='load a layout preset in a running TurboHUD'
     )
     commands.add_argument('--quit', action='store_true', help='quit a running TurboHUD')
+    parser.add_argument(
+        '--launch-option',
+        action='store_true',
+        help="Linux: print the line for TSU's launch options in Steam (live race data)",
+    )
     parser.add_argument('--seconds', type=float, help='quit after this many seconds (for tests)')
     args = parser.parse_args(argv)
     if args.seconds is not None and args.seconds <= 0:
@@ -1878,8 +1883,31 @@ def tell_running(args, send=None):
     return 0
 
 
+PROBE_FLAG = '--probe'  # Steam's launch option: TurboHUD --probe %command% (turbohud.tsu.probe)
+
+
+def launch_option(frozen=None, executable=None, source=None):
+    """The line for TSU's launch options in Steam that starts the game through the memory probe:
+    the bundled app itself, or from the source folder the probe script."""
+    frozen = getattr(sys, 'frozen', False) if frozen is None else frozen
+    if frozen:
+        return f'"{executable or sys.executable}" {PROBE_FLAG} %command%'
+    source = Path(source or Path(__file__).resolve().parents[1])
+    return f'python3 "{source / "experiments" / "tsu_memory_probe.py"}" %command%'
+
+
 def main(argv=None):
-    args = parse_args(sys.argv[1:] if argv is None else argv)
+    argv = sys.argv[1:] if argv is None else argv
+    if argv[:1] == [PROBE_FLAG]:
+        # Steam starts the bundled app in place of TSU; the game's own arguments follow, so
+        # they must not go through argparse. No Qt and no settings: only the probe runs.
+        from turbohud.tsu import probe
+
+        return probe.main(argv[1:])
+    args = parse_args(argv)
+    if args.launch_option:
+        print(launch_option())
+        return 0
     code = tell_running(args)
     if code is not None:
         return code

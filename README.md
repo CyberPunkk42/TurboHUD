@@ -52,8 +52,11 @@ Needs macOS as said in the download's `Read Me First.txt`.
    notification area.
 
 ### Linux
-1. Download `TurboHUD-<version>-linux-x64.tar.gz` and unpack it:
-   `tar -xzf TurboHUD-<version>-linux-x64.tar.gz`
+Needs a 64-bit Linux with glibc 2.35 or newer (Ubuntu 22.04, Linux Mint 21, Debian 12,
+Fedora 36, SteamOS 3.5, Arch or newer) and TSU's native Linux version. The download's
+`Read Me First.txt` has these steps too.
+1. Download `TurboHUD-<version>-linux-x64.tar.gz` and unpack it where it can stay:
+   `tar -xzf TurboHUD-<version>-linux-x64.tar.gz -C ~`
 2. Start it: double-click `TurboHUD` in the unpacked `TurboHUD` folder, or in a terminal
    `./TurboHUD/TurboHUD`.
 3. Linux has no shortcuts of its own (Ctrl+Shift+L and Ctrl+Shift+Q do nothing there).
@@ -91,7 +94,10 @@ else's, with no sudo and no change to the system. It only reads and never pauses
 game. How it all works, and what it does to RAM and the game:
 [docs/HOW_IT_WORKS.md](docs/HOW_IT_WORKS.md).
 1. In Steam, right-click Turbo Sliders Unlimited > **Properties** > **General** >
-   **Launch Options**, and enter (with the path to your copy of this folder):
+   **Launch Options**, and enter the line for your TurboHUD. With the download,
+   `~/TurboHUD/TurboHUD --launch-option` prints it, for example
+   `"/home/<user>/TurboHUD/TurboHUD" --probe %command%` (do it again if you move the folder).
+   From the source folder (with the path to your copy of it):
    `python3 /home/<user>/Work/workspace/tsu_repositories/TurboHUD/experiments/tsu_memory_probe.py %command%`
 2. Start TSU from Steam, and start TurboHUD (before or after; it finds the game).
 3. The race sections appear when the cars stand on the grid, before the lights; in the

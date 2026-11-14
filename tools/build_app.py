@@ -10,7 +10,9 @@ only start on this Mac's macOS or newer, and the build stops.
 - Windows: releases/TurboHUD-<version>-windows-x64.zip, holding TurboHUD/TurboHUD.exe
 - macOS:   releases/TurboHUD-<version>-macos-arm64.dmg, holding TurboHUD.app, a link to
            Applications to drag it onto, and a read-me (tools/mac_read_me.txt)
-- Linux:   releases/TurboHUD-<version>-linux-x64.tar.gz, holding TurboHUD/TurboHUD
+- Linux:   releases/TurboHUD-<version>-linux-x64.tar.gz, holding TurboHUD/TurboHUD and a read-me
+           (tools/linux_read_me.txt) with the launch option for live race data; build it in
+           Ubuntu 22.04 (tools/build_linux.sh) so it starts on older distros too
 
 Each archive gets a .sha256 file next to it. --smoke then starts the built app for a few
 seconds and fails if it does not quit cleanly.
@@ -40,6 +42,8 @@ PRESETS = ROOT / 'assets' / 'presets'  # the shipped layouts (turbohud.core.pres
 ICON = ROOT / 'assets' / 'tsu_turbo_hud.png'  # PyInstaller turns it into .ico / .icns with Pillow
 BUNDLE_ID = 'local.turbohud.TurboHUD'  # holds nothing personal: it goes out with the app
 MAC_READ_ME = ROOT / 'tools' / 'mac_read_me.txt'
+LINUX_READ_ME = ROOT / 'tools' / 'linux_read_me.txt'
+READ_ME_NAME = 'Read Me First.txt'
 # The players' guide, in every download next to the app (asked for by the user on 2026-11-12); a
 # .txt opens with a double-click everywhere, and its Markdown reads as plain text.
 QUICK_START = ROOT / 'QUICK_START.md'
@@ -192,7 +196,7 @@ def pack_dmg(app, archive, minimum):
         stage = Path(folder)
         subprocess.run(['ditto', str(app), str(stage / app.name)], check=True)  # keeps links and signature
         (stage / 'Applications').symlink_to('/Applications')
-        (stage / 'Read Me First.txt').write_text(read_me, encoding='utf-8')
+        (stage / READ_ME_NAME).write_text(read_me, encoding='utf-8')
         (stage / QUICK_START_NAME).write_bytes(QUICK_START.read_bytes())
         subprocess.run(
             ['hdiutil', 'create', '-quiet', '-volname', NAME, '-srcfolder', str(stage), '-ov']
@@ -219,6 +223,7 @@ def pack(dist, archive, system=sys.platform, minimum=(0, 0)):
         with tarfile.open(archive, 'w:gz') as tar:
             tar.add(dist / NAME, arcname=NAME)
             tar.add(QUICK_START, arcname=f'{NAME}/{QUICK_START_NAME}')
+            tar.add(LINUX_READ_ME, arcname=f'{NAME}/{READ_ME_NAME}')
             readme = tarfile.TarInfo(f'{NAME}/{CUSTOM_README_PATH}')
             text = custom_readme()
             readme.size = len(text)

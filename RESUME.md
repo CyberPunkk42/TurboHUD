@@ -28,6 +28,8 @@
   Centre text, and Undo. Checked by hand on the Mac.
 - Builds: `tools/build_app.py` (PyInstaller) makes a Windows ZIP and a Mac disk image (each with the
   Rust reader; the Mac one 32.5 MB, no Windows Python since 2026-11-11) and a Linux `.tar.gz`, run locally on each system.
+  The Linux one is built in Ubuntu 22.04 with `sh tools/build_linux.sh <version>` (starts on glibc 2.35 and newer), and
+  is its own memory probe: Steam's launch option `"…/TurboHUD" --probe %command%` (`TurboHUD --launch-option`).
   The repository is kept in step with a private GitHub repository (since 2026-11-11; remote
   `github` on the Mac, `origin` on the Windows PC), so the Windows PC can pull it; `.github/workflows/build.yml` runs only for a
   release tag, a pull request or by hand.
@@ -81,11 +83,23 @@
    Fullscreen, and listen for stutter while the race is searched for.
 3. Layout: checked by hand on the Mac; what is left is in races, on Linux and on Windows
    (backlog item 3).
-4. Builds and release: bundled apps with the probe, an AppImage; before the repository
+4. Builds and release: Linux players try the `.tar.gz` (2026-11-14) on their distros, an AppImage; before the repository
    goes public, the privacy check, a licence and a README for players.
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+  - 2026-11-14: A Linux build to share with other Linux players, asked for by the user (backlog item 4,
+    `feature/linux-bundle-probe`, on `fix/linux-flags-combined`). Built so far, the `.tar.gz` gave live data to no one:
+    the launch option named the probe script in a source folder. Now the bundled app is the probe:
+    `TurboHUD --probe %command%` hands the game's command to turbohud.tsu.probe before argparse and Qt, and the game gets
+    the environment Steam gave (`probe.game_env`: PyInstaller puts its `_internal` folder first in LD_LIBRARY_PATH,
+    seen in the built app's own environment, and adds `_PYI_*` variables). `TurboHUD --launch-option` prints the line
+    for Steam (the app's own path, quoted), and the self-test reads a `sleep` child (sys.executable is TurboHUD in the
+    app). The `.tar.gz` holds `tools/linux_read_me.txt` as `Read Me First.txt`: needs, install, the Steam step, use,
+    reporting. `tools/build_linux.sh` builds in an Ubuntu 22.04 container from `git archive HEAD` (PySide6 6.11 needs
+    glibc 2.34; this PC has 2.44). Checked with a build on this PC: smoke test passed; `--probe` with a stand-in game
+    got Steam's LD_LIBRARY_PATH back, no PyInstaller variables, all its arguments, and its exit code passed on;
+    `--probe --self-test` read its child and was refused the terminal. All tests pass.
   - 2026-11-14: Linux HUD frames failed since 2026-11-11 (`fix/linux-flags-combined`), found while building for
     Linux players: in `run()` the Linux pedals' `from turbohud.tsu.controller import Pad, combined` replaced the
     flags' `combined` (turbohud.core.flagstack, from `23ae315`), so with the yellow and blue flag sections there every

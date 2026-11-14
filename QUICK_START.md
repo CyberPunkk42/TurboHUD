@@ -17,7 +17,8 @@ game; it never changes it.
 **Applications**, and follow `Read Me First.txt` for the first start.
 
 **Linux**: unpack the `.tar.gz` and start `TurboHUD`. Live race data needs TSU started with a
-launch option: see the README.
+launch option in Steam: `TurboHUD --launch-option` prints it, and `Read Me First.txt` says where
+it goes.
 
 ## 2. First start
 

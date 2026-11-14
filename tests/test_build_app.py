@@ -113,6 +113,13 @@ class NamingTests(unittest.TestCase):
         self.assertIn('Open Anyway', text)
         self.assertIn('D3DMetal', text)
 
+    def test_the_linux_read_me_gives_the_launch_option(self):
+        text = build_app.LINUX_READ_ME.read_text(encoding='utf-8')
+        self.assertIn('TurboHUD --launch-option', text)
+        self.assertIn('--probe %command%', text)
+        self.assertIn(f'{app.PROBE_FLAG} %command%', app.launch_option(frozen=True, executable='/x/TurboHUD'))
+        self.assertIn('glibc 2.35', text)
+
     @unittest.skipUnless(sys.platform == 'darwin', 'makes a disk image')
     def test_the_disk_image_holds_the_app_the_link_and_the_read_me(self):
         with tempfile.TemporaryDirectory() as folder:
@@ -193,6 +200,8 @@ class PackTests(unittest.TestCase):
             with tarfile.open(archive) as tar:
                 self.assertIn('TurboHUD/_internal/lib.dll', tar.getnames())
                 self.assertIn('TurboHUD/Quick Start.txt', tar.getnames())
+                read_me = tar.extractfile('TurboHUD/Read Me First.txt').read()
+                self.assertEqual(read_me, build_app.LINUX_READ_ME.read_bytes())
                 readme = tar.extractfile('TurboHUD/customization/display_presets/README.txt').read()
                 self.assertEqual(readme, build_app.custom_readme())
             self.check_digest(archive)
@@ -247,7 +256,34 @@ class AppArgsTests(unittest.TestCase):
     def test_defaults(self):
         args = app.parse_args([])
         self.assertFalse(args.move)
+        self.assertFalse(args.launch_option)
         self.assertIsNone(args.seconds)
+
+    def test_probe_hands_the_games_command_to_the_probe(self):
+        # Steam: TurboHUD --probe <the game's command>, whose arguments argparse must not see.
+        command = ['/steam/run', '--', '/game/TSU.x64', '-screen-fullscreen', '0', '--move']
+        with mock.patch('turbohud.tsu.probe.main', return_value=7) as probe_main:
+            self.assertEqual(app.main(['--probe', *command]), 7)
+        probe_main.assert_called_once_with(command)
+
+    def test_the_launch_option_for_steam(self):
+        self.assertEqual(
+            app.launch_option(frozen=True, executable='/home/a/Turbo HUD/TurboHUD'),
+            '"/home/a/Turbo HUD/TurboHUD" --probe %command%',
+        )
+        self.assertEqual(
+            app.launch_option(frozen=False, source='/src/TurboHUD'),
+            'python3 "/src/TurboHUD/experiments/tsu_memory_probe.py" %command%',
+        )
+
+    def test_launch_option_prints_it_and_starts_nothing(self):
+        with (
+            mock.patch('turbohud.control.send') as send,
+            contextlib.redirect_stdout(io.StringIO()) as out,
+        ):
+            self.assertEqual(app.main(['--launch-option']), 0)
+        send.assert_not_called()
+        self.assertTrue(out.getvalue().rstrip().endswith('%command%'))
 
     def test_rejects_bad_seconds(self):
         with self.assertRaises(SystemExit), contextlib.redirect_stderr(io.StringIO()):
