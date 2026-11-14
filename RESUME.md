@@ -88,6 +88,14 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+  - 2026-11-14: The delta bar stayed green while losing time slowly, reported by the user with build 2026.11.14.3
+    (`fix/delta-bar-slow-loss`): the delta kept rising by hundredths and turned red only when it jumped from +0.3 to
+    +0.7. The colour turned only on a rate of 0.05 s a second held 0.25 s (from 2026-11-11), so a slow loss never
+    counted. Now it turns once the delta is DELTA_SWITCH (0.05 s) the other way from the best it reached in its colour
+    (the lowest while green, the highest while red), held DELTA_SWITCH_HOLD (0.25 s), however slowly it got there; a
+    new lap starts afresh as before. The per-read history is gone. Tests: a slow loss turns it red, a slow gain green,
+    the turn counts from the best reached, a jumpy delta keeps its colour; three of them fail on the old rule. All
+    tests pass. Not yet: seen in a race.
   - 2026-11-14: Linux build 2026.11.14.2 pinned no section on Hyprland, found by the user running it
     (`fix/linux-bundle-child-env`): its 19 sections came up tiled as normal windows, hard to close, with "TurboHUD window
     not found" for each. hyprctl, started by TurboHUD, got PyInstaller's LD_LIBRARY_PATH and loaded the app's libstdc++

@@ -1918,3 +1918,11 @@ its "Recent changes".
     `_internal`: hyprctl fails with its LD_LIBRARY_PATH and answers with `system_env`'s. `tools/build_linux.sh` also
     gives `releases/` back to the user (under sudo it was root's). Not yet: a new container build tried on Hyprland.
     All 1189 tests pass.
+  - 2026-11-14: The delta bar stayed green while losing time slowly, reported by the user with build 2026.11.14.3
+    (`fix/delta-bar-slow-loss`): the delta kept rising by hundredths and turned red only when it jumped from +0.3 to
+    +0.7. The colour turned only on a rate of 0.05 s a second held 0.25 s (from 2026-11-11), so a slow loss never
+    counted. Now it turns once the delta is DELTA_SWITCH (0.05 s) the other way from the best it reached in its colour
+    (the lowest while green, the highest while red), held DELTA_SWITCH_HOLD (0.25 s), however slowly it got there; a
+    new lap starts afresh as before. The per-read history is gone. Tests: a slow loss turns it red, a slow gain green,
+    the turn counts from the best reached, a jumpy delta keeps its colour; three of them fail on the old rule. All
+    tests pass. Not yet: seen in a race.
