@@ -239,10 +239,16 @@ screen most of them are on helps line them up (a line every 20 px, a stronger on
 middle in yellow), and the panel opens.
 
 Outside a race, every section shows a **preview**: one moment of a made-up race at Laguna
-Seca, lap 10 of 15 with 20 drivers and you in 6th, so you see each section as it looks in a
-race while you place it. Its lap times and gaps come from a real race there; the names are
-made up. It follows your options (columns, clan tags, sector bars, gear, km/h or mph). In a
-race, the sections show the race instead.
+Seca, 15 laps or 21 minutes, lap 10 with 20 drivers and you in 6th, just as the leader begins
+lap 11. You see each section as it looks in a race while you place it, with everything it can
+show, so the room it keeps is filled: pit times, a car in the pits, a shortcut penalty (CUT), a
+car out of the race (DNF), a yellow flag. With **Classes in the standings** on it is a race of
+two classes (GT3 and GT4), with the overall places. Its lap times and gaps come from a real
+race there; the names are made up. It follows your options (columns, clan tags, classes,
+sector bars, gear, km/h or mph). In a race, the sections show the race instead.
+
+A name too long for its room ends in "…": in **Nearby cars** a car's pit times take their room
+from its name while they show, and no name ever runs into the next column.
 
 **On the screen**
 - **Drag** a section to move it anywhere, also to another screen.

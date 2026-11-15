@@ -30,7 +30,10 @@ class PreviewTests(unittest.TestCase):
                 self.assertTrue(self.sections.get(key), key)
 
     def test_lap_ten_of_fifteen_in_sixth_place(self):
-        self.assertEqual(self.sections['lap'][0].text, 'Lap 10/15')
+        # 15 laps or 21 minutes, as the real race; the leader has just begun lap 11.
+        title = self.sections['lap'][0]
+        self.assertRegex(title.text, r'^Lap 10/15  -  7:\d\d left$')
+        self.assertEqual(title.tail.strip(' ·'), 'Leader 11')
         rows = self.sections['laptimes']
         self.assertEqual(len(rows), 1 + len(preview.RESULTS))  # a heading and 20 drivers
         self.assertIn('6. You', rows[1 + preview.LOCAL].text)
@@ -44,13 +47,35 @@ class PreviewTests(unittest.TestCase):
     def test_only_made_up_names(self):
         names = set(preview.NAMES)
         for row in self.sections['laptimes'][1:] + self.sections['players']:
-            shown = row.text.split('. ', 1)[1]
-            self.assertIn(shown, names)
+            shown = row.text.split('. ', 1)[1].removesuffix('…')  # cut short beside a pit time
+            self.assertTrue(any(name.startswith(shown) for name in names), shown)
         self.assertEqual(len(names), len(preview.RESULTS))
 
-    def test_one_car_in_the_pits_and_cars_close_by(self):
-        rows = self.sections['laptimes'][1:]
-        self.assertEqual(sum('PIT' in text(row) for row in rows), 1)
+    def test_every_kind_of_entry_the_standings_make_room_for(self):
+        # So the columns' room is seen filled (asked for by the user on 2026-11-15).
+        rows = {row.text.split('. ', 1)[1]: row for row in self.sections['laptimes'][1:]}
+        pitted = rows[preview.NAMES[preview.PITTED]]
+        self.assertEqual((pitted.middle, pitted.right), ('PIT 24.6s', '(8.20s)'))
+        self.assertEqual(rows[preview.NAMES[preview.IN_PIT]].right, 'PIT')
+        self.assertEqual(rows[preview.NAMES[preview.CUT]].right, 'CUT 2.4s')
+        self.assertEqual(rows[preview.NAMES[preview.RETIRED]].right, race.DNF_TEXT)
+
+    def test_a_car_close_by_shows_its_pit_times(self):
+        tails = [row.tail for row in self.sections['players']]
+        self.assertIn('  PIT 24.6s (8.20s)', tails)
+
+    def test_with_classes_a_two_class_race(self):
+        from turbohud.core.settings import Settings
+
+        classed = preview.preview_sections(classes=True, class_tags=tuple(Settings().class_tags))
+        rows = classed['laptimes'][1:]
+        self.assertEqual([row.rule for row in rows if row.rule], ['GT3', 'GT4'])
+        self.assertEqual(rows[-1].overall, 'P20')
+        self.assertIn('GT3 P6', [row.tag for row in classed['players']])
+        # Without GT3 and GT4 among the class tags: one class, as before.
+        self.assertFalse(any(row.overall for row in preview.preview_sections(classes=True)['laptimes']))
+
+    def test_cars_close_by(self):
         self.assertTrue(self.sections['radar'].blips)
         roles = {dot.role for dot in self.sections['trackmap'].dots}
         self.assertLessEqual({'me', 'leader', 'ahead', 'behind'}, roles)

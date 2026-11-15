@@ -95,6 +95,22 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+  - 2026-11-15: The preview fills every section's room, and names never run into a column, asked for by the
+    user (`feature/preview-standings-markers`): the preview race is timed as the real one was (15 laps or 21
+    minutes: "Lap 10/15 - 7:14 left · Leader 11", the leader just over the line), a car close by has just pitted
+    (its times in Nearby cars), the yellow flag lists a respawn, and with the classes option on it is a two-class
+    race (GT3 and GT4, each in a car of its own, as `car_classes` needs), with the overall places. Asked whether
+    pit times overlap a name in Nearby cars: names are cut by letters for them (`_short_name`), but a name of wide
+    letters (MMWW) could still reach the tag column by 8 px; `draw_hud` now cuts any name with '…' where the
+    first column begins (`fitted_name`, `first_column`), the pit time kept whole. Space at the right of the
+    standings in earlier images was the drawing script's (no text size set); drawn as the app draws, the last
+    column ends at the margin. Tests: the timed title and leader, the pit times close by, the class race and
+    its fallback without GT3 and GT4, the fitted name and first column. Not yet: seen on the screen.
+  - 2026-11-15: The preview's standings show every kind of entry, asked for by the user
+    (`feature/preview-standings-markers`): a car just out of the pits (PIT 24.6s, (8.20s) standing), the car in the
+    pits (PIT), a shortcut penalty (CUT 2.4s) and a car out of the race (DNF), through race_sections with stand-ins
+    for the shortcut penalties and retirements, so the room the columns keep for them is seen filled while
+    placing the section. Tests: each entry where it belongs. Not yet: seen on the screen.
   - 2026-11-15: The standings follow their columns, and the shipped layouts made again, asked for by the user (same
     branch): unticking a standings column in Settings (or classes and clan tags both off) makes its box narrower
     (`race.standings_section`, as `speed_section` does for the gear; at the default size every column 499 px,

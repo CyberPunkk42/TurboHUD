@@ -27,8 +27,9 @@ SECTOR_LINES = (10, 20)  # three sectors
 GATE_HALF_WIDTH = 9.0  # metres either side of the road's middle
 UNIT = race.UNITS_PER_SECOND
 LOCAL = 5  # the player: P6 (index in the order below)
-NOW_LAP = 9  # laps the leader has done: lap 10 of 15 shows
-LEADER_SHARE = 0.42  # how far into its lap the leader is
+NOW_LAP = 10  # laps the leader has done: it has just begun lap 11, the player is on lap 10
+LEADER_INTO = 2.5  # seconds into its lap: "Leader 11" shows after the player's lap and time left
+TIME_LIMIT = 21 * 60  # seconds: the real race was 15 laps or 21 minutes
 
 # The real race's results, without names: (race time in seconds, best lap in seconds, laps), in
 # finishing order. The 19th lost about 40 s in the pits; the 20th was lapped twice.
@@ -77,6 +78,9 @@ NAMES = (
     'Diego Alvarez',
     'Sam Whitlock',
 )
+# With the classes option on, a two-class race: these clan tags name the drivers' classes, so the
+# standings come by class with the overall place, and the nearby cars show class and place in it.
+CLASS_TAGS = tuple('GT3' if index < 12 else 'GT4' for index in range(20))
 TAGS = (
     'APX',
     '',
@@ -123,6 +127,31 @@ COUNTRIES = (
 )
 COMPOUNDS = (1, 1, 0, 1, 1, 0, 1, 2, 1, 1, 0, 1, 2, 1, 1, 1, 0, 2, 0, 1)  # 0 soft, 1 medium, 2 hard
 IN_PIT = 18  # the driver who lost time in the pits is in them now
+# So that every kind of entry the standings can show is there, as their columns make room for them
+# (asked for by the user on 2026-11-15): a car just out of the pits with its times, a shortcut
+# penalty, and a car out of the race.
+PITTED = 7  # out of the pits, close behind the player: PIT 24.6s for the stop, (8.20s) in the box
+PITTED_TIMES = (24.6, 8.2)
+CUT = 14  # slowed for a shortcut, with the seconds left
+CUT_LEFT = 2.4
+RETIRED = 19  # out of the race: DNF
+
+
+class _Penalties:
+    """Stands in for race.ShortcutPenalties: one car slowed for a shortcut."""
+
+    def left(self, _state):
+        return {NAMES[CUT]: CUT_LEFT}
+
+    def jump_starts(self, _state):
+        return frozenset()
+
+
+class _Retired:
+    """Stands in for race.Retirements: one car out of the race."""
+
+    def update(self, _state):
+        return frozenset({NAMES[RETIRED]})
 
 
 def _flag(country):
@@ -194,7 +223,7 @@ def _lap_times(index):
     return times
 
 
-def _driver(index, clock, lap):
+def _driver(index, clock, lap, tags=TAGS):
     """A PlayerState for driver `index` at race clock `clock` (seconds)."""
     times = _lap_times(index)
     starts = [0.0]
@@ -228,21 +257,25 @@ def _driver(index, clock, lap):
         velocity=(way[0] * speed, way[1] * speed),
         forward=way,
         forward_speed=speed,
-        tag=TAGS[index],
-        car='Tatuus FA01',
+        tag=tags[index],
+        # Classes need cars of their own (race.car_classes): one car for all names no classes.
+        car=f'{tags[index]} car' if tags is CLASS_TAGS else 'Tatuus FA01',
         compound=COMPOUNDS[index],
         in_box=in_pit,
         draft_drag=0.93 if index == LOCAL + 1 else None,
+        pit_seconds=PITTED_TIMES[0] if index == PITTED else None,
+        pit_stopped=PITTED_TIMES[1] if index == PITTED else 0.0,
     )
 
 
-def preview_state(folder=None, gear=True):
+def preview_state(folder=None, gear=True, classes=False):
     """The preview race's LapState: lap 10 of 15, the player 6th."""
     points, start = track(folder)
     lap = Lap(list(points))
     leader_times = _lap_times(0)
-    clock = sum(leader_times[:NOW_LAP]) + LEADER_SHARE * leader_times[NOW_LAP]
-    players = tuple(_driver(index, clock, lap) for index in range(len(RESULTS)))
+    clock = sum(leader_times[:NOW_LAP]) + LEADER_INTO
+    tags = CLASS_TAGS if classes else TAGS
+    players = tuple(_driver(index, clock, lap, tags) for index in range(len(RESULTS)))
     me = players[LOCAL]
     my_times = _lap_times(LOCAL)
     lap_starts = [0]
@@ -272,7 +305,7 @@ def preview_state(folder=None, gear=True):
     )
     return race.LapState(
         clock=round(clock * UNIT),
-        time_limit=0,
+        time_limit=round(TIME_LIMIT * UNIT),
         laps_completed=me.laps_completed,
         laps_to_finish=LAPS,
         lap_starts=lap_starts,
@@ -298,11 +331,14 @@ def preview_sections(
     clan_tags=True,
     columns=race.LAP_COLUMNS,
     radar_cone=True,
+    classes=False,
+    class_tags=(),
 ):
     """{section name: content} for move mode, as race_sections gives them in a race with the
     player's options, and the sections a calm moment leaves empty filled in: a yellow flag a
     sector ahead, a shortcut penalty, and the blue flag."""
-    state, (points, start) = preview_state(folder, gear)
+    classes = classes and {'GT3', 'GT4'} <= set(class_tags)
+    state, (points, start) = preview_state(folder, gear, classes)
     snapshot = race.Snapshot(race.RACING, state, True, 1.0, moved_at=1.0)
     track_map = TrackMap()
     track_map._gates = state.gates
@@ -315,7 +351,10 @@ def preview_sections(
         'delta_bar': delta_bar,
         'sector_bars': sector_bars,
         'clan_tags': clan_tags,
+        'class_tags': tuple(class_tags) if classes else (),
         'columns': tuple(columns),
+        'shortcuts': _Penalties(),
+        'retirements': _Retired(),
     }
     # Twice, as the radar and the delta bar follow the cars from one read to the next.
     race.race_sections(snapshot, 1.0, speed_unit, race.Standings(), radar, track_map, **options)
@@ -325,7 +364,7 @@ def preview_sections(
         sections['yellowflag'] = [
             Row('YELLOW  -  Sector 2', 'title', '#111111', centred=True),
             Row(f'S2  {NAMES[12]}  off track', 'small', '#111111'),
-            Row(f'S2  {NAMES[16]}  spun', 'small', '#111111'),
+            Row(f'S2  {NAMES[13]}  respawned', 'small', '#111111'),
         ]
     if not sections.get('shortcut'):
         sections['shortcut'] = race.shortcut_rows(state, {NAMES[LOCAL]: 2.4})
