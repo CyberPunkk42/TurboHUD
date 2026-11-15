@@ -2177,7 +2177,8 @@ def launch_option(frozen=None, executable=None, source=None):
     if frozen:
         return f'"{executable or sys.executable}" {PROBE_FLAG} %command%'
     source = Path(source or Path(__file__).resolve().parents[1])
-    return f'python3 "{source / "experiments" / "tsu_memory_probe.py"}" %command%'
+    # With '/' on every system: the line is for Steam on Linux.
+    return f'python3 "{(source / "experiments" / "tsu_memory_probe.py").as_posix()}" %command%'
 
 
 def main(argv=None):

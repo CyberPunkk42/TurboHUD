@@ -348,8 +348,10 @@ def run_game(command):
     """Start the game as our child, check the read once, then wait for the game."""
     # The environment Steam gave, not the bundled app's (turbohud.core.system_env).
     game = subprocess.Popen(command, env=system_env())
-    for sig in (signal.SIGTERM, signal.SIGINT, signal.SIGHUP):
-        signal.signal(sig, lambda number, _frame: game.send_signal(number))
+    # SIGHUP only where there is one (not on Windows, where the tests run too).
+    for sig in (signal.SIGTERM, signal.SIGINT, getattr(signal, 'SIGHUP', None)):
+        if sig is not None:
+            signal.signal(sig, lambda number, _frame: game.send_signal(number))
     path = log_path()
     server = None
     try:

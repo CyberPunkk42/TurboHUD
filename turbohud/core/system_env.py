@@ -24,11 +24,10 @@ def system_env(environ=None, frozen=None, bundle=None):
     if original is not None:
         env['LD_LIBRARY_PATH'] = original
     elif 'LD_LIBRARY_PATH' in env and bundle:  # set by PyInstaller with nothing before it
-        kept = [
-            part for part in env['LD_LIBRARY_PATH'].split(os.pathsep) if part and not part.startswith(bundle)
-        ]
+        # Always ':' (a Linux variable), not os.pathsep, which is ';' on Windows.
+        kept = [part for part in env['LD_LIBRARY_PATH'].split(':') if part and not part.startswith(bundle)]
         if kept:
-            env['LD_LIBRARY_PATH'] = os.pathsep.join(kept)
+            env['LD_LIBRARY_PATH'] = ':'.join(kept)
         else:
             del env['LD_LIBRARY_PATH']
     return env
