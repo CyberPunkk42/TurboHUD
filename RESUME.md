@@ -70,6 +70,9 @@
   whether TSU stutters while driving or between races (backlog item 0). Since 2026-11-13 on hold: with 2026.11.13.5
   TurboHUD ran smoothly through his huge stutters, fewer reads did not help, and a later race had at most one;
   most likely his Mac (2 to 3 GB of disk free, about 3 GB of memory left): he frees space and races again.
+  His log with 2026.11.14, after freeing his disk to about 244 GB (2026-11-15): TurboHUD clean (drawing 9 to 16%, no
+  30 s stall); TSU's race data spread to about 3,090 MiB mid-race again, one whole-system hitch, reads twice as dear
+  and long searches between races. Next: his stutter times and Activity Monitor's memory (backlog item 0).
 - Custom race and Single Player (`fix/custom-and-single-player`, 2026-11-13): found in a Custom race on Windows;
   try a Single Player event, and a Custom race on the Mac and on Linux (a second search pass there).
 - Replays after a race (`fix/replays-after-a-race`, 2026-11-13): try in TSU a recording watched after a race in the
@@ -88,6 +91,10 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+  - 2026-11-15: The tester's log with build 2026.11.14 in backlog item 0 (`docs/tester-log-2026-11-14`), after he
+    freed his disk to about 244 GB: TurboHUD ran clean (drawing 9 to 16%, steady frames, no stall every 30 s). Left:
+    TSU's race data spread to about 3,090 MiB mid-race as on his bad evening, one hitch of the whole Mac, race reads
+    twice as dear as with 2026.11.13.5, and long searches between races; what to ask him. The log stays local.
   - 2026-11-15: A test run printed "TurboHUD is already running: switched it to move mode", which looked as if the
     tests had reached the player's TurboHUD (`fix/tests-leave-running-app-alone`). They had not: the line came from a
     test that gives the start a fake TurboHUD answering "ok" (no command in the app's log, and none was running). The

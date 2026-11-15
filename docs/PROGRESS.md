@@ -1965,3 +1965,7 @@ its "Recent changes".
     tests had reached the player's TurboHUD (`fix/tests-leave-running-app-alone`). They had not: the line came from a
     test that gives the start a fake TurboHUD answering "ok" (no command in the app's log, and none was running). The
     test now catches the message and checks it, so a test run prints nothing of the kind. All 1199 tests pass.
+  - 2026-11-15: The tester's log with build 2026.11.14 in backlog item 0 (`docs/tester-log-2026-11-14`), after he
+    freed his disk to about 244 GB: TurboHUD ran clean (drawing 9 to 16%, steady frames, no stall every 30 s). Left:
+    TSU's race data spread to about 3,090 MiB mid-race as on his bad evening, one hitch of the whole Mac, race reads
+    twice as dear as with 2026.11.13.5, and long searches between races; what to ask him. The log stays local.
