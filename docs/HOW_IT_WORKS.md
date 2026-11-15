@@ -20,26 +20,26 @@ off. On Linux and Windows each section keeps its own window for now.
 
 | Section | What it shows |
 |---|---|
-| Lap and time left | Lap 2/3, and the time left in a timed race |
-| Running lap | the current lap time, counting |
+| Race progress | Lap 2/3, and the time left in a timed race |
+| Current lap | the current lap time, counting |
 | Delta to best | ahead (green) or behind (red) your best lap, live between checkpoints |
 | Delta bar | the same as a bar, right when ahead, green while gaining and red while losing time |
-| Last and best lap | your last and best lap times (purple the race's fastest, green your own best), with a bar per sector below |
+| My laps | your last and best lap times (purple the race's fastest, green your own best), with a bar per sector below |
 | Fuel | fuel left, laps it lasts at your recent use, fuel saved or burnt this lap; a level bar |
 | Fuel to finish | laps of fuel to spare (green) or missing (red) for the finish |
-| Tires | tire life left and the laps it lasts; a level bar |
-| Health | car health as the game counts it; yellow with less downforce, red when slowed; a level bar |
-| Draft | how strong the slipstream is (of the event's most), with a bar; the downforce it costs; the event's drafting at the start, then the last lap's time in a slipstream; who drafts you |
-| Speed | km/h or mph, yellow while coasting; throttle and brake bars beside it; as an option the gear and rev lights |
-| Players | the leader, then the 3 cars ahead of and 3 behind you on the track: position, flag, name, tire, PIT, and the live gap to you (or +1 L for laps), DNF for a car out of the race |
-| Lap times | every driver in race order (by class in a multi-class race) with flag, name and clan tag or class, lap, tire, their best lap (the race's fastest in purple) and their last lap, or CUT, JUMP, PIT or DNF |
+| Tire wear | tire life left and the laps it lasts; a level bar |
+| Car health | car health as the game counts it; yellow with less downforce, red when slowed; a level bar |
+| Slipstream | how strong the slipstream is (of the event's most), with a bar; the downforce it costs; the event's drafting at the start, then the last lap's time in a slipstream; who drafts you |
+| Speed and pedals | km/h or mph, yellow while coasting; throttle and brake bars beside it; as an option the gear and rev lights |
+| Nearby cars | the leader, then the 3 cars ahead of and 3 behind you on the track: position, flag, name, tire, PIT, and the live gap to you (or +1 L for laps), DNF for a car out of the race |
+| Standings | every driver in race order (by class in a multi-class race) with flag, name and clan tag or class, lap, tire, their best lap (the race's fastest in purple) and their last lap, or CUT, JUMP, PIT or DNF |
 | Blue flag | a navy bar that fades in when a car about to lap you is within 2 s |
 | Yellow flag | a car off the track, slow, stopped, spun, the wrong way or put back in your sector or the next, by sector and driver; CAR STOPPED AHEAD or WRONG WAY AHEAD for one up to 5 s ahead on the road |
 | Penalties | SHORTCUT with the seconds TSU slows you for a shortcut; JUMP START for a false start |
-| Proximity radar | your car and the cars around you, when one is within 0.5 s behind, beside or ahead; the slipstream behind cars ahead; by default only in cockpit cameras |
+| Radar | your car and the cars around you, when one is within 0.5 s behind, beside or ahead; the slipstream behind cars ahead; by default only in cockpit cameras |
 | Track map | the track from above, with you, the race leader (gold), the next car ahead (red), the next car behind (green), backmarkers between you and the car ahead (small, bluish), and as an option the other cars (faint grey) |
-| Local time | the clock |
-| Session time | how long TurboHUD has run (shown while there is no race) |
+| Clock | the clock |
+| Time since start | how long TurboHUD has run (shown while there is no race) |
 
 Spectating an online race, only the lap section (with "Spectating" and the leader's lap),
 the player list (gaps to the leader), the lap times, the track map (every car) and the

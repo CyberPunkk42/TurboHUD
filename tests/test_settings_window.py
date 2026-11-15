@@ -37,7 +37,7 @@ class SettingsWindowTests(unittest.TestCase):
 
     OPTIONS = (
         ('mph', 'Speed in mph', False, 'tip'),
-        ('sector_bars', 'Sector bars below the last and best lap', True, 'tip'),
+        ('sector_bars', 'Sector bars in My laps', True, 'tip'),
     )
 
     def test_the_options_show_and_say_which_changed(self):

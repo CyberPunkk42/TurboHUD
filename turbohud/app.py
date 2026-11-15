@@ -45,18 +45,18 @@ PLACEMENT_EVERY = 0.2  # seconds between position checks in move mode
 ICON = 'tsu_turbo_hud.png'  # in assets/, also the bundled app's icon
 # The settings window's switches for the lap times' columns (LAP_COLUMNS): (column, label, tooltip)
 LAP_COLUMN_OPTIONS = (
-    ('flag', 'Lap times: flag', "Each driver's country flag before the name"),
-    ('lap', 'Lap times: lap number', 'The lap each driver is on (L3)'),
+    ('flag', 'Standings: flag', "Each driver's country flag before the name"),
+    ('lap', 'Standings: lap number', 'The lap each driver is on (L3)'),
     (
         'tyre',
-        'Lap times: tire compound',
+        'Standings: tire compound',
         (
             "Each driver's tire compound, as in F1 (S red, M yellow, H white; a blue W where the track's"
             ' name has (WET), (RW), (QW) or (W))'
         ),
     ),
-    ('best', 'Lap times: best lap', "Each driver's best lap"),
-    ('current', 'Lap times: last lap', "Each driver's last lap, or CUT or PIT"),
+    ('best', 'Standings: best lap', "Each driver's best lap"),
+    ('current', 'Standings: last lap', "Each driver's last lap, or CUT or PIT"),
 )
 log = logging.getLogger('turbohud')
 
@@ -776,7 +776,7 @@ def run(args, folder):
             listed.append(
                 (
                     'radar_cone',
-                    'Slipstream cones on the proximity radar',
+                    'Slipstream cones on the radar',
                     settings.radar_cone,
                     'The slipstream behind each car ahead on the radar',
                 )
@@ -784,7 +784,7 @@ def run(args, folder):
             listed.append(
                 (
                     'radar_cockpit_only',
-                    'Proximity radar only in cockpit cameras',
+                    'Radar only in cockpit cameras',
                     settings.radar_cockpit_only,
                     (
                         'Shows the radar only while the camera sits at the driver (a first-person view, "CAM 5");'
@@ -805,7 +805,7 @@ def run(args, folder):
             listed.append(
                 (
                     'sector_bars',
-                    'Sector bars below the last and best lap',
+                    'Sector bars in My laps',
                     settings.sector_bars,
                     'One bar per stretch between checkpoints: purple, green or dark yellow',
                 )
@@ -838,7 +838,7 @@ def run(args, folder):
             listed.append(
                 (
                     'classes',
-                    'Classes in the lap times',
+                    'Classes in the standings',
                     settings.classes,
                     (
                         'In a race with two or more classes, named by the drivers\' clan tags ([GT3], [LMP], ...):'
@@ -850,7 +850,7 @@ def run(args, folder):
             listed.append(
                 (
                     'clan_tags',
-                    'Clan tags in the lap times',
+                    'Clan tags in the standings',
                     settings.clan_tags,
                     (
                         "Each driver's clan tag in a column after the name (in a race with classes: for the"
@@ -1632,16 +1632,16 @@ def run(args, folder):
     backdrop_action.setChecked(settings.backdrop)
     backdrop_action.triggered.connect(lambda checked: set_backdrop(checked))
     options_menu.addAction(backdrop_action)
-    radar_cone_action = QAction('Slipstream cones on the proximity radar', menu, checkable=True)
+    radar_cone_action = QAction('Slipstream cones on the radar', menu, checkable=True)
     radar_cone_action.setChecked(settings.radar_cone)
     radar_cone_action.triggered.connect(lambda checked: set_radar_cone(checked))
-    radar_cockpit_action = QAction('Proximity radar only in cockpit cameras', menu, checkable=True)
+    radar_cockpit_action = QAction('Radar only in cockpit cameras', menu, checkable=True)
     radar_cockpit_action.setChecked(settings.radar_cockpit_only)
     radar_cockpit_action.triggered.connect(lambda checked: set_radar_cockpit_only(checked))
     if any(section.drawing == 'radar' for section in layout):
         options_menu.addAction(radar_cone_action)
         options_menu.addAction(radar_cockpit_action)
-    sector_bars_action = QAction('Sector bars below the last and best lap', menu, checkable=True)
+    sector_bars_action = QAction('Sector bars in My laps', menu, checkable=True)
     sector_bars_action.setChecked(settings.sector_bars)
     sector_bars_action.triggered.connect(lambda checked: set_sector_bars(checked))
     if any(section.sectors for section in layout):
@@ -1656,10 +1656,10 @@ def run(args, folder):
     gear_action.triggered.connect(lambda checked: set_gear(checked))
     if any(section.name == 'speed' for section in layout):
         options_menu.addAction(gear_action)
-    classes_action = QAction('Classes in the lap times', menu, checkable=True)
+    classes_action = QAction('Classes in the standings', menu, checkable=True)
     classes_action.setChecked(settings.classes)
     classes_action.triggered.connect(lambda checked: set_classes(checked))
-    clan_tags_action = QAction('Clan tags in the lap times', menu, checkable=True)
+    clan_tags_action = QAction('Clan tags in the standings', menu, checkable=True)
     clan_tags_action.setChecked(settings.clan_tags)
     clan_tags_action.triggered.connect(lambda checked: set_clan_tags(checked))
     if any(section.name == 'laptimes' for section in layout):

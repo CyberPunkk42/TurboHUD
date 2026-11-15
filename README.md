@@ -7,7 +7,7 @@ Fullscreen mode too.
 Early version. On Linux, with TSU started through TurboHUD's memory probe (see
 [Live lap times on Linux](#live-lap-times-on-linux)), the HUD shows the live race: lap
 times and the delta to your best lap, fuel, tires, health, the draft, speed with pedal
-bars, the player list with gaps, yellow and blue flags, a proximity radar and a track map (see
+bars, the nearby cars with gaps, yellow and blue flags, a radar and a track map (see
 [Use](#use)). It works offline, in hotlaps, in a Custom race, online (as a guest, as a host
 and as a spectator) and in TSU's replays. On macOS, with TSU in CrossOver,
 the same HUD needs no setup (see [Live race data on macOS](#live-race-data-on-macos)). On
@@ -28,7 +28,7 @@ it. After that it starts with a double-click.
 
 **What to expect:** TurboHUD opens no window and has no Dock or taskbar button. When it
 runs, you see:
-- a small HUD: "TurboHUD - session time" and the local time (until a race shows the rest)
+- a small HUD: "TurboHUD - time since start" and the clock (until a race shows the rest)
 - the TurboHUD icon (a speedometer) in the menu bar (Mac) or in the taskbar's
   notification area (Windows; it may be hidden behind the **^** arrow)
 
@@ -46,7 +46,7 @@ Needs macOS as said in the download's `Read Me First.txt`.
 4. Open **System Settings > Privacy & Security** and scroll down to **Security**. Next to
    "TurboHUD was blocked", click **Open Anyway**, enter your password, and click **Open
    Anyway** once more.
-5. TurboHUD starts: look for the session time on the screen and the TurboHUD icon in the menu
+5. TurboHUD starts: look for the time since start on the screen and the TurboHUD icon in the menu
    bar. From now on, a double-click is enough.
 
 ### Windows
@@ -55,7 +55,7 @@ Needs macOS as said in the download's `Read Me First.txt`.
    Starting it from inside the ZIP without extracting does not work.
 3. Open the extracted `TurboHUD` folder and double-click `TurboHUD.exe`.
 4. If "Windows protected your PC" appears, click **More info**, then **Run anyway**.
-5. TurboHUD starts: look for the session time on the screen and the TurboHUD icon in the
+5. TurboHUD starts: look for the time since start on the screen and the TurboHUD icon in the
    notification area.
 
 ### Linux
@@ -114,7 +114,7 @@ game. How it all works, and what it does to RAM and the game:
    `python3 /home/<user>/Work/workspace/tsu_repositories/TurboHUD/experiments/tsu_memory_probe.py %command%`
 2. Start TSU from Steam, and start TurboHUD (before or after; it finds the game).
 3. The race sections appear when the cars stand on the grid, before the lights; in the
-   menus, the lobby and while a race loads only the local time shows (hover over the
+   menus, the lobby and while a race loads only the clock shows (hover over the
    TurboHUD icon to see what it waits for). In a race the sections described under
    [Use](#use) show, and stay after you finish until the race is over.
 
@@ -155,14 +155,14 @@ starts its small read-only reader (`turbohud-reader.exe`, in the download) besid
 The full guide to every section, menu item, button and option is
 [USER_GUIDE.md](USER_GUIDE.md) (in every download as `User Guide.txt`). In short:
 
-- The HUD is made of **sections** (lap, delta, fuel, tires, player list, lap times, flags,
+- The HUD is made of **sections** (race progress, delta, fuel, tire wear, nearby cars, standings, flags,
   radar, track map and more), each in its own box. Locked, clicks go through them to the game.
 - **Ctrl+Shift+L** (or **Move mode** in the TurboHUD icon's menu; on Linux outside
   Hyprland `TurboHUD --toggle`) switches to **move mode**: drag, nudge and size the sections, and use
   the panel to show or hide them, group and centre them, set text sizes, keep three presets
   (**Ctrl+Shift+1**, **2**, **3** load them) and load, share or design layouts per screen size.
   **Lock** or Ctrl+Shift+L again ends it, and so does a race beginning.
-- **Settings…** sets the colours, the size of all sections, the lap times' columns, the
+- **Settings…** sets the colours, the size of all sections, the standings' columns, the
   warning times, the race reads a second and the on/off options (also under **Options** in
   the icon's menu).
 - **Ctrl+Shift+Q** quits; on Windows **Ctrl+Shift+F12** is a spare for Ctrl+Shift+L.
