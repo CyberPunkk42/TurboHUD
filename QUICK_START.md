@@ -33,7 +33,8 @@ it goes.
 ## 3. Place your HUD (move mode)
 
 1. Press **Ctrl+Shift+L** (or choose **Move mode** in the icon's menu). A faint grid helps
-   line things up.
+   line things up. Outside a race the sections show a made-up race at Laguna Seca, so you
+   see what each one looks like.
 2. Drag each section where you want it, or click it and nudge it with the arrow keys (Shift:
    10 px). Drag a corner to size its text, an edge to give it more room.
 3. The panel that opens shows or hides each section, sets its text size (**Size px**) and

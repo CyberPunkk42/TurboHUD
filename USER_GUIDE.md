@@ -236,6 +236,12 @@ on other Linux desktops run `TurboHUD --toggle`. Every section gets a blue tint,
 screen most of them are on helps line them up (a line every 20 px, a stronger one every 100 px, the screen's
 middle in yellow), and the panel opens.
 
+Outside a race, every section shows a **preview**: one moment of a made-up race at Laguna
+Seca, lap 10 of 15 with 20 drivers and you in 6th, so you see each section as it looks in a
+race while you place it. Its lap times and gaps come from a real race there; the names are
+made up. It follows your options (columns, clan tags, sector bars, gear, km/h or mph). In a
+race, the sections show the race instead.
+
 **On the screen**
 - **Drag** a section to move it anywhere, also to another screen.
 - **Click** a section to select it (a frame in the highlight colour), then **nudge** it with

@@ -551,6 +551,29 @@ def run(args, folder):
                 'localtime': local_time_rows(time.localtime()),
             }
 
+    def preview():
+        """Move mode's preview race (turbohud.core.preview, made once per speed unit); {} if
+        it cannot be made."""
+        if preview_failed:
+            return {}
+        try:
+            from turbohud.core.preview import preview_sections
+
+            return preview_sections(
+                str(asset_path('')),
+                settings.speed_unit,
+                settings.gear,
+                settings.sector_bars,
+                settings.clan_tags,
+                tuple(settings.lap_columns),
+                settings.radar_cone,
+            )
+        except Exception:
+            log.exception('move mode: no preview race')
+            preview_failed.append(True)
+            return {}
+
+    preview_failed = []
     started = time.monotonic()
     # TSU's own flags, read from the game in the background (a fraction of a second, or
     # nothing when they are kept from before); emoji flags until then.
@@ -1832,6 +1855,8 @@ def run(args, folder):
         current = contents()
         if not locked:
             relearn_available()  # a race may start or end while the panel is open
+            if 'lap' not in current and live is not None:
+                current = {**preview(), **current}  # no race: the preview race, to place the sections by
         together = flags_combined(current)
         if live is not None:
             text = tray_text(status_text(live.snapshot()), live.warning() or shortcut_note)

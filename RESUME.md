@@ -95,6 +95,19 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+  - 2026-11-15: A preview race in move mode, asked for by the user (`feature/move-mode-preview`): outside a race,
+    every section shows one moment of a made-up race at WT Raceway Laguna Seca v1.0 instead of its sizing sample:
+    lap 10 of 15, 20 drivers, the player 6th, one car in the pits, two lapped, gaps, a car on the radar, fuel,
+    tire wear, car health, slipstream, a yellow flag, a shortcut penalty and the real track on the map.
+    `turbohud/core/preview.py` builds it as the reader would (LapState, PlayerState, CarState) and runs it
+    through `race_sections`, so it looks exactly as in a race and follows the player's options (columns, clan
+    tags, sector bars, gear, unit, radar cones). The numbers are the real race's of 2026-11-14 (each driver's
+    race time and best lap, from TSU's own results, without names); the track is the map TurboHUD learnt from
+    three clean laps there (`assets/preview/laguna_seca.json`, 3551 m), matched to the recording by its
+    checkpoint lines. Names, clan tags and flags are made up. Shipped in builds (`PREVIEW` in
+    `tools/build_app.py`). Guides say so. Tests: every section has something, lap 10/15 and 6th, the real best
+    laps, only made-up names, the pits, radar and map roles, the options, the track's length, the asset in
+    the build. Not yet: seen in move mode on the screen, and in a build.
   - 2026-11-15: Clearer section names, each with a tooltip, asked for by the user after feedback that "Lap times"
     and "Players" were not clear (`feature/clearer-section-names`): Lap times is now Standings, Players Nearby
     cars, Last and best lap My laps, Lap and time left Race progress, Running lap Current lap, Tires Tire wear,

@@ -358,6 +358,7 @@ gives no control over the car.
 | `turbohud/tsu/controller.py` | reads the gamepad's triggers |
 | `turbohud/core/il2cpp.py` | finds classes and fields by name in an IL2CPP game |
 | `turbohud/core/race.py` | reads the race and works out what each section shows |
+| `turbohud/core/preview.py` | move mode's preview: one moment of a made-up race at Laguna Seca (`assets/preview`), run through `race.py` like a real one |
 | `turbohud/core/trackmap.py` | the track map: the track's shape and which cars show |
 | `turbohud/core/hud.py` | the sections, their sizes, places and layout |
 | `turbohud/core/presets.py` | layout files per screen size, and fitting them to another |
