@@ -42,9 +42,9 @@ behind the **^** arrow), and in the tray of your desktop's panel on Linux. Its m
   - **Light tint behind all sections**: a faint dark box behind every section's text, for
     reading it on bright tracks. Each section also has its own **Tint** in move mode.
   - **Slipstream cones on the radar**: the slipstream behind each car ahead.
-  - **Radar only in cockpit cameras**: the radar shows only while TSU's camera
-    sits at the driver (a first-person view), not in the views from outside the car. On
-    by default.
+  - **Radar in every camera**: the radar also shows in the views from behind and outside
+    the car (third person). Off by default: then it shows only while TSU's camera sits at
+    the driver (first person, "CAM 5").
   - **Sector bars in My laps**: the small coloured bars, one per sector.
   - **Yellow flags**: the **Yellow flag** section and the yellow rings on the track map.
   - **Gear and revs in the speed section**: the gear above the speed and rev lights below it.
@@ -196,7 +196,9 @@ car lengths ahead and behind; a car further behind that already counts is an arr
 bottom edge, fainter the further away. In a multi-class race a car of another class is
 filled in its class's colour. With **Slipstream cones on the radar**, the
 slipstream behind each car ahead shows as a cone. By default it shows only in the cockpit
-cameras. How soon it shows is set under **Settings…**.
+cameras; **Every camera** in the settings window (or **Radar in every camera** in the icon's
+menu) shows it in the views from outside the car too. How soon it shows is set under
+**Settings…**.
 
 **Blue flag**
 A navy bar that fades in when a car about to lap you is within 2 seconds behind (faint at
@@ -316,18 +318,43 @@ places, sizes, text sizes and options: nothing personal, so it can be shared.
 
 Open it with **Settings…** in the icon's menu or in the move-mode panel.
 
+The window has two columns, under headings. The on/off options are the same as under
+**Options** in the icon's menu (section 2).
+
+**Look**
 - **Text**, **Highlight** and **Outline**: the colours of the text, of the highlighted
   parts (your own row, headings) and of the thin outline that keeps text readable over
   the game. **Reset colours** puts the defaults back.
 - **All sections:** **Smaller** and **Bigger** make every section 10% smaller or bigger.
-- The on/off options, the same as under **Options** in the icon's menu (section 2).
-- The standings' columns: **Standings: flag**, **Standings: lap number**, **Standings: tire
-  compound**, **Standings: best lap** and **Standings: last lap**.
-- **Blue flag when a car about to lap you is within:** 1 to 10 seconds (2 by default).
-- **Radar when a car is within:** 0.2 to 3 seconds (0.5 by default); a longer
-  time zooms the radar out.
+- **Light tint behind all sections** and **Speed in mph**.
+
+**Standings**
+- **Classes in the standings** and **Clan tags in the standings**.
+- **Columns:** **Flag**, **Lap** (the lap each driver is on), **Tire**, **Best** and **Last**
+  (the last lap): which columns the standings show.
+
+**Sections**
+- **Sector bars in My laps**, **Gear and revs in the speed section** and **Other cars on the
+  track map**.
+
+**Radar**
+- **Show in:** **Cockpit cameras** (the default: only while TSU's camera sits at the driver,
+  first person or "CAM 5") or **Every camera** (also the views from behind and outside the
+  car, third person).
+- **Slipstream cones on the radar**.
+- **Shows a car within:** 0.2 to 3 seconds (0.5 by default); a longer time zooms the radar
+  out.
+
+**Flags**
+- **Yellow flags**.
+- **Blue flag for a car within:** how far behind you a car about to lap you shows the blue
+  flag, 1 to 10 seconds (2 by default).
+
+**Reading the race**
 - **Race reads a second:** 20, 10 or 5. Fewer ask less of the game, but the delta and the
   track map move less smoothly, and a track first learnt at 5 gets a coarser line.
+
+At the bottom:
 - **Car classes...**: every car class a clan tag can name, by category in its colour.
 - **About...**: the name and the version. **Close** closes the window.
 

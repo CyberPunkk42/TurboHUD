@@ -95,6 +95,15 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+  - 2026-11-15: A tidier settings window, and the radar in third person, asked for by the user
+    (`feature/settings-tidy-radar-cameras`): the window has two columns under headings (Look, Standings, Sections;
+    Radar, Flags, Reading the race; More for an option not placed), the standings' columns in one row (Flag, Lap,
+    Tire, Best, Last), and is 514 px tall instead of 736. The radar's cameras are a choice, **Show in: Cockpit
+    cameras | Every camera**; Every camera shows it in the views from behind and outside the car too (the
+    setting `radar_cockpit_only`, as before; default the cockpit). The icon's menu says **Radar in every camera**
+    (ticked: third person too). Guides say so. Tests: the two buttons, shown and said, set from the menu; the
+    headings and More; compact with every option (rows 6 px apart: a layout inside another took the columns' 24
+    px). Not yet: seen on the screen.
   - 2026-11-15: A preview race in move mode, asked for by the user (`feature/move-mode-preview`): outside a race,
     every section shows one moment of a made-up race at WT Raceway Laguna Seca v1.0 instead of its sizing sample:
     lap 10 of 15, 20 drivers, the player 6th, one car in the pits, two lapped, gaps, a car on the radar, fuel,

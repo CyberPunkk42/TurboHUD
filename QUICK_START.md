@@ -54,7 +54,7 @@ Icon menu, **Settings...**: text colours, all sections bigger or smaller, km/h o
 light tint behind the sections, which columns the standings show (flag, lap, tire, best,
 last), when the blue flag and the radar warn, how many times a second the race is read, and
 the on/off options (also under **Options** in the icon's menu): the radar's slipstream cones
-and the radar only in cockpit cameras, sector bars, yellow flags, gear and revs, classes and
+and the radar in every camera (third person too), sector bars, yellow flags, gear and revs, classes and
 clan tags in the standings, other cars on the map. **Car classes...** is a list of every car
 class you can put in your clan tag (such as [GT3] or [LMP]) with its colour. **About...**
 (also **About TurboHUD...** in the icon's menu) shows the version you have.
@@ -89,7 +89,8 @@ listed in the panel under four headings:
 - **Track map**: learnt from three clean laps of yours; the cars as dots, incidents ringed.
 - **Radar**: cars close to you, red right beside you and yellow closing in, with the
   slipstream behind the cars ahead; arrows at its bottom edge for cars just out of view behind.
-  By default only in the cockpit cameras.
+  By default only in the cockpit cameras; **Every camera** in the settings shows it in third
+  person too.
 - **Blue flag**: a faster car about to lap you.
 - **Yellow flag**: trouble ahead (a car stopped, spun, off the track, the wrong way round or
   wrecked) and in which sector.
