@@ -2110,3 +2110,10 @@ its "Recent changes".
     off. The settings window's columns in two rows of four. Guides say so. Tests: the gap (leader, a car out,
     turned off, per class), the class lines without class and overall, every column off, a column added later.
     Not yet: seen in a race.
+  - 2026-11-15: The slipstream settings line clearer, and explained in the guides, asked for by the user
+    (`feature/clearer-draft-settings`): at a race's start the Slipstream section said "Max -10% drag -80%
+    downforce reach 30 20°"; now "Up to -10% drag, -80% downforce, 30 m, 20°" (reach in TSU's units, its metres),
+    as wide as before (279 px against 294 at scale 1): a two-line or longer wording would have made the box
+    bigger, into the user's track map and speed section. The User Guide explains every part of the section
+    (the draft share, the downforce it costs, each setting, the last lap's share, who drafts you); the Quick
+    Start and HOW_IT_WORKS name the settings. Test: the new line. Not yet: seen at a race's start.
