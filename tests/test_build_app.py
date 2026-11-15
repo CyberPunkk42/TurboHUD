@@ -405,3 +405,10 @@ class SingleInstanceTests(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class PreviewAssetTests(unittest.TestCase):
+    def test_the_preview_race_ships_with_the_app(self):
+        args = build_app.pyinstaller_args('linux')
+        self.assertIn(f'{build_app.PREVIEW}:assets/preview', args)
+        self.assertTrue((build_app.PREVIEW / 'laguna_seca.json').is_file())

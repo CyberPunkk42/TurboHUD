@@ -118,6 +118,7 @@ turbohud/
     presets.py          layout files per screen size, and fitting one to another size
     il2cpp.py           finds the game's classes and fields by name
     race.py             reads the race and works out what each section shows
+    preview.py          move mode's preview: a made-up race at Laguna Seca, through race.py
     trackmap.py         the track map: the learnt track and which cars show
     flags.py            TSU's flags as country codes
     flagstack.py        the blue and yellow flags combined where both are in one spot
