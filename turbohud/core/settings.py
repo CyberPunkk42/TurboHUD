@@ -46,7 +46,7 @@ class Theme:
 BLUE_SECONDS = (1.0, 10.0, 0.5)  # the blue flag's warning time: least, most, step
 RADAR_SECONDS = (0.2, 3.0, 0.1)  # the proximity radar's
 READS_PER_SECOND = (20, 10, 5)  # how often a race may be read; fewer ask less of the game
-GROUPS = ('A', 'B', 'C', 'D')  # section groups; '' is none
+GROUPS = ('A', 'B', 'C', 'D', 'E', 'F', 'G')  # section groups (E to G since 2026-11-15); '' is none
 PRESETS = (1, 2, 3, 4, 5)  # the layouts a player can keep (5 since 2026-11-15, asked for by players)
 PRESET_NAME_MOST = 24  # letters in a preset's name, such as "Race" or "Recordings"
 # The kinds of event a preset can load for by itself as one begins (asked for by players on

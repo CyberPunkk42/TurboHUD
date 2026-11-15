@@ -315,7 +315,7 @@ from its name while they show, and no name ever runs into the next column.
 
 **The panel's columns**, one row per section, under the headings Timing, Car, Race, Other:
 - **Show**: tick to show the section. **All** and **None** show or hide every section at once.
-- **Group**: put sections in the same group (A to D) to move them together; resizing one
+- **Group**: put sections in the same group (A to G) to move them together; resizing one
   resizes the others by the same amount.
 - **Centre**: **↔** centres the section across the screen it is on, **↕** down it.
 - **Mid text**: puts the text in the middle of its box instead of at the left.
@@ -326,7 +326,7 @@ from its name while they show, and no name ever runs into the next column.
 - **Lines %**: the room between its rows, in percent of the usual.
 
 **Below the rows**
-- **Same text size and width, group:** **A**, **B**, **C** or **D** gives that group's text
+- **Same text size and width, group:** **A** to **G** gives that group's text
   sections the largest text size among them and one width (save a preset first to be able
   to go back).
 - **Global text size (px)**: the text size of every section set to global. **All global**

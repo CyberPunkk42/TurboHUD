@@ -107,7 +107,7 @@ LEVEL_SAMPLE = (0.7, 'ahead')  # a level bar in move mode, to place the section
 SECTORS_SAMPLE = Sectors(('#c77dff', '#5ee07a', None))  # the sector bars in move mode
 REVS_SAMPLE = Sectors(rev_lights(0.75))  # the gear's rev lights in move mode
 PANEL_LINES_WIDTH = 50  # the move-mode panel's line spacing boxes: three digits and the arrows
-PANEL_COMBO_WIDTH = 56  # the move-mode panel's group lists: wide enough for '-' and A to D
+PANEL_COMBO_WIDTH = 56  # the move-mode panel's group lists: wide enough for '-' and A to G
 PANEL_SMALL_BUTTON = 32  # its one-character buttons (centre, match a group, delete a preset)
 # Its word buttons (All, None, Save, Load, Delete) are at least this wide, and wider where the
 # system's buttons need it for the word: with a fixed width macOS cut "None" and "Delete" short.

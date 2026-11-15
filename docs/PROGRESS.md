@@ -2172,3 +2172,6 @@ its "Recent changes".
     (and in presets) to its 4 rows once; the shipped layouts' boxes are 4 rows tall. Built on
     `feature/nearby-cars-bigger-default`. Tests for the rows, the setting, the upgrade, the preview and the shipped
     boxes; a 6 s start converted the Mac's settings to layout 8 (the old file kept beside it). Not yet seen in a race.
+  - 2026-11-15: Seven section groups, A to G (`feature/groups-a-to-g`, asked for by players; A to D before): in the
+    move-mode panel's Group lists and its "Same text size and width" buttons; the User Guide says A to G. Tests for
+    the settings and the panel; the panel stays within its width.

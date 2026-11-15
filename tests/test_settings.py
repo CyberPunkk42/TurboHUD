@@ -397,6 +397,11 @@ class GroupSettingTests(unittest.TestCase):
             data['sections']['lap']['group'] = 'Z'
             path.write_text(json.dumps(data))
             self.assertEqual(s.load_settings(path).sections['lap'].group, '')
+            # Seven groups since 2026-11-15 (asked for by players): G kept, H dropped.
+            for group, kept in (('G', 'G'), ('H', '')):
+                data['sections']['lap']['group'] = group
+                path.write_text(json.dumps(data))
+                self.assertEqual(s.load_settings(path).sections['lap'].group, kept)
 
 
 class LineSpacingTests(unittest.TestCase):

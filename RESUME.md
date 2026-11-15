@@ -100,6 +100,9 @@
    race on each and note the FPS per phase; it decides how one tint per group is made (item 3b).
 
 ## Recent changes
+  - 2026-11-15: Seven section groups, A to G (`feature/groups-a-to-g`, asked for by players; A to D before): in the
+    move-mode panel's Group lists and its "Same text size and width" buttons; the User Guide says A to G. Tests for
+    the settings and the panel; the panel stays within its width.
   - 2026-11-15: Nearby cars' short list, on by default (`feature/nearby-cars-short-list`, asked for by players; the
     user chose to keep their own row and to ship it on): the leader, the car ahead, you and the car behind, 4 rows;
     off ("Nearby cars: only the leader and the cars next to you", in the tray's Options and the settings window's
