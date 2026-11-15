@@ -2043,3 +2043,12 @@ its "Recent changes".
     `tools/build_app.py`). Guides say so. Tests: every section has something, lap 10/15 and 6th, the real best
     laps, only made-up names, the pits, radar and map roles, the options, the track's length, the asset in
     the build. Not yet: seen in move mode on the screen, and in a build.
+  - 2026-11-15: A tidier settings window, and the radar in third person, asked for by the user
+    (`feature/settings-tidy-radar-cameras`): the window has two columns under headings (Look, Standings, Sections;
+    Radar, Flags, Reading the race; More for an option not placed), the standings' columns in one row (Flag, Lap,
+    Tire, Best, Last), and is 514 px tall instead of 736. The radar's cameras are a choice, **Show in: Cockpit
+    cameras | Every camera**; Every camera shows it in the views from behind and outside the car too (the
+    setting `radar_cockpit_only`, as before; default the cockpit). The icon's menu says **Radar in every camera**
+    (ticked: third person too). Guides say so. Tests: the two buttons, shown and said, set from the menu; the
+    headings and More; compact with every option (rows 6 px apart: a layout inside another took the columns' 24
+    px). Not yet: seen on the screen.

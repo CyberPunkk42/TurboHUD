@@ -54,6 +54,46 @@ class SettingsWindowTests(unittest.TestCase):
         self.assertFalse(window.options['sector_bars'].isChecked())
         window.set_option('radar_cone', True)  # not listed: nothing happens
 
+    def test_the_radar_cameras_are_a_choice_of_two(self):
+        # Asked for by the user on 2026-11-15: the radar in third person too, not only "CAM 5".
+        options = (('radar_cockpit_only', 'Radar in every camera', True, 'tip'),)
+        window = self.window(options=options)
+        buttons = window.camera_buttons
+        self.assertEqual((buttons[True].text(), buttons[False].text()), ('Cockpit cameras', 'Every camera'))
+        self.assertTrue(buttons[True].isChecked())
+        self.assertNotIn('radar_cockpit_only', window.options)  # buttons, not a tick box
+        got = []
+        window.option_changed.connect(lambda *change: got.append(change))
+        buttons[False].click()
+        self.assertEqual(got, [('radar_cockpit_only', False)])
+        self.assertEqual((buttons[True].isChecked(), buttons[False].isChecked()), (False, True))
+        window.set_option('radar_cockpit_only', True)  # changed in the menu: shown, nothing said back
+        self.assertTrue(buttons[True].isChecked())
+        self.assertEqual(len(got), 1)
+
+    def test_the_options_come_under_headings(self):
+        from PySide6.QtWidgets import QLabel
+
+        options = (
+            ('mph', 'Speed in mph', False, 'tip'),
+            ('clan_tags', 'Clan tags in the standings', True, 'tip'),
+            ('column_flag', 'Flag', True, 'tip'),
+            ('yellow_flags', 'Yellow flags', True, 'tip'),
+            ('something_new', 'Something new', True, 'tip'),  # not placed: under More
+        )
+        window = self.window(options=options, reads_per_second=10)
+        headings = [label.text() for label in window.findChildren(QLabel) if '<small>' in label.text()]
+        for heading in ('LOOK', 'STANDINGS', 'RADAR', 'FLAGS', 'READING THE RACE', 'MORE'):
+            self.assertTrue(any(heading in text for text in headings), heading)
+        self.assertEqual(set(window.options), {key for key, *_rest in options})
+
+    def test_it_stays_compact_with_every_option(self):
+        options = [(f'k{n}', f'Option {n}', True, 'tip') for n in range(4)]
+        options += [(f'column_{c}', c, True, 'tip') for c in ('flag', 'lap', 'tyre', 'best', 'current')]
+        window = self.window(options=options, reads_per_second=10)
+        # Rows 6 px apart, not the columns' 24 (a layout inside another takes on its spacing).
+        self.assertLess(window.sizeHint().height(), 480)
+
     def test_the_class_sheet_opens_beside_it_and_lists_every_class(self):
         from PySide6.QtWidgets import QLabel, QPushButton
 

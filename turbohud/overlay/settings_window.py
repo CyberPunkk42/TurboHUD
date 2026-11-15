@@ -37,6 +37,21 @@ COLOURS = (
     ),
     ('Outline', 'outline_color', ('#000000ff', '#000000c8', '#00000080', '#0b1e3dc8', '#00000000')),
 )
+# Where each option goes: under its heading, in this order. Options not named here show under More.
+GROUPS = {
+    'look': ('backdrop', 'mph'),
+    'standings': ('classes', 'clan_tags'),
+    'sections': ('sector_bars', 'gear', 'map_others'),
+    'radar': ('radar_cone',),
+    'flags': ('yellow_flags',),
+}
+# The radar's cameras (asked for by the user on 2026-11-15: in the views from outside the car too):
+# (radar_cockpit_only, button, tooltip)
+CAMERA_CHOICES = (
+    (True, 'Cockpit cameras', 'Only while the camera sits at the driver: first person, "CAM 5"'),
+    (False, 'Every camera', 'Also in the views from behind and outside the car (third person)'),
+)
+HEADING = '#9fb8d8'  # the headings, as in the move-mode panel
 SIZE_STEP = 1.1  # Bigger: 10 % larger; Smaller: the same back
 SWATCH = 22  # pixels
 CHOSEN_RING = (120, 190, 255)
@@ -118,9 +133,22 @@ class SettingsWindow(QWidget):
         self.setAttribute(Qt.WA_TranslucentBackground)
         self.setAttribute(Qt.WA_ShowWithoutActivating)
         self.setStyleSheet('QLabel { color: white; }')
-        column = QVBoxLayout(self)
-        column.setContentsMargins(14, 12, 14, 12)
-        column.addWidget(QLabel('<b>TurboHUD - settings</b>'))
+        outer = QVBoxLayout(self)
+        outer.setContentsMargins(14, 12, 14, 12)
+        outer.addWidget(QLabel('<b>TurboHUD - settings</b>'))
+        columns = QHBoxLayout()
+        columns.setSpacing(24)
+        left, right = QVBoxLayout(), QVBoxLayout()
+        for side in (left, right):
+            side.setSpacing(6)  # not the columns' gap, which a layout inside would take on
+        columns.addLayout(left)
+        columns.addLayout(right)
+        outer.addLayout(columns)
+        listed = {key: (label, on, tip) for key, label, on, tip in options}
+        self.options = {}
+        self.camera_buttons = {}
+
+        left.addWidget(self._heading('Look'))
         grid = QGridLayout()
         self.swatches = {}
         for row, (label, field, colors) in enumerate(COLOURS):
@@ -135,7 +163,7 @@ class SettingsWindow(QWidget):
             line.addStretch()
             grid.addLayout(line, row, 1)
             self.swatches[field] = buttons
-        column.addLayout(grid)
+        left.addLayout(grid)
         size = QHBoxLayout()
         size.addWidget(QLabel('All sections:'))
         smaller, bigger = QPushButton('Smaller'), QPushButton('Bigger')
@@ -144,29 +172,57 @@ class SettingsWindow(QWidget):
         size.addWidget(smaller)
         size.addWidget(bigger)
         size.addStretch()
-        column.addLayout(size)
-        self.options = {}
-        for key, label, on, tip in options:
-            box = QCheckBox(label)
-            box.setStyleSheet('QCheckBox { color: white; }')
-            box.setChecked(on)
-            box.setToolTip(tip)
-            box.toggled.connect(lambda checked, k=key: self.option_changed.emit(k, checked))
-            column.addWidget(box)
-            self.options[key] = box
+        left.addLayout(size)
+        self._boxes(left, listed, GROUPS['look'])
+
+        standings = [key for key in GROUPS['standings'] if key in listed]
+        column_keys = [key for key in listed if key.startswith('column_')]
+        if standings or column_keys:
+            left.addWidget(self._heading('Standings'))
+            self._boxes(left, listed, standings)
+            if column_keys:
+                line = QHBoxLayout()
+                line.addWidget(QLabel('Columns:'))
+                for key in column_keys:
+                    line.addWidget(self._box(key, *listed[key]))
+                line.addStretch()
+                left.addLayout(line)
+        if any(key in listed for key in GROUPS['sections']):
+            left.addWidget(self._heading('Sections'))
+            self._boxes(left, listed, GROUPS['sections'])
+        left.addStretch()
+
+        right.addWidget(self._heading('Radar'))
+        if 'radar_cockpit_only' in listed:
+            right.addLayout(self._camera_row(*listed['radar_cockpit_only']))
+        self._boxes(right, listed, GROUPS['radar'])
         timing = QGridLayout()
-        self.blue_seconds = self._seconds_box(blue_seconds, BLUE_SECONDS, self.blue_seconds_changed)
-        self.blue_seconds.setToolTip('How far behind you a car about to lap you shows the blue flag')
-        timing.addWidget(QLabel('Blue flag when a car about to lap you is within:'), 0, 0)
-        timing.addWidget(self.blue_seconds, 0, 1)
         self.radar_seconds = self._seconds_box(radar_seconds, RADAR_SECONDS, self.radar_seconds_changed)
         self.radar_seconds.setToolTip('How far ahead of or behind you a car shows the radar')
-        timing.addWidget(QLabel('Radar when a car is within:'), 1, 0)
-        timing.addWidget(self.radar_seconds, 1, 1)
-        column.addLayout(timing)
+        timing.addWidget(QLabel('Shows a car within:'), 0, 0)
+        timing.addWidget(self.radar_seconds, 0, 1)
+        right.addLayout(timing)
+
+        right.addWidget(self._heading('Flags'))
+        self._boxes(right, listed, GROUPS['flags'])
+        blue = QGridLayout()
+        self.blue_seconds = self._seconds_box(blue_seconds, BLUE_SECONDS, self.blue_seconds_changed)
+        self.blue_seconds.setToolTip('How far behind you a car about to lap you shows the blue flag')
+        blue.addWidget(QLabel('Blue flag for a car within:'), 0, 0)
+        blue.addWidget(self.blue_seconds, 0, 1)
+        right.addLayout(blue)
+
+        # Anything not placed above (a new option) still shows, at the end.
+        rest = [key for key in listed if key not in self.options and key != 'radar_cockpit_only']
+        if rest:
+            right.addWidget(self._heading('More'))
+            self._boxes(right, listed, rest)
+
         self.read_buttons = {}
         if reads_per_second is not None:
-            column.addLayout(self._reads_row(reads_per_second))
+            right.addWidget(self._heading('Reading the race'))
+            right.addLayout(self._reads_row(reads_per_second))
+        right.addStretch()
         row = QHBoxLayout()
         reset, close = QPushButton('Reset colours'), QPushButton('Close')
         reset.clicked.connect(self.reset)
@@ -182,9 +238,50 @@ class SettingsWindow(QWidget):
         row.addWidget(about)
         row.addStretch()
         row.addWidget(close)
-        column.addLayout(row)
+        outer.addLayout(row)
         self.show_chosen()
         self.adjustSize()
+
+    @staticmethod
+    def _heading(text):
+        label = QLabel(f'<small><b>{text.upper()}</b></small>')
+        label.setStyleSheet(f'color: {HEADING}; padding-top: 6px;')
+        return label
+
+    def _box(self, key, label, on, tip):
+        box = QCheckBox(label)
+        box.setStyleSheet('QCheckBox { color: white; }')
+        box.setChecked(on)
+        box.setToolTip(tip)
+        box.toggled.connect(lambda checked, k=key: self.option_changed.emit(k, checked))
+        self.options[key] = box
+        return box
+
+    def _boxes(self, layout, listed, keys):
+        for key in keys:
+            if key in listed and key not in self.options:
+                layout.addWidget(self._box(key, *listed[key]))
+
+    def _camera_row(self, _label, cockpit_only, tip):
+        """The radar's cameras as a choice of two: in the cockpit cameras only, or in every
+        camera, the views from behind the car too (radar_cockpit_only)."""
+        row = QHBoxLayout()
+        row.addWidget(QLabel('Show in:'))
+        group = QButtonGroup(self)
+        for only, text, about in CAMERA_CHOICES:
+            button = QPushButton(text)
+            button.setCheckable(True)
+            button.setChecked(only == cockpit_only)
+            button.setStyleSheet(READS_BUTTON)
+            button.setToolTip(about)
+            group.addButton(button)
+            button.clicked.connect(
+                lambda _checked=False, o=only: self.option_changed.emit('radar_cockpit_only', o)
+            )
+            row.addWidget(button)
+            self.camera_buttons[only] = button
+        row.addStretch()
+        return row
 
     def _reads_row(self, chosen):
         """Buttons rather than a drop-down, whose list would be one more window."""
@@ -221,6 +318,9 @@ class SettingsWindow(QWidget):
 
     def set_option(self, key, on):
         """Show an option changed elsewhere (the menu, the panel), saying nothing back."""
+        if key == 'radar_cockpit_only' and self.camera_buttons:
+            self.camera_buttons[bool(on)].setChecked(True)  # a button group: the other goes off
+            return
         box = self.options.get(key)
         if box is not None and box.isChecked() != on:
             box.blockSignals(True)

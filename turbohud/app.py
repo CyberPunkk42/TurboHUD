@@ -45,18 +45,18 @@ PLACEMENT_EVERY = 0.2  # seconds between position checks in move mode
 ICON = 'tsu_turbo_hud.png'  # in assets/, also the bundled app's icon
 # The settings window's switches for the lap times' columns (LAP_COLUMNS): (column, label, tooltip)
 LAP_COLUMN_OPTIONS = (
-    ('flag', 'Standings: flag', "Each driver's country flag before the name"),
-    ('lap', 'Standings: lap number', 'The lap each driver is on (L3)'),
+    ('flag', 'Flag', "Each driver's country flag before the name"),
+    ('lap', 'Lap', 'The lap each driver is on (L3)'),
     (
         'tyre',
-        'Standings: tire compound',
+        'Tire',
         (
             "Each driver's tire compound, as in F1 (S red, M yellow, H white; a blue W where the track's"
             ' name has (WET), (RW), (QW) or (W))'
         ),
     ),
-    ('best', 'Standings: best lap', "Each driver's best lap"),
-    ('current', 'Standings: last lap', "Each driver's last lap, or CUT or PIT"),
+    ('best', 'Best', "Each driver's best lap"),
+    ('current', 'Last', "Each driver's last lap, or CUT or PIT"),
 )
 log = logging.getLogger('turbohud')
 
@@ -807,12 +807,9 @@ def run(args, folder):
             listed.append(
                 (
                     'radar_cockpit_only',
-                    'Radar only in cockpit cameras',
+                    'Radar in every camera',  # the settings window shows it as Show in: Cockpit / Every camera
                     settings.radar_cockpit_only,
-                    (
-                        'Shows the radar only while the camera sits at the driver (a first-person view, "CAM 5");'
-                        ' hidden in the views from outside the car'
-                    ),
+                    'Which of TSU\'s cameras the radar shows in',
                 )
             )
         if any(section.drawing == 'map' for section in layout):
@@ -900,7 +897,7 @@ def run(args, folder):
     def set_radar_cockpit_only(only):
         nonlocal settings
         settings = replace(settings, radar_cockpit_only=only)
-        radar_cockpit_action.setChecked(only)
+        radar_cockpit_action.setChecked(not only)
         show_option('radar_cockpit_only', only)
         save()
         log.info('proximity radar %s', 'only in cockpit cameras' if only else 'in every camera')
@@ -1658,9 +1655,10 @@ def run(args, folder):
     radar_cone_action = QAction('Slipstream cones on the radar', menu, checkable=True)
     radar_cone_action.setChecked(settings.radar_cone)
     radar_cone_action.triggered.connect(lambda checked: set_radar_cone(checked))
-    radar_cockpit_action = QAction('Radar only in cockpit cameras', menu, checkable=True)
-    radar_cockpit_action.setChecked(settings.radar_cockpit_only)
-    radar_cockpit_action.triggered.connect(lambda checked: set_radar_cockpit_only(checked))
+    # Ticked: the radar also in the views from outside the car (third person), not only the cockpit's.
+    radar_cockpit_action = QAction('Radar in every camera', menu, checkable=True)
+    radar_cockpit_action.setChecked(not settings.radar_cockpit_only)
+    radar_cockpit_action.triggered.connect(lambda checked: set_radar_cockpit_only(not checked))
     if any(section.drawing == 'radar' for section in layout):
         options_menu.addAction(radar_cone_action)
         options_menu.addAction(radar_cockpit_action)
