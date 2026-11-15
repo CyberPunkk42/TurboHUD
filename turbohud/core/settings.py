@@ -27,8 +27,8 @@ MAX_SCALE = 3.0
 # 2: a text section's box fits closely round its text; 3: 20 lap times; 4: the track map's
 # dark square is its tint (on), where its saved tint meant nothing before; 5: the last and
 # best lap has sector bars below its text; 6: text sections have a text size (their own, or the
-# global one), and the box follows it
-LAYOUT_VERSION = 6
+# global one), and the box follows it; 7: the standings and nearby cars narrower (closer columns)
+LAYOUT_VERSION = 7
 FONT_LIMITS = (6, 120)  # text sizes in pixels (core.hud.FONT_SIZES)
 DEFAULT_FONT = 13  # core.hud.DEFAULT_FONT
 _COLOR = re.compile(r'#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?')

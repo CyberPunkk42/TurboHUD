@@ -69,7 +69,9 @@ class Row:
 
 FLAG_WIDTH = 1.5  # a flag's room before the text, in font sizes
 TYRE_WIDTH = 1.0  # a tire compound's ring, in font sizes (no lower than the text's descenders)
-COLUMN_GAP = 1.0  # least room between the text and the right column, in font sizes
+# Least room between the text and a column, and between columns, in font sizes: 0.6 since 2026-11-15
+# (was 1.0; players found the standings too wide, asked for by the user).
+COLUMN_GAP = 0.6
 
 
 @dataclass(frozen=True)
@@ -283,31 +285,14 @@ def tag_left(lines, before_end, measure):
     return start - tag
 
 
-def packed_after_names(lines, left, measure, tag_start, overall_end):
-    """(tag_start, overall_end) moved left to just after the longest name shown in `lines`
-    (from `left`, past a flag), never further right than they were. The other columns are
-    placed from the box's right edge for the longest name a driver can have, which left a big
-    gap before the clan tags (reported by the user on 2026-11-15); the tag and the overall
-    place belong to the name, the rest stays put."""
-    rows = [
-        line
-        for line in lines
-        if not line.rule and (line.tag or line.overall or line.before or line.middle or line.right)
-    ]
-    if not rows or (tag_start is None and overall_end is None):
-        return tag_start, overall_end
-    gap = max(COLUMN_GAP * line.size for line in lines)
-    after = max(
-        left + (FLAG_WIDTH * line.size if line.flag else 0) + measure(line.text, line.size) for line in rows
-    )
-    after += gap
-    widest = max((measure(line.overall, line.size) for line in rows if line.overall), default=None)
-    if overall_end is not None and widest is not None:  # none shown: it stays where it was
-        overall_end = min(overall_end, after + widest)
-        after = overall_end + gap
-    if tag_start is not None:
-        tag_start = min(tag_start, after)
-    return tag_start, overall_end
+def unused_dropped(lines, reserve):
+    """The `reserve` (a snug section's usual content, whose columns are made room for) without
+    the overall place and the clan tag where no line of `lines` has one: the race has no classes
+    or no tags, so their room goes to the box's right edge rather than between the names and
+    the laps (asked for by the user on 2026-11-15). The other columns keep their room for their
+    widest text (L99, PIT, CUT, JUMP, DNF), so a pit stop or a penalty moves nothing."""
+    drop = {name: '' for name in ('overall', 'tag') if not any(getattr(line, name) for line in lines)}
+    return [replace(line, **drop) for line in reserve] if drop else list(reserve)
 
 
 def overall_right(lines, middle_end, tyre_end, before_end, tag_start, measure):

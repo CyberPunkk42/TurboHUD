@@ -25,11 +25,11 @@ from turbohud.core.hud import (
     blend,
     middle_right,
     overall_right,
-    packed_after_names,
     snug_width,
     steady_text,
     tag_left,
     tyre_right,
+    unused_dropped,
 )
 
 # On Linux the desktop's default font may be a monospace or icon font; prefer a plain
@@ -529,6 +529,8 @@ def draw_hud(painter, lines, theme, scale=None, left=0, width=None, centre=False
         def steady_advance(text, size):
             return text_advance(steady_text(text), size)
 
+        if snug and not centre:
+            reserve = unused_dropped(lines, reserve)
         placed = list(lines) + list(reserve)
         if snug and not centre:
             width = snug_width(lines, reserve, width, margin, steady_advance)
@@ -537,8 +539,6 @@ def draw_hud(painter, lines, theme, scale=None, left=0, width=None, centre=False
         before_end = before_right(placed, middle_end, steady_advance, tyre_end)
         tag_start = tag_left(placed, before_end, steady_advance)
         overall_end = overall_right(placed, middle_end, tyre_end, before_end, tag_start, steady_advance)
-        # Right after the names shown, not those a driver could have (the reserve's).
-        tag_start, overall_end = packed_after_names(lines, x, text_advance, tag_start, overall_end)
     for line in lines:
         text_x = centred_x(line, width, margin) if (centre or line.centred) and width is not None else x
         if line.rule:

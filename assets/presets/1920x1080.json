@@ -140,7 +140,7 @@
     "players": {
       "x": 509,
       "y": 845,
-      "width": 376,
+      "width": 366,
       "height": 200,
       "visible": true,
       "group": "",
@@ -152,7 +152,7 @@
     "laptimes": {
       "x": 0,
       "y": 254,
-      "width": 436,
+      "width": 422,
       "height": 572,
       "visible": true,
       "group": "",

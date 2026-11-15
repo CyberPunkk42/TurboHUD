@@ -17,9 +17,11 @@ from turbohud.core import stalls
 from turbohud.core.hud import (
     CLOCK_SECTIONS,
     RACE_SECTIONS,
+    base_size,
     common_font,
     default_tint,
     font_of_box,
+    font_scale,
     is_text_section,
     more_lap_rows_place,
     sector_bar_place,
@@ -59,6 +61,9 @@ LAP_COLUMN_OPTIONS = (
     ('current', 'Last', "Each driver's last lap, or CUT or PIT"),
 )
 log = logging.getLogger('turbohud')
+
+
+NARROWER = ('laptimes', 'players')  # the boxes layout 7 makes narrower
 
 
 def upgrade_layout(settings, path, ink, measure=None):
@@ -115,6 +120,20 @@ def upgrade_layout(settings, path, ink, measure=None):
 
         sections = with_fonts(sections)
         presets = {number: with_fonts(kept) for number, kept in presets.items()}
+    if version < 7:
+        # Closer columns (COLUMN_GAP 0.6, was 1.0): the standings and nearby cars no wider than
+        # their text now needs at their text size (players found them too wide, 2026-11-15).
+        def narrower(places):
+            fitted = {}
+            for name, place in places.items():
+                if name in NARROWER and name in known:
+                    needed = base_size(known[name], font_scale(place.font or font_size), measure)[0]
+                    place = replace(place, width=min(place.width, needed))
+                fitted[name] = place
+            return fitted
+
+        sections = narrower(sections)
+        presets = {number: narrower(kept) for number, kept in presets.items()}
     settings = replace(
         settings, sections=sections, presets=presets, font_size=font_size, layout_version=LAYOUT_VERSION
     )
