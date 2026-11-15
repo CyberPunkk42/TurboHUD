@@ -67,14 +67,14 @@ class LayoutsWindow(QWidget):
         self.shortcuts = shortcuts
         self.saved = set(saved_presets)
         self.names = dict(names or {})
-        self.setWindowTitle('TurboHUD - layouts')
+        self.setWindowTitle('TurboHUD - Layouts')
         self.setAttribute(Qt.WA_TranslucentBackground)
         self.setAttribute(Qt.WA_ShowWithoutActivating)
         self.setStyleSheet('QLabel { color: white; }')
         outer = QVBoxLayout(self)
         outer.setContentsMargins(14, 12, 14, 12)
         outer.setSpacing(6)
-        outer.addWidget(QLabel('<b>TurboHUD - layouts</b>'))
+        outer.addWidget(QLabel('<b>TurboHUD - Layouts</b>'))
 
         outer.addWidget(self._heading('Presets'))
         grid = QGridLayout()
@@ -165,6 +165,8 @@ class LayoutsWindow(QWidget):
         designing = QHBoxLayout()
         designing.addWidget(QLabel('Design for:'))
         self.design_size = QComboBox()
+        # As wide as its longest size, "(this screen)" included (set_own_screen).
+        self.design_size.setSizeAdjustPolicy(QComboBox.AdjustToContents)
         for width, height in SCREENS:
             self.design_size.addItem(f'{width}x{height}', (width, height))
         self.design_size.setToolTip('A screen size to make the layout for, shown to scale on this screen')
@@ -277,6 +279,12 @@ class LayoutsWindow(QWidget):
             mark = ' (this screen)' if (width, height) == own else ''
             self.design_size.addItem(f'{width}x{height}{mark}', (width, height))
         self.design_size.setCurrentIndex(sizes.index(own))
+        # The list is wider now: the window grows with it, or the buttons beside it were cut off
+        # (reported by the user on 2026-11-15).
+        self.design_size.updateGeometry()
+        self.layout().invalidate()
+        self.layout().activate()
+        self.resize(self.sizeHint())
 
     def mousePressEvent(self, event):
         # Dragged by its background, out of the way of a section if need be.

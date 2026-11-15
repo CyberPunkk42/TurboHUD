@@ -2182,3 +2182,9 @@ its "Recent changes".
     when it changes (a section moved, emptied, its tint switched), not at each new text. Windows and Linux keep a tint
     per section until the window count probe is run there (backlog items 1c and 3b). Tests offscreen for the tint
     between sections, no double tint, a moved section, the switch; a 6 s start clean. Not yet seen over TSU.
+  - 2026-11-15: The Layouts window's buttons cut off, and window titles in capitals, reported by the user
+    (`fix/layouts-buttons-and-titles`): at move mode's start Design for shows "5120x1440 (this screen)", wider than
+    the window was made for, so the list, Design, Save design and Cancel were cut off. The list now sizes to its
+    longest entry and the window grows with it. Titles: TurboHUD - Layouts, Move Mode, Settings, Car Classes, Design
+    Screen, Grid. A test makes the list as the app does and checks every button's width; seen in a render with the
+    Mac's own style.

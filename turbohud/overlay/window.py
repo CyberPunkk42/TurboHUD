@@ -1074,7 +1074,7 @@ class DesignFrame(QWidget):
         super().__init__(None, window_flags())
         self.native = native
         self.label = ''
-        self.setWindowTitle('TurboHUD - design screen')
+        self.setWindowTitle('TurboHUD - Design Screen')
         self.setAttribute(Qt.WA_TranslucentBackground)
         self.setAttribute(Qt.WA_ShowWithoutActivating)
         self.setWindowFlag(Qt.WindowTransparentForInput, True)
@@ -1121,7 +1121,7 @@ class GridWindow(QWidget):
     def __init__(self, native):
         super().__init__(None, window_flags())
         self.native = native
-        self.setWindowTitle('TurboHUD - grid')  # Hyprland finds each window by its title
+        self.setWindowTitle('TurboHUD - Grid')  # Hyprland finds each window by its title
         self.setAttribute(Qt.WA_TranslucentBackground)
         self.setAttribute(Qt.WA_ShowWithoutActivating)
         self.setWindowFlag(Qt.WindowTransparentForInput, True)
@@ -1190,14 +1190,14 @@ class MovePanel(QWidget):
     ):
         super().__init__(None, window_flags())
         self.native = native
-        self.setWindowTitle('TurboHUD - move mode')
+        self.setWindowTitle('TurboHUD - Move Mode')
         self.setAttribute(Qt.WA_TranslucentBackground)
         self.setAttribute(Qt.WA_ShowWithoutActivating)
         self.setStyleSheet('QLabel, QCheckBox { color: white; }' + self._font_cap())
         column = QVBoxLayout(self)
         column.setContentsMargins(14, 8, 14, 8)
         column.setSpacing(3)  # tight, with a row per section
-        column.addWidget(QLabel('<b>TurboHUD - move mode</b>'))
+        column.addWidget(QLabel('<b>TurboHUD - Move Mode</b>'))
         for line in help_lines(shortcuts, commands, lock_key):
             column.addWidget(QLabel(line))
         self.boxes = {}

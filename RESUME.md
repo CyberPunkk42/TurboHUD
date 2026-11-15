@@ -100,6 +100,12 @@
    race on each and note the FPS per phase; it decides how one tint per group is made (item 3b).
 
 ## Recent changes
+  - 2026-11-15: The Layouts window's buttons cut off, and window titles in capitals, reported by the user
+    (`fix/layouts-buttons-and-titles`): at move mode's start Design for shows "5120x1440 (this screen)", wider than
+    the window was made for, so the list, Design, Save design and Cancel were cut off. The list now sizes to its
+    longest entry and the window grows with it. Titles: TurboHUD - Layouts, Move Mode, Settings, Car Classes, Design
+    Screen, Grid. A test makes the list as the app does and checks every button's width; seen in a render with the
+    Mac's own style.
   - 2026-11-15: One tint for each group on the Mac (`feature/group-tint-mac`, asked for by the user): while locked,
     the Mac's one window draws one tint round each group's sections with their tint on, the room between them too,
     and those sections no tint of their own. A switch, "One tint for each group" (tray Options and the settings
