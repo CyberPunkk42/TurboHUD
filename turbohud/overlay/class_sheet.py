@@ -15,7 +15,7 @@ log = logging.getLogger(__name__)
 NAME_COLOR = '#c8d0dc'  # a class's name, beside its code in the category's colour
 HOW_TO = (
     'Put a class code in your clan tag in TSU, such as [GT3], with or without the brackets, in any'
-    ' case. With two or more classes in a race, the lap times are grouped by class, each in its'
+    ' case. With two or more classes in a race, the standings are grouped by class, each in its'
     " category's colour. Two classes of one category in a race: the one listed first keeps the"
     " colour, the other takes the next category's free colour. A class in a paler colour comes from"
     " the driver's car, as others in the same car named it."

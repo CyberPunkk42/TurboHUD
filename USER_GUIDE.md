@@ -17,7 +17,7 @@ nothing to other players or servers, and gives no control over the car.
   show, and clicks go straight through to the game. In **move mode** every section gets a
   blue tint and can be dragged and sized, and a panel with all the settings for the layout
   opens (see section 4).
-- **When the race sections show.** Without a race, only **Session time** and **Local
+- **When the race sections show.** Without a race, only **Time since start** and **Clock
   time** show. The race sections appear when the cars stand on the grid, before the
   lights, stay after you finish until the race is over, and go away in the lobby and the
   menus. Online, finding the race takes a few seconds after the event starts.
@@ -41,15 +41,15 @@ behind the **^** arrow), and in the tray of your desktop's panel on Linux. Its m
   - **Speed in mph**: the speed in mph instead of km/h.
   - **Light tint behind all sections**: a faint dark box behind every section's text, for
     reading it on bright tracks. Each section also has its own **Tint** in move mode.
-  - **Slipstream cones on the proximity radar**: the slipstream behind each car ahead.
-  - **Proximity radar only in cockpit cameras**: the radar shows only while TSU's camera
+  - **Slipstream cones on the radar**: the slipstream behind each car ahead.
+  - **Radar only in cockpit cameras**: the radar shows only while TSU's camera
     sits at the driver (a first-person view), not in the views from outside the car. On
     by default.
-  - **Sector bars below the last and best lap**: the small coloured bars, one per sector.
+  - **Sector bars in My laps**: the small coloured bars, one per sector.
   - **Yellow flags**: the **Yellow flag** section and the yellow rings on the track map.
   - **Gear and revs in the speed section**: the gear above the speed and rev lights below it.
-  - **Classes in the lap times**: in a race with car classes, the lap times grouped by class.
-  - **Clan tags in the lap times**: in a race without classes, each driver's clan tag in a
+  - **Classes in the standings**: in a race with car classes, the standings grouped by class.
+  - **Clan tags in the standings**: in a race without classes, each driver's clan tag in a
     column of its own.
   - **Other cars on the track map**: every other car as a faint grey dot.
 - **Relearn this track's map**: during a race, forgets the map of this track (the saved one
@@ -65,18 +65,19 @@ the Mac and Linux it also switches the running one to move mode.
 ## 3. The sections
 
 In move mode the panel lists the sections under four headings: **Timing**, **Car**,
-**Race** and **Other**. The colours below are the default ones; the text, highlight and
+**Race** and **Other**. Hover over a section's name in the panel, or over the section itself in
+move mode, for a line on what it shows. The colours below are the default ones; the text, highlight and
 outline colours can be changed in the settings.
 
 ### Timing
 
-**Lap and time left**
+**Race progress**
 Your lap ("Lap 2/13") and, in a timed race, the time left. For a few seconds after the
 leader starts a new lap that you are not on yet, "Leader 4" fades in at its end, and
 "Final lap" when the leader starts the last one. Before a race it may say what TurboHUD
 is waiting for. Spectating, it says "Spectating" with the leader's lap.
 
-**Running lap**
+**Current lap**
 The time of the lap you are driving, counting up.
 
 **Delta to best**
@@ -90,7 +91,7 @@ when behind. It is green while you are gaining time and red while you are losing
 colour turns once the delta has moved 0.05 s the other way for a quarter of a second, so
 a slow, steady loss turns it red too.
 
-**Last and best lap**
+**My laps**
 Your last and your best lap time. The best is purple when it is the fastest lap of anyone
 in the race, green when it is your own best but someone has gone faster, and white for a
 slower last lap. Below them, small **sector bars**, one per stretch of the track between
@@ -98,7 +99,7 @@ TSU's sector lines, are coloured the same way for each sector of your last lap (
 green, or dark yellow when slower than your best). After you set such a lap, the track
 map's road shows purple or green for 6 seconds.
 
-**Lap times**
+**Standings**
 Every driver in race order (in qualifying, which TSU runs as hotlapping, by best lap). Each
 row has, as chosen under **Settings…**:
 - the place, the country flag, the name (up to 20 letters) and, in a race without classes,
@@ -116,13 +117,13 @@ Your own row is in the highlight colour. With more than 20 drivers it shows the 
 the drivers around you. While clan tags show, the list's text may get a little smaller to
 fit its box.
 
-The **country flags** here and in the player list are TSU's own pictures: at its start
+The **country flags** here and in **Nearby cars** are TSU's own pictures: at its start
 TurboHUD reads them from your copy of the game (only reading) and keeps them, made small,
 in its own folder. Where the game is not found, the system's emoji flags show (on Windows,
 which has none, the country code).
 
 **Car classes (multi-class races).** Drivers name their class with their clan tag in TSU
-(`[GT3]`, `[LMP]`, `[LMP2]` ...). With two or more classes in a race, the lap times come by
+(`[GT3]`, `[LMP]`, `[LMP2]` ...). With two or more classes in a race, the standings come by
 class, each below a thin line with its name in the class's colour, numbered within the
 class, with the class's fastest lap in purple and the overall place (`P7`) in an **Ovr**
 column. A driver without a class tag (or with a team's tag) gets the class most tagged
@@ -141,21 +142,21 @@ green through yellow to red, and turns red when the fuel does not last to the fi
 Laps of fuel to spare (`Finish +1.4 laps`, green) or missing (`Finish -0.8 laps`, red) for
 the end of the race: red means you have to pit for fuel.
 
-**Tires**
+**Tire wear**
 Tire life left in percent and the laps it lasts, with a bar. Only in events with tire wear.
 
-**Health**
+**Car health**
 Your car's health as the game counts it, with a bar. Yellow with "less downforce" when the
 damage costs grip, red with "slowed" when it makes the car slower. Only in events with
 damage.
 
-**Draft**
+**Slipstream**
 How strong the slipstream you are in is (of the most this event gives), with a bar, and
 the downforce it costs when that is 5% or more. At the start of a race it shows the
 event's drafting settings, later your time in a slipstream on the last lap, and who is
 drafting you.
 
-**Speed**
+**Speed and pedals**
 Your speed in km/h or mph (yellow while you roll without throttle or brake), with throttle
 and brake bars beside it. With **Gear and revs in the speed section**, the gear above it (R
 only while reversing, red near the shift) and rev lights below it. On Linux the bars follow
@@ -164,7 +165,7 @@ your gamepad's triggers smoothly; on the Mac and Windows they move in TSU's own 
 
 ### Race
 
-**Players**
+**Nearby cars**
 The race leader on top, then the 3 cars ahead of you and the 3 behind you on the track,
 with you always in the same row, whatever lap each car is on. Each row has the place, the
 flag, the name, the tire compound, **PIT** with its timers while in the pits, and the live
@@ -188,12 +189,12 @@ this track's map**. Only in races and special events, not in the arena modes. It
 in move mode turns its dark square on (the default) or off. It is square: size it at a
 corner.
 
-**Proximity radar**
+**Radar**
 Your car and the cars around you, when one is within half a second behind or ahead (faint)
 up to alongside (fully visible): red right beside you, yellow closing in. It shows about six
 car lengths ahead and behind; a car further behind that already counts is an arrow at the
 bottom edge, fainter the further away. In a multi-class race a car of another class is
-filled in its class's colour. With **Slipstream cones on the proximity radar**, the
+filled in its class's colour. With **Slipstream cones on the radar**, the
 slipstream behind each car ahead shows as a cone. By default it shows only in the cockpit
 cameras. How soon it shows is set under **Settings…**.
 
@@ -220,11 +221,11 @@ for a false start (throttle on the red lights) and 1.5 s more.
 
 ### Other
 
-**Local time**
+**Clock**
 Your computer's clock.
 
-**Session time**
-"TurboHUD - session time": how long TurboHUD has been running. It shows while there is no
+**Time since start**
+"TurboHUD - time since start": how long TurboHUD has been running. It shows while there is no
 race.
 
 
@@ -314,10 +315,10 @@ Open it with **Settings…** in the icon's menu or in the move-mode panel.
   the game. **Reset colours** puts the defaults back.
 - **All sections:** **Smaller** and **Bigger** make every section 10% smaller or bigger.
 - The on/off options, the same as under **Options** in the icon's menu (section 2).
-- The lap times' columns: **Lap times: flag**, **Lap times: lap number**, **Lap times: tire
-  compound**, **Lap times: best lap** and **Lap times: last lap**.
+- The standings' columns: **Standings: flag**, **Standings: lap number**, **Standings: tire
+  compound**, **Standings: best lap** and **Standings: last lap**.
 - **Blue flag when a car about to lap you is within:** 1 to 10 seconds (2 by default).
-- **Proximity radar when a car is within:** 0.2 to 3 seconds (0.5 by default); a longer
+- **Radar when a car is within:** 0.2 to 3 seconds (0.5 by default); a longer
   time zooms the radar out.
 - **Race reads a second:** 20, 10 or 5. Fewer ask less of the game, but the delta and the
   track map move less smoothly, and a track first learnt at 5 gets a coarser line.

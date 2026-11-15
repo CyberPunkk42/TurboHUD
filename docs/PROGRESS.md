@@ -2020,3 +2020,13 @@ its "Recent changes".
     screen with the user's two monitors, ties, sections off-screen; no focus where it never left, the window from
     move mode's start, never its own. Checked with this PC's monitors and the logged places: DP-2. Not yet: seen in
     move mode on Hyprland.
+  - 2026-11-15: Clearer section names, each with a tooltip, asked for by the user after feedback that "Lap times"
+    and "Players" were not clear (`feature/clearer-section-names`): Lap times is now Standings, Players Nearby
+    cars, Last and best lap My laps, Lap and time left Race progress, Running lap Current lap, Tires Tire wear,
+    Health Car health, Draft Slipstream, Speed Speed and pedals, Proximity radar Radar, Local time Clock, Session
+    time Time since start (also its title on the screen). Every section has a one-line `tip`: on its name in the
+    panel and, with its name, on its box in move mode. The options that name a section follow (Standings: flag,
+    Clan tags in the standings, Sector bars in My laps, Slipstream cones on the radar ...). Saved layouts and
+    presets keep working: they use the sections' inner names, which stay. Both guides, README and HOW_IT_WORKS
+    use the new names. Tests: every section has a short tip, the panel and the boxes show it, the new names. Not
+    yet: seen on the screen.

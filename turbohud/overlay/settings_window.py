@@ -160,8 +160,8 @@ class SettingsWindow(QWidget):
         timing.addWidget(QLabel('Blue flag when a car about to lap you is within:'), 0, 0)
         timing.addWidget(self.blue_seconds, 0, 1)
         self.radar_seconds = self._seconds_box(radar_seconds, RADAR_SECONDS, self.radar_seconds_changed)
-        self.radar_seconds.setToolTip('How far ahead of or behind you a car shows the proximity radar')
-        timing.addWidget(QLabel('Proximity radar when a car is within:'), 1, 0)
+        self.radar_seconds.setToolTip('How far ahead of or behind you a car shows the radar')
+        timing.addWidget(QLabel('Radar when a car is within:'), 1, 0)
         timing.addWidget(self.radar_seconds, 1, 1)
         column.addLayout(timing)
         self.read_buttons = {}

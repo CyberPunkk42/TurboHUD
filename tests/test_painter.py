@@ -1723,3 +1723,57 @@ class TextResizeTests(unittest.TestCase):
         panel.spacings['laptimes'].setValue(150)
         panel.set_spacing('laptimes', 2.0)  # shown: no request back
         self.assertEqual((got, panel.spacings['laptimes'].value()), ([('laptimes', 150)], 200))
+
+
+@unittest.skipUnless(importlib.util.find_spec('PySide6'), 'needs Qt')
+class SectionTipTests(unittest.TestCase):
+    """Each section says in a line what it shows (asked for by the user on 2026-11-15)."""
+
+    @classmethod
+    def setUpClass(cls):
+        MovePanelPresetTests.setUpClass()
+
+    class Native:
+        def raise_window(self, window):
+            return 'test'
+
+    def test_every_section_has_a_short_tip(self):
+        from turbohud.core.hud import CLOCK_SECTIONS, RACE_SECTIONS
+
+        for section in (*RACE_SECTIONS, *CLOCK_SECTIONS):
+            with self.subTest(section=section.name):
+                self.assertTrue(section.tip)
+                self.assertLessEqual(len(section.tip), 130)  # a line, not a manual
+                self.assertFalse(section.tip.endswith('.'))
+
+    def test_the_panel_shows_it_on_each_name(self):
+        from PySide6.QtWidgets import QCheckBox
+
+        from turbohud.core.hud import RACE_SECTIONS
+        from turbohud.overlay.window import MovePanel
+
+        panel = MovePanel(self.Native(), RACE_SECTIONS, True)
+        self.addCleanup(panel.close)
+        tips = {box.text(): box.toolTip() for box in panel.findChildren(QCheckBox)}
+        for section in RACE_SECTIONS:
+            with self.subTest(section=section.name):
+                self.assertEqual(tips[section.label], section.tip)
+
+    def test_a_section_box_names_itself_and_says_what_it_shows(self):
+        from turbohud.core.hud import RACE_SECTIONS
+        from turbohud.core.settings import Theme
+        from turbohud.overlay.window import SectionWindow
+
+        for name in ('laptimes', 'radar'):  # text, and a drawing
+            section = next(s for s in RACE_SECTIONS if s.name == name)
+            window = SectionWindow(self.Native(), Theme(), section)
+            self.addCleanup(window.close)
+            self.assertEqual(window.toolTip(), f'{section.label}: {section.tip}')
+
+    def test_the_clearer_names(self):
+        from turbohud.core.hud import CLOCK_SECTIONS, RACE_SECTIONS
+
+        labels = {s.name: s.label for s in (*RACE_SECTIONS, *CLOCK_SECTIONS)}
+        self.assertEqual(labels['laptimes'], 'Standings')
+        self.assertEqual(labels['players'], 'Nearby cars')
+        self.assertEqual(labels['times'], 'My laps')

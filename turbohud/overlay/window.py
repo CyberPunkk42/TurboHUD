@@ -272,7 +272,8 @@ class SectionWindow(QWidget):
         width, height = base_size(section, theme.scale, text_width)
         if not section.bar:
             height = tight_height(section, theme.scale, text_ink)
-            self.setToolTip(section.label)  # no room for its name in the box (move mode)
+        # No room for its name in the box (move mode): its name and what it shows.
+        self.setToolTip(f'{section.label}: {section.tip}' if section.tip else section.label)
         self.base = (width, height)
         # Resized at any edge or corner in move mode (resize_edges), by the desktop where it can:
         # Qt's size grip pointed and pulled the wrong way at times (reported by the user on 2026-11-13).
@@ -1238,7 +1239,7 @@ class MovePanel(QWidget):
 
     def _section_row(self, grid, row, section):
         box = QCheckBox(section.label)
-        box.setToolTip(f'Show {section.label.lower()}')
+        box.setToolTip(section.tip or f'Show {section.label.lower()}')
         box.toggled.connect(lambda checked, name=section.name: self.wanted_changed.emit(name, checked))
         grid.addWidget(box, row, 0)
         self.boxes[section.name] = box

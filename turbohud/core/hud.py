@@ -123,7 +123,7 @@ def local_time_rows(now):
 
 def session_rows(seconds):
     """The content without game data: how long TurboHUD has been running."""
-    return [Row('TurboHUD - session time', 'title'), Row(clock(seconds), 'big', 'accent')]
+    return [Row('TurboHUD - time since start', 'title'), Row(clock(seconds), 'big', 'accent')]
 
 
 def help_lines(shortcuts, commands=False, lock_key='Ctrl+Shift+L'):
@@ -375,6 +375,7 @@ class Section:
     # Its columns right after the longest text shown, not at the box's right edge (snug_width).
     snug: bool = False
     spacing: float = 1.0  # the room between its rows, as a share of the usual (a section's own option)
+    tip: str = ''  # what it shows, in a line: the tooltip on its name in the panel and on its box
 
 
 LAP_TIME_ROWS = 20  # how many drivers the lap times section is made for
@@ -405,29 +406,64 @@ def text_can_centre(section):
 RACE_SECTIONS = (
     Section(
         'lap',
-        'Lap and time left',
+        'Race progress',
         (
             # The widest it gets, the leader a lap ahead (reported by the user on 2026-11-13: cut off).
             (Row('Lap 13/13  -  21:00 left', 'title', tail=' · Leader 13'),),
             (Row('Waiting for TSU (launch option)', 'title'),),
         ),
+        tip='Your lap (Lap 2/13), the time left in a timed race, and when the leader starts a new or the final lap',
     ),
-    Section('current', 'Running lap', ((Row('0:00.0', 'big'),), (Row('10:00.000', 'big'),))),
-    Section('delta', 'Delta to best', ((Row('+00.00 vs best', 'medium'),),)),
+    Section(
+        'current',
+        'Current lap',
+        ((Row('0:00.0', 'big'),), (Row('10:00.000', 'big'),)),
+        tip="The time of the lap you're driving now, counting up",
+    ),
+    Section(
+        'delta',
+        'Delta to best',
+        ((Row('+00.00 vs best', 'medium'),),),
+        tip='Ahead (-, green) or behind (+, red) your best lap of this race, right now',
+    ),
     Section(
         'times',
-        'Last and best lap',
+        'My laps',
         ((Row('Last 0:00.000   Best 0:00.000', 'medium'),),),
         level=True,
         sectors=True,
+        tip='Your last and best lap, with a bar for each sector: purple the fastest of anyone, green your own best',
     ),
-    Section('fuel', 'Fuel', ((Row('Fuel 100.0%', 'medium', tail='  ~10.0 laps  +0.00%'),),), level=True),
-    Section('fuelfinish', 'Fuel to finish', ((Row('Finish +00.0 laps', 'medium'),),)),
-    Section('tires', 'Tires', ((Row('Tires 100%  ~10.0 laps', 'medium'),),), level=True),
-    Section('health', 'Health', ((Row('Health 100%', 'medium', tail='  less downforce'),),), level=True),
+    Section(
+        'fuel',
+        'Fuel',
+        ((Row('Fuel 100.0%', 'medium', tail='  ~10.0 laps  +0.00%'),),),
+        level=True,
+        tip='Fuel left, how many laps it lasts, and how much you saved or burnt more than usual this lap',
+    ),
+    Section(
+        'fuelfinish',
+        'Fuel to finish',
+        ((Row('Finish +00.0 laps', 'medium'),),),
+        tip='Laps of fuel to spare (green) or missing (red) at the finish: red means pit for fuel',
+    ),
+    Section(
+        'tires',
+        'Tire wear',
+        ((Row('Tires 100%  ~10.0 laps', 'medium'),),),
+        level=True,
+        tip='Tire life left and the laps it lasts; only in events with tire wear',
+    ),
+    Section(
+        'health',
+        'Car health',
+        ((Row('Health 100%', 'medium', tail='  less downforce'),),),
+        level=True,
+        tip="Your car's health, and when damage costs grip or speed; only in events with damage",
+    ),
     Section(
         'draft',
-        'Draft',
+        'Slipstream',
         (
             (
                 Row('Draft 100%', 'medium', tail='  -80% downforce'),
@@ -436,12 +472,19 @@ RACE_SECTIONS = (
             ),
         ),
         level=True,
+        tip="How strong the slipstream (draft) you're in is, what it costs in downforce, and who is drafting you",
     ),
-    Section('speed', 'Speed', ((Row('000', 'medium', tail=' km/h', slot='000'),),), pedals=True),
-    Section('localtime', 'Local time', ((Row('00:00', 'medium'),),)),
+    Section(
+        'speed',
+        'Speed and pedals',
+        ((Row('000', 'medium', tail=' km/h', slot='000'),),),
+        pedals=True,
+        tip='Your speed with throttle and brake bars; the gear and rev lights too where turned on',
+    ),
+    Section('localtime', 'Clock', ((Row('00:00', 'medium'),),), tip="Your computer's clock"),
     Section(
         'players',
-        'Players',
+        'Nearby cars',
         (
             tuple(
                 Row(
@@ -456,10 +499,12 @@ RACE_SECTIONS = (
                 for n in range(10, 10 + 8)
             ),
         ),
+        tip='The leader, then the 3 cars ahead of you and the 3 behind on the track, with live gaps; '
+        'orange: let them by, blue: a lap down',
     ),
     Section(
         'laptimes',
-        'Lap times',
+        'Standings',
         (
             (Row('Driver', 'small', 'accent', middle='Best', right='Lap'),)
             + tuple(
@@ -478,6 +523,7 @@ RACE_SECTIONS = (
             ),
         ),
         snug=True,
+        tip='Every driver in race order: lap, tires, best and last lap, pit stops and penalties',
     ),
     Section(
         'yellowflag',
@@ -491,17 +537,47 @@ RACE_SECTIONS = (
             ),
         ),
         background='#ffd400',
+        tip='An incident in your sector or the next one: who, where and what happened',
     ),
     Section(
         'shortcut',
         'Penalties',
         ((Row('SHORTCUT  0.0 s', 'title', '#111111', centred=True),),),
         background='#ff8c1a',
+        tip='Shortcut and jump-start penalties, with the seconds left',
     ),
-    Section('blueflag', 'Blue flag', (), bar=(480, 24), drawing='flag'),
-    Section('deltabar', 'Delta bar', (), bar=(360, 36), drawing='delta'),
-    Section('radar', 'Proximity radar', (), bar=(160, 160), drawing='radar'),
-    Section('trackmap', 'Track map', (), bar=(240, 240), drawing='map'),
+    Section(
+        'blueflag',
+        'Blue flag',
+        (),
+        bar=(480, 24),
+        drawing='flag',
+        tip='A faster car about to lap you is close behind: let it by',
+    ),
+    Section(
+        'deltabar',
+        'Delta bar',
+        (),
+        bar=(360, 36),
+        drawing='delta',
+        tip='The live delta as a bar: to the right and green while you gain time, to the left and red while you lose it',
+    ),
+    Section(
+        'radar',
+        'Radar',
+        (),
+        bar=(160, 160),
+        drawing='radar',
+        tip='Cars beside you or close behind or ahead: red alongside, yellow closing in',
+    ),
+    Section(
+        'trackmap',
+        'Track map',
+        (),
+        bar=(240, 240),
+        drawing='map',
+        tip='The track from above: you, the leader, and the cars just ahead and behind',
+    ),
 )
 # The move-mode panel lists the sections under these headings (asked for by the user on
 # 2026-11-11); a section not named here comes under the last.
@@ -541,8 +617,13 @@ def panel_categories(sections):
 
 
 CLOCK_SECTIONS = (
-    Section('clock', 'Session time', ((Row('TurboHUD - session time', 'title'), Row('00:00', 'big')),)),
-    Section('localtime', 'Local time', ((Row('00:00', 'medium'),),)),
+    Section(
+        'clock',
+        'Time since start',
+        ((Row('TurboHUD - time since start', 'title'), Row('00:00', 'big')),),
+        tip="How long TurboHUD has been running; shown only while there's no race",
+    ),
+    Section('localtime', 'Clock', ((Row('00:00', 'medium'),),), tip="Your computer's clock"),
 )
 
 
