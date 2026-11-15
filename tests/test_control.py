@@ -299,6 +299,9 @@ class PlatformTests(unittest.TestCase):
         self.assertIsNone(choose_platform({'WAYLAND_DISPLAY': 'w', 'DISPLAY': ':0'}, 'darwin'))
 
 
+SHIPPED = Path(__file__).resolve().parents[1] / 'assets' / 'presets'
+
+
 class HelpTests(unittest.TestCase):
     def test_the_panel_says_how_to_switch_without_shortcuts(self):
         self.assertIn('--toggle', ' '.join(hud.help_lines(shortcuts=False, commands=True)))
@@ -379,6 +382,27 @@ class StartLayoutTests(unittest.TestCase):
             settings.Settings(), self.screen, hud.RACE_SECTIONS, self.measure, self.ink
         )
         self.assertEqual(self.start(settings.Settings()), shipped)
+
+    def test_default_files_never_replace_placed_sections(self):
+        presets.default_files(self.folder, SHIPPED)  # as at every start (2026-11-15)
+        placed = replace(settings.Settings(), sections={'speed': settings.SectionPlace(1, 2, 3, 4)})
+        self.assertEqual(self.start(placed), placed)
+
+    def test_first_start_with_default_files_takes_the_one_for_the_screen(self):
+        presets.default_files(self.folder, SHIPPED)
+        shipped = app.first_start_layout(
+            settings.Settings(), self.screen, hud.RACE_SECTIONS, self.measure, self.ink
+        )
+        made = presets.load_file(self.folder / '1920x1080 (TurboHUD default).json')[1]
+        first = self.start(settings.Settings())
+        self.assertEqual(first, shipped)
+        self.assertEqual(first.sections['speed'].x, made['speed'].x)
+        self.assertEqual(first.sections['speed'].y, made['speed'].y)
+
+    def test_own_layout_wins_over_default_files(self):
+        presets.default_files(self.folder, SHIPPED)
+        presets.save_file(self.folder / '1920x1080.json', self.own, (1920, 1080), 13)
+        self.assertEqual(self.start(settings.Settings()).sections['speed'].x, 100)
 
     def test_placed_sections_kept_without_own_layout(self):
         placed = replace(settings.Settings(), sections={'speed': settings.SectionPlace(1, 2, 3, 4)})

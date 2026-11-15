@@ -162,6 +162,56 @@ class DefaultTests(unittest.TestCase):
             self.assertTrue(x + w <= 1366 and y + h <= 768, name)
 
 
+class DefaultFilesTests(unittest.TestCase):
+    """TurboHUD's own layouts in customization/display_presets (asked for by the user on 2026-11-15)."""
+
+    def setUp(self):
+        self.folder = Path(tempfile.mkdtemp()) / 'customization' / 'display_presets'
+
+    def test_every_shipped_layout_written_under_its_own_name(self):
+        written = presets.default_files(self.folder, FOLDER)
+        self.assertEqual(sorted(written), sorted(presets.default_name(size) for size in presets.SCREENS))
+        self.assertIn('1920x1080 (TurboHUD default).json', written)
+        for size in presets.SCREENS:
+            copy = self.folder / presets.default_name(size)
+            self.assertEqual(copy.read_bytes(), (FOLDER / presets.file_name(size)).read_bytes())
+        self.assertTrue((self.folder / presets.CUSTOM_README).exists())
+
+    def test_only_missing_or_older_ones_written_again(self):
+        presets.default_files(self.folder, FOLDER)
+        self.assertEqual(presets.default_files(self.folder, FOLDER), [])
+        old = self.folder / presets.default_name((1920, 1080))
+        old.write_text('{"an older version": 1}', encoding='utf-8')
+        self.assertEqual(presets.default_files(self.folder, FOLDER), [old.name])
+        self.assertEqual(old.read_bytes(), (FOLDER / '1920x1080.json').read_bytes())
+
+    def test_the_players_own_files_never_touched(self):
+        self.folder.mkdir(parents=True)
+        own = self.folder / '1920x1080.json'
+        presets.save_file(own, {'speed': SectionPlace(10, 20, 30, 40)}, (1920, 1080), 13)
+        before = own.read_bytes()
+        presets.default_files(self.folder, FOLDER)
+        self.assertEqual(own.read_bytes(), before)
+
+    def test_a_folder_that_cannot_be_made(self):
+        blocker = Path(tempfile.mkdtemp()) / 'a file'
+        blocker.write_text('x', encoding='utf-8')
+        self.assertIsNone(presets.default_files(blocker / 'display_presets', FOLDER))
+
+    def test_default_files_are_not_ones_own(self):
+        presets.default_files(self.folder, FOLDER)
+        self.assertIsNone(presets.custom_for((1920, 1080), self.folder))
+        self.assertTrue(presets.is_default_file(self.folder / '2560x1440 (TurboHUD default).json'))
+        self.assertFalse(presets.is_default_file(self.folder / '2560x1440.json'))
+
+    def test_own_file_of_any_name_wins_over_them(self):
+        presets.default_files(self.folder, FOLDER)
+        own = {'speed': SectionPlace(10, 20, 30, 40)}
+        presets.save_file(self.folder / 'zz mine.json', own, (1920, 1080), 13)
+        _digest, found = presets.custom_for((1920, 1080), self.folder)
+        self.assertEqual(found['speed'].x, 10)
+
+
 if __name__ == '__main__':
     unittest.main()
 

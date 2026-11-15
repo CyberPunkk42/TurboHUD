@@ -156,10 +156,11 @@ def with_layout(settings, places, screen, sections):
 
 
 def start_layout(settings, screen, layout, measure, ink, folder, shipped=None):
-    """The settings at a start on `screen`: the layout in `folder` (customization/display_presets)
-    made for its size, where that file is new or changed since it was last taken (asked for by the
-    user on 2026-11-13); else on a first start the shipped one (first_start_layout); else as they
-    are."""
+    """The settings at a start on `screen`: the player's own layout in `folder`
+    (customization/display_presets) made for its size, where that file is new or changed since it
+    was last taken (asked for by the user on 2026-11-13); else on a first start TurboHUD's own one
+    for the screen (first_start_layout; the same as its default_name file in `folder`); else as
+    they are. TurboHUD's own files there never replace sections already placed (2026-11-15)."""
     from turbohud.core import presets
 
     sections = {section.name: section for section in layout}
@@ -582,6 +583,11 @@ def run(args, folder):
     first = {name: window.base for name, window in windows.items()}
     screen = main_screen(screens)
     own_folder = layout_presets.custom_folder(settings_dir())
+    # TurboHUD's own layouts beside the player's, to see and start from (asked for by the user on
+    # 2026-11-15); they never replace a placed layout (start_layout).
+    written = layout_presets.default_files(own_folder, asset_path('presets'))
+    if written:
+        log.info('customization/display_presets: wrote %s', ', '.join(written))
     if screen is not None:
         settings = start_layout(settings, screen, layout, text_width, text_ink, own_folder)
     defaults = first_launch(layout, first, screen[:2] if screen else (0, 0))

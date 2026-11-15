@@ -286,16 +286,23 @@ not end it. Your layout is saved as you change it.
 ## 5. Layouts for every screen size
 
 TurboHUD comes with layouts for 1920x1080, 2560x1440, 2560x1600, 3840x2160 and 5120x1440.
-On the first start it takes the one for your main screen's size, or the nearest one,
-fitted to your screen.
+They are in the **`customization/display_presets`** folder beside TurboHUD: beside
+`TurboHUD.exe` on Windows, beside the `TurboHUD` program on Linux; on the Mac, and wherever
+that folder cannot be written to, in TurboHUD's settings folder (section 8). They are named
+like `2560x1440 (TurboHUD default).json`.
 
-Your own layouts go in the **`customization/display_presets`** folder beside TurboHUD:
-beside `TurboHUD.exe` on Windows, beside the `TurboHUD` program on Linux; on the Mac, and
-wherever that folder cannot be written to, in TurboHUD's settings folder (section 8).
-**Export…**, **Import…** and **Save design…** open it. At a start, a layout there made for
-your screen's exact size is taken once, and again each time the file changes, so moving
-sections afterwards sticks. A layout file holds only places, sizes, text sizes and options:
-nothing personal, so it can be shared.
+- **First start.** When your main screen has one of those sizes, TurboHUD lays out the HUD as
+  that layout has it; for another size it takes the nearest one, fitted to your screen.
+- **Your own layout always wins.** Once you have placed sections, TurboHUD's layouts never
+  move them again, also not after an update. A layout file of your own for your screen's
+  size in that folder (any name without "(TurboHUD default)") is taken instead of
+  TurboHUD's: at a start it is taken once, and again each time the file changes, so moving
+  sections afterwards sticks.
+- **TurboHUD's own files** are written again by every new version (and come back when
+  deleted). To change one, arrange the HUD and save it under another name: **Export…** does.
+
+**Export…**, **Import…** and **Save design…** open that folder. A layout file holds only
+places, sizes, text sizes and options: nothing personal, so it can be shared.
 
 
 ## 6. The settings window

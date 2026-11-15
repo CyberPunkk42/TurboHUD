@@ -299,7 +299,11 @@ macOS `~/Library/Application Support/TurboHUD`, Windows `%APPDATA%\TurboHUD`):
 - `bottle_reader.log` (macOS): the reader's errors
 
 Your own layouts go in `customization/display_presets` beside TurboHUD (in the settings folder
-where that one cannot be written to): layout files with places and sizes only.
+where that one cannot be written to): layout files with places and sizes only. TurboHUD's own
+layouts per screen size are there too, as `<width>x<height> (TurboHUD default).json`: in the
+Windows and Linux downloads, and written again from the ones inside the app at each start where
+missing or older. A first start takes the one for the main screen; they never replace sections
+already placed, nor a layout file of the player's own.
 
 It writes nothing into the game's folders and changes nothing in the system.
 

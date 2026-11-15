@@ -54,7 +54,8 @@ USER_GUIDE_NAME = 'User Guide.txt'
 GUIDES = ((QUICK_START, QUICK_START_NAME), (USER_GUIDE, USER_GUIDE_NAME))  # in every download
 # customization/display_presets with its read-me, in the zip and the tar beside the program (on the Mac
 # the app's own folder is not written to: TurboHUD makes it in its settings folder).
-CUSTOM_README_PATH = 'customization/display_presets/README.txt'
+CUSTOM_FOLDER = 'customization/display_presets'
+CUSTOM_README_PATH = f'{CUSTOM_FOLDER}/README.txt'
 MAC_NEWEST_MINIMUM = (15, 0)  # the build stops if the app would need a newer macOS than this
 MACH_O_MAGIC = {
     b'\xcf\xfa\xed\xfe',  # 64-bit
@@ -219,6 +220,28 @@ def custom_readme():
     return CUSTOM_README_TEXT.encode('utf-8')
 
 
+def default_layouts():
+    """[(file, its name in customization/display_presets)] for TurboHUD's own layouts
+    (assets/presets), in the zip and the tar beside the program (asked for by the user on
+    2026-11-15). The Mac app writes them into its settings folder at its start (presets.default_files)."""
+    if str(ROOT) not in sys.path:
+        sys.path.insert(0, str(ROOT))
+    from turbohud.core.presets import default_name, load_file
+
+    found = []
+    for path in sorted(PRESETS.glob('*.json')):
+        preset = load_file(path)
+        if preset is None:
+            raise SystemExit(f'not a layout file: {path}')
+        found.append((path, default_name(preset[0])))
+    return found
+
+
+def _not_customization(info):
+    """tarfile's filter: leaves out a customization folder left in dist (pack writes its own)."""
+    return None if info.name.startswith(f'{NAME}/customization/') else info
+
+
 def pack(dist, archive, system=sys.platform, minimum=(0, 0)):
     archive.parent.mkdir(parents=True, exist_ok=True)
     archive.unlink(missing_ok=True)
@@ -226,7 +249,7 @@ def pack(dist, archive, system=sys.platform, minimum=(0, 0)):
         pack_dmg(dist / f'{NAME}.app', archive, minimum)
     elif archive.name.endswith('.tar.gz'):
         with tarfile.open(archive, 'w:gz') as tar:
-            tar.add(dist / NAME, arcname=NAME)
+            tar.add(dist / NAME, arcname=NAME, filter=_not_customization)
             for guide, name in GUIDES:
                 tar.add(guide, arcname=f'{NAME}/{name}')
             tar.add(LINUX_READ_ME, arcname=f'{NAME}/{READ_ME_NAME}')
@@ -235,15 +258,21 @@ def pack(dist, archive, system=sys.platform, minimum=(0, 0)):
             readme.size = len(text)
             readme.mode = 0o644
             tar.addfile(readme, io.BytesIO(text))
+            for layout, name in default_layouts():
+                tar.add(layout, arcname=f'{NAME}/{CUSTOM_FOLDER}/{name}')
     else:
         folder = dist / NAME
         with zipfile.ZipFile(archive, 'w', zipfile.ZIP_DEFLATED) as zip_file:
             for path in sorted(folder.rglob('*')):
+                if path.relative_to(folder).parts[0] == 'customization':
+                    continue  # pack writes its own (a smoke run of an older build may have left one)
                 zip_file.write(path, Path(NAME) / path.relative_to(folder))
             for guide, name in GUIDES:
                 zip_file.write(guide, Path(NAME) / name)
             # The folder for one's own layouts, beside the program (turbohud.core.presets).
             zip_file.writestr(f'{NAME}/{CUSTOM_README_PATH}', custom_readme())
+            for layout, name in default_layouts():
+                zip_file.write(layout, f'{NAME}/{CUSTOM_FOLDER}/{name}')
     digest = hashlib.sha256(archive.read_bytes()).hexdigest()
     archive.with_name(archive.name + '.sha256').write_text(f'{digest}  {archive.name}\n', encoding='utf-8')
     return digest

@@ -182,7 +182,28 @@ class PackTests(unittest.TestCase):
         (dist / 'TurboHUD' / '_internal').mkdir(parents=True)
         (dist / 'TurboHUD' / 'TurboHUD.exe').write_bytes(b'program')
         (dist / 'TurboHUD' / '_internal' / 'lib.dll').write_bytes(b'library')
+        # Left by a smoke run of an older build: pack writes this folder itself.
+        stale = dist / 'TurboHUD' / 'customization' / 'display_presets'
+        stale.mkdir(parents=True)
+        (stale / 'old.json').write_text('{}', encoding='utf-8')
         return dist
+
+    LAYOUTS = (
+        '1920x1080 (TurboHUD default).json',
+        '2560x1440 (TurboHUD default).json',
+        '2560x1600 (TurboHUD default).json',
+        '3840x2160 (TurboHUD default).json',
+        '5120x1440 (TurboHUD default).json',
+    )
+
+    def check_layouts(self, read):
+        """TurboHUD's own layouts beside the program (asked for by the user on 2026-11-15)."""
+        for name in self.LAYOUTS:
+            size = name.split(' ')[0]
+            self.assertEqual(
+                read(f'TurboHUD/customization/display_presets/{name}'),
+                (build_app.PRESETS / f'{size}.json').read_bytes(),
+            )
 
     def check_digest(self, archive):
         line = archive.with_name(archive.name + '.sha256').read_text(encoding='utf-8')
@@ -196,8 +217,14 @@ class PackTests(unittest.TestCase):
                 self.assertEqual(sorted(zip_file.namelist()), [
                     'TurboHUD/Quick Start.txt', 'TurboHUD/TurboHUD.exe', 'TurboHUD/User Guide.txt',
                     'TurboHUD/_internal/', 'TurboHUD/_internal/lib.dll',
+                    'TurboHUD/customization/display_presets/1920x1080 (TurboHUD default).json',
+                    'TurboHUD/customization/display_presets/2560x1440 (TurboHUD default).json',
+                    'TurboHUD/customization/display_presets/2560x1600 (TurboHUD default).json',
+                    'TurboHUD/customization/display_presets/3840x2160 (TurboHUD default).json',
+                    'TurboHUD/customization/display_presets/5120x1440 (TurboHUD default).json',
                     'TurboHUD/customization/display_presets/README.txt',
                 ])  # fmt: skip
+                self.check_layouts(zip_file.read)
                 self.assertEqual(
                     zip_file.read('TurboHUD/Quick Start.txt'), build_app.QUICK_START.read_bytes()
                 )
@@ -216,6 +243,9 @@ class PackTests(unittest.TestCase):
                 self.assertEqual(read_me, build_app.LINUX_READ_ME.read_bytes())
                 readme = tar.extractfile('TurboHUD/customization/display_presets/README.txt').read()
                 self.assertEqual(readme, build_app.custom_readme())
+                self.check_layouts(lambda name: tar.extractfile(name).read())
+                self.assertNotIn('TurboHUD/customization/display_presets/old.json', tar.getnames())
+                self.assertEqual(len(tar.getnames()), len(set(tar.getnames())))  # nothing twice
             self.check_digest(archive)
 
 

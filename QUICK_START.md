@@ -41,7 +41,9 @@ it goes.
    to 3). **Undo** goes back a step, **Redo** forward again.
 4. **Load screen default** gives you TurboHUD's layout for your screen size; **Export…** and
    **Import…** share layouts as files (in the `customization/display_presets` folder beside
-   TurboHUD); **Design for** lays one out for another screen size.
+   TurboHUD, which also holds TurboHUD's own layouts per screen size: a first start uses the
+   one for your screen, and they never replace a layout of yours); **Design for** lays one out
+   for another screen size.
 5. Press **Ctrl+Shift+L** again (or **Lock**) to finish; a race starting also locks it. Your
    layout is saved.
 
