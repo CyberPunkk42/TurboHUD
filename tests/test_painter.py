@@ -1521,6 +1521,87 @@ if __name__ == '__main__':
 
 
 @unittest.skipUnless(importlib.util.find_spec('PySide6'), 'needs Qt')
+class GroupTintTests(unittest.TestCase):
+    """One tint for each group on the Mac's one window (asked for by the user on 2026-11-15)."""
+
+    @classmethod
+    def setUpClass(cls):
+        os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
+        if sys.platform == 'win32':  # offscreen finds no fonts there without this
+            os.environ.setdefault(
+                'QT_QPA_FONTDIR', os.path.join(os.environ.get('WINDIR', r'C:\Windows'), 'Fonts')
+            )
+        from PySide6.QtWidgets import QApplication
+
+        cls.app = QApplication.instance() or QApplication([])
+
+    def setUp(self):
+        from turbohud.core.hud import RACE_SECTIONS, Row
+        from turbohud.core.settings import Theme
+        from turbohud.overlay.window import HudCanvases, SectionWindow
+
+        class Native:
+            hides_windows = True
+            one_window = True
+
+            def raise_window(self, window):
+                return 'test'
+
+        native = Native()
+        self.windows = []
+        for name, place in (('fuel', (100, 100, 200, 40)), ('tires', (100, 200, 200, 40))):
+            window = SectionWindow(native, Theme(), next(s for s in RACE_SECTIONS if s.name == name))
+            self.addCleanup(window.close)
+            window.setGeometry(*place)
+            window.backdrop, window.group = True, 'A'
+            self.windows.append(window)
+        self.canvases = HudCanvases(native, [(0, 0, 800, 600)], self.windows)
+        self.canvas = self.canvases.canvases[0]
+        self.addCleanup(self.canvas.close)
+        for window in self.windows:
+            window.canvas = self.canvases
+            window.show_on_top()
+            window.show_content([Row('Fuel 50.0%', 'medium')])
+
+    def alpha(self, x, y):
+        return self.canvas.grab().toImage().pixelColor(x, y).alpha()
+
+    def test_the_room_between_grouped_sections_is_tinted_too(self):
+        self.canvases.set_group_tint(True)
+        self.assertGreater(self.alpha(150, 170), 0)  # between them: the group's tint
+        self.assertGreater(self.alpha(290, 105), 0)  # inside one, beside its text
+        self.assertEqual(self.alpha(50, 50), 0)  # outside the group the game shows through
+
+    def test_off_each_keeps_its_own_tint_and_the_room_between_shows_the_game(self):
+        self.canvases.set_group_tint(False)
+        self.assertEqual(self.alpha(150, 170), 0)
+        self.assertGreater(self.alpha(290, 105), 0)
+
+    def test_grouped_sections_add_no_tint_of_their_own_over_the_groups(self):
+        # One tint, as light as a section's own: not the group's and each section's on top.
+        self.canvases.set_group_tint(True)
+        between, inside = self.alpha(150, 170), self.alpha(290, 105)
+        self.assertEqual(inside, between)
+
+    def test_a_section_without_its_tint_or_group_is_left_out(self):
+        self.windows[1].group = ''
+        self.canvases.set_group_tint(True)
+        self.assertEqual(self.alpha(150, 170), 0)  # one in the group: its box only
+        self.windows[1].group, self.windows[1].backdrop = 'A', False
+        self.canvases.set_group_tint(True)
+        self.assertEqual(self.alpha(290, 205), 0)  # its tint off: not drawn behind it (beside its text)
+
+    def test_a_moved_section_moves_the_groups_tint(self):
+        self.canvases.set_group_tint(True)
+        self.alpha(0, 0)  # drawn once
+        self.windows[1].setGeometry(100, 400, 200, 40)
+        self.windows[1].update()
+        self.assertGreater(self.alpha(150, 300), 0)  # the group reaches further down now
+        self.windows[1].setGeometry(100, 150, 200, 40)
+        self.windows[1].update()
+        self.assertEqual(self.alpha(150, 300), 0)  # and back: nothing left where it reached
+
+
 class CanvasTests(unittest.TestCase):
     """Locked, every section drawn in one window per screen (asked for on 2026-11-09: on a
     Mac 17 windows cost 35 FPS where one window with the same boxes cost 5)."""
@@ -1635,7 +1716,10 @@ class CanvasTests(unittest.TestCase):
             bar.canvas = canvases
             bar.show_on_top()
             bar.show_content([], delta_view=DeltaBarView(0.5, -1.0, ''))
-            bar.draw = lambda painter, bar=bar, draw=bar.draw: (drawn.append(bar), draw(painter))
+            bar.draw = lambda painter, own_tint=True, bar=bar, draw=bar.draw: (
+                drawn.append(bar),
+                draw(painter, own_tint),
+            )
         top, middle, bottom = bars
         changed = QRegion()
         for bar in (top, bottom):

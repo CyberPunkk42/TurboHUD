@@ -47,6 +47,7 @@ from turbohud.core.hud import (
     fitting_scale,
     font_for_height,
     font_scale,
+    group_tint_boxes,
     has_tint,
     help_lines,
     hud_lines,
@@ -466,9 +467,18 @@ class SectionWindow(QWidget):
         taken, SectionWindow.drawing_by = SectionWindow.drawing_by, {}
         return taken
 
-    def draw(self, painter):
+    def tints_itself(self):
+        """Whether it draws the light tint behind its text now (locked, its tint on, text to
+        show): what a group's one tint stands in for on the HUD canvas."""
+        section = self.section
+        if section.drawing or section.bar or section.background:
+            return False
+        return self.wanted and self.locked and self.backdrop and bool(self.rows)
+
+    def draw(self, painter, own_tint=True):
         """Draw the section into `painter`, its top-left corner at (0, 0) and as large as
-        this window: on the window itself, or on a HudCanvas that holds every section."""
+        this window: on the window itself, or on a HudCanvas that holds every section.
+        `own_tint` False: no tint of its own, as its group's one tint is behind it."""
         if not self.wanted:
             return
         painter.setRenderHint(QPainter.Antialiasing)
@@ -518,7 +528,7 @@ class SectionWindow(QWidget):
             self._paint_backdrop(painter, self.section.background)
             if self.opacity is not None:  # the blue flag too (turbohud.core.flagstack): a blue frame
                 self._paint_blue_frame(painter, scale)
-        elif self.locked and self.backdrop and rows:
+        elif self.locked and self.backdrop and rows and own_tint:
             self._paint_backdrop(painter)
         if self.section.pedals and rows:  # no bars without a speed (menu, no game)
             throttle, brake = self.pedals or (None, None)
@@ -946,6 +956,9 @@ class HudCanvas(QWidget):
         self.native = native
         self.windows = windows  # every SectionWindow, in drawing order
         self.drawn = {}  # section name -> QRect (screen) it was last asked to be drawn in
+        # One tint behind each group's tinted sections (the option, on by default; 2026-11-15).
+        self.group_tint = False
+        self.group_boxes = {}  # group -> its tint's QRect (screen), as last drawn
         self.setWindowTitle('TurboHUD')
         self.setAttribute(Qt.WA_TranslucentBackground)
         self.setAttribute(Qt.WA_ShowWithoutActivating)
@@ -953,16 +966,37 @@ class HudCanvas(QWidget):
         self.setGeometry(*place)
 
     def redraw(self, window):
-        """Draw `window`'s section again, where it is and where it was (it may have moved)."""
+        """Draw `window`'s section again, where it is and where it was (it may have moved). A
+        group's tint is drawn again whole only where it changed (a section moved, emptied, its
+        tint switched): a section's new text alone is drawn on the tint as it is."""
         now = QRect(window.x(), window.y(), window.width(), window.height())
         before = self.drawn.get(window.section.name)
         self.drawn[window.section.name] = now
-        for rect in (before, now):
+        rects = [before, now]
+        boxes = self._group_boxes()
+        if boxes != self.group_boxes:
+            changed = {g for g in {*boxes, *self.group_boxes} if boxes.get(g) != self.group_boxes.get(g)}
+            rects += [self.group_boxes.get(g) for g in changed] + [boxes.get(g) for g in changed]
+            self.group_boxes = boxes
+        for rect in rects:
             if rect is None:
                 continue
             local = rect.translated(-self.x(), -self.y()).adjusted(-2, -2, 2, 2).intersected(self.rect())
             if not local.isEmpty():
                 QWidget.update(self, local)
+
+    def _group_boxes(self):
+        """{group: QRect (screen)} of one tint round each group's tinted sections; {} with the
+        option off."""
+        if not self.group_tint:
+            return {}
+        members = [(w.group, (w.x(), w.y(), w.width(), w.height())) for w in self.windows if w.tints_itself()]
+        return {group: QRect(*box) for group, box in group_tint_boxes(members).items()}
+
+    def set_group_tint(self, on):
+        self.group_tint = on
+        self.group_boxes = self._group_boxes()
+        self.update()
 
     def show_on_top(self):
         self.show()
@@ -980,6 +1014,17 @@ class HudCanvas(QWidget):
         for rect in area:
             painter.fillRect(rect, Qt.transparent)
         painter.setCompositionMode(QPainter.CompositionMode_SourceOver)
+        boxes = self._group_boxes()
+        if boxes:
+            painter.save()
+            painter.setRenderHint(QPainter.Antialiasing)
+            painter.setPen(Qt.NoPen)
+            painter.setBrush(QColor(*BACKDROP))
+            for rect in boxes.values():
+                local = QRectF(rect.translated(-self.x(), -self.y()))
+                if area.intersects(local.toAlignedRect()):
+                    painter.drawRoundedRect(local, 6, 6)  # as a section's own (_paint_backdrop)
+            painter.restore()
         for window in self.windows:
             if not window.wanted:
                 continue
@@ -990,7 +1035,7 @@ class HudCanvas(QWidget):
             painter.translate(place.topLeft())
             painter.setClipRect(QRect(0, 0, place.width(), place.height()))
             drawing = time.perf_counter()
-            window.draw(painter)
+            window.draw(painter, not (window.group in boxes and window.tints_itself()))
             window.drew(time.perf_counter() - drawing)
             painter.restore()
         painter.end()
@@ -1006,6 +1051,10 @@ class HudCanvases:
     def redraw(self, window):
         for canvas in self.canvases:
             canvas.redraw(window)
+
+    def set_group_tint(self, on):
+        for canvas in self.canvases:
+            canvas.set_group_tint(on)
 
     def set_shown(self, shown):
         for canvas in self.canvases:

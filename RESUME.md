@@ -100,6 +100,13 @@
    race on each and note the FPS per phase; it decides how one tint per group is made (item 3b).
 
 ## Recent changes
+  - 2026-11-15: One tint for each group on the Mac (`feature/group-tint-mac`, asked for by the user): while locked,
+    the Mac's one window draws one tint round each group's sections with their tint on, the room between them too,
+    and those sections no tint of their own. A switch, "One tint for each group" (tray Options and the settings
+    window's Look; only where the one window is, the Mac), on by default. The group's whole tint is drawn again only
+    when it changes (a section moved, emptied, its tint switched), not at each new text. Windows and Linux keep a tint
+    per section until the window count probe is run there (backlog items 1c and 3b). Tests offscreen for the tint
+    between sections, no double tint, a moved section, the switch; a 6 s start clean. Not yet seen over TSU.
   - 2026-11-15: Seven section groups, A to G (`feature/groups-a-to-g`, asked for by players; A to D before): in the
     move-mode panel's Group lists and its "Same text size and width" buttons; the User Guide says A to G. Tests for
     the settings and the panel; the panel stays within its width.

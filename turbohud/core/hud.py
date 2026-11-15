@@ -663,6 +663,25 @@ def speed_section(section, gear):
     return replace(section, samples=((Row('6', 'big'), *section.samples[0]),), level=True)
 
 
+def group_tint_boxes(members):
+    """{group: (x, y, width, height)}: one box round each group's tinted sections, for one tint
+    behind the whole group (asked for by the user on 2026-11-15; on the Mac's one window, where the
+    room between them can be drawn too). `members`: (group, (x, y, width, height)) of each section
+    that would draw its own tint; one in no group ('') keeps its own."""
+    boxes = {}
+    for group, (x, y, width, height) in members:
+        if not group:
+            continue
+        if group in boxes:
+            left, top, w, h = boxes[group]
+            right, bottom = max(left + w, x + width), max(top + h, y + height)
+            left, top = min(left, x), min(top, y)
+            boxes[group] = (left, top, right - left, bottom - top)
+        else:
+            boxes[group] = (x, y, width, height)
+    return boxes
+
+
 NEARBY_SHORT_ROWS = 4  # Nearby cars' short list: the leader, the car ahead, you, the car behind
 
 
