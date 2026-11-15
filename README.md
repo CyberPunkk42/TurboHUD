@@ -187,7 +187,8 @@ the first run, which takes a minute; later starts are quick.
 
 The terminal shows TurboHUD's log while it runs; Ctrl+C there quits it.
 
-Tests: `python3 -B -m unittest discover -s tests` (Windows: `py -3 -B -m unittest
+Tests, once the start script has set up `.buildtools/venv`: on macOS and Linux
+`.buildtools/venv/bin/python -B -m unittest discover -s tests` (Windows: `py -3 -B -m unittest
 discover -s tests`). Builds: `python tools/build_app.py --smoke` with the packages in
 `requirements-build.txt`, run on each system you want a build for; the Rust reader for
 Windows and the Mac first with `sh tools/get_rust.sh`. The Linux build is made in an Ubuntu
