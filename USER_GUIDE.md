@@ -199,7 +199,9 @@ gives up letters to them and ends in "…"), the clan tag (in a race with classe
 and the place in it, `GT3 P7`, in the class's colour), the tire compound, and the live gap to
 you (or `+1 L` for a lap). A name in orange is a lap or more ahead of you in the race (let it
 by), in blue a lap or more behind. **DNF** marks a car out of the race. Spectating, it shows
-the gaps to the leader.
+the gaps to the leader. Its text is as large as the standings' in the layouts TurboHUD comes
+with (since 2026-11-15); to make it larger in your own layout, set its **Size px** in move
+mode, or drag a corner of it.
 
 **Track map**
 The track from above, with you as a white ring (always on top, ringed in yellow when you

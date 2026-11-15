@@ -2154,3 +2154,8 @@ its "Recent changes".
     mode, not when empty; practice cannot be told from a race. At the user's wish the presets, files and Design
     moved from the panel into a Layouts window (**Layouts…**). Tests for the settings, the modes and the window;
     the guides, README and read-me updated. Not yet tried by hand nor in TSU (backlog item 3).
+  - 2026-11-15: Nearby cars' text as large as the Standings' in the shipped layouts (`feature/nearby-cars-bigger-default`,
+    a player found it too small; the user chose a bigger default): 10 px at 1920x1080 (was 8), 14 at 2560x1440 (was
+    10), 20 at 5120x1440 (was 15) and so on, its line spacing lowered (225% to 100 or 125%) so its box is no taller
+    and touches no other section. Layouts players placed stay as they are: the User Guide points to Size px. A test
+    keeps it at least the Standings' size. Not yet seen on screen.

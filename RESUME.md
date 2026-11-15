@@ -98,6 +98,11 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+  - 2026-11-15: Nearby cars' text as large as the Standings' in the shipped layouts (`feature/nearby-cars-bigger-default`,
+    a player found it too small; the user chose a bigger default): 10 px at 1920x1080 (was 8), 14 at 2560x1440 (was
+    10), 20 at 5120x1440 (was 15) and so on, its line spacing lowered (225% to 100 or 125%) so its box is no taller
+    and touches no other section. Layouts players placed stay as they are: the User Guide points to Size px. A test
+    keeps it at least the Standings' size. Not yet seen on screen.
   - 2026-11-15: Five named presets, loaded by the kind of event, in a Layouts window (asked for by players,
     `feature/named-presets-by-mode`): presets 1 to 5 (Ctrl+Shift+4 and 5 on Windows, the Mac and Hyprland, and
     `--preset 4`/`5`; AGENTS.md's Hyprland exception says so, approved by the user), each with a name of up to
