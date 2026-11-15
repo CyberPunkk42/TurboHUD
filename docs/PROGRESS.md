@@ -2198,3 +2198,6 @@ its "Recent changes".
     settings window's Look and the tray's Options, on by default; turned off in move mode the grid goes at once, and
     comes back when turned on. The User Guide says so. A settings test; a 6 s start in move mode clean (grid shown).
     Not tried with the grid off by hand.
+- 2026-11-16: The full test run on Windows stopped with an access violation (`fix/dialog-tests-fonts-windows`):
+  `tests/test_dialogs.py`, the first Qt tests in a run, started Qt without the Windows fonts folder that the
+  other Qt tests give it, so the font tests after them crashed. It now sets it too; the app was not affected.
