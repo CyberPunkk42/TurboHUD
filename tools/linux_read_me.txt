@@ -57,7 +57,7 @@ Other desktops have no shortcuts in TurboHUD. Use the tray icon's menu, or these
 (you can put them on keys in your desktop's keyboard settings):
     ~/TurboHUD/TurboHUD --toggle       move mode on or off: drag and resize the sections,
                                        tick off the ones you do not want
-    ~/TurboHUD/TurboHUD --preset 1     load a saved layout (1, 2 or 3)
+    ~/TurboHUD/TurboHUD --preset 1     load a saved layout (1 to 5)
     ~/TurboHUD/TurboHUD --quit         quit
 More in "Quick Start.txt".
 

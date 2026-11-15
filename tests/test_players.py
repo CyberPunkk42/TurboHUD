@@ -1721,6 +1721,50 @@ class RaceStartTests(unittest.TestCase):
                 self.assertFalse(starts.started(self.snapshot(moved_at=1.0, **kind), 1.0))
 
 
+class EventModeTests(unittest.TestCase):
+    """The preset for each kind of event loads as one begins (asked for by players on 2026-11-15)."""
+
+    snapshot = RaceStartTests.snapshot
+
+    def test_each_kind_of_event(self):
+        for state, mode in (
+            ({}, 'race'),
+            ({'replay': True}, 'recording'),
+            ({'replay': True, 'hotlapping': True}, 'recording'),  # a qualifying's recording
+            ({'hotlapping': True}, 'hotlapping'),
+            ({'on_a_track': False}, 'special'),  # Sumo, King of the Hill, Battle, Tag ...
+            ({'spectating': True}, 'race'),
+        ):
+            with self.subTest(**state):
+                self.assertEqual(race.event_mode(self.snapshot(**state).state), mode)
+
+    def test_once_as_an_event_begins_even_one_running_at_the_start(self):
+        modes = race.EventModes()
+        self.assertIsNone(modes.began(self.snapshot(racing=False), 0.0))  # the menus
+        self.assertEqual(modes.began(self.snapshot(moved_at=1.0), 1.0), 'race')
+        self.assertIsNone(modes.began(self.snapshot(moved_at=2.0), 2.0))  # racing on: told once
+
+    def test_the_next_event_of_the_same_mode_keeps_the_layout(self):
+        # A section moved during a race stays through the next race, and a replay rewound (TSU
+        # rebuilds it for a moment) is no new one.
+        modes = race.EventModes()
+        modes.began(self.snapshot(replay=True, moved_at=1.0), 1.0)
+        self.assertIsNone(modes.began(self.snapshot(racing=False), 2.0))
+        self.assertIsNone(modes.began(self.snapshot(replay=True, moved_at=3.0), 3.0))
+
+    def test_another_mode_is_told(self):
+        modes = race.EventModes()
+        modes.began(self.snapshot(hotlapping=True, moved_at=1.0), 1.0)
+        modes.began(self.snapshot(racing=False), 2.0)
+        self.assertEqual(modes.began(self.snapshot(moved_at=3.0), 3.0), 'race')
+        # An arena's mode read a moment later than the race began: told when known.
+        self.assertEqual(modes.began(self.snapshot(on_a_track=False, moved_at=4.0), 4.0), 'special')
+
+    def test_not_while_the_clock_stands(self):
+        modes = race.EventModes()
+        self.assertIsNone(modes.began(self.snapshot(moved_at=0.0), race.STILL_SECONDS + 5))
+
+
 class GearSectionTests(unittest.TestCase):
     """The Gear section: the gear and its rev lights, green, yellow and red (asked for by the user
     on 2026-11-13)."""

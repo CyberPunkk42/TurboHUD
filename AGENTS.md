@@ -43,7 +43,8 @@ but never import from or write into that folder.
   runtime requests aimed at TurboHUD's own window. One exception, approved by the user on
   2026-11-15: while it runs, TurboHUD adds its shortcuts to Hyprland's live keymap (never
   its files), only on keys nothing else has, and removes exactly those at quit
-  (`turbohud/overlay/hyprland.py`). Don't widen it without asking.
+  (`turbohud/overlay/hyprland.py`). Since 2026-11-15 (approved by the user) these are
+  Ctrl+Shift+L (or F12), Q and 1 to 5. Don't widen it without asking.
 - The user's TSU data (`player.json`, liveries in `SavedPaintJobs`) lives in
   `%USERPROFILE%\AppData\LocalLow\Turbo Sliders\Unlimited\<Steam ID>`. On the user's Mac,
   TSU runs in a CrossOver bottle, so the same folder is inside the bottle. Read from it

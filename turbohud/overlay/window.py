@@ -39,6 +39,7 @@ from turbohud.core.hud import (
     SPACINGS,
     Sectors,
     base_size,
+    beside,
     centred_text,
     content_shift,
     content_size,
@@ -62,7 +63,6 @@ from turbohud.core.hud import (
     text_can_centre,
     tight_height,
 )
-from turbohud.core.presets import SCREENS
 from turbohud.core.race import (
     RADAR_FULL,
     Blip,
@@ -73,7 +73,7 @@ from turbohud.core.race import (
     radar_edge_blips,
     rev_lights,
 )
-from turbohud.core.settings import GROUPS, PRESETS
+from turbohud.core.settings import GROUPS
 from turbohud.core.trackmap import MapDot, TrackMapView, map_transform, outline_from_path, road_width
 from turbohud.hud.painter import (
     AHEAD_COLOR,
@@ -89,6 +89,7 @@ from turbohud.hud.painter import (
     text_ink,
     text_width,
 )
+from turbohud.overlay.layouts_window import LayoutsWindow
 
 TINT = (23, 56, 97, 153)  # move mode's background: red, green, blue, opacity (0-255)
 BORDER = (120, 170, 230)
@@ -1106,6 +1107,8 @@ class MovePanel(QWidget):
     preset_save_requested = Signal(int)  # the preset's number
     preset_load_requested = Signal(int)
     preset_delete_requested = Signal(int)
+    preset_renamed = Signal(int, str)  # the preset's number, its name
+    auto_preset_changed = Signal(str, int)  # an event mode, the preset loaded as one begins (0: none)
     match_requested = Signal(str)  # the group
     undo_requested = Signal()
     redo_requested = Signal()  # forward again after Undo (asked for by the user on 2026-11-13)
@@ -1126,7 +1129,15 @@ class MovePanel(QWidget):
     focusable = True  # it takes clicks on its tick boxes and buttons
 
     def __init__(
-        self, native, sections, shortcuts, commands=False, saved_presets=(), lock_key='Ctrl+Shift+L'
+        self,
+        native,
+        sections,
+        shortcuts,
+        commands=False,
+        saved_presets=(),
+        lock_key='Ctrl+Shift+L',
+        preset_names=None,
+        auto_presets=None,
     ):
         super().__init__(None, window_flags())
         self.native = native
@@ -1202,8 +1213,27 @@ class MovePanel(QWidget):
         )
         self.rows_area.viewport().setAutoFillBackground(False)
         column.addWidget(self.rows_area)
-        self._finish(column, sections, shortcuts, saved_presets)
+        self._finish(column, sections)
         self.fit_height(None)
+        # The presets, layout files and the design screen: a window of their own (asked for by the
+        # user on 2026-11-15), its signals passed on as the panel's.
+        self.layouts = LayoutsWindow(
+            native, window_flags(), shortcuts, saved_presets, preset_names, auto_presets
+        )
+        for name in (
+            'preset_save_requested',
+            'preset_load_requested',
+            'preset_delete_requested',
+            'preset_renamed',
+            'auto_preset_changed',
+            'screen_default_requested',
+            'export_requested',
+            'import_requested',
+            'design_requested',
+            'design_save_requested',
+            'design_cancel_requested',
+        ):
+            getattr(self.layouts, name).connect(getattr(self, name))
 
     def _font_cap(self):
         """A style rule holding the text at PANEL_FONT_PX where the system's is larger, so the
@@ -1328,8 +1358,8 @@ class MovePanel(QWidget):
         box.setToolTip(tip)
         return box
 
-    def _finish(self, column, sections, shortcuts, saved_presets):
-        """Below the sections: matching a group, the presets, and the buttons."""
+    def _finish(self, column, sections):
+        """Below the sections: matching a group, the global text size, and the buttons."""
         self.text_sections = [section.name for section in sections if not section.drawing]
         self.matches = {}
         matches = QHBoxLayout()
@@ -1358,90 +1388,6 @@ class MovePanel(QWidget):
         every.addWidget(follow)
         every.addStretch()
         column.addLayout(every)
-        presets = QGridLayout()
-        presets.setHorizontalSpacing(4)
-        presets.setVerticalSpacing(3)
-        presets.addWidget(QLabel('Presets:'), 0, 0, Qt.AlignTop)
-        self.preset_loads = {}
-        self.preset_deletes = {}
-        for line, number in enumerate(PRESETS):
-            presets.addWidget(QLabel(f'<b>{number}</b>'), line, 1, Qt.AlignRight)
-            save = QPushButton('Save')
-            save.setMinimumWidth(PANEL_WORD_BUTTON)
-            save.setToolTip(f'Keep the layout as it is now in preset {number}, replacing what was there')
-            save.clicked.connect(lambda _checked=False, n=number: self.preset_save_requested.emit(n))
-            presets.addWidget(save, line, 2)
-            load = QPushButton('Load')
-            load.setMinimumWidth(PANEL_WORD_BUTTON)
-            load.setToolTip(
-                f'Put the sections as preset {number} has them, also with Ctrl+Shift+{number}'
-                if shortcuts
-                else f'Put the sections as preset {number} has them'
-            )
-            load.setEnabled(number in saved_presets)
-            load.clicked.connect(lambda _checked=False, n=number: self.preset_load_requested.emit(n))
-            presets.addWidget(load, line, 3)
-            self.preset_loads[number] = load
-            delete = QPushButton('Delete')
-            delete.setMinimumWidth(PANEL_WORD_BUTTON)
-            delete.setAccessibleName(f'Delete preset {number}')
-            delete.setToolTip(f'Delete preset {number}; Undo brings it back')
-            delete.setEnabled(number in saved_presets)
-            delete.clicked.connect(lambda _checked=False, n=number: self.preset_delete_requested.emit(n))
-            presets.addWidget(delete, line, 4)
-            self.preset_deletes[number] = delete
-        # Beside the presets, a layout to and from files, and the shipped one for this screen.
-        self.layout_buttons = {}
-        for line, (text, tip, signal) in enumerate(
-            (
-                (
-                    'Load screen default',
-                    (
-                        "The layout TurboHUD comes with for this screen's size (fitted where none is made for it);"
-                        ' one step for Undo'
-                    ),
-                    self.screen_default_requested,
-                ),
-                ('Export…', 'Save the layout to a file, to share it or keep it', self.export_requested),
-                (
-                    'Import…',
-                    'Load a layout from a file, fitted to this screen if made for another; one step for Undo',
-                    self.import_requested,
-                ),
-            )
-        ):
-            button = QPushButton(text)
-            button.setMinimumWidth(PANEL_WORD_BUTTON)
-            button.setToolTip(tip)
-            button.clicked.connect(signal)
-            presets.addWidget(button, line, 6)
-            self.layout_buttons[text] = button
-        presets.setColumnStretch(5, 1)
-        column.addLayout(presets)
-        designing = QHBoxLayout()
-        designing.addWidget(QLabel('Design for:'))
-        self.design_size = QComboBox()
-        for width, height in SCREENS:
-            self.design_size.addItem(f'{width}x{height}', (width, height))
-        self.design_size.setToolTip('A screen size to make the layout for, shown to scale on this screen')
-        designing.addWidget(self.design_size)
-        self.design = QPushButton('Design')
-        self.design.setToolTip('Show that screen size as a frame here, its layout inside to arrange')
-        self.design.clicked.connect(lambda: self.design_requested.emit(*self.design_size.currentData()))
-        self.design_save = QPushButton('Save design…')
-        self.design_save.setToolTip(
-            'Save the layout in the frame, at full size, as a file for that screen size'
-        )
-        self.design_save.clicked.connect(self.design_save_requested)
-        self.design_cancel = QPushButton('Cancel')
-        self.design_cancel.setToolTip('Leave the design screen; your own layout comes back')
-        self.design_cancel.clicked.connect(self.design_cancel_requested)
-        for button in (self.design, self.design_save, self.design_cancel):
-            button.setMinimumWidth(PANEL_WORD_BUTTON)
-            designing.addWidget(button)
-        designing.addStretch()
-        column.addLayout(designing)
-        self.set_designing(False)
         row = QHBoxLayout()
         self.undo = QPushButton('Undo')
         self.undo.setToolTip('Go back one change to the layout, as often as there are changes')
@@ -1463,6 +1409,12 @@ class MovePanel(QWidget):
             self.relearn.setEnabled(False)
             self.relearn.clicked.connect(self.relearn_requested)
             row.addWidget(self.relearn)
+        layouts = QPushButton('Layouts…')
+        layouts.setToolTip(
+            'The presets and their names, which loads for each kind of event, layout files, Design'
+        )
+        layouts.clicked.connect(self.open_layouts)
+        row.addWidget(layouts)
         lock = QPushButton('Lock')
         settings = QPushButton('Settings…')
         settings.setToolTip('Colours, sizes, warning times and the options for the whole HUD')
@@ -1559,9 +1511,18 @@ class MovePanel(QWidget):
             self.global_size.blockSignals(False)
 
     def set_presets_saved(self, numbers):
-        for number, load in self.preset_loads.items():
-            load.setEnabled(number in numbers)
-            self.preset_deletes[number].setEnabled(number in numbers)
+        self.layouts.set_presets_saved(numbers)
+
+    def open_layouts(self):
+        """The layouts window beside the panel, wholly on its screen; shown again where it was
+        hidden behind something."""
+        anchor = self.frameGeometry().getRect()
+        screen = self.screen().availableGeometry().getRect() if self.screen() is not None else anchor
+        size = (self.layouts.width(), self.layouts.height())
+        if self.layouts.isVisible():
+            self.native.raise_window(self.layouts)
+        else:
+            self.layouts.show_at(*beside(size, anchor, screen))
 
     def set_undo_available(self, available):
         self.undo.setEnabled(available)
@@ -1570,25 +1531,10 @@ class MovePanel(QWidget):
         self.redo.setEnabled(available)
 
     def set_designing(self, designing):
-        """Save design and Cancel only while the design screen shows; meanwhile Load screen default
-        and Import... are off (they would put a full-size layout over the design). Export... then
-        saves the design (the app does it)."""
-        self.design_save.setEnabled(designing)
-        self.design_cancel.setEnabled(designing)
-        for text in ('Load screen default', 'Import…'):
-            self.layout_buttons[text].setEnabled(not designing)
+        self.layouts.set_designing(designing)
 
     def set_own_screen(self, size):
-        """The Design for list with this screen's `size` (width, height) chosen, so Design shows
-        one's own layout at 100% straight away (asked for by the user on 2026-11-15); a size the
-        list lacks is put in it, in order. It is marked "(this screen)"."""
-        own = tuple(size)
-        sizes = sorted(set(SCREENS) | {own})
-        self.design_size.clear()
-        for width, height in sizes:
-            mark = ' (this screen)' if (width, height) == own else ''
-            self.design_size.addItem(f'{width}x{height}{mark}', (width, height))
-        self.design_size.setCurrentIndex(sizes.index(own))
+        self.layouts.set_own_screen(size)
 
     def set_relearn_available(self, available):
         """Relearn map works only while a track is known (in a race)."""

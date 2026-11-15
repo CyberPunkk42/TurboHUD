@@ -53,6 +53,8 @@ SHORTCUTS = (
     ('CTRL + SHIFT + 1', ('--preset', '1')),
     ('CTRL + SHIFT + 2', ('--preset', '2')),
     ('CTRL + SHIFT + 3', ('--preset', '3')),
+    ('CTRL + SHIFT + 4', ('--preset', '4')),
+    ('CTRL + SHIFT + 5', ('--preset', '5')),
 )
 BIND_LABEL = 'TurboHUD shortcut'  # the binds' description: how TurboHUD knows its own
 MODS = {'SHIFT': 1, 'CAPS': 2, 'CTRL': 4, 'ALT': 8, 'MOD2': 16, 'MOD3': 32, 'SUPER': 64, 'MOD5': 128}

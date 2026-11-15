@@ -46,7 +46,16 @@ BLUE_SECONDS = (1.0, 10.0, 0.5)  # the blue flag's warning time: least, most, st
 RADAR_SECONDS = (0.2, 3.0, 0.1)  # the proximity radar's
 READS_PER_SECOND = (20, 10, 5)  # how often a race may be read; fewer ask less of the game
 GROUPS = ('A', 'B', 'C', 'D')  # section groups; '' is none
-PRESETS = (1, 2, 3)  # the layouts a player can keep
+PRESETS = (1, 2, 3, 4, 5)  # the layouts a player can keep (5 since 2026-11-15, asked for by players)
+PRESET_NAME_MOST = 24  # letters in a preset's name, such as "Race" or "Recordings"
+# The kinds of event a preset can load for by itself as one begins (asked for by players on
+# 2026-11-15): (key, what the settings call it). turbohud.core.race.event_mode tells them apart.
+EVENT_MODES = (
+    ('recording', 'Recording'),
+    ('hotlapping', 'Hotlapping'),
+    ('race', 'Race'),
+    ('special', 'Special event'),
+)
 
 
 @dataclass(frozen=True)
@@ -123,6 +132,9 @@ class Settings:
     lap_columns: tuple = LAP_COLUMNS  # the lap times' columns shown (see LAP_COLUMNS)
     layout_version: int = 1  # how to read the section sizes: LAYOUT_VERSION is the latest
     presets: dict = field(default_factory=dict)  # number (one of PRESETS) -> a kept `sections`
+    preset_names: dict = field(default_factory=dict)  # number -> the player's name for it; none: unnamed
+    # Event mode (a key of EVENT_MODES) -> the preset loaded as such an event begins; none: off.
+    auto_presets: dict = field(default_factory=dict)
     blue_seconds: float = 2.0  # how far behind a car about to lap the player shows the blue flag
     radar_seconds: float = 0.5  # how far ahead or behind a car shows the proximity radar
     # How often a race is read and its sections updated (READS_PER_SECOND); 10 by default since
@@ -259,6 +271,38 @@ def _presets(data, tint=False):
     return {number: sections for number, sections in kept.items() if sections}
 
 
+def preset_name(value):
+    """A preset's name as kept: one line, no spaces round it, at most PRESET_NAME_MOST letters."""
+    if not isinstance(value, str):
+        return ''
+    return ' '.join(value.split())[:PRESET_NAME_MOST].strip()
+
+
+def _preset_names(data):
+    """{number: name} from the file; an empty or unknown one is left out."""
+    if not isinstance(data, dict):
+        return {}
+    names = {number: preset_name(data.get(str(number))) for number in PRESETS}
+    return {number: name for number, name in names.items() if name}
+
+
+def _auto_presets(data):
+    """{event mode: preset number} from the file; an unknown mode or number is left out."""
+    if not isinstance(data, dict):
+        return {}
+    return {
+        mode: data[mode]
+        for mode, _label in EVENT_MODES
+        if data.get(mode) in PRESETS and not isinstance(data.get(mode), bool)
+    }
+
+
+def preset_label(number, names):
+    """How the app names preset `number`: "3 Race" with a name in `names`, else "3"."""
+    name = names.get(number, '')
+    return f'{number} {name}' if name else str(number)
+
+
 def _section_data(sections):
     return {
         name: {
@@ -313,6 +357,8 @@ def load_settings(path):
         lap_columns=_lap_columns(data.get('lap_columns'), data.get('lap_columns_known')),
         layout_version=_layout_version(data.get('layout_version')),
         presets=_presets(data.get('presets'), data.get('backdrop') is True),
+        preset_names=_preset_names(data.get('preset_names')),
+        auto_presets=_auto_presets(data.get('auto_presets')),
         blue_seconds=_seconds(data.get('blue_seconds'), Settings.blue_seconds, BLUE_SECONDS),
         radar_seconds=_seconds(data.get('radar_seconds'), Settings.radar_seconds, RADAR_SECONDS),
         reads_per_second=(
@@ -358,6 +404,8 @@ def save_settings(path, settings):
         'applied_preset': settings.applied_preset,
         'sections': _section_data(settings.sections),
         'presets': {str(number): _section_data(kept) for number, kept in settings.presets.items()},
+        'preset_names': {str(number): name for number, name in settings.preset_names.items()},
+        'auto_presets': dict(settings.auto_presets),
     }
     if settings.class_tags != CLASS_TAGS:  # else the registry's, which may grow
         data['class_tags'] = list(settings.class_tags)

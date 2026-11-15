@@ -246,7 +246,7 @@ it lets its windows take the mouse so they can be dragged; when locked they let 
 click through to the game.
 
 Shortcuts: Wayland lets no program catch keys meant for another window, so while TurboHUD
-runs it adds Ctrl+Shift+L, Q, 1, 2 and 3 to Hyprland's live keys (`hyprctl eval` with
+runs it adds Ctrl+Shift+L, Q and 1 to 5 to Hyprland's live keys (`hyprctl eval` with
 `hl.bind`, on older Hyprland `hyprctl keyword bindd`), each running the command below. It
 first looks at `hyprctl binds` and leaves every key something else has (Ctrl+Shift+F12 for
 move mode where Ctrl+Shift+L is taken). Its binds are labelled "TurboHUD shortcut", and it
@@ -258,7 +258,7 @@ takes them over.
 
 ## Commands from the command line (Linux, macOS)
 
-`run_turbohud.sh --toggle`, `--move`, `--lock`, `--settings`, `--preset 1` (or 2, or 3)
+`run_turbohud.sh --toggle`, `--move`, `--lock`, `--settings`, `--preset 1` (or 2 to 5)
 and `--quit` tell the running TurboHUD what to do. It listens on a socket in your user's private runtime
 folder (`/run/user/<uid>/turbohud/control.sock`, only your user can open it); the
 command connects, sends one word, gets "ok" and ends. A second start of TurboHUD uses

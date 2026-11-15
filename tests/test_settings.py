@@ -303,6 +303,61 @@ class PresetTests(unittest.TestCase):
         path.write_text('{"presets": []}')
         self.assertEqual(s.load_settings(path).presets, {})
 
+    def test_five_presets_since_2026_11_15(self):
+        # Asked for by players: five, for recordings, practice, qualifying, racing and the rest.
+        path = self.path()
+        good = {'x': 1, 'y': 2, 'width': 30, 'height': 40}
+        path.write_text(json.dumps({'presets': {str(n): {'lap': good} for n in range(1, 7)}}))
+        self.assertEqual(list(s.load_settings(path).presets), [1, 2, 3, 4, 5])
+
+    def test_names_and_presets_by_mode_round_trip_and_start_empty(self):
+        path = self.path()
+        kept = s.Settings(
+            presets={4: {'lap': self.PLACE}},
+            preset_names={1: 'Race', 4: 'Recordings'},
+            auto_presets={'recording': 4, 'race': 1},
+        )
+        s.save_settings(path, kept)
+        loaded = s.load_settings(path)
+        self.assertEqual(loaded.preset_names, {1: 'Race', 4: 'Recordings'})
+        self.assertEqual(loaded.auto_presets, {'recording': 4, 'race': 1})
+        self.assertEqual((s.Settings().preset_names, s.Settings().auto_presets), ({}, {}))
+
+    def test_a_file_from_before_names_has_none_and_loads_nothing_by_itself(self):
+        path = self.path()
+        path.write_text('{"presets": {"1": {"lap": {"x": 1, "y": 2, "width": 30, "height": 40}}}}')
+        loaded = s.load_settings(path)
+        self.assertEqual((loaded.preset_names, loaded.auto_presets), ({}, {}))
+
+    def test_broken_names_and_choices_are_left_out(self):
+        path = self.path()
+        path.write_text(
+            json.dumps(
+                {
+                    'preset_names': {'1': 7, '2': '   ', '3': '  Quali  \n run ', '6': 'Six', '5': 'x' * 40},
+                    'auto_presets': {
+                        'race': 6,
+                        'special': True,
+                        'recording': '2',
+                        'sumo': 1,
+                        'hotlapping': 3,
+                    },
+                }
+            )
+        )
+        loaded = s.load_settings(path)
+        self.assertEqual(loaded.preset_names, {3: 'Quali run', 5: 'x' * s.PRESET_NAME_MOST})
+        self.assertEqual(loaded.auto_presets, {'hotlapping': 3})
+        path.write_text('{"preset_names": [], "auto_presets": "race"}')
+        loaded = s.load_settings(path)
+        self.assertEqual((loaded.preset_names, loaded.auto_presets), ({}, {}))
+
+    def test_a_preset_is_named_by_its_number_and_name(self):
+        self.assertEqual(s.preset_label(3, {3: 'Race'}), '3 Race')
+        self.assertEqual(s.preset_label(2, {3: 'Race'}), '2')
+        self.assertEqual(s.preset_name('  Hot   laps '), 'Hot laps')
+        self.assertEqual(s.preset_name(None), '')
+
     def test_a_preset_keeps_what_shows_and_the_group(self):
         places = s.preset_places({'lap': self.PLACE}, ['lap'], [(0, 0, 1920, 1080)])
         self.assertEqual(places['lap'], self.PLACE)

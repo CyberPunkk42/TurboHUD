@@ -2145,3 +2145,12 @@ its "Recent changes".
   - 2026-11-15: The test command in RESUME.md runs in `.buildtools/venv` (`docs/resume-test-command`):
     with Homebrew's `python3.13` alone the Qt tests failed for want of PySide6; in the venv all pass.
     README and AGENTS.md say the same for macOS and Linux; Ruff's line names the Mac too. Windows unchanged.
+  - 2026-11-15: Five named presets, loaded by the kind of event, in a Layouts window (asked for by players,
+    `feature/named-presets-by-mode`): presets 1 to 5 (Ctrl+Shift+4 and 5 on Windows, the Mac and Hyprland, and
+    `--preset 4`/`5`; AGENTS.md's Hyprland exception says so, approved by the user), each with a name of up to
+    24 letters. Per kind of event (Recording, Hotlapping, Race, Special event: an arena's Battle, Sumo, King of
+    the Hill, Tag ...) a preset or Off, all Off at first: it loads once as an event of another kind than the
+    last begins (race.EventModes, from the replay and hotlapping flags and the event mode's class), not in move
+    mode, not when empty; practice cannot be told from a race. At the user's wish the presets, files and Design
+    moved from the panel into a Layouts window (**Layouts…**). Tests for the settings, the modes and the window;
+    the guides, README and read-me updated. Not yet tried by hand nor in TSU (backlog item 3).

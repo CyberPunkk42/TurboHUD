@@ -82,7 +82,7 @@ Fedora 36, SteamOS 3.5, Arch or newer) and TSU's native Linux version. The downl
    | `TurboHUD --toggle` | move mode on or off |
    | `TurboHUD --move` / `--lock` | move mode on / off |
    | `TurboHUD --settings` | open the settings window |
-   | `TurboHUD --preset 1` | load layout preset 1 (or 2, or 3) |
+   | `TurboHUD --preset 1` | load layout preset 1 (or 2 to 5) |
    | `TurboHUD --quit` | quit TurboHUD |
 
    Starting TurboHUD again while it runs opens no second copy: it switches the running
@@ -159,8 +159,10 @@ The full guide to every section, menu item, button and option is
   radar, track map and more), each in its own box. Locked, clicks go through them to the game.
 - **Ctrl+Shift+L** (or **Move mode** in the TurboHUD icon's menu; on Linux outside
   Hyprland `TurboHUD --toggle`) switches to **move mode**: drag, nudge and size the sections, and use
-  the panel to show or hide them, group and centre them, set text sizes, keep three presets
-  (**Ctrl+Shift+1**, **2**, **3** load them) and load, share or design layouts per screen size.
+  the panel to show or hide them, group and centre them and set text sizes. Its **Layouts…**
+  window keeps five named presets (**Ctrl+Shift+1** to **5** load them), loads one by itself as a
+  recording, hotlapping, race or special event begins, and loads, shares or designs layouts per
+  screen size.
   **Lock** or Ctrl+Shift+L again ends it, and so does a race beginning.
 - **Settings…** sets the colours, the size of all sections, the standings' columns, the
   warning times, the race reads a second and the on/off options (also under **Options** in
