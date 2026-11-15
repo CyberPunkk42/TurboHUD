@@ -209,12 +209,31 @@ class TintTests(unittest.TestCase):
 
 
 class GridScreenTests(unittest.TestCase):
-    def test_the_grid_goes_on_the_main_screen_only(self):
-        wide, above = (0, 0, 5120, 1440), (1280, -1440, 2560, 1440)
+    WIDE, ABOVE = (0, 0, 5120, 1440), (1280, -1440, 2560, 1440)
+
+    def test_without_sections_the_main_screen(self):
+        wide, above = self.WIDE, self.ABOVE
         self.assertEqual(hud.grid_screen([wide, above], primary=above), above)  # the system's main one
         self.assertEqual(hud.grid_screen([above, wide]), wide)  # none known: the largest
         self.assertEqual(hud.grid_screen([above, wide], primary=(9, 9, 9, 9)), wide)  # not a screen
         self.assertIsNone(hud.grid_screen([]))
+
+    def test_the_screen_the_sections_are_on(self):
+        # Wayland: Qt calls the monitor above the main one, as Hyprland named it first.
+        wide, above = self.WIDE, self.ABOVE
+        sections = [(2165, 0, 799, 68), (3557, 5, 434, 49), (1580, 1110, 523, 275)]
+        self.assertEqual(hud.grid_screen([above, wide], sections, primary=above), wide)
+        self.assertEqual(hud.grid_screen([above, wide], [(1300, -1400, 200, 50)], primary=wide), above)
+
+    def test_a_tie_goes_to_the_main_screen_then_the_larger(self):
+        wide, above = self.WIDE, self.ABOVE
+        sections = [(10, 10, 100, 50), (1300, -1400, 100, 50)]
+        self.assertEqual(hud.grid_screen([wide, above], sections, primary=above), above)
+        self.assertEqual(hud.grid_screen([above, wide], sections), wide)
+
+    def test_sections_off_every_screen_do_not_count(self):
+        wide, above = self.WIDE, self.ABOVE
+        self.assertEqual(hud.grid_screen([wide, above], [(9000, 9000, 10, 10)], primary=above), above)
 
 
 class PanelCategoryTests(unittest.TestCase):

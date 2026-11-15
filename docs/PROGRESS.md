@@ -2011,3 +2011,12 @@ its "Recent changes".
     left alone, the second key, leftovers taken over, rebind after a reload event, no command socket means
     none. Checked on this PC's Hyprland 0.56.2: all five bound, back after `hyprctl reload`, gone after quit. Not
     yet: the keys pressed in a race, and a Linux build with it.
+  - 2026-11-15: The grid on the wrong monitor and the mouse jumping on Hyprland, reported by the user
+    (`fix/hyprland-grid-and-focus`): the grid went on Qt's main screen, which on Wayland is only the first monitor
+    Hyprland names (here the small one above); it now goes on the screen holding most shown sections, else the
+    main screen, else the largest (`grid_screen`). And after placing each window TurboHUD focused the window from
+    its own start (the terminal), which Hyprland does by moving the mouse onto it: now it gives the focus back
+    only where its own window (the panel) has it, to the window focused when move mode began. Tests: the grid's
+    screen with the user's two monitors, ties, sections off-screen; no focus where it never left, the window from
+    move mode's start, never its own. Checked with this PC's monitors and the logged places: DP-2. Not yet: seen in
+    move mode on Hyprland.

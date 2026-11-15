@@ -231,8 +231,8 @@ race.
 ## 4. Move mode and the panel
 
 Press **Ctrl+Shift+L** (Windows, Mac, Hyprland), choose **Move mode** in the icon's menu, or
-on other Linux desktops run `TurboHUD --toggle`. Every section gets a blue tint, a faint **grid** on the main
-screen helps line them up (a line every 20 px, a stronger one every 100 px, the screen's
+on other Linux desktops run `TurboHUD --toggle`. Every section gets a blue tint, a faint **grid** on the
+screen most of them are on helps line them up (a line every 20 px, a stronger one every 100 px, the screen's
 middle in yellow), and the panel opens.
 
 **On the screen**

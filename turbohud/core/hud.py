@@ -1014,13 +1014,29 @@ def main_screen(screens):
     return max(screens, key=lambda s: s[2] * s[3], default=None)
 
 
-def grid_screen(screens, primary=None):
-    """The one screen move mode's grid goes on: the system's main screen (`primary`, as Qt
-    reports it), else the largest (main_screen). A grid on every screen reached across all the
-    monitors (reported by the user on 2026-11-14). None without screens."""
-    if primary is not None and tuple(primary) in [tuple(screen) for screen in screens]:
-        return tuple(primary)
-    return main_screen(screens)
+def grid_screen(screens, sections=(), primary=None):
+    """The one screen move mode's grid goes on: the one holding the middles of most shown
+    `sections` (their places), as that is where they are lined up; with none there, the system's
+    main screen (`primary`, as Qt reports it), else the largest (main_screen). A tie goes to the
+    main screen, then the larger. A grid on every screen reached across all the monitors
+    (reported by the user on 2026-11-14). Qt's main screen alone is not enough: on Wayland it is
+    only the first monitor the desktop named, on the user's PC the small one above the game's
+    (reported on 2026-11-15). None without screens."""
+    screens = [tuple(screen) for screen in screens]
+    if not screens:
+        return None
+    primary = tuple(primary) if primary is not None and tuple(primary) in screens else None
+    counts = dict.fromkeys(screens, 0)
+    for x, y, width, height in sections:
+        cx, cy = x + width / 2, y + height / 2
+        for screen in screens:
+            sx, sy, sw, sh = screen
+            if sx <= cx < sx + sw and sy <= cy < sy + sh:
+                counts[screen] += 1
+                break
+    if not any(counts.values()):
+        return primary or main_screen(screens)
+    return max(screens, key=lambda s: (counts[s], s == primary, s[2] * s[3]))
 
 
 def first_launch(sections, sizes, origin=(0, 0), reference=REFERENCE_SCREEN, margin=LAYOUT_MARGIN, gap=8):

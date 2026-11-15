@@ -684,7 +684,8 @@ def run(args, folder):
                 grid_window.hide()
             return
         primary = QGuiApplication.primaryScreen()
-        place = grid_screen(screens, primary.geometry().getRect() if primary else None)
+        sections = [tuple(w.placement()) for w in windows.values() if w.wanted]
+        place = grid_screen(screens, sections, primary.geometry().getRect() if primary else None)
         if place is None:
             return
         if grid_window is None:
