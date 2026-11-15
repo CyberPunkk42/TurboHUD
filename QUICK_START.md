@@ -72,8 +72,8 @@ Hover over a section's name in the move-mode panel for a short explanation.
 - **Speed and pedals**: speed, throttle and brake, and as an option gear and rev lights.
 
 **Race**
-- **Nearby cars**: the leader, then 3 cars ahead and 3 behind you on the track, with the gap
-  to each; orange a lap or more ahead (let them by), blue a lap or more behind.
+- **Nearby cars**: the leader, then the car ahead and the car behind you on the track (3 of
+  each with **Nearby cars: only the leader and the cars next to you** off), with the gap to each; orange a lap or more ahead (let them by), blue a lap or more behind.
 - **Track map**: the track learnt from where the cars drive, with you and the cars near you.
 - **Radar**: cars close to you, seen from above: red beside you, yellow closing in.
 - **Blue flag**: a faster car about to lap you.

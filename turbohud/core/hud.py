@@ -563,7 +563,7 @@ RACE_SECTIONS = (
                 for n in range(10, 10 + 8)
             ),
         ),
-        tip='The leader, then the 3 cars ahead of you and the 3 behind on the track, with live gaps; '
+        tip='The leader and the cars ahead of and behind you on the track, with live gaps; '
         'orange: let them by, blue: a lap down',
     ),
     Section(
@@ -661,6 +661,17 @@ def speed_section(section, gear):
     if not gear:
         return section
     return replace(section, samples=((Row('6', 'big'), *section.samples[0]),), level=True)
+
+
+NEARBY_SHORT_ROWS = 4  # Nearby cars' short list: the leader, the car ahead, you, the car behind
+
+
+def players_section(section, short):
+    """Nearby cars made for its short list (`short`: the leader, the car ahead, you and the car
+    behind, asked for by players on 2026-11-15), so its box is 4 rows tall, or as it is."""
+    if not short:
+        return section
+    return replace(section, samples=(section.samples[0][:NEARBY_SHORT_ROWS],))
 
 
 def panel_categories(sections):

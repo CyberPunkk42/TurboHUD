@@ -1721,6 +1721,49 @@ class RaceStartTests(unittest.TestCase):
                 self.assertFalse(starts.started(self.snapshot(moved_at=1.0, **kind), 1.0))
 
 
+class NearbyShortListTests(unittest.TestCase):
+    """Nearby cars' short list: the leader, the car ahead, you and the car behind (asked for by
+    players on 2026-11-15, on by default)."""
+
+    def field(self, me=5, count=9):
+        # On a lap of 40 checkpoints, each car a checkpoint behind the one before: P1 leads, `me` is
+        # local; all within half a lap, so the order on the track is the race order.
+        return [
+            player(f'P{i + 1}', [lap(0, count=40), lap(400_000, count=30 - i)], local=(i == me))
+            for i in range(count)
+        ]
+
+    def test_the_leader_the_car_ahead_you_and_the_car_behind(self):
+        rows = race.players_rows(self.field(), short=True)
+        self.assertEqual([r.text for r in rows], ['1. P1', '5. P5', '6. P6', '7. P7'])
+        self.assertEqual(rows[2].color, 'accent')  # you, in the same row as ever in it
+        self.assertEqual(len(rows), hud.NEARBY_SHORT_ROWS)
+
+    def test_off_the_three_ahead_and_the_three_behind(self):
+        rows = race.players_rows(self.field())
+        self.assertEqual(
+            [r.text for r in rows], ['1. P1', '3. P3', '4. P4', '5. P5', '6. P6', '7. P7', '8. P8', '9. P9']
+        )
+
+    def test_right_behind_the_leader_it_is_not_shown_twice(self):
+        rows = race.players_rows(self.field(me=1), short=True)
+        self.assertEqual([r.text for r in rows], ['', '1. P1', '2. P2', '3. P3'])  # you stay in row 3
+
+    def test_leading_there_is_no_car_ahead(self):
+        rows = race.players_rows(self.field(me=0), short=True)
+        self.assertEqual([r.text for r in rows], ['', '', '1. P1', '2. P2'])
+
+    def test_spectating_four_rows_too(self):
+        players = [dataclasses.replace(p, local=False) for p in self.field()]
+        self.assertEqual(len(race.players_rows(players, watching=True, short=True)), hud.NEARBY_SHORT_ROWS)
+        self.assertEqual(len(race.players_rows(players, watching=True)), race.MAX_PLAYER_ROWS)
+
+    def test_its_box_is_made_for_four_rows(self):
+        section = next(s for s in hud.RACE_SECTIONS if s.name == 'players')
+        self.assertEqual(len(hud.players_section(section, True).samples[0]), hud.NEARBY_SHORT_ROWS)
+        self.assertIs(hud.players_section(section, False), section)
+
+
 class EventModeTests(unittest.TestCase):
     """The preset for each kind of event loads as one begins (asked for by players on 2026-11-15)."""
 

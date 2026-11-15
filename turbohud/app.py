@@ -24,7 +24,9 @@ from turbohud.core.hud import (
     font_scale,
     is_text_section,
     more_lap_rows_place,
+    players_section,
     sector_bar_place,
+    tight_height,
     tight_place,
 )
 from turbohud.core.settings import (
@@ -145,6 +147,19 @@ def upgrade_layout(settings, path, ink, measure=None):
 
         sections = narrower(sections)
         presets = {number: narrower(kept) for number, kept in presets.items()}
+    if version < 8 and settings.nearby_short and 'players' in known:
+        # Nearby cars' short list, on by default since 2026-11-15 (asked for by players): its box no
+        # taller than its 4 rows need, which leaves no empty room below them.
+        def shorter(places):
+            place = places.get('players')
+            if place is None:
+                return places
+            short = replace(players_section(known['players'], True), spacing=place.spacing)
+            height = tight_height(short, font_scale(place.font or font_size), ink)
+            return {**places, 'players': replace(place, height=min(place.height, height))}
+
+        sections = shorter(sections)
+        presets = {number: shorter(kept) for number, kept in presets.items()}
     settings = replace(
         settings, sections=sections, presets=presets, font_size=font_size, layout_version=LAYOUT_VERSION
     )
@@ -453,6 +468,7 @@ def run(args, folder):
         speed_section,
         text_box,
     )
+    from turbohud.core.hud import players_section as nearby_section
     from turbohud.hud.painter import text_ink, text_width, use_game_flags
     from turbohud.overlay import (
         HOTKEY_LOCK,
@@ -571,6 +587,7 @@ def run(args, folder):
                 settings.lap_columns,
                 retirements,
                 settings.radar_cockpit_only,
+                settings.nearby_short,
             )
             if not settings.yellow_flags:
                 yellow_flags.reset()  # turned on again, it starts afresh
@@ -605,6 +622,7 @@ def run(args, folder):
                 settings.radar_cone,
                 settings.classes,
                 tuple(settings.class_tags),
+                settings.nearby_short,
             )
         except Exception:
             log.exception('move mode: no preview race')
@@ -673,6 +691,12 @@ def run(args, folder):
         made = standings_section(base, settings.lap_columns, settings.clan_tags, settings.classes)
         window.section = replace(made, spacing=window.section.spacing)
 
+    def with_nearby(window):
+        """Nearby cars' window made for its short list or its long one (hud.players_section),
+        its line spacing kept."""
+        base = next(section for section in layout if section.name == 'players')
+        window.section = replace(nearby_section(base, settings.nearby_short), spacing=window.section.spacing)
+
     for name, window in windows.items():
         saved = settings.sections.get(name)
         place = (saved.x, saved.y, saved.width, saved.height) if saved else defaults[name]
@@ -686,6 +710,8 @@ def run(args, folder):
                 )
             if name == 'laptimes':
                 with_columns(window)
+            if name == 'players':
+                with_nearby(window)
             window.text_resized.connect(lambda name: resized_by_hand(name))
             # A snug section (the standings) is as wide as its columns need, no more: its columns
             # sit after the names whatever the box's width, so more would only be empty room.
@@ -864,6 +890,15 @@ def run(args, folder):
                     'Which of TSU\'s cameras the radar shows in',
                 )
             )
+        if any(section.name == 'players' for section in layout):
+            listed.append(
+                (
+                    'nearby_short',
+                    'Nearby cars: only the leader and the cars next to you',
+                    settings.nearby_short,
+                    'The leader, the car ahead, you and the car behind; off: the 3 cars ahead and the 3 behind',
+                )
+            )
         if any(section.drawing == 'map' for section in layout):
             listed.append(
                 (
@@ -1031,6 +1066,25 @@ def run(args, folder):
         refit_standings()
         save()
         log.info('lap times column %s %s', column, 'on' if shown else 'off')
+
+    def set_nearby_short(short):
+        """Nearby cars' short list on or off: its box as tall as its rows now need."""
+        nonlocal settings
+        settings = replace(settings, nearby_short=short)
+        nearby_short_action.setChecked(short)
+        show_option('nearby_short', short)
+        window = windows.get('players')
+        if window is not None:
+            with_nearby(window)
+            place = text_box(
+                window.section, tuple(window.placement()), window.font, text_width, text_ink, True, False
+            )
+            resize_sections({'players': place})
+            window.update()
+        save()
+        log.info(
+            'nearby cars: %s', 'the leader and the cars next to you' if short else '3 ahead and 3 behind'
+        )
 
     def set_map_others(others):
         nonlocal settings
@@ -1233,6 +1287,7 @@ def run(args, folder):
                 'radar_cone': set_radar_cone,
                 'radar_cockpit_only': set_radar_cockpit_only,
                 'map_others': set_map_others,
+                'nearby_short': set_nearby_short,
                 'sector_bars': set_sector_bars,
                 'yellow_flags': set_yellow_flags,
                 'gear': set_gear,
@@ -1784,6 +1839,13 @@ def run(args, folder):
     if any(section.name == 'laptimes' for section in layout):
         options_menu.addAction(classes_action)
         options_menu.addAction(clan_tags_action)
+    nearby_short_action = QAction(
+        'Nearby cars: only the leader and the cars next to you', menu, checkable=True
+    )
+    nearby_short_action.setChecked(settings.nearby_short)
+    nearby_short_action.triggered.connect(lambda checked: set_nearby_short(checked))
+    if any(section.name == 'players' for section in layout):
+        options_menu.addAction(nearby_short_action)
     map_others_action = QAction('Other cars on the track map', menu, checkable=True)
     map_others_action.setChecked(settings.map_others)
     map_others_action.triggered.connect(lambda checked: set_map_others(checked))

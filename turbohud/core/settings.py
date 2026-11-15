@@ -27,8 +27,9 @@ MAX_SCALE = 3.0
 # 2: a text section's box fits closely round its text; 3: 20 lap times; 4: the track map's
 # dark square is its tint (on), where its saved tint meant nothing before; 5: the last and
 # best lap has sector bars below its text; 6: text sections have a text size (their own, or the
-# global one), and the box follows it; 7: the standings and nearby cars narrower (closer columns)
-LAYOUT_VERSION = 7
+# global one), and the box follows it; 7: the standings and nearby cars narrower (closer columns);
+# 8: nearby cars 4 rows tall where its short list is on (the default since 2026-11-15)
+LAYOUT_VERSION = 8
 FONT_LIMITS = (6, 120)  # text sizes in pixels (core.hud.FONT_SIZES)
 DEFAULT_FONT = 13  # core.hud.DEFAULT_FONT
 _COLOR = re.compile(r'#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?')
@@ -121,6 +122,9 @@ class Settings:
     speed_unit: str = 'kmh'  # 'kmh' or 'mph'
     backdrop: bool = False  # every section with a tint has it on (see SectionPlace.tint)
     map_others: bool = False  # the track map also shows the other cars, as faint grey dots
+    # Nearby cars shows only the leader, the car ahead, you and the car behind (asked for by players
+    # on 2026-11-15, on by default); off: the 3 cars ahead and the 3 behind.
+    nearby_short: bool = True
     radar_cone: bool = True  # the proximity radar shows the slipstream behind cars ahead
     radar_cockpit_only: bool = True  # the proximity radar only while the camera sits at the driver
     sector_bars: bool = True  # the sector bars below the last and best lap
@@ -346,6 +350,7 @@ def load_settings(path):
         speed_unit=data.get('speed_unit') if data.get('speed_unit') in SPEED_UNITS else 'kmh',
         backdrop=data.get('backdrop') is True,
         map_others=data.get('map_others') is True,
+        nearby_short=data.get('nearby_short') is not False,
         radar_cone=data.get('radar_cone') is not False,
         radar_cockpit_only=data.get('radar_cockpit_only') is not False,
         sector_bars=data.get('sector_bars') is not False,
@@ -387,6 +392,7 @@ def save_settings(path, settings):
         'speed_unit': settings.speed_unit,
         'backdrop': settings.backdrop,
         'map_others': settings.map_others,
+        'nearby_short': settings.nearby_short,
         'radar_cone': settings.radar_cone,
         'radar_cockpit_only': settings.radar_cockpit_only,
         'sector_bars': settings.sector_bars,

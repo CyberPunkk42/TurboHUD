@@ -52,6 +52,9 @@ behind the **^** arrow), and in the tray of your desktop's panel on Linux. Its m
   - **Classes in the standings**: in a race with car classes, the standings grouped by class.
   - **Clan tags in the standings**: in a race without classes, each driver's clan tag in a
     column of its own.
+  - **Nearby cars: only the leader and the cars next to you**: Nearby cars shows the leader,
+    the car ahead, you and the car behind (4 rows). On by default; off, it shows the 3 cars
+    ahead and the 3 behind.
   - **Other cars on the track map**: every other car as a faint grey dot.
 - **Relearn this track's map**: during a race, forgets the map of this track (the saved one
   too); the map is then learnt again from the next whole clean lap.
@@ -192,8 +195,10 @@ your gamepad's triggers smoothly; on the Mac and Windows they move in TSU's own 
 ### Race
 
 **Nearby cars**
-The race leader on top, then the 3 cars ahead of you and the 3 behind you on the track,
-with you always in the same row, whatever lap each car is on. Each row has the place, the
+The race leader on top, then the car ahead of you and the car behind you on the track, with
+you always in the same row, whatever lap each car is on. With **Nearby cars: only the leader
+and the cars next to you** turned off (the icon's Options menu, or the settings window), it
+shows the 3 cars ahead and the 3 behind instead, and its box grows to their rows. Each row has the place, the
 flag, the name (up to 18 letters), **PIT** with its timers while in the pits (the name then
 gives up letters to them and ends in "…"), the clan tag (in a race with classes: the class
 and the place in it, `GT3 P7`, in the class's colour), the tire compound, and the live gap to
@@ -412,8 +417,8 @@ The window has two columns, under headings. The on/off options are the same as u
   column left out makes the box narrower.
 
 **Sections**
-- **Sector bars in My laps**, **Gear and revs in the speed section** and **Other cars on the
-  track map**.
+- **Nearby cars: only the leader and the cars next to you**, **Sector bars in My laps**,
+  **Gear and revs in the speed section** and **Other cars on the track map**.
 
 **Radar**
 - **Show in:** **Cockpit cameras** (the default: only while TSU's camera sits at the driver,
