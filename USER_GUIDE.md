@@ -42,6 +42,8 @@ behind the **^** arrow), and in the tray of your desktop's panel on Linux. Its m
   - **Speed in mph**: the speed in mph instead of km/h.
   - **Light tint behind all sections**: a faint dark box behind every section's text, for
     reading it on bright tracks. Each section also has its own **Tint** in move mode.
+  - **Move mode grid**: the faint grid on the main screen in move mode. On by default; off,
+    move mode shows no grid.
   - **Slipstream cones on the radar**: the slipstream behind each car ahead.
   - **Radar in every camera**: the radar also shows in the views from behind and outside
     the car (third person). Off by default: then it shows only while TSU's camera sits at
@@ -290,7 +292,7 @@ you do not see it.
 Press **Ctrl+Shift+L** (Windows, Mac, Hyprland), choose **Move mode** in the icon's menu, or
 on other Linux desktops run `TurboHUD --toggle`. Every section gets a blue tint, a faint **grid** on the
 screen most of them are on helps line them up (a line every 20 px, a stronger one every 100 px, the screen's
-middle in yellow), and the panel opens.
+middle in yellow; **Move mode grid** in the settings or the icon's Options turns it off), and the panel opens.
 
 Outside a race, every section shows a **preview**: one moment of a made-up race at Laguna
 Seca, 15 laps or 21 minutes, lap 10 with 20 drivers and you in 6th, just as the leader begins
@@ -407,7 +409,7 @@ The window has two columns, under headings. The on/off options are the same as u
   parts (your own row, headings) and of the thin outline that keeps text readable over
   the game. **Reset colours** puts the defaults back.
 - **All sections:** **Smaller** and **Bigger** make every section 10% smaller or bigger.
-- **Light tint behind all sections** and **Speed in mph**.
+- **Light tint behind all sections**, **Move mode grid** and **Speed in mph**.
 
 **Standings**
 - **Classes in the standings** and **Clan tags in the standings**.

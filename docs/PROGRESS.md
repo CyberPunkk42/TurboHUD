@@ -2175,3 +2175,7 @@ its "Recent changes".
   - 2026-11-15: Seven section groups, A to G (`feature/groups-a-to-g`, asked for by players; A to D before): in the
     move-mode panel's Group lists and its "Same text size and width" buttons; the User Guide says A to G. Tests for
     the settings and the panel; the panel stays within its width.
+  - 2026-11-16: A switch for move mode's grid, asked for by the user (`feature/grid-switch`): "Move mode grid", in the
+    settings window's Look and the tray's Options, on by default; turned off in move mode the grid goes at once, and
+    comes back when turned on. The User Guide says so. A settings test; a 6 s start in move mode clean (grid shown).
+    Not tried with the grid off by hand.
