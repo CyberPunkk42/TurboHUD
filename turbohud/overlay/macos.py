@@ -79,6 +79,9 @@ class Native:
     name = 'macOS'
     hides_windows = True  # a hidden section leaves the screen; showing it again stays in place
     one_window = True  # locked, every section drawn in one window per screen (HudCanvas)
+    # File and message windows open on TurboHUD's level, above its windows (turbohud.overlay.dialogs):
+    # the system's own opened behind them (reported by the user on 2026-11-15).
+    dialogs_on_top = True
 
     def __init__(self):
         self.app = send(cls('NSApplication'), 'sharedApplication')
