@@ -1234,6 +1234,17 @@ class MovePanelPresetTests(unittest.TestCase):
         panel.show()
         self.assertLessEqual(panel.height(), 800)  # still within a small screen
 
+    def test_seven_groups_to_choose_and_match(self):
+        # A to G since 2026-11-15 (asked for by players; A to D before).
+        panel = self.panel()
+        letters = ['A', 'B', 'C', 'D', 'E', 'F', 'G']
+        combo = panel.groups['lap']
+        self.assertEqual([combo.itemText(i) for i in range(combo.count())], ['-', *letters])
+        self.assertEqual(list(panel.matches), letters)
+        panel.set_group('lap', 'G')
+        panel.groups['delta'].setCurrentText('G')
+        self.assertTrue(panel.matches['G'].isEnabled())
+
     def test_match_works_from_two_text_sections_in_a_group(self):
         panel = self.panel()
         got = []

@@ -2154,3 +2154,6 @@ its "Recent changes".
     mode, not when empty; practice cannot be told from a race. At the user's wish the presets, files and Design
     moved from the panel into a Layouts window (**Layouts…**). Tests for the settings, the modes and the window;
     the guides, README and read-me updated. Not yet tried by hand nor in TSU (backlog item 3).
+  - 2026-11-15: Seven section groups, A to G (`feature/groups-a-to-g`, asked for by players; A to D before): in the
+    move-mode panel's Group lists and its "Same text size and width" buttons; the User Guide says A to G. Tests for
+    the settings and the panel; the panel stays within its width.

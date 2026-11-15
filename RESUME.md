@@ -98,6 +98,9 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+  - 2026-11-15: Seven section groups, A to G (`feature/groups-a-to-g`, asked for by players; A to D before): in the
+    move-mode panel's Group lists and its "Same text size and width" buttons; the User Guide says A to G. Tests for
+    the settings and the panel; the panel stays within its width.
   - 2026-11-15: Five named presets, loaded by the kind of event, in a Layouts window (asked for by players,
     `feature/named-presets-by-mode`): presets 1 to 5 (Ctrl+Shift+4 and 5 on Windows, the Mac and Hyprland, and
     `--preset 4`/`5`; AGENTS.md's Hyprland exception says so, approved by the user), each with a name of up to
