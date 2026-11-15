@@ -4383,9 +4383,12 @@ def draft_rows(state):
     draft, car = state.draft, state.car
     rows = []
     if state.clock < DRAFT_CARD_SECONDS * UNITS_PER_SECOND:
-        text = f'Max -{draft.speed_effect * 100:.0f}% drag  -{draft.downforce * 100:.0f}% downforce'
+        # The event's limits (asked for by the user on 2026-11-15, clearer than "Max ... reach 30 20°";
+        # the guides explain each): a slipstream at its strongest, how far behind a car it reaches
+        # (game units, TSU's metres) and how far off that car's line (degrees).
+        text = f'Up to -{draft.speed_effect * 100:.0f}% drag, -{draft.downforce * 100:.0f}% downforce'
         if draft.reach is not None and draft.angle is not None:
-            text += f'  reach {draft.reach:g}  {draft.angle:g}°'
+            text += f', {draft.reach:g} m, {draft.angle:g}°'
         rows.append(Row(text, 'small'))
     elif car is not None and car.draft_last_lap is not None:
         rows.append(Row(f'Last lap {car.draft_last_lap * 100:.0f}% in a slipstream', 'small'))

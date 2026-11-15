@@ -95,6 +95,13 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+  - 2026-11-15: The slipstream settings line clearer, and explained in the guides, asked for by the user
+    (`feature/clearer-draft-settings`): at a race's start the Slipstream section said "Max -10% drag -80%
+    downforce reach 30 20°"; now "Up to -10% drag, -80% downforce, 30 m, 20°" (reach in TSU's units, its metres),
+    as wide as before (279 px against 294 at scale 1): a two-line or longer wording would have made the box
+    bigger, into the user's track map and speed section. The User Guide explains every part of the section
+    (the draft share, the downforce it costs, each setting, the last lap's share, who drafts you); the Quick
+    Start and HOW_IT_WORKS name the settings. Test: the new line. Not yet: seen at a race's start.
   - 2026-11-15: Every standings column optional, a gap to the leader, and class lines without the class column,
     asked for by the user and a player (`feature/standings-columns-gap`): `LAP_COLUMNS` adds `gap`, `class` and
     `overall` (the place and the name always show). Gap: a new column (`Row.lead`, between the tire and Best;

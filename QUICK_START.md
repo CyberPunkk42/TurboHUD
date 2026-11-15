@@ -80,7 +80,8 @@ listed in the panel under four headings:
 - **Fuel** and **Fuel to finish**: fuel left, how many laps it lasts, and whether it lasts to
   the end (green: laps to spare; red: you need to pit).
 - **Tire wear** and **Car health**: tire wear and damage left, where the event has them on.
-- **Slipstream**: how much you are in someone's slipstream.
+- **Slipstream**: how much you are in someone's slipstream (more speed, less grip), and at the
+  start the event's limits: "Up to -10% drag, -80% downforce, 30 m, 20°" (see the User Guide).
 - **Speed and pedals**: with throttle and brake bars, and as an option the gear and rev lights.
 
 **Race**

@@ -154,10 +154,26 @@ damage costs grip, red with "slowed" when it makes the car slower. Only in event
 damage.
 
 **Slipstream**
-How strong the slipstream you are in is (of the most this event gives), with a bar, and
-the downforce it costs when that is 5% or more. At the start of a race it shows the
-event's drafting settings, later your time in a slipstream on the last lap, and who is
-drafting you.
+Driving close behind another car, you are in its slipstream (draft): less air resistance, so
+more speed on the straights, but also less downforce, so less grip in the corners. The
+section shows, with the bar below:
+
+- **Draft 46%**: how strong the slipstream you are in is now, as a share of the most this
+  event gives. It is strongest close behind a car and straight in line with it.
+- **-12% downforce**: the grip that slipstream takes from you now (shown from 5%).
+- At the start of a race, the event's drafting settings, as the host set them, for example
+  **Up to -10% drag, -80% downforce, 30 m, 20°**:
+  - **-10% drag**: at its strongest, a slipstream takes up to 10% off your air resistance;
+  - **-80% downforce**: and up to 80% off your downforce;
+  - **30 m**: it reaches up to 30 m behind a car (in TSU's units, which are its metres);
+  - **20°**: and up to 20° off the line straight behind that car: further to the side, you
+    are out of it.
+- Later in the race, instead: **Last lap 21% in a slipstream**, the share of your last lap
+  you spent in one.
+- **Playername drafts you 40%**: the car behind you in your slipstream, and how strong it is
+  for that car; its colour goes from cyan to red the closer it gets.
+
+Only in events with drafting on.
 
 **Speed and pedals**
 Your speed in km/h or mph (yellow while you roll without throttle or brake), with throttle

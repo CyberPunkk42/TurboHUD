@@ -29,7 +29,7 @@ off. On Linux and Windows each section keeps its own window for now.
 | Fuel to finish | laps of fuel to spare (green) or missing (red) for the finish |
 | Tire wear | tire life left and the laps it lasts; a level bar |
 | Car health | car health as the game counts it; yellow with less downforce, red when slowed; a level bar |
-| Slipstream | how strong the slipstream is (of the event's most), with a bar; the downforce it costs; the event's drafting at the start, then the last lap's time in a slipstream; who drafts you |
+| Slipstream | how strong the slipstream is (of the event's most), with a bar; the downforce it costs; the event's drafting at the start ("Up to -10% drag, -80% downforce, 30 m, 20°": the most it takes off the air resistance and the downforce, how far behind a car it reaches and how far off its line), then the last lap's time in a slipstream; who drafts you |
 | Speed and pedals | km/h or mph, yellow while coasting; throttle and brake bars beside it; as an option the gear and rev lights |
 | Nearby cars | the leader, then the 3 cars ahead of and 3 behind you on the track: position, flag, name, tire, PIT, and the live gap to you (or +1 L for laps), DNF for a car out of the race |
 | Standings | every driver in race order (by class in a multi-class race) with flag, name and clan tag or class, lap, tire, their best lap (the race's fastest in purple) and their last lap, or CUT, JUMP, PIT or DNF |

@@ -1230,7 +1230,7 @@ class DraftExtrasTests(unittest.TestCase):
             draft=SERVER_DRAFT,
         )
         self.assertEqual(
-            [r.text for r in race.draft_rows(start)], ['Max -10% drag  -80% downforce  reach 30  20°']
+            [r.text for r in race.draft_rows(start)], ['Up to -10% drag, -80% downforce, 30 m, 20°']
         )
         later = dataclasses.replace(start, clock=900_000)
         self.assertEqual([r.text for r in race.draft_rows(later)], ['Last lap 23% in a slipstream'])
