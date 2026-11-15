@@ -2142,3 +2142,5 @@ its "Recent changes".
     cars; Nearby cars' tag or class and place and the name giving up letters to pit times; which edge sets the
     text size and why a side springs back; HOW_IT_WORKS' table and its old section names. AGENTS.md's rule
     stands; the memory notes the short Quick Start.
+  - 2026-11-15: The test command in RESUME.md runs in `.buildtools/venv` (`docs/resume-test-command`):
+    with Homebrew's `python3.13` alone the Qt tests failed for want of PySide6; in the venv all pass.

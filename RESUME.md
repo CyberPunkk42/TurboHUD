@@ -54,8 +54,9 @@
   content shows). Ctrl+Shift+L toggles, Ctrl+Shift+Q quits; no Alt, which Mac keyboards
   lack. Position and size are remembered. Move mode ends by its shortcut, the panel's Lock or a
   race beginning (a click on the game no longer ends it, since 2026-11-13).
-- Tests: `/opt/homebrew/bin/python3.13 -B -m unittest discover -s tests` (Windows:
-  `py -3 -B -m unittest discover -s tests`). The Rust reader's: `eval "$(sh tools/get_rust.sh --env)"`,
+- Tests: `.buildtools/venv/bin/python -B -m unittest discover -s tests`, the environment with
+  PySide6 that `run_turbohud.sh` sets up (Homebrew's `python3.13` alone has no PySide6, so the Qt
+  tests fail; Windows: `py -3 -B -m unittest discover -s tests`). The Rust reader's: `eval "$(sh tools/get_rust.sh --env)"`,
   then `cargo test --offline` in `reader/` (Windows: `cargo +1.99.1 test --offline --target x86_64-pc-windows-gnullvm`);
   `sh tools/get_rust.sh` builds it (Mac, and Windows in Git Bash since 2026-11-12).
 - Lint and format: `.buildtools/ruff-venv/bin/ruff check .` and `ruff format --check .`
@@ -95,6 +96,8 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+  - 2026-11-15: The test command in RESUME.md runs in `.buildtools/venv` (`docs/resume-test-command`):
+    with Homebrew's `python3.13` alone the Qt tests failed for want of PySide6; in the venv all pass.
   - 2026-11-15: The guides checked against the app, the User Guide in full and the Quick Start short, asked for by
     the user (same branch, `feature/radar-explained`): the Quick Start rewritten to about 110 lines (was 150),
     one short line per section and feature, pointing to the User Guide. Corrected where the app had moved on: on
