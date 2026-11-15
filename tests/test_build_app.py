@@ -190,6 +190,7 @@ class PackTests(unittest.TestCase):
 
     LAYOUTS = (
         '1920x1080 (TurboHUD default).json',
+        '2294x1490 (TurboHUD default).json',
         '2560x1440 (TurboHUD default).json',
         '2560x1600 (TurboHUD default).json',
         '3840x2160 (TurboHUD default).json',
@@ -218,6 +219,7 @@ class PackTests(unittest.TestCase):
                     'TurboHUD/Quick Start.txt', 'TurboHUD/TurboHUD.exe', 'TurboHUD/User Guide.txt',
                     'TurboHUD/_internal/', 'TurboHUD/_internal/lib.dll',
                     'TurboHUD/customization/display_presets/1920x1080 (TurboHUD default).json',
+                    'TurboHUD/customization/display_presets/2294x1490 (TurboHUD default).json',
                     'TurboHUD/customization/display_presets/2560x1440 (TurboHUD default).json',
                     'TurboHUD/customization/display_presets/2560x1600 (TurboHUD default).json',
                     'TurboHUD/customization/display_presets/3840x2160 (TurboHUD default).json',

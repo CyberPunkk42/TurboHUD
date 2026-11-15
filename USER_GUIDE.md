@@ -294,7 +294,8 @@ not end it. Your layout is saved as you change it.
 
 ## 5. Layouts for every screen size
 
-TurboHUD comes with layouts for 1920x1080, 2560x1440, 2560x1600, 3840x2160 and 5120x1440.
+TurboHUD comes with layouts for 1920x1080, 2294x1490 (a Mac's), 2560x1440, 2560x1600, 3840x2160 and
+5120x1440, all made from one layout for 5120x1440 and fitted to each size.
 They are in the **`customization/display_presets`** folder beside TurboHUD: beside
 `TurboHUD.exe` on Windows, beside the `TurboHUD` program on Linux; on the Mac, and wherever
 that folder cannot be written to, in TurboHUD's settings folder (section 8). They are named

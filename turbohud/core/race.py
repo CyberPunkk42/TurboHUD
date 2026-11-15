@@ -3760,6 +3760,23 @@ def _only_columns(row, columns):
     return dataclasses.replace(row, **changes) if changes else row
 
 
+def standings_section(section, columns=LAP_COLUMNS, clan_tags=True, classes=True):
+    """The standings section (hud.RACE_SECTIONS' laptimes) made for the columns the player
+    shows, so its box is only as wide as those need (asked for by the user on 2026-11-15:
+    unticking a column left its room). Without classes no overall place; without classes and
+    clan tags no tag column."""
+    drop = {}
+    if not classes:
+        drop['overall'] = ''
+        if not clan_tags:
+            drop['tag'] = ''
+    samples = tuple(
+        tuple(dataclasses.replace(_only_columns(row, columns), **drop) for row in sample)
+        for sample in section.samples
+    )
+    return dataclasses.replace(section, samples=samples)
+
+
 def _class_name(group):
     """A class's label in the lap times: its code as the registry writes it ('GrT')."""
     return group if group == OTHER_CLASS else shown_code(group)

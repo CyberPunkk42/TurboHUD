@@ -502,6 +502,7 @@ def run(args, folder):
             Standings,
             YellowFlags,
             race_sections,
+            standings_section,
             status_text,
             with_local_time,
         )
@@ -646,6 +647,14 @@ def run(args, folder):
     for section in layout:
         if section.bar:  # the blue flag, the radar and the track map: their own spots
             defaults[section.name] = drawing_place(section, first[section.name], screen or (0, 0, 1920, 1080))
+
+    def with_columns(window):
+        """The standings' window made for the columns shown (race.standings_section), its line
+        spacing kept."""
+        base = next(section for section in layout if section.name == 'laptimes')
+        made = standings_section(base, settings.lap_columns, settings.clan_tags, settings.classes)
+        window.section = replace(made, spacing=window.section.spacing)
+
     for name, window in windows.items():
         saved = settings.sections.get(name)
         place = (saved.x, saved.y, saved.width, saved.height) if saved else defaults[name]
@@ -657,8 +666,13 @@ def run(args, folder):
                 window.section = replace(
                     speed_section(window.section, settings.gear), spacing=window.section.spacing
                 )
+            if name == 'laptimes':
+                with_columns(window)
             window.text_resized.connect(lambda name: resized_by_hand(name))
-            place = text_box(window.section, place, window.font, text_width, text_ink)
+            # A snug section (the standings) is as wide as its columns need, no more: its columns
+            # sit after the names whatever the box's width, so more would only be empty room.
+            snug = window.section.snug
+            place = text_box(window.section, place, window.font, text_width, text_ink, not snug, True)
         place = fit_on_screens(place, screens)
         window.setGeometry(*place)
         window.backdrop = saved.tint if saved else default_tint(window.section, settings.backdrop)
@@ -962,11 +976,21 @@ def run(args, folder):
         base = next(section for section in layout if section.name == 'speed')
         window.section = replace(speed_section(base, settings.gear), spacing=window.section.spacing)
 
+    def refit_standings():
+        """A column on or off: the standings' box as wide as its columns now need."""
+        window = windows.get('laptimes')
+        if window is None:
+            return
+        with_columns(window)
+        resize_sections({'laptimes': fitted(window, keep_width=False)})
+        window.update()
+
     def set_classes(shown):
         nonlocal settings
         settings = replace(settings, classes=shown)
         classes_action.setChecked(shown)
         show_option('classes', shown)
+        refit_standings()
         save()
         log.info('classes in the lap times %s', 'on' if shown else 'off')
 
@@ -975,6 +999,7 @@ def run(args, folder):
         settings = replace(settings, clan_tags=shown)
         clan_tags_action.setChecked(shown)
         show_option('clan_tags', shown)
+        refit_standings()
         save()
         log.info('clan tags in the lap times %s', 'on' if shown else 'off')
 
@@ -984,6 +1009,7 @@ def run(args, folder):
         kept = set(settings.lap_columns) | {column} if shown else set(settings.lap_columns) - {column}
         settings = replace(settings, lap_columns=tuple(c for c in LAP_COLUMNS if c in kept))
         show_option(f'column_{column}', shown)
+        refit_standings()
         save()
         log.info('lap times column %s %s', column, 'on' if shown else 'off')
 

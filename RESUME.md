@@ -95,6 +95,20 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+  - 2026-11-15: The standings follow their columns, and the shipped layouts made again, asked for by the user (same
+    branch): unticking a standings column in Settings (or classes and clan tags both off) makes its box narrower
+    (`race.standings_section`, as `speed_section` does for the gear; at the default size every column 499 px,
+    Flag, Best and Last only 358). A snug section's box is always as wide as its columns need, also at a start.
+    The shipped layouts (`assets/presets`) come from the user's current 5120x1440 layout (after layout 7), fitted
+    with `fit_layout` to 1920x1080, 2560x1440, 2560x1600, 3840x2160 and, new, 2294x1490 for a Mac
+    (`presets.SCREENS`); every section on its screen; the overlaps are the sections touching as in the user's own
+    layout. Written with CRLF, as those files were. A first start still takes the screen's layout only where the
+    player placed nothing (`first_start_layout`). The standings' side edge: a side adds room but cannot make the
+    box narrower than its text needs at its size (by design: the top and bottom edge and the corners set the text
+    size), so the user's box, at that least width, snapped back; it is narrower now. Tests: narrower per column
+    left out, tags and the overall place with their options, the new size in the downloads and default files.
+    Checked: the app started and quit on a copy of the user's settings (layout 7: standings 818 to 769 px). Not
+    yet: seen on the screen.
   - 2026-11-15: Narrower standings with steady columns, and race reads 10 times a second by default, asked for by
     the user (`fix/standings-tag-gap-reads-default`): `reads_per_second` defaults to 10 (was 20); a saved setting
     stays. Names keep their 20-letter field; every column keeps a fixed room for its widest text (L99, PIT 00.0s,
