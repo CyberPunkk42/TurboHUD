@@ -130,3 +130,31 @@ class StandingsSectionTests(unittest.TestCase):
         self.assertTrue(all(not row.tag for row in rows))
         rows = race.standings_section(self.base, clan_tags=False, classes=True).samples[0]
         self.assertTrue(any(row.tag for row in rows))  # in a race with classes, the class goes there
+
+
+class NameFieldTests(unittest.TestCase):
+    """The standings' names as long as the nearby cars' (asked for by the user on 2026-11-15)."""
+
+    def test_eighteen_letters_in_both(self):
+        from turbohud.core.hud import RACE_SECTIONS
+
+        self.assertEqual(race.LAP_NAME_SHOWN, race.MAX_NAME_SHOWN)
+        self.assertEqual(race.LAP_NAME_SHOWN, 18)
+        sample = next(s for s in RACE_SECTIONS if s.name == 'laptimes').samples[0][1]
+        self.assertEqual(len(sample.text.split('. ', 1)[1]), race.LAP_NAME_SHOWN)
+
+    def test_the_standings_box_is_never_wider_than_its_columns(self):
+        from turbohud.core.hud import RACE_SECTIONS, text_box
+
+        laptimes = next(s for s in RACE_SECTIONS if s.name == 'laptimes')
+        players = next(s for s in RACE_SECTIONS if s.name == 'players')
+
+        def measure(text, size):
+            return len(text) * size * 0.6
+
+        def ink(_text, size):
+            return size * 0.7, 0
+
+        exact = text_box(laptimes, (0, 0, 10, 10), 13, measure, ink, False)[2]
+        self.assertEqual(text_box(laptimes, (0, 0, 2000, 10), 13, measure, ink)[2], exact)
+        self.assertEqual(text_box(players, (0, 0, 2000, 10), 13, measure, ink)[2], 2000)  # room kept there

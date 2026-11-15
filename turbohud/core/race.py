@@ -2957,7 +2957,8 @@ MAX_PLAYER_ROWS = 8  # more players: the leader and those around the local playe
 MAX_NAME_SHOWN = 18
 # The lap times' name field: this many letters, a longer name cut with '…' (asked for by the user on
 # 2026-11-13, so the list keeps its width whoever joins; its sample in hud.RACE_SECTIONS is as long).
-LAP_NAME_SHOWN = 20
+# 18 since 2026-11-15, as the player list's (was 20), so the standings are narrower.
+LAP_NAME_SHOWN = MAX_NAME_SHOWN
 
 
 def ranked(players, hotlapping=False):

@@ -102,7 +102,7 @@ map's road shows purple or green for 6 seconds.
 **Standings**
 Every driver in race order (in qualifying, which TSU runs as hotlapping, by best lap). Each
 row has, as chosen under **Settings…**:
-- the place, the country flag, the name (up to 20 letters) and, in a race without classes,
+- the place, the country flag, the name (up to 18 letters, as in Nearby cars; a longer one ends in "…") and, in a race without classes,
   the clan tag (`FTR` for `[FTR]`)
 - the lap each driver is on (`L3`)
 - the tire compound as a letter in a coloured ring, as in F1: **S** red, **M** yellow,

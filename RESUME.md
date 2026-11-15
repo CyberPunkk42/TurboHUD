@@ -95,6 +95,13 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+  - 2026-11-15: The standings' names 18 letters, as the nearby cars', asked for by the user
+    (`feature/name-field-18`): `LAP_NAME_SHOWN` is `MAX_NAME_SHOWN` (18, was 20), a longer name cut with '…'; the
+    standings box at the default size 484 px (was 499); the shipped layouts' standings widths to match (only
+    those numbers, CRLF kept). A snug section's box (the standings) is never wider than its columns need, also
+    when a layout or preset is loaded (`text_box`). A tooltip with the whole name on a cut one was built and taken
+    out again at the user's word: move mode, the only time one can hover, shows the preview's made-up names.
+    Tests: 18 in both, the sample as long, the snug box. Not yet: seen on the screen.
   - 2026-11-15: The preview fills every section's room, and names never run into a column, asked for by the
     user (`feature/preview-standings-markers`): the preview race is timed as the real one was (15 laps or 21
     minutes: "Lap 10/15 - 7:14 left · Leader 11", the leader just over the line), a car close by has just pitted

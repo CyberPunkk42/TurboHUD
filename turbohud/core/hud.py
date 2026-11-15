@@ -552,7 +552,7 @@ RACE_SECTIONS = (
             (Row('Driver', 'small', 'accent', middle='Best', right='Lap'),)
             + tuple(
                 Row(
-                    f'{n}. Playername1234567890',  # a 20-letter name (race.LAP_NAME_SHOWN)
+                    f'{n}. Playername12345678',  # an 18-letter name (race.LAP_NAME_SHOWN)
                     'small',
                     before='L99',
                     flag='DE',
@@ -970,6 +970,8 @@ def text_box(section, place, font, measure, ink, keep_width=True, keep_height=No
     edge added (asked for by the user on 2026-11-13: longer pedal bars beside the speed, its
     text the same size), or the width Match gave a group. It keeps its top left corner."""
     keep_height = keep_width if keep_height is None else keep_height
+    if section.snug:
+        keep_width = False  # its columns sit after the names: more width would be empty room
     scale = font_scale(font)
     x, y, width, height = place
     needed = base_size(section, scale, measure)[0]
