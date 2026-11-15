@@ -196,3 +196,11 @@ class StandingsColumnsTests(unittest.TestCase):
         self.assertFalse(
             any(row.middle or row.right or row.before or row.lead or row.tyre or row.flag for row in rows)
         )
+
+
+class DraftPreviewTests(unittest.TestCase):
+    def test_someone_drafts_you_in_the_big_row(self):
+        rows = preview.preview_sections()['draft']
+        self.assertEqual(len(rows), 3)
+        self.assertIn(' drafts you ', rows[1].text)
+        self.assertEqual(rows[1].style, 'medium')

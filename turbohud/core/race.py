@@ -2955,6 +2955,9 @@ def with_local_time(sections, snapshot, now_struct):
 
 MAX_PLAYER_ROWS = 8  # more players: the leader and those around the local player
 MAX_NAME_SHOWN = 18
+# Who drafts the player, in the draft section's bigger text: this many letters, so that row fits
+# the section's width (2026-11-15).
+DRAFTER_NAME_SHOWN = 10
 # The lap times' name field: this many letters, a longer name cut with '…' (asked for by the user on
 # 2026-11-13, so the list keeps its width whoever joins; its sample in hud.RACE_SECTIONS is as long).
 # 18 since 2026-11-15, as the player list's (was 20), so the standings are narrower.
@@ -4378,10 +4381,13 @@ def drafted_by(players, draft):
 
 
 def draft_rows(state):
-    """The draft section's small rows below the meter: the event's drafting at the
-    start, then the last lap's time in a slipstream; and who drafts the local player."""
+    """The draft section's two rows below the meter, always both, so neither the text nor the
+    bar below it moves as they come and go (an empty row keeps its place): who drafts the local
+    player, as big as the meter (asked for by the user on 2026-11-15: players missed it in
+    small text); then, small, the event's drafting at the start, later the last lap's time in
+    a slipstream."""
     draft, car = state.draft, state.car
-    rows = []
+    info = Row('', 'small')
     if state.clock < DRAFT_CARD_SECONDS * UNITS_PER_SECOND:
         # The event's limits (asked for by the user on 2026-11-15, clearer than "Max ... reach 30 20°";
         # the guides explain each): a slipstream at its strongest, how far behind a car it reaches
@@ -4389,19 +4395,20 @@ def draft_rows(state):
         text = f'Up to -{draft.speed_effect * 100:.0f}% drag, -{draft.downforce * 100:.0f}% downforce'
         if draft.reach is not None and draft.angle is not None:
             text += f', {draft.reach:g} m, {draft.angle:g}°'
-        rows.append(Row(text, 'small'))
+        info = Row(text, 'small')
     elif car is not None and car.draft_last_lap is not None:
-        rows.append(Row(f'Last lap {car.draft_last_lap * 100:.0f}% in a slipstream', 'small'))
+        info = Row(f'Last lap {car.draft_last_lap * 100:.0f}% in a slipstream', 'small')
+    giving = Row('', 'medium')
     who = drafted_by(state.players, draft)
     if who is not None:
         name, strength = who
-        if len(name) > MAX_NAME_SHOWN:
-            name = name[: MAX_NAME_SHOWN - 1] + '…'
+        if len(name) > DRAFTER_NAME_SHOWN:
+            name = name[: DRAFTER_NAME_SHOWN - 1] + '…'
         # From the draft's cyan to red, the stronger its slipstream from the local car
         # (the closer it is behind).
         color = blend(DRAFTED_FROM_COLOR, DRAFTED_CLOSE_COLOR, strength)
-        rows.append(Row(f'{name} drafts you {strength * 100:.0f}%', 'small', color))
-    return rows
+        giving = Row(f'{name} drafts you {strength * 100:.0f}%', 'medium', color)
+    return [giving, info]
 
 
 def radar_blips(me, speed, others, draft=None, within=RADAR_FROM):

@@ -1230,10 +1230,31 @@ class DraftExtrasTests(unittest.TestCase):
             draft=SERVER_DRAFT,
         )
         self.assertEqual(
-            [r.text for r in race.draft_rows(start)], ['Up to -10% drag, -80% downforce, 30 m, 20°']
+            [r.text for r in race.draft_rows(start)], ['', 'Up to -10% drag, -80% downforce, 30 m, 20°']
         )
         later = dataclasses.replace(start, clock=900_000)
-        self.assertEqual([r.text for r in race.draft_rows(later)], ['Last lap 23% in a slipstream'])
+        self.assertEqual([r.text for r in race.draft_rows(later)], ['', 'Last lap 23% in a slipstream'])
+
+    def test_always_two_rows_so_nothing_moves(self):
+        # Who drafts you, as big as the meter (players missed it small), then the small line; an
+        # empty row keeps its place, so the text and the bar below stay put (2026-11-15).
+        state = race.LapState(
+            clock=900_000, time_limit=0, laps_completed=1, laps_to_finish=3, lap_starts=[0, 800_000],
+            draft=SERVER_DRAFT,
+        )  # fmt: skip
+        rows = race.draft_rows(state)
+        self.assertEqual([(r.text, r.style) for r in rows], [('', 'medium'), ('', 'small')])
+
+    def test_who_drafts_you_in_the_bigger_text_and_a_name_cut_to_fit(self):
+        me = heading_north('Me', (0.0, 100.0), local=True)
+        chaser = heading_north('Christopher Abernathy', (0.5, 92.0), drag=0.9)
+        state = race.LapState(
+            clock=900_000, time_limit=0, laps_completed=1, laps_to_finish=3, lap_starts=[0, 800_000],
+            car=race.CarState(False, 0, 0, False, 0, 40.0, draft=0.0), draft=SERVER_DRAFT, players=(me, chaser),
+        )  # fmt: skip
+        giving = race.draft_rows(state)[0]
+        self.assertEqual(giving.style, 'medium')
+        self.assertTrue(giving.text.startswith('Christoph… drafts you '), giving.text)
 
     def test_the_slipstream_on_the_radar_can_be_turned_off(self):
         def view(cone):
@@ -1307,7 +1328,7 @@ class DraftedColourTests(unittest.TestCase):
                 draft=SERVER_DRAFT,
                 players=(me, chaser),
             )
-            return race.draft_rows(state)[-1].color
+            return race.draft_rows(state)[0].color  # who drafts you: the first row
 
         weak, strong = colour(0.99), colour(0.905)  # 10 % and 95 % of the slipstream
         red = lambda c: int(c[1:3], 16) - int(c[5:7], 16)  # red over blue

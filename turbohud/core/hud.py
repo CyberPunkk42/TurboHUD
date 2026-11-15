@@ -531,8 +531,8 @@ RACE_SECTIONS = (
         (
             (
                 Row('Draft 100%', 'medium', tail='  -80% downforce'),
+                Row('Playername drafts you 100%', 'medium'),  # race.DRAFTER_NAME_SHOWN letters
                 Row('Up to -10% drag, -80% downforce, 30 m, 20°', 'small'),
-                Row('Playername1234567 drafts you 100%', 'small'),
             ),
         ),
         level=True,
