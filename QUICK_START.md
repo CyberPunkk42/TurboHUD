@@ -101,14 +101,15 @@ listed in the panel under four headings:
 
 | Keys | Does | Where |
 |---|---|---|
-| **Ctrl+Shift+L** | Move mode on / off (unlock and lock the HUD) | Windows, Mac |
-| **Ctrl+Shift+F12** | The same, if another program has Ctrl+Shift+L (see below) | Windows |
-| **Ctrl+Shift+1**, **2**, **3** | Load layout preset 1, 2 or 3, also during a race | Windows, Mac |
-| **Ctrl+Shift+Q** | Quit TurboHUD | Windows, Mac |
+| **Ctrl+Shift+L** | Move mode on / off (unlock and lock the HUD) | Windows, Mac, Hyprland |
+| **Ctrl+Shift+F12** | The same, if another program has Ctrl+Shift+L (see below) | Windows, Hyprland |
+| **Ctrl+Shift+1**, **2**, **3** | Load layout preset 1, 2 or 3, also during a race | Windows, Mac, Hyprland |
+| **Ctrl+Shift+Q** | Quit TurboHUD | Windows, Mac, Hyprland |
 
-They work while you play: you don't need to leave the game. Linux has no shortcuts: use the
-icon's menu, or `run_turbohud.sh --toggle`, `--preset 1` and `--quit` (a key on your desktop
-can run them).
+They work while you play: you don't need to leave the game. On Hyprland (Omarchy, for
+example) TurboHUD adds them while it runs, on keys nothing else uses, and changes no file.
+Other Linux desktops have no shortcuts: use the icon's menu, or `TurboHUD --toggle`,
+`--preset 1` and `--quit` (a key on your desktop can run them).
 
 ## Ctrl+Shift+L does nothing? (AMD graphics cards)
 

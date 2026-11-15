@@ -32,7 +32,8 @@ From the two overlay probes (`experiments/README.md`) and the user's priorities:
   - Native Wayland: an ordinary app can neither stay on top nor place itself. Only the
     layer-shell extension allows it (KDE, Sway, Hyprland; not GNOME). System-wide
     shortcuts need the GlobalShortcuts portal. As built: on Hyprland TurboHUD asks
-    Hyprland at runtime to float and pin its own windows; on other Wayland desktops it
+    Hyprland at runtime to float and pin its own windows and, while it runs, for its
+    shortcuts (Ctrl+Shift+L and so on, in Hyprland's live keymap); on other Wayland desktops it
     runs through XWayland; instead of shortcuts, `run_turbohud.sh --toggle` and the
     other commands can be bound to a key in the desktop's own settings.
   - Steam Deck in Game Mode (gamescope): outside windows do not show over the game.
@@ -142,8 +143,8 @@ turbohud/
     class_sheet.py      the list of car classes, opened from the settings
     windows.py          Win32: RegisterHotKey, focus hand-back
     macos.py            Cocoa: window level above Fullscreen, all Spaces; Carbon hotkeys
-    linux.py            Linux: Hyprland or XWayland, no shortcuts
-    hyprland.py         asks Hyprland to float, place and pin TurboHUD's own windows
+    linux.py            Linux: Hyprland or XWayland; shortcuts on Hyprland only
+    hyprland.py         asks Hyprland to float, place and pin TurboHUD's own windows, binds its keys
 assets/                 the icon, and presets/ (the shipped layouts per screen size)
 experiments/            the probes that settled the design; tsu_memory_probe.py is what
                         the Steam launch option runs from the source

@@ -66,8 +66,13 @@ Fedora 36, SteamOS 3.5, Arch or newer) and TSU's native Linux version. The downl
    `tar -xzf TurboHUD-<version>-linux-x64.tar.gz -C ~`
 2. Start it: double-click `TurboHUD` in the unpacked `TurboHUD` folder, or in a terminal
    `./TurboHUD/TurboHUD`.
-3. Linux has no shortcuts of its own (Ctrl+Shift+L and Ctrl+Shift+Q do nothing there).
-   Use the TurboHUD icon's menu (in the tray or status bar): **Move mode**, **Options**,
+3. On Hyprland (for example Omarchy) the shortcuts are the same as on Windows: while it
+   runs, TurboHUD adds Ctrl+Shift+L, Q, 1, 2 and 3 to Hyprland's keys, only where nothing
+   else has them (Ctrl+Shift+F12 for move mode where Ctrl+Shift+L is taken), and takes them
+   away at quit. No Hyprland file is changed; after a reload of Hyprland's settings they
+   come back within a moment. Other desktops have no shortcuts in TurboHUD (Ctrl+Shift+L
+   and Ctrl+Shift+Q do nothing there).
+   Everywhere, use the TurboHUD icon's menu (in the tray or status bar): **Move mode**, **Options**,
    **Settings…**, **Quit TurboHUD**. Or tell the running TurboHUD from a terminal, in a few
    hundredths of a second (with the download, `~/TurboHUD/TurboHUD --toggle` and so on; from
    the source, `run_turbohud.sh`):
@@ -81,8 +86,8 @@ Fedora 36, SteamOS 3.5, Arch or newer) and TSU's native Linux version. The downl
    | `TurboHUD --quit` | quit TurboHUD |
 
    Starting TurboHUD again while it runs opens no second copy: it switches the running
-   one to move mode. To have a key for it, bind the command in your desktop's own key
-   settings yourself (TurboHUD changes none), on a combination that is still free
+   one to move mode. To have a key for it on another desktop, or another key on Hyprland,
+   bind the command in your desktop's own key settings yourself, on a combination that is still free
    (`hyprctl binds` lists the taken ones). On Omarchy, whose bindings are in Lua, a line
    in `~/.config/hypr/bindings.lua`:
    `o.bind("SUPER + SHIFT + H", "TurboHUD move mode", "sh /home/<user>/<folder>/TurboHUD/run_turbohud.sh --toggle")`.
@@ -90,8 +95,8 @@ Fedora 36, SteamOS 3.5, Arch or newer) and TSU's native Linux version. The downl
    `bind = SUPER SHIFT, H, exec, sh /home/<user>/<folder>/TurboHUD/run_turbohud.sh --toggle`.
    Where the desktop has no tray, TurboHUD starts in move mode, so **Close** quits it.
 4. On Hyprland (for example Omarchy), TurboHUD asks Hyprland to float and pin its own
-   window above the game, without a frame and without taking the keyboard focus; your
-   Hyprland settings are not changed. On X11 Qt keeps it on top. On other Wayland
+   window above the game, without a frame and without taking the keyboard focus, and adds
+   its shortcuts while it runs; your Hyprland files are not changed. On X11 Qt keeps it on top. On other Wayland
    desktops (KDE, GNOME ...) TurboHUD runs through XWayland, where those desktops keep
    a window on top (not yet tried there; `TURBOHUD_PLATFORM=wayland` keeps Wayland).
 
@@ -152,8 +157,8 @@ The full guide to every section, menu item, button and option is
 
 - The HUD is made of **sections** (lap, delta, fuel, tires, player list, lap times, flags,
   radar, track map and more), each in its own box. Locked, clicks go through them to the game.
-- **Ctrl+Shift+L** (or **Move mode** in the TurboHUD icon's menu; on Linux
-  `TurboHUD --toggle`) switches to **move mode**: drag, nudge and size the sections, and use
+- **Ctrl+Shift+L** (or **Move mode** in the TurboHUD icon's menu; on Linux outside
+  Hyprland `TurboHUD --toggle`) switches to **move mode**: drag, nudge and size the sections, and use
   the panel to show or hide them, group and centre them, set text sizes, keep three presets
   (**Ctrl+Shift+1**, **2**, **3** load them) and load, share or design layouts per screen size.
   **Lock** or Ctrl+Shift+L again ends it, and so does a race beginning.

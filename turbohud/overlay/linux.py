@@ -1,31 +1,55 @@
-"""Linux and other systems. No system-wide shortcuts yet; the tray icon's menu switches
-move mode instead.
+"""Linux and other systems.
 
 On Hyprland (Wayland), where Qt cannot keep a window on top, TurboHUD asks Hyprland at
 runtime to float, place and pin its own window, and gives the keyboard focus back to
 the window that had it (turbohud.overlay.hyprland). Elsewhere Qt's stay-on-top hint does
 the work, as it does on X11.
+
+Shortcuts: on Hyprland, the same keys as on Windows and the Mac, added to Hyprland's live
+keymap while TurboHUD runs (turbohud.overlay.hyprland). Elsewhere none; the tray icon's menu
+and the command line (turbohud.control) do it, and a player can bind those to keys.
 """
 
 import logging
 import os
+import sys
+from pathlib import Path
 
 from PySide6.QtCore import QTimer
 from PySide6.QtGui import QGuiApplication
 
-from turbohud.overlay import hyprland
+from turbohud.overlay import LOCK_KEY, LOCK_KEY_BACKUP, hyprland
 
 APP_ID = 'TurboHUD'  # the Wayland app id, which desktops show as the window's class
 FIND_TRIES = 40  # times 50 ms: how long to wait for the window to appear in Hyprland
 FIND_STEP_MS = 50
 PLACE_TRIES = 3  # Hyprland may refuse requests for a window that has only just appeared
 PLACE_RETRY_MS = 250
+REBIND_MS = 200  # after Hyprland reloaded its config, which drops TurboHUD's keys
+SHORTCUT_NAMES = {'--toggle': 'move mode', '--quit': 'quit', '--preset': 'layout'}
 
 log = logging.getLogger(__name__)
 
 
+def own_command(args, frozen=None, executable=None, source=None):
+    """The command line that tells this TurboHUD to do something (turbohud.control): the
+    bundled program itself, or from the source folder this Python with launch_turbohud.py."""
+    frozen = getattr(sys, 'frozen', False) if frozen is None else frozen
+    executable = executable or sys.executable
+    if frozen:
+        return [executable, *args]
+    source = source or Path(__file__).resolve().parents[2] / 'launch_turbohud.py'
+    return [executable, '-B', str(source), *args]
+
+
+def shortcut_name(args):
+    name = SHORTCUT_NAMES[args[0]]
+    return f'{name} {args[1]}' if len(args) > 1 else name
+
+
 class Native:
     name = 'Linux'
+    taken_by = 'another Hyprland bind'
 
     def __init__(self, hypr='detect'):
         """`hypr`: a turbohud.overlay.hyprland.Hyprland, None for none, or 'detect'."""
@@ -130,8 +154,82 @@ class Native:
             self.hypr.focus(self.previous)
 
     def register_hotkeys(self, on_hotkey):
+        """On Hyprland, TurboHUD's keys in its live keymap, each running TurboHUD's command
+        line; True if move mode and quit have one. `on_hotkey` is not called: the command
+        line reaches the running TurboHUD. Elsewhere none."""
         self.lock_keys = []
-        return False
+        self.bound = []
+        if self.hypr is None:
+            return False
+        shortcuts = self._bind_all()
+        if self.bound:
+            self._watch_reloads()
+        return shortcuts
+
+    def _bind_all(self):
+        binds = self.hypr.binds()
+
+        def take(keys, args):
+            owner = self.hypr.bind_owner(keys, binds)
+            if owner == 'other':
+                log.warning('Hyprland: %s is bound to something else; TurboHUD leaves it', keys)
+                return False
+            if owner == 'turbohud':  # left by a TurboHUD that did not quit
+                self.hypr.unbind(keys)
+            if self.hypr.bind(keys, own_command(list(args)), shortcut_name(args)):
+                self.bound.append(keys)
+                return True
+            return False
+
+        (lock_keys, lock_args), (quit_keys, quit_args), *presets = hyprland.SHORTCUTS
+        if take(lock_keys, lock_args):
+            self.lock_keys = [LOCK_KEY]
+        elif take(hyprland.LOCK_BIND_BACKUP, lock_args):
+            self.lock_keys = [LOCK_KEY_BACKUP]
+        quit_ok = take(quit_keys, quit_args)
+        for keys, args in presets:
+            take(keys, args)
+        log.info('Hyprland: shortcuts %s while TurboHUD runs', ', '.join(self.bound) or 'none')
+        return bool(self.lock_keys) and quit_ok
+
+    def _watch_reloads(self):
+        """Add the keys again after Hyprland reloaded its config (Omarchy does at a theme
+        change, Hyprland when a config file is saved): a reload drops them."""
+        from PySide6.QtNetwork import QLocalSocket
+
+        path = hyprland.event_socket()
+        if path is None:
+            log.info('Hyprland: no event socket; a config reload drops the shortcuts')
+            return
+        self.events = QLocalSocket()
+        self.event_text = ''
+        self.events.readyRead.connect(self._read_events)
+        self.events.connectToServer(path)
+
+    def _read_events(self):
+        self.event_text += bytes(self.events.readAll()).decode('utf-8', 'replace')
+        *lines, self.event_text = self.event_text.split('\n')
+        if any(line.startswith('configreloaded>>') for line in lines):
+            log.info('Hyprland reloaded its config: adding the shortcuts again')
+            QTimer.singleShot(REBIND_MS, self._rebind)
+
+    def _rebind(self):
+        self.bound = []
+        self._bind_all()
 
     def unregister_hotkeys(self):
-        pass
+        """Take TurboHUD's keys out of Hyprland's keymap again: only those still its own."""
+        events = getattr(self, 'events', None)
+        if events is not None:
+            events.readyRead.disconnect(self._read_events)
+            events.abort()
+            self.events = None
+        bound = getattr(self, 'bound', [])
+        if self.hypr is None or not bound:
+            return
+        binds = self.hypr.binds()
+        for keys in bound:
+            if self.hypr.bind_owner(keys, binds) == 'turbohud':
+                self.hypr.unbind(keys)
+        log.info('Hyprland: shortcuts removed')
+        self.bound = []

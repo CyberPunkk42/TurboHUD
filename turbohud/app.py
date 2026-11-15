@@ -291,12 +291,13 @@ def one_window_wanted(native, environ=os.environ):
     return bool(getattr(native, 'one_window', False)) and environ.get('TURBOHUD_ONE_WINDOW', '1') != '0'
 
 
-def taken_note(lock_keys, lock_key='Ctrl+Shift+L'):
+def taken_note(lock_keys, lock_key='Ctrl+Shift+L', taken_by='another program (AMD Software?)'):
     """What the tooltip and the log say where another program has Ctrl+Shift+L (AMD Software
-    does) and the second key works instead; None where Ctrl+Shift+L works or neither does."""
+    does; on Hyprland another bind) and the second key works instead; None where Ctrl+Shift+L
+    works or neither does."""
     if not lock_keys or lock_key in lock_keys:
         return None
-    return f'{lock_key} is taken by another program (AMD Software?): {lock_keys[0]} switches move mode'
+    return f'{lock_key} is taken by {taken_by}: {lock_keys[0]} switches move mode'
 
 
 def tray_text(status, warning=None):
@@ -1703,7 +1704,9 @@ def run(args, folder):
     log.info(
         'shortcuts: %s' % (', '.join([*lock_keys, 'Ctrl+Shift+Q']) if shortcuts else 'none, system-wide')
     )
-    shortcut_note = taken_note(lock_keys)
+    shortcut_note = taken_note(
+        lock_keys, taken_by=getattr(native, 'taken_by', 'another program (AMD Software?)')
+    )
     if shortcut_note:
         log.warning(shortcut_note)
         tray.setToolTip(tray_text('starting', shortcut_note))
@@ -1730,6 +1733,11 @@ def run(args, folder):
         return 'ok'
 
     commands = listen_for_commands(app, on_command)
+    if shortcuts and not commands and getattr(native, 'bound', None):
+        # Hyprland's keys run the command line, which needs the command socket.
+        log.warning('no command socket: the Hyprland shortcuts would do nothing, so none')
+        native.unregister_hotkeys()
+        shortcuts, lock_keys = False, []
     log.info('commands: run_turbohud.sh --toggle / --quit' if commands else 'no command socket')
     panel = MovePanel(
         native,

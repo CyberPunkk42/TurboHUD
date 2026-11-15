@@ -95,6 +95,18 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+  - 2026-11-15: Shortcuts on Hyprland, asked for by the user (`feature/hyprland-shortcuts`, backlog item 5):
+    Ctrl+Shift+L, Q, 1, 2 and 3 now work on Omarchy as on Windows and the Mac. While TurboHUD runs it adds them to
+    Hyprland's live keymap (`hyprctl eval` with `hl.bind`, older Hyprland `keyword bindd`), each running its own
+    command line (`--toggle`, `--quit`, `--preset N`), only on keys `hyprctl binds` shows free (Ctrl+Shift+F12 for
+    move mode where Ctrl+Shift+L is taken), labelled "TurboHUD shortcut"; at quit it removes exactly those. A
+    config reload drops them, so it listens on Hyprland's event socket and adds them again; keys left by a
+    TurboHUD that crashed are taken over at the next start. No Hyprland file changes; AGENTS.md has the
+    exception the user approved. Both guides, README, the Linux read-me, HOW_IT_WORKS and STACK say so. Tests: key
+    names, the Lua and classic commands, escaping, who owns a key, the five keys bound and removed, taken keys
+    left alone, the second key, leftovers taken over, rebind after a reload event, no command socket means
+    none. Checked on this PC's Hyprland 0.56.2: all five bound, back after `hyprctl reload`, gone after quit. Not
+    yet: the keys pressed in a race, and a Linux build with it.
   - 2026-11-15: TurboHUD's own layouts in `customization/display_presets`, asked for by the user
     (`feature/default-layouts-in-folder`, on `feature/user-guide-in-builds`): the five shipped layouts are in the
     Windows zip and the Linux tar as `<width>x<height> (TurboHUD default).json`, and at each start the app writes

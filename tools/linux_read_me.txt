@@ -45,8 +45,16 @@ a few seconds after the start. Hover over the tray icon to see what TurboHUD is 
 
 
 USE
-Linux has no global shortcuts in TurboHUD. Use the tray icon's menu, or these commands (you can
-put them on keys in your desktop's keyboard settings):
+On Hyprland (Omarchy and others), while TurboHUD runs:
+    Ctrl+Shift+L       move mode on or off: drag and resize the sections, tick off the
+                       ones you do not want (Ctrl+Shift+F12 if your setup has Ctrl+Shift+L)
+    Ctrl+Shift+1, 2, 3 load a saved layout
+    Ctrl+Shift+Q       quit
+TurboHUD adds these keys to Hyprland only where nothing else uses them, takes them away when
+it quits, and changes none of your Hyprland files.
+
+Other desktops have no shortcuts in TurboHUD. Use the tray icon's menu, or these commands
+(you can put them on keys in your desktop's keyboard settings):
     ~/TurboHUD/TurboHUD --toggle       move mode on or off: drag and resize the sections,
                                        tick off the ones you do not want
     ~/TurboHUD/TurboHUD --preset 1     load a saved layout (1, 2 or 3)
