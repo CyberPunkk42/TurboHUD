@@ -95,6 +95,15 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+  - 2026-11-15: The guides checked against the app, the User Guide in full and the Quick Start short, asked for by
+    the user (same branch, `feature/radar-explained`): the Quick Start rewritten to about 110 lines (was 150),
+    one short line per section and feature, pointing to the User Guide. Corrected where the app had moved on: on
+    Windows, the Mac and Linux nothing shows while TurboHUD waits for TSU, then the Clock; "Time since start"
+    only on a system TurboHUD cannot read TSU on (the guides, README and both Read Me First files had promised
+    it, or a clock, at the first start); the standings' heading row, steady columns and width; classes need two
+    cars; Nearby cars' tag or class and place and the name giving up letters to pit times; which edge sets the
+    text size and why a side springs back; HOW_IT_WORKS' table and its old section names. AGENTS.md's rule
+    stands; the memory notes the short Quick Start.
   - 2026-11-15: The radar explained in the guides, and its preview with everything on it, asked for by the user
     (`feature/radar-explained`): the User Guide's Radar section says what it shows and when (half a second
     faint, alongside full, not standing) and has a table of every object: you, red, yellow, grey, a class colour

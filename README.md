@@ -28,7 +28,7 @@ it. After that it starts with a double-click.
 
 **What to expect:** TurboHUD opens no window and has no Dock or taskbar button. When it
 runs, you see:
-- a small HUD: "TurboHUD - time since start" and the clock (until a race shows the rest)
+- once TSU runs, a small clock (the race sections come when a race starts)
 - the TurboHUD icon (a speedometer) in the menu bar (Mac) or in the taskbar's
   notification area (Windows; it may be hidden behind the **^** arrow)
 
@@ -46,8 +46,8 @@ Needs macOS as said in the download's `Read Me First.txt`.
 4. Open **System Settings > Privacy & Security** and scroll down to **Security**. Next to
    "TurboHUD was blocked", click **Open Anyway**, enter your password, and click **Open
    Anyway** once more.
-5. TurboHUD starts: look for the time since start on the screen and the TurboHUD icon in the menu
-   bar. From now on, a double-click is enough.
+5. TurboHUD starts: look for the TurboHUD icon in the menu bar (and, once TSU runs, a small
+   clock on the screen). From now on, a double-click is enough.
 
 ### Windows
 1. Download `TurboHUD-<version>-windows-x64.zip`.
@@ -55,8 +55,8 @@ Needs macOS as said in the download's `Read Me First.txt`.
    Starting it from inside the ZIP without extracting does not work.
 3. Open the extracted `TurboHUD` folder and double-click `TurboHUD.exe`.
 4. If "Windows protected your PC" appears, click **More info**, then **Run anyway**.
-5. TurboHUD starts: look for the time since start on the screen and the TurboHUD icon in the
-   notification area.
+5. TurboHUD starts: look for the TurboHUD icon in the notification area (and, once TSU runs, a
+   small clock on the screen).
 
 ### Linux
 Needs a 64-bit Linux with glibc 2.35 or newer (Ubuntu 22.04, Linux Mint 21, Debian 12,
