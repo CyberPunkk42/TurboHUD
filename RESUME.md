@@ -95,6 +95,15 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+  - 2026-11-15: The grid on the wrong monitor and the mouse jumping on Hyprland, reported by the user
+    (`fix/hyprland-grid-and-focus`): the grid went on Qt's main screen, which on Wayland is only the first monitor
+    Hyprland names (here the small one above); it now goes on the screen holding most shown sections, else the
+    main screen, else the largest (`grid_screen`). And after placing each window TurboHUD focused the window from
+    its own start (the terminal), which Hyprland does by moving the mouse onto it: now it gives the focus back
+    only where its own window (the panel) has it, to the window focused when move mode began. Tests: the grid's
+    screen with the user's two monitors, ties, sections off-screen; no focus where it never left, the window from
+    move mode's start, never its own. Checked with this PC's monitors and the logged places: DP-2. Not yet: seen in
+    move mode on Hyprland.
   - 2026-11-15: Shortcuts on Hyprland, asked for by the user (`feature/hyprland-shortcuts`, backlog item 5):
     Ctrl+Shift+L, Q, 1, 2 and 3 now work on Omarchy as on Windows and the Mac. While TurboHUD runs it adds them to
     Hyprland's live keymap (`hyprctl eval` with `hl.bind`, older Hyprland `keyword bindd`), each running its own

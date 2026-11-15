@@ -13,9 +13,10 @@ class FakeHypr:
     def __init__(self):
         self.where = (300, 200, 450, 220)
         self.focused = []
+        self.active = '0xgame'
 
     def active_window(self):
-        return '0xgame'
+        return self.active
 
     def geometry(self, address):
         return self.where
@@ -78,8 +79,41 @@ class LinuxNativeTests(unittest.TestCase):
         native = self.native(hypr)
         native.prepare_app()
         native.addresses[1] = '0xaaa'
+        hypr.active = '0xaaa'  # TurboHUD's panel has it
         native.give_focus_back()
         self.assertEqual(hypr.focused, ['0xgame'])
+
+    def test_no_focus_and_no_mouse_jump_where_the_focus_never_left(self):
+        # Hyprland moves the mouse onto a window it focuses: the grid and the sections take no
+        # focus, so placing them must not focus the game (or a terminal) again.
+        hypr = FakeHypr()
+        native = self.native(hypr)
+        native.prepare_app()
+        native.addresses[1] = '0xaaa'
+        hypr.active = '0xbrowser'
+        native.give_focus_back()
+        self.assertEqual(hypr.focused, [])
+
+    def test_move_mode_remembers_the_window_focused_then(self):
+        hypr = FakeHypr()
+        native = self.native(hypr)
+        hypr.active = '0xterminal'  # where TurboHUD was started from
+        native.prepare_app()
+        native.addresses[1] = '0xpanel'
+        hypr.active = '0xgame'
+        native.take_focus()  # move mode begins over the game
+        hypr.active = '0xpanel'
+        native.give_focus_back()
+        self.assertEqual(hypr.focused, ['0xgame'])
+
+    def test_move_mode_never_remembers_its_own_window(self):
+        hypr = FakeHypr()
+        native = self.native(hypr)
+        native.prepare_app()
+        native.addresses[1] = '0xpanel'
+        hypr.active = '0xpanel'
+        native.take_focus()
+        self.assertEqual(native.previous, '0xgame')
 
 
 if __name__ == '__main__':

@@ -147,11 +147,23 @@ class Native:
             self.hypr.move(address, x, y)
 
     def take_focus(self):
-        pass
+        """Move mode begins: remember the window that has the focus now (the game, usually),
+        for give_focus_back; not the one from TurboHUD's start, such as the terminal it came from."""
+        if self.hypr is None:
+            return
+        active = self.hypr.active_window()
+        if active and active not in self.addresses.values():
+            self.previous = active
 
     def give_focus_back(self):
-        if self.hypr is not None and self.previous and self.previous not in self.addresses.values():
-            self.hypr.focus(self.previous)
+        """Back to the window that had the focus, only where one of TurboHUD's own windows (the
+        panel) has it now. Hyprland moves the mouse onto a window it focuses, so focusing it when
+        the focus never left made the mouse jump to it (reported by the user on 2026-11-15)."""
+        if self.hypr is None or not self.previous or self.previous in self.addresses.values():
+            return
+        if self.hypr.active_window() not in self.addresses.values():
+            return
+        self.hypr.focus(self.previous)
 
     def register_hotkeys(self, on_hotkey):
         """On Hyprland, TurboHUD's keys in its live keymap, each running TurboHUD's command
