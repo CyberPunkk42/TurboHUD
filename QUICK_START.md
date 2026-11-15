@@ -88,8 +88,9 @@ listed in the panel under four headings:
 - **Nearby cars**: the leader on top, then the 3 cars ahead of and the 3 behind you on the track,
   with the gap to each.
 - **Track map**: learnt from three clean laps of yours; the cars as dots, incidents ringed.
-- **Radar**: cars close to you, red right beside you and yellow closing in, with the
-  slipstream behind the cars ahead; arrows at its bottom edge for cars just out of view behind.
+- **Radar**: cars close to you, seen from above: red right beside you, yellow closing in, grey
+  not in the way, an arrow at its edge for one just out of view, and the slipstream behind the
+  cars ahead (all in the User Guide).
   By default only in the cockpit cameras; **Every camera** in the settings shows it in third
   person too.
 - **Blue flag**: a faster car about to lap you.

@@ -95,6 +95,14 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+  - 2026-11-15: The radar explained in the guides, and its preview with everything on it, asked for by the user
+    (`feature/radar-explained`): the User Guide's Radar section says what it shows and when (half a second
+    faint, alongside full, not standing) and has a table of every object: you, red, yellow, grey, a class colour
+    with its warning round it, the cyan slipstream cone, the cyan outline of the car you draft, the arrow at the
+    edge; the Quick Start names them. In move mode the radar showed only the one car behind that the preview
+    race had; `preview.preview_radar` now shows a car beside, one closing in, one ahead with its cone and the
+    player in it, one far to the side, one past the edge (an arrow) and, with classes, one of the other class;
+    it follows the cones option. Tests: every kind there, the options. Not yet: seen on the screen.
   - 2026-11-15: Who drafts you, bigger in the Slipstream section, and nothing in it moving, asked for by the user
     (players missed it) (`feature/draft-who-bigger`): "… drafts you 42%" is in the meter's medium text, right
     below it, the name cut to 10 letters (`DRAFTER_NAME_SHOWN`) so the row fits the box (+6 px wide, once: 314 px

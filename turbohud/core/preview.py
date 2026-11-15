@@ -349,6 +349,27 @@ def preview_state(folder=None, gear=True, classes=False):
     ), (points, start)
 
 
+def preview_radar(classes=False, cone=True):
+    """The radar with every kind of thing it can show (asked for by the user on 2026-11-15: one
+    car behind, as the race had it, left most of it unseen): a car beside (red), one closing in
+    behind (yellow), one ahead whose slipstream the player is in (with `cone`), one near but not
+    counting, far to the side (grey), one further behind than the radar shows (an arrow at its
+    bottom edge), and with `classes` one of the other class, in its colour with its warning
+    round it. Ahead and side in metres from the player's car, its heading up."""
+    blips = [
+        race.Blip(-0.5, 3.2, 0.02, 0.0),  # beside, on the right
+        race.Blip(-10.0, -1.4, 0.06, 0.32),  # closing in behind, on the left
+        race.Blip(11.0, 0.6, -0.03, None, True if cone else None),  # ahead: you are in its slipstream
+        race.Blip(5.0, 7.5, 0.0, None),  # near, but far to the side
+        race.Blip(-27.0, 0.8, 0.0, 0.45),  # further behind than shown: an arrow at the edge
+    ]
+    if classes:
+        gt4 = race.radar_class_colors({0: 'GT3', 1: 'GT4'})['GT4']
+        blips.append(race.Blip(-4.5, -3.4, 0.0, 0.15, class_color=gt4))  # another class, close
+    view = race.RADAR_VIEW
+    return race.RadarView(1.0, tuple(blips), view, (30.0, 20.0) if cone else None)
+
+
 @functools.cache
 def preview_sections(
     folder=None,
@@ -396,4 +417,5 @@ def preview_sections(
     if not sections.get('shortcut'):
         sections['shortcut'] = race.shortcut_rows(state, {NAMES[LOCAL]: 2.4})
     sections.setdefault('blue', 1.0)
+    sections['radar'] = preview_radar(classes, radar_cone)
     return sections

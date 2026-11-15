@@ -204,3 +204,24 @@ class DraftPreviewTests(unittest.TestCase):
         self.assertEqual(len(rows), 3)
         self.assertIn(' drafts you ', rows[1].text)
         self.assertEqual(rows[1].style, 'medium')
+
+
+class RadarPreviewTests(unittest.TestCase):
+    """Every kind of thing the radar shows, in move mode (asked for by the user on 2026-11-15)."""
+
+    def test_every_kind_on_it(self):
+        view = preview.preview_radar(classes=True, cone=True)
+        seconds = [blip.seconds for blip in view.blips]
+        self.assertIn(0.0, seconds)  # beside: red
+        self.assertTrue(any(s is not None and race.RADAR_FULL < s <= view.within for s in seconds))  # yellow
+        self.assertTrue(any(s is None for s in seconds))  # not counting: grey
+        self.assertTrue(any(blip.in_cone for blip in view.blips))  # its slipstream, the player in it
+        self.assertTrue(any(abs(blip.ahead) > view.view for blip in view.blips))  # an arrow at the edge
+        self.assertTrue(any(blip.class_color for blip in view.blips))  # another class
+        self.assertEqual(view.cone, (30.0, 20.0))
+
+    def test_it_follows_the_options(self):
+        view = preview.preview_radar(classes=False, cone=False)
+        self.assertIsNone(view.cone)
+        self.assertFalse(any(blip.in_cone is not None or blip.class_color for blip in view.blips))
+        self.assertIs(preview.preview_sections()['radar'], preview.preview_sections()['radar'])

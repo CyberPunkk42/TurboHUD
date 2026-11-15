@@ -2125,3 +2125,11 @@ its "Recent changes".
     sits under the text, and before it jumped whenever the "drafts you" row came or went). The box is sized by
     its sample for both, fixed. The preview has a car 12 m behind the player in its slipstream. Guide says so.
     Tests: always two rows, the bigger style, the name cut, the preview's drafter. Not yet: seen in a race.
+  - 2026-11-15: The radar explained in the guides, and its preview with everything on it, asked for by the user
+    (`feature/radar-explained`): the User Guide's Radar section says what it shows and when (half a second
+    faint, alongside full, not standing) and has a table of every object: you, red, yellow, grey, a class colour
+    with its warning round it, the cyan slipstream cone, the cyan outline of the car you draft, the arrow at the
+    edge; the Quick Start names them. In move mode the radar showed only the one car behind that the preview
+    race had; `preview.preview_radar` now shows a car beside, one closing in, one ahead with its cone and the
+    player in it, one far to the side, one past the edge (an arrow) and, with classes, one of the other class;
+    it follows the cones option. Tests: every kind there, the options. Not yet: seen on the screen.

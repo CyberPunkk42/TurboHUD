@@ -212,15 +212,33 @@ in move mode turns its dark square on (the default) or off. It is square: size i
 corner.
 
 **Radar**
-Your car and the cars around you, when one is within half a second behind or ahead (faint)
-up to alongside (fully visible): red right beside you, yellow closing in. It shows about six
-car lengths ahead and behind; a car further behind that already counts is an arrow at the
-bottom edge, fainter the further away. In a multi-class race a car of another class is
-filled in its class's colour. With **Slipstream cones on the radar**, the
-slipstream behind each car ahead shows as a cone. By default it shows only in the cockpit
-cameras; **Every camera** in the settings window (or **Radar in every camera** in the icon's
-menu) shows it in the views from outside the car too. How soon it shows is set under
-**Settings…**.
+The cars around you, seen from above, so you know where they are without looking round:
+your car in the middle, heading up; what is above the middle line is ahead of you, below it
+behind. It shows about six car lengths ahead and behind, and the cars are drawn a little
+bigger than they are, to be seen at a glance.
+
+It appears only when a car is close: faintly once one is within half a second behind or
+ahead of you, fully once it is alongside or within a tenth of a second, and it fades away
+again shortly after the last one has gone. Standing (on the grid) it stays away. How soon it
+appears is set under **Settings…** (**Shows a car within:**, 0.5 s by default).
+
+What you see on it:
+
+| On the radar | Means |
+|---|---|
+| Light grey car in the middle | You |
+| **Red** car | Right beside you, or less than 0.1 s behind: no room there |
+| **Yellow** car | Closing in, within the time set (0.5 s by default) |
+| **Grey** car | Near but no danger: far to the side (another part of the track) or further off |
+| Car filled in a **class colour** (blue, green, purple or pink) | In a race with classes, a car of another class than yours; red or yellow round it when it is close, as above |
+| **Cyan cone** behind a car ahead | Its slipstream, as far and as wide as the event has it; brighter while you are in it |
+| **Cyan outline** round a car ahead | The car whose slipstream you are in now |
+| **Arrow** at the top or bottom edge | A car that already counts but is further away than the radar shows, ahead or behind: coloured as a car would be, fainter the further off it is |
+
+The cones can be turned off with **Slipstream cones on the radar**. By default the radar
+shows only in the cockpit cameras; **Every camera** in the settings window (or **Radar in
+every camera** in the icon's menu) shows it in the views from outside the car too. In move
+mode the preview shows each of these at once.
 
 **Blue flag**
 A navy bar that fades in when a car about to lap you is within 2 seconds behind (faint at
