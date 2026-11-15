@@ -29,6 +29,7 @@ from turbohud.core.hud import (
     steady_text,
     tag_left,
     tyre_right,
+    unused_dropped,
 )
 
 # On Linux the desktop's default font may be a monospace or icon font; prefer a plain
@@ -528,6 +529,8 @@ def draw_hud(painter, lines, theme, scale=None, left=0, width=None, centre=False
         def steady_advance(text, size):
             return text_advance(steady_text(text), size)
 
+        if snug and not centre:
+            reserve = unused_dropped(lines, reserve)
         placed = list(lines) + list(reserve)
         if snug and not centre:
             width = snug_width(lines, reserve, width, margin, steady_advance)

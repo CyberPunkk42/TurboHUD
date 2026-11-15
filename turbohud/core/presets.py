@@ -4,7 +4,8 @@ A preset file holds a layout: where each section sits on the screen (from its to
 its size, text size and options, and the size of the screen it was made for. Nothing personal: it
 can be shared, and TurboHUD ships one per common screen size (assets/presets). Asked for by the
 user on 2026-11-13: defaults for 1920x1080, 2560x1440, 2560x1600, 3840x2160 and 5120x1440, made
-from their own 5120x1440 layout, and presets of one's own to make and share.
+from their own 5120x1440 layout, and presets of one's own to make and share. On 2026-11-15 made
+again from their newer layout, with 2294x1490 (a Mac's) added.
 
 Fitting keeps the order of the sections (`fit_layout`): they scale by the ratio of the screens'
 heights, so text keeps its proportion to the screen, and the empty room between them is shared
@@ -24,7 +25,8 @@ from turbohud.core.hud import FONT_SIZES, is_text_section, text_box
 from turbohud.core.settings import SectionPlace, _font, _sections, _spacing
 
 FORMAT = 1  # the preset file's format, written into it
-SCREENS = ((1920, 1080), (2560, 1440), (2560, 1600), (3840, 2160), (5120, 1440))  # shipped ones
+# The shipped ones (assets/presets); 2294x1490, a Mac's, since 2026-11-15 (asked for by the user).
+SCREENS = ((1920, 1080), (2294, 1490), (2560, 1440), (2560, 1600), (3840, 2160), (5120, 1440))
 
 
 def file_name(size):

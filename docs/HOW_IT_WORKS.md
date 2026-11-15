@@ -66,7 +66,7 @@ the menus only the local time shows.
    its own child process, and then answers read-only questions about the game's memory
    from TurboHUD. That is all it does.
 3. **TurboHUD** (`turbohud/`). The overlay app you start with `run_turbohud.sh`. It
-   asks the probe for the race data about 20 times a second (10 or 5 if set so in the
+   asks the probe for the race data about 10 times a second (20 or 5 if set so in the
    settings window), works out what to show and draws the sections. A section that is
    unticked is not drawn; on the Mac its window also leaves the screen.
 

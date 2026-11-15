@@ -125,11 +125,28 @@ class TagColumnTests(unittest.TestCase):
         self.assertEqual(hud.tag_left(lines, 400, self.measure), 400 - 3 * size - gap - 5 * size)
         self.assertIsNone(hud.tag_left(self.lines(hud.Row('A', 'small', before='L1')), 400, self.measure))
 
+    def test_room_for_columns_the_race_does_not_have_goes(self):
+        # No classes and no tags in this race: their room goes to the box's right edge, not
+        # between the names and the laps (asked for by the user on 2026-11-15).
+        reserve = self.lines(
+            hud.Row('Name', 'small', middle='PIT 00.0s', before='L99', tag='PROAM', overall='P20')
+        )
+        plain = self.lines(hud.Row('Ann', 'small', middle='1:23.456', before='L3'))
+        kept = hud.unused_dropped(plain, reserve)[0]
+        self.assertEqual((kept.tag, kept.overall), ('', ''))
+        self.assertEqual((kept.before, kept.middle), ('L99', 'PIT 00.0s'))  # a pit stop moves nothing
+        tagged = self.lines(hud.Row('Ann', 'small', middle='1:23.456', before='L3', tag='FTR'))
+        self.assertEqual(hud.unused_dropped(tagged, reserve)[0].tag, 'PROAM')
+        self.assertLess(
+            hud.lines_width(plain + hud.unused_dropped(plain, reserve), self.measure),
+            hud.lines_width(plain + reserve, self.measure),
+        )
+
     def test_it_counts_towards_the_width(self):
         plain = self.lines(hud.Row('A', 'small', middle='1:23', right='0:12', before='L12'))
         tagged = self.lines(hud.Row('A', 'small', middle='1:23', right='0:12', before='L12', tag='FTR'))
         size = plain[0].size
-        self.assertEqual(
+        self.assertAlmostEqual(
             hud.lines_width(tagged, self.measure) - hud.lines_width(plain, self.measure),
             3 * size + hud.COLUMN_GAP * size,
         )
@@ -156,8 +173,12 @@ class BeforeColumnTests(unittest.TestCase):
         lap = self.lines(hud.Row('A', 'small', middle='1:23', right='0:12', before='L12'))
         size = plain[0].size
         extra = 3 * size + hud.COLUMN_GAP * size
-        self.assertEqual(hud.lines_width(lap, self.measure), hud.lines_width(plain, self.measure) + extra)
-        self.assertEqual(hud.line_width(lap[0], self.measure), hud.line_width(plain[0], self.measure) + extra)
+        self.assertAlmostEqual(
+            hud.lines_width(lap, self.measure), hud.lines_width(plain, self.measure) + extra
+        )
+        self.assertAlmostEqual(
+            hud.line_width(lap[0], self.measure), hud.line_width(plain[0], self.measure) + extra
+        )
 
 
 class DeltaBarPlaceTests(unittest.TestCase):
@@ -1090,7 +1111,7 @@ class OverallColumnTests(unittest.TestCase):
         line = hud.Line('1. Name', 1, 'text', 10, overall='P12', middle='1:00.0')
         without = hud.replace(line, overall='')
         widths = hud.lines_width([line], self.measure), hud.lines_width([without], self.measure)
-        self.assertEqual(widths[0] - widths[1], len('P12') + hud.COLUMN_GAP)
+        self.assertAlmostEqual(widths[0] - widths[1], len('P12') + hud.COLUMN_GAP)
 
 
 class TextSizeTests(unittest.TestCase):

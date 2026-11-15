@@ -69,7 +69,9 @@ class Row:
 
 FLAG_WIDTH = 1.5  # a flag's room before the text, in font sizes
 TYRE_WIDTH = 1.0  # a tire compound's ring, in font sizes (no lower than the text's descenders)
-COLUMN_GAP = 1.0  # least room between the text and the right column, in font sizes
+# Least room between the text and a column, and between columns, in font sizes: 0.6 since 2026-11-15
+# (was 1.0; players found the standings too wide, asked for by the user).
+COLUMN_GAP = 0.6
 
 
 @dataclass(frozen=True)
@@ -281,6 +283,16 @@ def tag_left(lines, before_end, measure):
     gap = max(COLUMN_GAP * line.size for line in lines)
     start = before_end - before - gap if before is not None else before_end
     return start - tag
+
+
+def unused_dropped(lines, reserve):
+    """The `reserve` (a snug section's usual content, whose columns are made room for) without
+    the overall place and the clan tag where no line of `lines` has one: the race has no classes
+    or no tags, so their room goes to the box's right edge rather than between the names and
+    the laps (asked for by the user on 2026-11-15). The other columns keep their room for their
+    widest text (L99, PIT, CUT, JUMP, DNF), so a pit stop or a penalty moves nothing."""
+    drop = {name: '' for name in ('overall', 'tag') if not any(getattr(line, name) for line in lines)}
+    return [replace(line, **drop) for line in reserve] if drop else list(reserve)
 
 
 def overall_right(lines, middle_end, tyre_end, before_end, tag_start, measure):

@@ -74,3 +74,34 @@ class PreviewTests(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class StandingsSectionTests(unittest.TestCase):
+    """The standings' box follows the columns shown (asked for by the user on 2026-11-15)."""
+
+    def setUp(self):
+        from turbohud.core.hud import RACE_SECTIONS
+
+        self.base = next(s for s in RACE_SECTIONS if s.name == 'laptimes')
+
+    def width(self, section):
+        from turbohud.core.hud import content_size
+
+        return content_size(section.samples[0], 1.0, lambda text, size: len(text) * size * 0.6)[0]
+
+    def test_every_column_left_out_makes_it_narrower(self):
+        everything = race.standings_section(self.base)
+        self.assertEqual(self.width(everything), self.width(self.base))
+        fewer = race.standings_section(self.base, ('flag', 'best', 'current'))
+        fewest = race.standings_section(self.base, ('flag', 'current'))
+        self.assertLess(self.width(fewer), self.width(everything))
+        self.assertLess(self.width(fewest), self.width(fewer))
+
+    def test_tags_and_the_overall_place_go_with_their_options(self):
+        rows = race.standings_section(self.base, classes=False).samples[0]
+        self.assertTrue(all(not row.overall for row in rows))
+        self.assertTrue(any(row.tag for row in rows))  # the clan tags still show
+        rows = race.standings_section(self.base, clan_tags=False, classes=False).samples[0]
+        self.assertTrue(all(not row.tag for row in rows))
+        rows = race.standings_section(self.base, clan_tags=False, classes=True).samples[0]
+        self.assertTrue(any(row.tag for row in rows))  # in a race with classes, the class goes there

@@ -51,7 +51,8 @@ class UpgradeLayoutTests(unittest.TestCase):
         settings.save_settings(self.path, self.lap_times(2, 300))
         upgraded = app.upgrade_layout(settings.load_settings(self.path), self.path, self.ink)
         place = upgraded.sections['laptimes']
-        self.assertEqual((place.x, place.y, place.width), (100, 200, 500))
+        self.assertEqual((place.x, place.y), (100, 200))
+        self.assertLessEqual(place.width, 500)  # no wider than its text since layout 7
         # The 4 more rows of 21 px on a box that fits 16 rows and a heading, 351 px at scale 1.
         self.assertEqual(place.height, round(300 * (351 + 84) / 351))
         self.assertEqual(upgraded.presets[2]['laptimes'], place)
@@ -407,3 +408,44 @@ class StartLayoutTests(unittest.TestCase):
     def test_placed_sections_kept_without_own_layout(self):
         placed = replace(settings.Settings(), sections={'speed': settings.SectionPlace(1, 2, 3, 4)})
         self.assertEqual(self.start(placed), placed)
+
+
+class NarrowerStandingsTests(unittest.TestCase):
+    """Layout 7: the standings and nearby cars no wider than their text needs (2026-11-15)."""
+
+    def setUp(self):
+        self.path = Path(tempfile.mkdtemp()) / settings.SETTINGS_FILE
+
+    @staticmethod
+    def ink(_text, size):
+        return size * 0.7, 0
+
+    @staticmethod
+    def measure(text, size):
+        return len(text) * size * 0.6
+
+    def test_wide_boxes_become_as_wide_as_their_text_also_in_presets(self):
+        from turbohud.core.hud import RACE_SECTIONS, base_size, font_scale
+
+        wide = settings.SectionPlace(10, 20, 2000, 400, font=20)
+        clock = settings.SectionPlace(10, 500, 900, 60)
+        saved = settings.Settings(
+            sections={'laptimes': wide, 'players': wide, 'localtime': clock},
+            presets={1: {'laptimes': wide}},
+            layout_version=6,
+        )
+        settings.save_settings(self.path, saved)
+        upgraded = app.upgrade_layout(settings.load_settings(self.path), self.path, self.ink, self.measure)
+        laptimes = next(s for s in RACE_SECTIONS if s.name == 'laptimes')
+        needed = base_size(laptimes, font_scale(20), self.measure)[0]
+        self.assertEqual(upgraded.sections['laptimes'].width, needed)
+        self.assertEqual(upgraded.presets[1]['laptimes'].width, needed)
+        self.assertLess(upgraded.sections['players'].width, 2000)
+        self.assertEqual(upgraded.sections['localtime'].width, 900)  # not one of them
+        self.assertEqual(upgraded.sections['laptimes'].height, 400)  # only the width
+
+    def test_a_box_already_narrow_enough_stays(self):
+        narrow = settings.SectionPlace(10, 20, 100, 400)
+        settings.save_settings(self.path, settings.Settings(sections={'laptimes': narrow}, layout_version=6))
+        upgraded = app.upgrade_layout(settings.load_settings(self.path), self.path, self.ink, self.measure)
+        self.assertEqual(upgraded.sections['laptimes'].width, 100)

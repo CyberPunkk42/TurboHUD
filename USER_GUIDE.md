@@ -294,7 +294,8 @@ not end it. Your layout is saved as you change it.
 
 ## 5. Layouts for every screen size
 
-TurboHUD comes with layouts for 1920x1080, 2560x1440, 2560x1600, 3840x2160 and 5120x1440.
+TurboHUD comes with layouts for 1920x1080, 2294x1490 (a Mac's), 2560x1440, 2560x1600, 3840x2160 and
+5120x1440, all made from one layout for 5120x1440 and fitted to each size.
 They are in the **`customization/display_presets`** folder beside TurboHUD: beside
 `TurboHUD.exe` on Windows, beside the `TurboHUD` program on Linux; on the Mac, and wherever
 that folder cannot be written to, in TurboHUD's settings folder (section 8). They are named
@@ -351,7 +352,7 @@ The window has two columns, under headings. The on/off options are the same as u
   flag, 1 to 10 seconds (2 by default).
 
 **Reading the race**
-- **Race reads a second:** 20, 10 or 5. Fewer ask less of the game, but the delta and the
+- **Race reads a second:** 20, 10 (the default) or 5. Fewer ask less of the game, but the delta and the
   track map move less smoothly, and a track first learnt at 5 gets a coarser line.
 
 At the bottom:
