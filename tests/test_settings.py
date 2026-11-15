@@ -303,6 +303,13 @@ class PresetTests(unittest.TestCase):
         path.write_text('{"presets": []}')
         self.assertEqual(s.load_settings(path).presets, {})
 
+    def test_one_tint_for_each_group_is_on_unless_turned_off(self):
+        path = self.path()
+        path.write_text('{}')
+        self.assertTrue(s.load_settings(path).group_tint)
+        s.save_settings(path, s.Settings(group_tint=False))
+        self.assertFalse(s.load_settings(path).group_tint)
+
     def test_nearby_cars_short_list_is_on_unless_turned_off(self):
         path = self.path()
         path.write_text('{}')

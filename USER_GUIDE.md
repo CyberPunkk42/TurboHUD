@@ -42,6 +42,9 @@ behind the **^** arrow), and in the tray of your desktop's panel on Linux. Its m
   - **Speed in mph**: the speed in mph instead of km/h.
   - **Light tint behind all sections**: a faint dark box behind every section's text, for
     reading it on bright tracks. Each section also has its own **Tint** in move mode.
+  - **One tint for each group** (Mac): sections in the same group with their tint on share
+    one tint while locked, the room between them too, so the group reads as one box. On by
+    default. On Windows and Linux each section keeps its own tint for now.
   - **Slipstream cones on the radar**: the slipstream behind each car ahead.
   - **Radar in every camera**: the radar also shows in the views from behind and outside
     the car (third person). Off by default: then it shows only while TSU's camera sits at
@@ -407,7 +410,8 @@ The window has two columns, under headings. The on/off options are the same as u
   parts (your own row, headings) and of the thin outline that keeps text readable over
   the game. **Reset colours** puts the defaults back.
 - **All sections:** **Smaller** and **Bigger** make every section 10% smaller or bigger.
-- **Light tint behind all sections** and **Speed in mph**.
+- **Light tint behind all sections**, **One tint for each group** (Mac; see section 2) and
+  **Speed in mph**.
 
 **Standings**
 - **Classes in the standings** and **Clan tags in the standings**.

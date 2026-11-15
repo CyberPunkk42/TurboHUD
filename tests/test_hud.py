@@ -629,6 +629,17 @@ if __name__ == '__main__':
     unittest.main()
 
 
+class GroupTintBoxTests(unittest.TestCase):
+    """One box round each group's tinted sections (2026-11-15)."""
+
+    def test_one_box_round_each_group(self):
+        members = [('A', (100, 100, 200, 40)), ('A', (120, 200, 300, 40)), ('B', (600, 10, 50, 50))]
+        self.assertEqual(hud.group_tint_boxes(members), {'A': (100, 100, 320, 140), 'B': (600, 10, 50, 50)})
+
+    def test_a_section_in_no_group_keeps_its_own(self):
+        self.assertEqual(hud.group_tint_boxes([('', (1, 2, 3, 4))]), {})
+
+
 MOVER_GROUPS = {'lap': 'A', 'delta': 'A', 'speed': 'A', 'fuel': 'B', 'tires': ''}
 
 

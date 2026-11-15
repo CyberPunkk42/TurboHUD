@@ -163,16 +163,11 @@ presets with their shortcuts, groups, the Centre buttons, Centre text and Undo. 
   hotlapping event, a race, and an arena event (Sumo, Battle, King of the Hill, Tag), whose mode is read a
   moment after the race (the log says `event type:` and `a ... began`).
 
-## 3b. Asked for on 2026-11-15: more groups, Nearby cars, one tint per group
-- Groups A to G (now A to D): no decision needed.
-- Nearby cars: an option showing only the leader, the car ahead and the car behind. Open: whether the
-  player's own row stays (leader, ahead, you, behind).
-- Nearby cars' text too small (a player): the shipped layouts give it 8 px at 1920x1080 and 10 px at
-  2560x1440 (Standings 10 and 14), and Size px already sets it. Open: a bigger shipped default, or only
-  the guides pointing to Size px.
-- One tint across a group of sections: on the Mac's one window one rectangle per group; on Windows and
-  Linux, a window per section cannot draw in the gaps. Waits on item 1c: with one window there too it is
-  one rectangle everywhere; else the touching sides square and the windows stretched over half the gap.
+## 3b. One tint per group on Windows and Linux (asked for on 2026-11-15)
+Done on 2026-11-15: groups A to G, Nearby cars' short list (own row kept, on by default), its bigger shipped
+text, and one tint for each group on the Mac (`feature/group-tint-mac`, a switch on by default). Left: Windows
+and Linux, where a window per section cannot draw in the gaps. Waits on item 1c: with one window there too, the
+Mac's drawing serves as it is; else the touching sides square and the windows stretched over half the gap.
 
 ## 4. Builds and release
 The Mac app for a tester (2026-11-06): build with `sh tools/get_mac_python.sh`, then

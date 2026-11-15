@@ -658,6 +658,7 @@ def run(args, folder):
         canvas = HudCanvases(native, screens, list(windows.values()))
         for window in windows.values():
             window.canvas = canvas
+        canvas.set_group_tint(settings.group_tint)
         canvas.set_shown(True)
         log.info('locked: the sections in one window per screen (%d)', len(screens))
     first = {name: window.base for name, window in windows.items()}
@@ -851,6 +852,17 @@ def run(args, folder):
         save()
         log.info('tint behind all sections %s', 'on' if backdrop else 'off')
 
+    def set_group_tint(on):
+        """One tint for each group on or off (the HUD canvas: the Mac)."""
+        nonlocal settings
+        settings = replace(settings, group_tint=on)
+        group_tint_action.setChecked(on)
+        show_option('group_tint', on)
+        if canvas is not None:
+            canvas.set_group_tint(on)
+        save()
+        log.info('one tint for each group %s', 'on' if on else 'off')
+
     def show_all_tinted():
         backdrop_action.setChecked(all_tinted())
         show_option('backdrop', all_tinted())
@@ -873,6 +885,15 @@ def run(args, folder):
                 'A light tint behind every section; each has its own Tint in the move-mode panel',
             ),
         ]
+        if canvas is not None:  # where the sections are drawn in one window (the Mac)
+            listed.append(
+                (
+                    'group_tint',
+                    'One tint for each group',
+                    settings.group_tint,
+                    "Grouped sections with their tint on share one tint, the room between them too",
+                )
+            )
         if any(section.drawing == 'radar' for section in layout):
             listed.append(
                 (
@@ -1284,6 +1305,7 @@ def run(args, folder):
             setters = {
                 'mph': set_mph,
                 'backdrop': set_backdrop,
+                'group_tint': set_group_tint,
                 'radar_cone': set_radar_cone,
                 'radar_cockpit_only': set_radar_cockpit_only,
                 'map_others': set_map_others,
@@ -1805,6 +1827,11 @@ def run(args, folder):
     backdrop_action.setChecked(settings.backdrop)
     backdrop_action.triggered.connect(lambda checked: set_backdrop(checked))
     options_menu.addAction(backdrop_action)
+    group_tint_action = QAction('One tint for each group', menu, checkable=True)
+    group_tint_action.setChecked(settings.group_tint)
+    group_tint_action.triggered.connect(lambda checked: set_group_tint(checked))
+    if canvas is not None:
+        options_menu.addAction(group_tint_action)
     radar_cone_action = QAction('Slipstream cones on the radar', menu, checkable=True)
     radar_cone_action.setChecked(settings.radar_cone)
     radar_cone_action.triggered.connect(lambda checked: set_radar_cone(checked))
