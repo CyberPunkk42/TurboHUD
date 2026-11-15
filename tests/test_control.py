@@ -410,6 +410,45 @@ class StartLayoutTests(unittest.TestCase):
         self.assertEqual(self.start(placed), placed)
 
 
+class NearbyShortListUpgradeTests(unittest.TestCase):
+    """Layout 8: Nearby cars no taller than its short list's 4 rows, on by default since 2026-11-15."""
+
+    def setUp(self):
+        self.path = Path(tempfile.mkdtemp()) / settings.SETTINGS_FILE
+
+    @staticmethod
+    def ink(_text, size):
+        return size * 0.7, 0
+
+    def upgraded(self, **fields):
+        tall = settings.SectionPlace(10, 20, 400, 300, font=14)
+        clock = settings.SectionPlace(10, 500, 200, 300)
+        saved = settings.Settings(
+            sections={'players': tall, 'localtime': clock},
+            presets={3: {'players': tall}},
+            layout_version=7,
+            **fields,
+        )
+        settings.save_settings(self.path, saved)
+        return app.upgrade_layout(settings.load_settings(self.path), self.path, self.ink)
+
+    def test_its_box_shrinks_to_four_rows_also_in_presets(self):
+        from dataclasses import replace as changed
+
+        from turbohud.core.hud import RACE_SECTIONS, font_scale, players_section, tight_height
+
+        upgraded = self.upgraded()
+        players = next(s for s in RACE_SECTIONS if s.name == 'players')
+        four = tight_height(players_section(changed(players, spacing=1.0), True), font_scale(14), self.ink)
+        place = upgraded.sections['players']
+        self.assertEqual((place.x, place.y, place.width, place.height), (10, 20, 400, four))
+        self.assertEqual(upgraded.presets[3]['players'], place)
+        self.assertEqual(upgraded.sections['localtime'].height, 300)  # not Nearby cars
+
+    def test_with_the_long_list_kept_the_box_stays(self):
+        self.assertEqual(self.upgraded(nearby_short=False).sections['players'].height, 300)
+
+
 class NarrowerStandingsTests(unittest.TestCase):
     """Layout 7: the standings and nearby cars no wider than their text needs (2026-11-15)."""
 

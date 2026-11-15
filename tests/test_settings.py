@@ -303,6 +303,13 @@ class PresetTests(unittest.TestCase):
         path.write_text('{"presets": []}')
         self.assertEqual(s.load_settings(path).presets, {})
 
+    def test_nearby_cars_short_list_is_on_unless_turned_off(self):
+        path = self.path()
+        path.write_text('{}')
+        self.assertTrue(s.load_settings(path).nearby_short)
+        s.save_settings(path, s.Settings(nearby_short=False))
+        self.assertFalse(s.load_settings(path).nearby_short)
+
     def test_five_presets_since_2026_11_15(self):
         # Asked for by players: five, for recordings, practice, qualifying, racing and the rest.
         path = self.path()

@@ -34,7 +34,7 @@ from dataclasses import dataclass
 
 from turbohud.core.class_registry import CLASS_TAGS, class_colors, class_tag, paler, shown_code
 from turbohud.core.flags import flag_code, flag_text
-from turbohud.core.hud import Row, Sectors, blend, clock, local_time_rows
+from turbohud.core.hud import NEARBY_SHORT_ROWS, Row, Sectors, blend, clock, local_time_rows
 from turbohud.core.il2cpp import ARRAY_DATA, ARRAY_LENGTH, LIST_ITEMS, SIMPLE_TYPES, NotFound, ReadError
 from turbohud.core.settings import LAP_COLUMNS
 from turbohud.core.trackmap import OFF_TRACK_LAYERS, off_the_track
@@ -2431,6 +2431,7 @@ def race_sections(
     columns=LAP_COLUMNS,
     retirements=None,
     radar_cockpit_only=False,
+    nearby_short=False,
 ):
     """{section name: rows} for a live-reader snapshot (see core.hud.RACE_SECTIONS); a
     section with nothing to show has no rows. Nothing before the grid: in the menus, the
@@ -2441,7 +2442,7 @@ def race_sections(
     `blue_within` is how many seconds behind a car shows the blue flag; `delta_bar` (a
     DeltaBar) gives the delta bar, under 'deltaview'; `sector_bars` False leaves the sector
     bars out (an option); `yellow_flags` (a YellowFlags) gives the yellow flag section and
-    the cars ringed on the track map; `class_tags`: the clan tags that name a class, for the
+    the cars ringed on the track map; `nearby_short`: Nearby cars' short list; `class_tags`: the clan tags that name a class, for the
     lap times of a multi-class race (none: no classes); `shortcuts` (a ShortcutPenalties)
     gives the shortcut section and CUT in the lap times; `retirements` (a Retirements) DNF in
     the lists."""
@@ -2451,7 +2452,7 @@ def race_sections(
     retired = retirements.update(state) if retirements is not None and state.players else frozenset()
     if state.spectating:
         return _watching_sections(
-            snapshot, now, standings, track_map, class_tags, clan_tags, columns, retired
+            snapshot, now, standings, track_map, class_tags, clan_tags, columns, retired, nearby_short
         )
     if state.finished or state.laps_to_finish and state.laps_completed >= state.laps_to_finish:
         # Finished: the lap sections say so, and the rest stays (the player list above
@@ -2495,6 +2496,7 @@ def race_sections(
             compounds=state.compounds,
             wet=is_wet(state.track),
             retired=retired,
+            short=nearby_short,
         )
         cuts = shortcuts.left(state) if shortcuts is not None else None
         jumped = shortcuts.jump_starts(state) if shortcuts is not None else frozenset()
@@ -2560,6 +2562,7 @@ def _watching_sections(
     clan_tags=True,
     columns=LAP_COLUMNS,
     retired=frozenset(),
+    nearby_short=False,
 ):
     """What a spectator sees: the race, with the leader's lap, the player list with the
     gaps to the leader, the lap times and the map; nothing about a car of their own."""
@@ -2572,7 +2575,7 @@ def _watching_sections(
             else ranked(state.players, state.hotlapping)
         )
         sections['players'] = players_rows(
-            state.players, order, state.clock, state.gates, watching=True, retired=retired
+            state.players, order, state.clock, state.gates, watching=True, retired=retired, short=nearby_short
         )
         sections['laptimes'] = lap_times_rows(
             state.players,
@@ -3299,9 +3302,11 @@ def track_offset(player, me, clock=None, gates=(), reference=None):
     return ahead, ('time', -seconds if ahead > 0 else seconds)
 
 
-def relative_players(players, me, order=None, clock=None, gates=()):
-    """(ahead, behind) of `me` on the track: up to RELATIVE_AHEAD cars in front, the furthest
-    first, and up to RELATIVE_BEHIND behind, the nearest first, each as (player, gap), in the
+def relative_players(
+    players, me, order=None, clock=None, gates=(), most_ahead=RELATIVE_AHEAD, most_behind=RELATIVE_BEHIND
+):
+    """(ahead, behind) of `me` on the track: up to `most_ahead` cars in front, the furthest
+    first, and up to `most_behind` behind, the nearest first, each as (player, gap), in the
     order they are on the track (track_offset). A car not placed yet (on the grid) counts by race
     `order`. Cars that finished are left out while `me` races."""
     order = list(ranked(players) if order is None else order)
@@ -3324,8 +3329,8 @@ def relative_players(players, me, order=None, clock=None, gates=()):
         found = offsets[id(p)]
         return found[1] if found is not None else None
 
-    ahead = [(p, shown(p)) for p in ahead[:RELATIVE_AHEAD]]
-    behind = [(p, shown(p)) for p in behind[:RELATIVE_BEHIND]]
+    ahead = [(p, shown(p)) for p in ahead[:most_ahead]]
+    behind = [(p, shown(p)) for p in behind[:most_behind]]
     return ahead[::-1], behind
 
 
@@ -3340,6 +3345,7 @@ def players_rows(
     compounds=None,
     wet=False,
     retired=frozenset(),
+    short=False,
 ):
     """The player list. Racing (asked for by the user on 2026-11-12): the race's leader on top,
     with the race gap (empty where the leader is the local car or is shown below), then the
@@ -3348,10 +3354,12 @@ def players_rows(
     PIT, its class and place in it in the class's colour (a multi-class race; else its clan
     tag, with `clan_tags`), its tire compound and the gap on the track. `watching`: a
     spectator has no car, so the list is the race order with the gaps to the leader. A car in
-    `retired` (Retirements) has DNF in its gap's place."""
+    `retired` (Retirements) has DNF in its gap's place. `short` (asked for by players on
+    2026-11-15): only the leader, the car ahead, the local car and the car behind (4 rows)."""
     order = list(ranked(players) if order is None else order)
     if watching or not any(p.local for p in players):
-        return _standings_rows(players, order, clock, gates, retired)
+        most = NEARBY_SHORT_ROWS if short else MAX_PLAYER_ROWS
+        return _standings_rows(players, order, clock, gates, retired, most)
     me = next(p for p in players if p.local)
     positions = {id(p): i for i, p in enumerate(order, start=1)}
     classes = car_classes(order, class_tags)
@@ -3359,7 +3367,8 @@ def players_rows(
     if classes:
         places = by_class(order, classes)[1]
         colors = class_colors(set(classes.values()) - {OTHER_CLASS})
-    ahead, behind = relative_players(players, me, order, clock, gates)
+    near = 1 if short else RELATIVE_AHEAD
+    ahead, behind = relative_players(players, me, order, clock, gates, near, 1 if short else RELATIVE_BEHIND)
     most = len(order)
     leader = order[0] if order else None
     listed = {id(p) for p, _found in (*ahead, *behind)} | {id(me)}
@@ -3367,7 +3376,7 @@ def players_rows(
     if leader is not None and id(leader) not in listed:
         top = [(leader, gap(leader, me, clock, gates))]  # the race gap: laps or time
     rows = [] if top else [Row('', 'small')]
-    rows += [Row('', 'small')] * (RELATIVE_AHEAD - len(ahead))  # the local car stays in its row
+    rows += [Row('', 'small')] * (near - len(ahead))  # the local car stays in its row
     for player, found in [*top, *ahead, (me, None), *behind]:
         tail = _pit_tail(player)
         name = _short_name(player.name, tail)
@@ -3406,13 +3415,13 @@ def _short_name(name, tail):
     return name[: most - 1] + '…' if len(name) > most else name
 
 
-def _standings_rows(players, order, clock, gates, retired=frozenset()):
+def _standings_rows(players, order, clock, gates, retired=frozenset(), max_rows=MAX_PLAYER_ROWS):
     """The player list in race order (the leader and those around the local player), with
     the gaps to the leader: for a spectator."""
     me = order[0] if order else None
     rows = []
     most = len(order)
-    for position, player in shown_players(players, order=order):
+    for position, player in shown_players(players, max_rows, order):
         tail = _pit_tail(player)
         found = gap(player, me, clock, gates) if me is not None and player is not me else None
         rows.append(

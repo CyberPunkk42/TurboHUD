@@ -68,6 +68,17 @@ class FileTests(unittest.TestCase):
                 ]
                 self.assertGreaterEqual(sections['players']['font'], sections['laptimes']['font'])
 
+    def test_nearby_cars_is_made_for_its_short_list(self):
+        # On by default since 2026-11-15: the shipped boxes as tall as its 4 rows (as Qt measures them,
+        # within a few pixels of the offscreen font here).
+        for size in presets.SCREENS:
+            with self.subTest(size=size):
+                sections = json.loads((FOLDER / presets.file_name(size)).read_text(encoding='utf-8'))[
+                    'sections'
+                ]
+                players = sections['players']
+                self.assertLess(players['height'], players['font'] * players['spacing'] * 2.2 * 4)
+
     def test_the_shipped_presets_hold_nothing_but_the_layout(self):
         for size in presets.SCREENS:
             with self.subTest(size=size):

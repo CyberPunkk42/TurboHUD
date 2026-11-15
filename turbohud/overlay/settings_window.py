@@ -41,7 +41,7 @@ COLOURS = (
 GROUPS = {
     'look': ('backdrop', 'mph'),
     'standings': ('classes', 'clan_tags'),
-    'sections': ('sector_bars', 'gear', 'map_others'),
+    'sections': ('nearby_short', 'sector_bars', 'gear', 'map_others'),
     'radar': ('radar_cone',),
     'flags': ('yellow_flags',),
 }

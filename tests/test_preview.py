@@ -88,6 +88,11 @@ class PreviewTests(unittest.TestCase):
         self.assertIn('APX', ''.join(row.tag or '' for row in self.sections['laptimes']))
         self.assertIn('mph', text(preview.preview_sections(speed_unit='mph')['speed'][-1]))
 
+    def test_nearby_cars_short_list(self):
+        # Since 2026-11-15: the leader, the car ahead, you and the car behind.
+        self.assertEqual(len(preview.preview_sections(nearby_short=True)['players']), 4)
+        self.assertEqual(len(self.sections['players']), 8)
+
     def test_the_track_is_laguna_seca_as_learnt(self):
         points, start = preview.track()
         self.assertGreater(len(points), 500)

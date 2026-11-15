@@ -98,6 +98,13 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+  - 2026-11-15: Nearby cars' short list, on by default (`feature/nearby-cars-short-list`, asked for by players; the
+    user chose to keep their own row and to ship it on): the leader, the car ahead, you and the car behind, 4 rows;
+    off ("Nearby cars: only the leader and the cars next to you", in the tray's Options and the settings window's
+    Sections), the 3 ahead and 3 behind as before. Spectating, 4 rows too. Layout 8 shrinks a saved Nearby cars box
+    (and in presets) to its 4 rows once; the shipped layouts' boxes are 4 rows tall. Built on
+    `feature/nearby-cars-bigger-default`. Tests for the rows, the setting, the upgrade, the preview and the shipped
+    boxes; a 6 s start converted the Mac's settings to layout 8 (the old file kept beside it). Not yet seen in a race.
   - 2026-11-15: Nearby cars' text as large as the Standings' in the shipped layouts (`feature/nearby-cars-bigger-default`,
     a player found it too small; the user chose a bigger default): 10 px at 1920x1080 (was 8), 14 at 2560x1440 (was
     10), 20 at 5120x1440 (was 15) and so on, its line spacing lowered (225% to 100 or 125%) so its box is no taller

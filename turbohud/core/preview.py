@@ -381,6 +381,7 @@ def preview_sections(
     radar_cone=True,
     classes=False,
     class_tags=(),
+    nearby_short=False,
 ):
     """{section name: content} for move mode, as race_sections gives them in a race with the
     player's options, and the sections a calm moment leaves empty filled in: a yellow flag a
@@ -403,6 +404,7 @@ def preview_sections(
         'columns': tuple(columns),
         'shortcuts': _Penalties(),
         'retirements': _Retired(),
+        'nearby_short': nearby_short,
     }
     # Twice, as the radar and the delta bar follow the cars from one read to the next.
     race.race_sections(snapshot, 1.0, speed_unit, race.Standings(), radar, track_map, **options)
