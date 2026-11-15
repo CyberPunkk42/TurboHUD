@@ -1987,3 +1987,15 @@ its "Recent changes".
     button and label of the move-mode panel and the settings window as the app makes them (offscreen); checked
     to fail with "Redo" and "Penalties" taken out. AGENTS.md: a change a player sees updates both guides in the
     same branch. HOW_IT_WORKS no longer names "Fin" in the lap times (the app has none). All tests pass.
+  - 2026-11-15: TurboHUD's own layouts in `customization/display_presets`, asked for by the user
+    (`feature/default-layouts-in-folder`, on `feature/user-guide-in-builds`): the five shipped layouts are in the
+    Windows zip and the Linux tar as `<width>x<height> (TurboHUD default).json`, and at each start the app writes
+    them there from `assets/presets` where missing or older (`presets.default_files`; on the Mac, whose folder is
+    in the settings folder, that is how they get there). Their own names keep unpacking a new version from
+    replacing a player's `1920x1080.json`, and `custom_for` passes them over, so they never put a layout over
+    sections already placed (a plain new file there would have, at the next start); a first start takes the one
+    for the screen (the same as before, from `assets/presets`), a player's own file still wins. The pack leaves a
+    `customization` folder left in `dist` out. Read-me, User Guide, Quick Start and HOW_IT_WORKS say so. Tests:
+    the files written, again only when missing or older, the player's untouched, no folder; not counted as one's
+    own, an own file of any name wins; at a start placed sections kept, a first start takes the screen's, own
+    wins; the zip and tar hold them, nothing twice. All 1218 tests pass. Not yet: a real build opened.

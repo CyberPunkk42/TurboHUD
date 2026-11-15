@@ -290,14 +290,25 @@ def out_of_frame(places, frame, scale, size):
 # once each time the file is new or has changed.
 CUSTOM_FOLDER = Path('customization') / 'display_presets'
 CUSTOM_README = 'README.txt'
+# TurboHUD's own layouts, also in this folder (asked for by the user on 2026-11-15: in every build, to
+# see and start from), under names of their own: unpacking a new version over an old one then never
+# replaces a layout of the player's, and these files never put a layout over sections the player has
+# already placed. They are written again from the shipped ones at each start (default_files).
+DEFAULT_SUFFIX = ' (TurboHUD default).json'
 CUSTOM_README_TEXT = """TurboHUD display presets
 
 Put a TurboHUD layout file (.json) here, named after the screen size it is for, such as
 2560x1440.json. When TurboHUD starts on a screen of that size, it takes that layout (once each
 time the file is new or has changed, so moving sections afterwards sticks).
 
+The files named like "2560x1440 (TurboHUD default).json" are the layouts TurboHUD comes with,
+one per common screen size. On the first start, TurboHUD lays out the HUD as the one for your
+screen's size (or the nearest, fitted). They never replace a layout of your own, and every new
+version of TurboHUD writes them again, so to change one, save your layout under another name
+(Export... in move mode does).
+
 Export... in move mode saves the layout here; Import... loads one from here; Load screen default
-puts back the one here for your screen, or else the layout TurboHUD comes with.
+puts back your own one here for your screen, or else the layout TurboHUD comes with.
 """
 
 
@@ -335,12 +346,47 @@ def ready_folder(folder):
     return Path(folder)
 
 
+def default_name(size):
+    """The name of TurboHUD's own layout for a screen `size` in customization/display_presets."""
+    return f'{size[0]}x{size[1]}{DEFAULT_SUFFIX}'
+
+
+def is_default_file(path):
+    """Whether `path` is one of TurboHUD's own layouts there (default_name), not the player's."""
+    return Path(path).name.endswith(DEFAULT_SUFFIX)
+
+
+def default_files(folder, shipped_folder):
+    """Write TurboHUD's own layouts (the files in `shipped_folder`, assets/presets) into `folder`
+    (customization/display_presets) as default_name files, where one is missing or differs (an
+    older version's); the player's own files are never touched. The names written, or None where
+    the folder cannot be written to."""
+    if ready_folder(folder) is None:
+        return None
+    written = []
+    for source in sorted(Path(shipped_folder).glob('*.json')):
+        preset = load_file(source)
+        if preset is None:
+            continue
+        target = Path(folder) / default_name(preset[0])
+        try:
+            data = source.read_bytes()
+            if not target.exists() or target.read_bytes() != data:
+                target.write_bytes(data)
+                written.append(target.name)
+        except OSError:
+            return None
+    return written
+
+
 def custom_for(size, folder):
-    """(the file's digest, {name: SectionPlace}) of the layout made for exactly `size` among the
-    files in `folder` (its name, else any file made for that size); None where there is none."""
+    """(the file's digest, {name: SectionPlace}) of the player's own layout made for exactly `size`
+    among the files in `folder` (its name, else any file made for that size; TurboHUD's own
+    default_name files do not count); None where there is none."""
     folder = Path(folder)
     named = folder / file_name(size)
-    candidates = [named] + sorted(p for p in folder.glob('*.json') if p != named) if folder.is_dir() else []
+    found = sorted(p for p in folder.glob('*.json') if p != named and not is_default_file(p))
+    candidates = [named] + found if folder.is_dir() else []
     for path in candidates:
         try:
             data = path.read_bytes()
@@ -371,6 +417,7 @@ def kept_sections(places, known):
 
 __all__ = [
     'CUSTOM_FOLDER',
+    'DEFAULT_SUFFIX',
     'FORMAT',
     'SCREENS',
     'SectionPlace',
@@ -378,11 +425,14 @@ __all__ = [
     'app_folder',
     'custom_folder',
     'custom_for',
+    'default_files',
     'default_for',
+    'default_name',
     'design_frame',
     'file_name',
     'fit_layout',
     'into_frame',
+    'is_default_file',
     'kept_sections',
     'layout_for',
     'load_file',
