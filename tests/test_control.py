@@ -1,3 +1,5 @@
+import contextlib
+import io
 import os
 import socket
 import sys
@@ -233,8 +235,12 @@ class CommandLineTests(unittest.TestCase):
             sent.append(command)
             return 'ok'
 
-        self.assertEqual(app.tell_running(app.parse_args([]), send), 0)
+        # The fake's answer, not a real TurboHUD: its message is caught, so a test run never prints
+        # "already running: switched it to move mode" as if it had switched the player's one.
+        with contextlib.redirect_stdout(io.StringIO()) as out:
+            self.assertEqual(app.tell_running(app.parse_args([]), send), 0)
         self.assertEqual(sent, ['ping', 'move'])
+        self.assertIn('switched it to move mode', out.getvalue())
 
     def test_with_none_running_a_start_starts_and_a_command_fails(self):
         def send(command):

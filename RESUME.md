@@ -88,6 +88,10 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+  - 2026-11-15: A test run printed "TurboHUD is already running: switched it to move mode", which looked as if the
+    tests had reached the player's TurboHUD (`fix/tests-leave-running-app-alone`). They had not: the line came from a
+    test that gives the start a fake TurboHUD answering "ok" (no command in the app's log, and none was running). The
+    test now catches the message and checks it, so a test run prints nothing of the kind. All 1199 tests pass.
   - 2026-11-15: Design for starts on this screen's size, asked for by the user (`feature/design-own-size-first`):
     each time move mode opens, the list has the size of the screen the sections are on chosen and marked "(this
     screen)", so Design shows one's own layout straight away; a size the list lacks (a scaled screen, say 1707x960)
