@@ -262,10 +262,36 @@ def _driver(index, clock, lap, tags=TAGS):
         car=f'{tags[index]} car' if tags is CLASS_TAGS else 'Tatuus FA01',
         compound=COMPOUNDS[index],
         in_box=in_pit,
-        draft_drag=0.93 if index == LOCAL + 1 else None,
         pit_seconds=PITTED_TIMES[0] if index == PITTED else None,
         pit_stopped=PITTED_TIMES[1] if index == PITTED else 0.0,
     )
+
+
+DRAFTER_BEHIND = 12.0  # metres behind the player: the car drafting it (the draft section's big row)
+DRAFTER_DRAG = 0.95  # its air resistance in the slipstream: 50 % of the event's most (-10 %)
+
+
+def _with_drafter(players, local):
+    """`players` with the car nearest behind the player put in its slipstream: DRAFTER_BEHIND
+    metres back on its line, drafting, so the draft section shows who drafts you (2026-11-15)."""
+    me = players[local]
+    (x, z), (fx, fz) = me.position, me.forward
+
+    def behind(player):
+        return -((player.position[0] - x) * fx + (player.position[1] - z) * fz)
+
+    near = [i for i, p in enumerate(players) if i != local and not p.in_pit and behind(p) > 0]
+    if not near:
+        return players
+    index = min(near, key=lambda i: behind(players[i]))
+    chaser = replace(
+        players[index],
+        position=(x - fx * DRAFTER_BEHIND, z - fz * DRAFTER_BEHIND),
+        forward=me.forward,
+        velocity=me.velocity,
+        draft_drag=DRAFTER_DRAG,
+    )
+    return players[:index] + (chaser,) + players[index + 1 :]
 
 
 def preview_state(folder=None, gear=True, classes=False):
@@ -276,6 +302,7 @@ def preview_state(folder=None, gear=True, classes=False):
     clock = sum(leader_times[:NOW_LAP]) + LEADER_INTO
     tags = CLASS_TAGS if classes else TAGS
     players = tuple(_driver(index, clock, lap, tags) for index in range(len(RESULTS)))
+    players = _with_drafter(players, LOCAL)
     me = players[LOCAL]
     my_times = _lap_times(LOCAL)
     lap_starts = [0]

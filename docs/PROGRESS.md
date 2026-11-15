@@ -2117,3 +2117,11 @@ its "Recent changes".
     bigger, into the user's track map and speed section. The User Guide explains every part of the section
     (the draft share, the downforce it costs, each setting, the last lap's share, who drafts you); the Quick
     Start and HOW_IT_WORKS name the settings. Test: the new line. Not yet: seen at a race's start.
+  - 2026-11-15: Who drafts you, bigger in the Slipstream section, and nothing in it moving, asked for by the user
+    (players missed it) (`feature/draft-who-bigger`): "… drafts you 42%" is in the meter's medium text, right
+    below it, the name cut to 10 letters (`DRAFTER_NAME_SHOWN`) so the row fits the box (+6 px wide, once: 314 px
+    at scale 1); the settings line or last lap's share small below. `draft_rows` always gives both rows, an
+    empty one keeping its place, so neither the text nor the bar below it moves as they come and go (the bar
+    sits under the text, and before it jumped whenever the "drafts you" row came or went). The box is sized by
+    its sample for both, fixed. The preview has a car 12 m behind the player in its slipstream. Guide says so.
+    Tests: always two rows, the bigger style, the name cut, the preview's drafter. Not yet: seen in a race.

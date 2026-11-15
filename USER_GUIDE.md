@@ -161,7 +161,12 @@ section shows, with the bar below:
 - **Draft 46%**: how strong the slipstream you are in is now, as a share of the most this
   event gives. It is strongest close behind a car and straight in line with it.
 - **-12% downforce**: the grip that slipstream takes from you now (shown from 5%).
-- At the start of a race, the event's drafting settings, as the host set them, for example
+- **Nora Vest… drafts you 42%**, in the same big text: the car behind you in your
+  slipstream (its name cut to 10 letters) and how strong your slipstream is for it; its colour
+  goes from cyan to red the closer it gets. Nobody there, the line stays empty, so nothing
+  in the section moves.
+- Below, in small text: at the start of a race, the event's drafting settings, as the host
+  set them, for example
   **Up to -10% drag, -80% downforce, 30 m, 20°**:
   - **-10% drag**: at its strongest, a slipstream takes up to 10% off your air resistance;
   - **-80% downforce**: and up to 80% off your downforce;
@@ -170,8 +175,6 @@ section shows, with the bar below:
     are out of it.
 - Later in the race, instead: **Last lap 21% in a slipstream**, the share of your last lap
   you spent in one.
-- **Playername drafts you 40%**: the car behind you in your slipstream, and how strong it is
-  for that car; its colour goes from cyan to red the closer it gets.
 
 Only in events with drafting on.
 
