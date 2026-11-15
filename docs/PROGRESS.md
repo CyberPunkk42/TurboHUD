@@ -1961,3 +1961,7 @@ its "Recent changes".
     screen)", so Design shows one's own layout straight away; a size the list lacks (a scaled screen, say 1707x960)
     is put in it, in order, and gone again on another screen. A test for the panel. All 1198 tests pass. Not yet:
     seen in move mode. Goes with `fix/design-own-size-full` (one's own size shown at 100%, not 88%).
+  - 2026-11-15: A test run printed "TurboHUD is already running: switched it to move mode", which looked as if the
+    tests had reached the player's TurboHUD (`fix/tests-leave-running-app-alone`). They had not: the line came from a
+    test that gives the start a fake TurboHUD answering "ok" (no command in the app's log, and none was running). The
+    test now catches the message and checks it, so a test run prints nothing of the kind. All 1199 tests pass.
