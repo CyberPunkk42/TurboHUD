@@ -93,6 +93,12 @@ The user approves every change by merging it locally. There are no pull requests
   - keep `RESUME.md`'s "Current state" and "Next steps" true
   - add a dated entry at the top of its "Recent changes", and append the same entry
     to `docs/PROGRESS.md`
+- The players' guides, `QUICK_START.md` (one page) and `USER_GUIDE.md` (every section, menu
+  item, button and option), ship in every download (`GUIDES` in `tools/build_app.py`). Any
+  change a player can see or use (a section, option, menu item, button, shortcut, command,
+  colour meaning, file) updates both, as far as each covers it, in the same branch, and
+  `README.md` where it says the same. `tests/test_guides.py` fails when a name the app shows
+  is missing from a guide; it cannot tell a wrong explanation, so reread the changed part.
 - New or changed behavior gets tests in the same pull request. Tests use temporary
   folders and never real liveries. All tests must pass before committing.
 - Python: on Windows use `py -3`; on the user's Mac use `/opt/homebrew/bin/python3.13`

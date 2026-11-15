@@ -48,6 +48,10 @@ READ_ME_NAME = 'Read Me First.txt'
 # .txt opens with a double-click everywhere, and its Markdown reads as plain text.
 QUICK_START = ROOT / 'QUICK_START.md'
 QUICK_START_NAME = 'Quick Start.txt'
+# The longer guide to every section, menu item, button and option (asked for by the user on 2026-11-15).
+USER_GUIDE = ROOT / 'USER_GUIDE.md'
+USER_GUIDE_NAME = 'User Guide.txt'
+GUIDES = ((QUICK_START, QUICK_START_NAME), (USER_GUIDE, USER_GUIDE_NAME))  # in every download
 # customization/display_presets with its read-me, in the zip and the tar beside the program (on the Mac
 # the app's own folder is not written to: TurboHUD makes it in its settings folder).
 CUSTOM_README_PATH = 'customization/display_presets/README.txt'
@@ -197,7 +201,8 @@ def pack_dmg(app, archive, minimum):
         subprocess.run(['ditto', str(app), str(stage / app.name)], check=True)  # keeps links and signature
         (stage / 'Applications').symlink_to('/Applications')
         (stage / READ_ME_NAME).write_text(read_me, encoding='utf-8')
-        (stage / QUICK_START_NAME).write_bytes(QUICK_START.read_bytes())
+        for guide, name in GUIDES:
+            (stage / name).write_bytes(guide.read_bytes())
         subprocess.run(
             ['hdiutil', 'create', '-quiet', '-volname', NAME, '-srcfolder', str(stage), '-ov']
             + ['-format', 'UDZO', str(archive)],
@@ -222,7 +227,8 @@ def pack(dist, archive, system=sys.platform, minimum=(0, 0)):
     elif archive.name.endswith('.tar.gz'):
         with tarfile.open(archive, 'w:gz') as tar:
             tar.add(dist / NAME, arcname=NAME)
-            tar.add(QUICK_START, arcname=f'{NAME}/{QUICK_START_NAME}')
+            for guide, name in GUIDES:
+                tar.add(guide, arcname=f'{NAME}/{name}')
             tar.add(LINUX_READ_ME, arcname=f'{NAME}/{READ_ME_NAME}')
             readme = tarfile.TarInfo(f'{NAME}/{CUSTOM_README_PATH}')
             text = custom_readme()
@@ -234,7 +240,8 @@ def pack(dist, archive, system=sys.platform, minimum=(0, 0)):
         with zipfile.ZipFile(archive, 'w', zipfile.ZIP_DEFLATED) as zip_file:
             for path in sorted(folder.rglob('*')):
                 zip_file.write(path, Path(NAME) / path.relative_to(folder))
-            zip_file.write(QUICK_START, Path(NAME) / QUICK_START_NAME)
+            for guide, name in GUIDES:
+                zip_file.write(guide, Path(NAME) / name)
             # The folder for one's own layouts, beside the program (turbohud.core.presets).
             zip_file.writestr(f'{NAME}/{CUSTOM_README_PATH}', custom_readme())
     digest = hashlib.sha256(archive.read_bytes()).hexdigest()

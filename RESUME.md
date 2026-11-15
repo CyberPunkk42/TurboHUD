@@ -95,6 +95,16 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+  - 2026-11-15: A user guide in every build, asked for by the user (`feature/user-guide-in-builds`):
+    `USER_GUIDE.md` explains every section (what it shows, its colours, when it shows), the tray menu and its
+    Options, move mode and every column and button of its panel, layouts per screen size, the settings window,
+    the shortcuts and Linux commands, and the files. `tools/build_app.py` ships it as `User Guide.txt` beside
+    `Quick Start.txt` in the Windows zip, the Linux tar and the Mac disk image (`GUIDES`). The README's long Use
+    part is now a summary that points to it. New `tests/test_guides.py`: both guides name every section and
+    shortcut; the user guide every panel heading, tray menu item, lap times column and Linux command, and every
+    button and label of the move-mode panel and the settings window as the app makes them (offscreen); checked
+    to fail with "Redo" and "Penalties" taken out. AGENTS.md: a change a player sees updates both guides in the
+    same branch. HOW_IT_WORKS no longer names "Fin" in the lap times (the app has none). All tests pass.
   - 2026-11-15: Documentation brought up to the app as it is, asked for by the user (`docs/refresh-docs-2026-11-15`):
     README (Windows live data and its reader, Custom races, the first start's layout per screen size, the Options
     submenu, one copy at a time, About, move mode's grid, nudges, corner and edge resizing, Size px and Lines %,
