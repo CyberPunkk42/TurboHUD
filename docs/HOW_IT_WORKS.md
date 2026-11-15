@@ -5,9 +5,9 @@ top of the game that show race information the game does not show itself, or not
 clearly. This document explains what it shows, where the data comes from, and what it
 does (and does not do) to the game, to your RAM and to your system.
 
-State: 2026-11-04. Live race data works on Linux (the native TSU build) and on macOS
-(TSU in CrossOver; see "On macOS" below). On Windows TurboHUD so far shows only a session
-clock and the local time. The rest of this document describes Linux where they differ.
+State: 2026-11-15. Live race data works on Linux (the native TSU build), on macOS (TSU in
+CrossOver; see "On macOS" below) and on Windows (see "On Windows" below). The rest of this
+document describes Linux where they differ.
 
 ## What it shows
 
@@ -23,19 +23,23 @@ off. On Linux and Windows each section keeps its own window for now.
 | Lap and time left | Lap 2/3, and the time left in a timed race |
 | Running lap | the current lap time, counting |
 | Delta to best | ahead (green) or behind (red) your best lap, live between checkpoints |
-| Last and best lap | your last and best lap times |
+| Delta bar | the same as a bar, right when ahead, green while gaining and red while losing time |
+| Last and best lap | your last and best lap times (purple the race's fastest, green your own best), with a bar per sector below |
 | Fuel | fuel left, laps it lasts at your recent use, fuel saved or burnt this lap; a level bar |
 | Fuel to finish | laps of fuel to spare (green) or missing (red) for the finish |
 | Tires | tire life left and the laps it lasts; a level bar |
 | Health | car health as the game counts it; yellow with less downforce, red when slowed; a level bar |
 | Draft | how strong the slipstream is (of the event's most), with a bar; the downforce it costs; the event's drafting at the start, then the last lap's time in a slipstream; who drafts you |
-| Speed | km/h or mph, yellow while coasting; throttle and brake bars beside it |
-| Players | position, flag, name, PIT, and the live gap to you (or +1 L for laps) |
-| Lap times | every driver in race order with flag and name, their best lap (the race's fastest in green) and their running lap, or Fin |
+| Speed | km/h or mph, yellow while coasting; throttle and brake bars beside it; as an option the gear and rev lights |
+| Players | the leader, then the 3 cars ahead of and 3 behind you on the track: position, flag, name, tire, PIT, and the live gap to you (or +1 L for laps), DNF for a car out of the race |
+| Lap times | every driver in race order (by class in a multi-class race) with flag, name and clan tag or class, lap, tire, their best lap (the race's fastest in purple) and their last lap, or CUT, JUMP, PIT, DNF or Fin |
 | Blue flag | a navy bar that fades in when a car about to lap you is within 2 s |
-| Proximity radar | your car and the cars around you, when one is within 0.5 s behind, beside or ahead; the slipstream behind cars ahead |
+| Yellow flag | a car off the track, slow, stopped, spun, the wrong way or put back in your sector or the next, by sector and driver; CAR STOPPED AHEAD or WRONG WAY AHEAD for one up to 5 s ahead on the road |
+| Penalties | SHORTCUT with the seconds TSU slows you for a shortcut; JUMP START for a false start |
+| Proximity radar | your car and the cars around you, when one is within 0.5 s behind, beside or ahead; the slipstream behind cars ahead; by default only in cockpit cameras |
 | Track map | the track from above, with you, the race leader (gold), the next car ahead (red), the next car behind (green), backmarkers between you and the car ahead (small, bluish), and as an option the other cars (faint grey) |
 | Local time | the clock |
+| Session time | how long TurboHUD has run (shown while there is no race) |
 
 Spectating an online race, only the lap section (with "Spectating" and the leader's lap),
 the player list (gaps to the leader), the lap times, the track map (every car) and the
@@ -56,7 +60,8 @@ the menus only the local time shows.
 
 1. **The game, TSU.** Unchanged. Nothing is installed into it, injected into it or
    patched in it. TurboHUD never writes to the game's memory or to its folders.
-2. **The probe** (`turbohud/tsu/probe.py`, started by `experiments/tsu_memory_probe.py`).
+2. **The probe** (`turbohud/tsu/probe.py`; the downloaded app is the probe itself with
+   `--probe`, a start from the source uses `experiments/tsu_memory_probe.py`).
    A small Python program that Steam runs through the launch option. It starts TSU as
    its own child process, and then answers read-only questions about the game's memory
    from TurboHUD. That is all it does.
@@ -105,7 +110,7 @@ with `ReadProcessMemory`. So:
 ```
  CrossOver ──runs──▶ TSU.exe (the game)
                        ▲ read-only
- bottle_reader.py ─────┘  (Windows Python, in the same bottle)
+ turbohud-reader.exe ──┘  (a Windows program in Rust, in the same bottle)
        ▲ questions and answers over its standard input and output
  TurboHUD (the native Mac overlay app, outside the bottle)
 ```
@@ -128,6 +133,14 @@ in 1 MiB pieces, half of the time, and takes about 15 s if it has to cover all t
 stops at the first good hit, so a race is expected within about 4 to 6 s (worked out from a
 search at a quarter of the time; not yet seen in a race).
 
+## On Windows: a reader beside the game
+
+Windows lets a program read another of the same user (`OpenProcess` with `PROCESS_VM_READ`,
+then `ReadProcessMemory`), so there is no probe and no launch option. TurboHUD starts the same
+Rust reader as on the Mac (`turbohud-reader.exe`, in the download), as an ordinary program
+beside TSU, and asks it over a pipe; where it is missing, TurboHUD reads in Python itself
+(`turbohud/tsu/winmemory.py`). A search reads with 4 threads: about 6 s for all of TSU's data.
+
 ## How it finds the race in the game's memory
 
 TSU is made with Unity using IL2CPP: its code is compiled, but it keeps a description of
@@ -140,7 +153,8 @@ The race data is found along this path of objects:
 
 ```
 TS.Services.sm_instance          (a static field: always findable)
-  .m_activeServer.m_eventListener  the race controller (offline, hotlap, hosted online)
+  .m_activeServer.m_eventListener  the race controller (offline, hotlap, hosted online;
+                                   in a Custom race see "Online races" below)
   .m_eventState                    the race
       .times                       race clock and time limit
       .players[i]                  every player (the local one is marked)
@@ -184,8 +198,8 @@ records every race for its replays, though, and its recorder
 position, which TurboHUD reads instead. If recording is off, it works the positions
 out from the checkpoints and each car's velocity (see the limits below).
 
-A search reads all of the game's data once (about 1.5 to 2 seconds, one CPU core
-busy). So TurboHUD searches only when it has to: when there is no offline or hosted
+A search reads all of the game's data once (on Linux about 1.5 to 2 seconds, one CPU
+core busy; on Windows about 6 s with 4 threads; on the Mac, through Wine, longer). So TurboHUD searches only when it has to: when there is no offline or hosted
 race, and TSU's own log file says an event is running (TSU writes "Event started." and
 "Event ended." into `log.txt` as it happens, with dated copies in `Logs/`; TurboHUD only
 reads them, and goes by the newest). In
@@ -194,7 +208,9 @@ started and it names an event: some players' TSU stops writing it, and then Turb
 searches anyway, as it does with no log at all, on the waits below. Then, between
 searches, it also takes a quick look every 2 seconds where the last race was (256 MiB
 from just below it, a few percent of the data), as TSU tends to put the next race there. While an event runs without a race found
-yet, it waits 10 seconds after each search before the next.
+yet, it waits 10 seconds after each search before the next; after a minute of searches that
+find nothing, the wait doubles up to 60 s, and ends at once when TSU's log newly says an
+event runs.
 
 When you spectate, the race is there but has no local player. A search then finds no
 race of yours to stop at, so it reads all the data once and takes the race it found to
@@ -206,6 +222,10 @@ and every car on the map.
 
 When you host an online race with other players, TSU runs the server inside your game,
 and the race is found the normal way, with no search.
+
+A Custom race (and, expected the same, a Single Player event) has no active server: its race
+is in a `TS.HostEventController` with the same fields as the client's, and the same search
+finds it (one pass with both classes on Windows, a second pass elsewhere).
 
 ## Other inputs
 
@@ -263,16 +283,23 @@ memory, so it could grow to several GB of RAM. Now it searches only during event
 reuses one buffer (checked: RAM stays flat over repeated searches). The fix takes
 effect for the probe the next time TSU is started.
 
-**Files TurboHUD writes**, all its own, in `~/.config/TurboHUD/`:
+**Files TurboHUD writes**, all its own, in its settings folder (Linux `~/.config/TurboHUD/`,
+macOS `~/Library/Application Support/TurboHUD`, Windows `%APPDATA%\TurboHUD`):
 
-- `settings.json`: section places, sizes, groups, shown or hidden, mph, light tint,
-  other cars on the track map
+- `settings.json`: section places, sizes, text sizes, groups, shown or hidden, presets, the
+  colours and the options
+- `flags/`: TSU's flag images, read from your copy of the game and made small
+- `turbohud.lock`: held while TurboHUD runs, so only one runs at a time
 - `tracks/`: the track map's learnt tracks, one small file per track (the line it
   draws, and the start line), named from the track's checkpoint lines
 - `turbohud.log`: what TurboHUD did in this run (replaced at each start), with numbers to
   go by if the HUD lags: every 30 s in a race how long its reads took, and when each
   search for an online race ran and what it found. No names or IDs of players.
-- `memory_probe.log`: written by the probe: the game it found, errors
+- `memory_probe.log` (Linux): written by the probe: the game it found, errors
+- `bottle_reader.log` (macOS): the reader's errors
+
+Your own layouts go in `customization/display_presets` beside TurboHUD (in the settings folder
+where that one cannot be written to): layout files with places and sizes only.
 
 It writes nothing into the game's folders and changes nothing in the system.
 
@@ -285,8 +312,7 @@ gives no control over the car.
 
 ## Limits and what is not checked yet
 
-- No live data on Windows yet: its reader (`turbohud/tsu/winmemory.py`) is not used by
-  the app there. On macOS the throttle and brake bars move in TSU's thirds, as the pad's
+- On macOS and Windows the throttle and brake bars move in TSU's thirds, as the pad's
   triggers are read only on Linux.
 - In online races where your game is a client (joining someone else's server, or
   hosting with only AI drivers), the game keeps no car positions where the offline
@@ -308,15 +334,18 @@ gives no control over the car.
 |---|---|
 | `turbohud/tsu/probe.py` | the probe: starts TSU, serves read-only questions |
 | `turbohud/tsu/client.py` | talks to the probe, reads the race in a background thread |
-| `turbohud/tsu/bottle.py` | macOS: finds TSU's bottle, starts the reader, asks it over the pipe |
-| `turbohud/tsu/bottle_reader.py` | macOS: the read-only reader inside the bottle |
+| `turbohud/tsu/bottle.py` | macOS: finds TSU's bottle and starts the reader there; Windows: starts it beside TSU; asks it over the pipe |
+| `reader/` | the read-only reader in Rust (a Windows program) |
+| `turbohud/tsu/bottle_reader.py` | the same reader in Python, the fallback (`TURBOHUD_PY_READER=1`) |
 | `turbohud/tsu/winmemory.py` | reading TSU as a Windows program: regions, page cache, paced search |
 | `turbohud/tsu/gamelog.py` | reads TSU's log to know whether an event runs |
+| `turbohud/tsu/gameflags.py` | TSU's own flag images, from the player's copy of the game |
 | `turbohud/tsu/controller.py` | reads the gamepad's triggers |
 | `turbohud/core/il2cpp.py` | finds classes and fields by name in an IL2CPP game |
 | `turbohud/core/race.py` | reads the race and works out what each section shows |
 | `turbohud/core/trackmap.py` | the track map: the track's shape and which cars show |
 | `turbohud/core/hud.py` | the sections, their sizes, places and layout |
+| `turbohud/core/presets.py` | layout files per screen size, and fitting them to another |
 | `turbohud/overlay/` | the windows; Hyprland, Windows and macOS specifics |
 | `turbohud/app.py` | starts everything: settings, windows, tray menu, shortcuts |
 | `turbohud/control.py` | the command socket for `run_turbohud.sh --toggle` and the rest |

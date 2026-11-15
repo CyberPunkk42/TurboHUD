@@ -25,8 +25,8 @@ If there is no Open Anyway button, type this in Terminal and press Return, then 
 
 
 WHAT TO EXPECT
-TurboHUD opens no window and has no Dock icon. You should see its icon in the menu bar (black,
-"TSU TurboHUD") and a small clock at the top left of the screen.
+TurboHUD opens no window and has no Dock icon. You should see its icon in the menu bar (a
+speedometer) and a small clock on the screen.
 
 Start TSU, in either order. The race sections appear when the cars stand on the grid. Online,
 finding the race can take a few seconds after the start. Hover over the menu bar icon to see

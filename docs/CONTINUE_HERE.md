@@ -1,72 +1,51 @@
 # Continue here
 
-Where the work stopped on 2026-11-11, on the Mac. Everything below was merged into `main`
-and nothing was pushed or tagged. Delete a point when it is settled, and this file when
-none is left.
+Where the work stopped on 2026-11-15, on Linux. Everything below is merged into `main` and
+pushed to the GitHub remote. Delete a point when it is settled, and this file when none is left.
 
 ## Next session
-Open from 2026-11-11 (the user stopped there; all merged):
-- The tester's results with build 2026.11.11.4 (`TurboHUD-test-instructions.md`): Part 3 FPS (one window
-  against a window each, on the power adapter), Part 4 (panel buttons, None then Undo, the delta bar, a
-  yellow flag against AI), Part 6 (at least three online races: seconds to show, `quick look: race found`
-  from race 2, yellow flags online), the Part 7 log.
-- Off the track by the surface's layer (2026-11-11): no yellow flag on plastic kerbs, concrete run-off or curbs,
-  still one on Terrain; a rallycross track (Dirt) shows none; a wrecked car (damage on) shows `wrecked`.
-- The user's own race from source: yellow flags (your own car's too, since 2026-11-11; too eager, too late, wrong sectors? thresholds are first
-  guesses: `YELLOW_*` in `turbohud/core/race.py`), the gliding delta bar (smooth enough?), a broken track map
-  mending after a clean lap, a purple sector turning green, the Yellow flags tick box in the menu and
-  Settings (not seen in the app: an off-screen start of the app crashes on the Mac).
-- The delta against TSU's ghost: the tester's bar seemed late against his ghost, as it compares with his
-  best lap of the race, not the ghost. To follow the ghost: a recording of a race against a ghost with
-  `experiments/tsu_race_recorder.py`, then `EventPlayer.m_comparedTimes` /
-  `m_ghostRecordingPlayerToCompareWith`.
-- The move-mode panel is 400 x 914 points with the macOS buttons: if too tall on a 14" MacBook, presets on
-  one line.
-
-1. The one-window HUD gave no gain that showed on 2026-11-10 ("One-window HUD and reads on the user's
-   Mac" below), though it looks and works as before. To tell whether it helps at all: in one race, with the
-   Metal HUD, a minute each of TurboHUD closed, every section shown, the same with
+1. The tester (backlog item 0): his log with 2026.11.14, after he freed his disk to about 244 GB,
+   is clean on TurboHUD's side (drawing 9 to 16%, no stall every 30 s). Asked of him: whether that
+   session stuttered and at what clock times (while driving or between races); whether it began
+   when TSU's race data spread to about 3 GB; Activity Monitor's Memory Pressure, Swap Used and the
+   memory of wine (TSU) and TurboHUD in a race; if it stutters, the same race with TurboHUD closed.
+   If it stutters only with TurboHUD: fewer reads a second and fewer pages, then the searches.
+2. Custom race and Single Player (2026-11-13): found in a Custom race on Windows; try a Single
+   Player event, and a Custom race on the Mac and on Linux (a second search pass there).
+3. Replays after a race (2026-11-13): a recording watched after a race in the same TSU session,
+   opened from the list and watched again; on the Mac, whether the recordings get an access time.
+4. Windows (backlog item 1): the overlay over TSU in Fullscreen and Fullscreen Exclusive, and a whole
+   race offline and hosting.
+5. The Mac's one-window HUD gave no gain that showed on 2026-11-10 ("One-window HUD and reads on the
+   user's Mac" below), though it looks and works as before. To tell whether it helps at all: in one
+   race, with the Metal HUD, a minute each of TurboHUD closed, every section shown, the same with
    `TURBOHUD_ONE_WINDOW=0 sh run_turbohud.sh`, one section shown in each of the two, and closed again.
-2. Build 2026.11.14 for the tester (`releases/`; it adds Custom race and Single Player, test sheet "New since 2026.11.13.5"; his disk is freed (about 244 GB) and his 2026.11.14 log is clean on TurboHUD's side; next his stutter times and memory: backlog item 0; .5 leaves the end-of-race slow frames out of the log; .4: the log notes each freeze, garbage collection and the costliest sections to draw, for his stutter: backlog item 0; the test sheet starts with a stutter part; .3 had the move-mode panel fitting small screens, check 28; .2 had the new icon and About, one copy at a time, arrow keys in move mode, layouts per screen size and the lap title fixes, test sheet checks 25 to 27; 2026.11.13 had text sizes in pixels and edge resizing, move mode staying on, gear and rev lights, the radar only in cockpit cameras, DNF, pit stops only in the box, the lap times' name field and Ovr column, replay fixes, test sheet checks 21 to 24; .7 had the lighter race reads, the player list in track order, the Last column, steady lists and replays, test sheet checks 18 to 20; .6 had the fixes for his stutter with .4, see backlog item 0, and no yellow flag for a car left standing over a minute; .4 added the player list around the player, tire compounds, the wet W, classes in colour with the class sheet, the lap times' columns as options and the bigger radar arrows (Part 4 points 14 to 17); before them 2026.11.11.8 and .9, which replace 2026.11.11.4 to .7, with the own yellow flag, the smaller own dot, the yellow sector following a car backwards, the radar capped at six car lengths with edge arrows, classes on the radar and clan tags in the lap times (Part 4 points 10 to 13, Part 6); before them JUMP START (shown while TSU flags it, then 1.5 s): TSU's own flags, wrong way, hazard ahead, the
-   yellow sector on the map, the steady yellow box, flags stacked, classes, the shortcut penalty, three-lap track
-   learning and Relearn, no Windows Python; Parts 4 and 6 of the sheet look at them), with
-   `TurboHUD-test-instructions.md` for it: a race joined online (point 2b), the new delta bar, the Rust
-   reader (the Python one as fallback, `TURBOHUD_PY_READER=1`), and five FPS measurements in one race
-   against AI: closed; one window with every section, then only the local time; a window each
-   (`TURBOHUD_ONE_WINDOW=0`) with every section, then only the local time. Put their results under
-   "Tester's Mac", with the quick look, the log (`(the Rust reader)`, the `race reads` median), whether a
-   reader was left and whether TSU froze. Results of 2026.11.09.2, if they come, go there too.
-2b. The tester's TSU writes no race log (2026-11-11), so TurboHUD never searched for races he joined online
-   and showed only the clock; fixed the same day (`RESUME.md`). Build 2026.11.11 (point 2): check a race joined as a
-   client (a session the user hosts, and the event server) shows the HUD, and that the log has
-   `TSU's log: not known (searching anyway)` then `search: race found`. He ran TurboHUD from the disk image
-   that time: install it into Applications first.
-   Seen with 2026.11.11 the same night, in a session the user hosted: the HUD showed, about 10 s after the
-   start (no log to go by: the timed search; each search with no race takes 8 to 10 s on his Mac, then
-   10 s wait, so up to about 20 s). The third event's race was found but not read until the event was
-   restarted: fixed the same night (`RESUME.md`). And his stutter and FPS drops were gone with 2026.11.11
-   (the user, no numbers yet). Built the same night: a quick look near the last race every 2 s while there
-   is no log to go by (`RESUME.md`). Build 2026.11.11.2: from the second race of a session on, the HUD within
-   about 2 to 3 s of the start, with `quick look: race found` in the log. Which change since 2026.11.08.2
-   (his last measured build) took his stutter away is not known: his Part 3 numbers, the one window
-   against a window each, would tell the most.
-3. At each quit of TSU the user notes whether it froze and whether TurboHUD ran ("Other points").
-4. When one comes up: a special event (map expected), King of the Hill or Sumo (no map), a track without
-   sector lines (3 even sector bars expected), joining as a driver after spectating.
-5. Online, the search from the last race worked in one session on 2026-11-10 ("Not yet seen in a race");
-   when one comes up: another session, and spectating.
-6. With point 1 and the tester's numbers: keep the one window, make it only as large as its sections, or
-   go back to a window each. The Mac app ships without the Windows Python since 2026-11-11.
+   With those numbers (and the tester's): keep the one window, make it only as large as its sections,
+   or go back to a window each.
+6. Not yet seen since 2026-11-13 to 2026-11-15: the design screen opening on this screen's size at
+   100%, the grid beneath the sections on the Mac and Windows, the Options submenu in the Mac's menu
+   bar and Windows' tray, the delta bar turning red on a slow loss, the HUD coming at once when TSU's
+   log newly says an event runs, and the move-mode panel on a small Mac laptop.
+7. The user's own race from source: yellow flags (too eager, too late, wrong sectors? thresholds are
+   first guesses: `YELLOW_*` in `turbohud/core/race.py`); off the track by the surface's layer (no yellow
+   flag on plastic kerbs, concrete run-off or curbs, still one on Terrain; none on a rallycross track;
+   `wrecked` with damage on); a broken track map mending after a clean lap; a purple sector turning green.
+8. The delta against TSU's ghost: the tester's bar seemed late against his ghost, as it compares with his
+   best lap of the race, not the ghost. To follow the ghost: a recording of a race against a ghost with
+   `experiments/tsu_race_recorder.py`, then `EventPlayer.m_comparedTimes` /
+   `m_ghostRecordingPlayerToCompareWith`.
+9. At each quit of TSU the user notes whether it froze and whether TurboHUD ran ("Other points").
+10. When one comes up: a special event (map expected), King of the Hill or Sumo (no map), a track without
+    sector lines (3 even sector bars expected), joining as a driver after spectating; online, the search
+    from the last race in another session, and spectating ("Not yet seen in a race").
 
 Offered next (2026-11-10), most value first: the one-window canvas only as large as the sections; the
-one-window canvas on Linux and Windows; sector times as numbers. Built from this list: race reads that
-merge pages further apart, and online searches that begin where the last race was ("Not yet seen in a
-race"). Windows and the CrossOver trial: `docs/WINDOWS_AND_CROSSOVER.md`.
+one-window canvas on Linux and Windows; sector times as numbers. Windows and the CrossOver trial:
+`docs/WINDOWS_AND_CROSSOVER.md`.
 
 The user likes a plain, numbered to-do list at each step, and merges each branch by saying "merge".
-Run the tests only while TurboHUD is not running (`pgrep -fl launch_turbohud`), as one of them can
-switch a running TurboHUD to move mode. The same goes for a build's `--smoke`: with TurboHUD running, the
-built app only hands it "move" and quits, so the smoke test passes without starting the new app.
+The tests and a build's `--smoke` leave a running TurboHUD alone (the smoke test runs the built app
+with settings and a command socket of its own since 2026-11-13).
 
 ## Not yet seen in a race
 - The Rust reader (2026-11-10), seen the same evening in a race against AI (the log, 22:09 to 22:11): it
@@ -115,7 +94,7 @@ built app only hands it "move" and quits, so the smoke test passes without start
   watch, seen at 2.9 to 4.7 s (it took 15 to 21 s). Still to see: `has not run: searching past it` (an old
   race picked first), the HUD switching to the car with no search when the player drives the next race,
   and the 10 s waits for the first minute of empty searches while a race joined in progress is set up.
-- The track map only in races (2026-11-08, backlog item 7): read the log's `event type:` line in a
+- The track map only in races (2026-11-08, backlog item 6): read the log's `event type:` line in a
   regular race and a special event (expected `TS.RaceEventMode`, with the map) and in King of the Hill
   or Sumo (no map).
 - Race start online: the search reads half of the time instead of a quarter. As a driver the race was
@@ -233,7 +212,7 @@ The probe (`experiments/window_count_probe.py`, 2026-11-09, the user's layout, o
 nearly the whole screen): nothing 120 FPS, 17 windows 85, one window 115, nothing again 120. So the
 number of windows costs, not their area.
 
-Built the same day (backlog item 3): locked, on the Mac, every section is drawn in one window per screen
+Built the same day (backlog item 2): locked, on the Mac, every section is drawn in one window per screen
 (`HudCanvas` in `turbohud/overlay/window.py`); move mode keeps a window per section. Not yet seen over
 TSU. To check: the Metal HUD with every section shown (expected near 115 to 120, from 80 to 110); move
 mode as before (drag, resize, groups, Undo); while locked, a preset shortcut and "bigger"/"smaller" in
@@ -272,8 +251,8 @@ A race against AI with the Metal HUD, read by eye by the user; `main` with the o
 - No online race could be driven, so the search from the last race is not seen yet.
 
 ### Other points
-- Custom sessions show only the clock: no race is found in them. Not looked into: what such a session
-  holds, and whether the HUD could read it.
+- Custom races are read since 2026-11-13 (`TS.HostEventController`, found by the search); a Single
+  Player event is still to see.
 - TSU freezing when it is quit. Seen twice, each time with TurboHUD quit first:
 
   | When | TurboHUD | Steam started | TSU |
@@ -304,7 +283,8 @@ online as a driver.
    capture event (an arena mode) has no map. Still to see: joining as a driver brings the
    normal HUD with no search.
 2. Later: a race on someone else's server, ideally 20 players. Hyprland: `--preset`, group
-   resizing, Undo, the bin. Windows: none of this has run there, and live data is not built.
+   resizing, Undo, the bin. Windows: live data runs there since 2026-11-11 (an online race and a
+   Custom race read); the layout list has not been tried there.
 
 Ask the user to say when done before restarting TurboHUD: the log is replaced at each start.
 
@@ -318,8 +298,9 @@ Ask the user to say when done before restarting TurboHUD: the log is replaced at
   they found the result "much better" afterwards, but may not have widened it.
 - Offers not taken up yet: a leader-only blue flag; the settings window remembering where it
   was dragged; slots for other numbers (fuel and tires move by a digit at 100 to 99%).
-- `releases/` holds only the latest build, 2026.11.10 (needs macOS 27): see backlog item 5 for what it
-  needs before it runs on an older macOS.
+- `releases/` is local to each machine (gitignored): the Mac's holds the tester's builds (the latest
+  2026.11.14), this Linux PC's the Linux `.tar.gz` (2026.11.14.6). For a Mac build that runs on an older
+  macOS: backlog item 4.
 
 ## How the slow reads were found
 Worth keeping for the next time the HUD lags. What fooled the first attempts: offscreen drawing
@@ -332,5 +313,4 @@ is far cheaper than real Mac windows, so benchmarks without real windows looked 
 - The log's `race reads` line gives trips a read, ms a trip and how much of that is on the
   game's memory; `HUD frames` gives the overlay's side.
 
-Run tests with `XDG_RUNTIME_DIR` set to an empty private folder and `QT_QPA_PLATFORM=offscreen`
-(backlog item 1). On the Mac, the real app cannot start offscreen: `macos.py` needs real windows.
+Run tests with `XDG_RUNTIME_DIR` set to an empty private folder and `QT_QPA_PLATFORM=offscreen`. On the Mac, the real app cannot start offscreen: `macos.py` needs real windows.

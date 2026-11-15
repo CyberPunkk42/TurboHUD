@@ -22,7 +22,7 @@ it goes.
 
 ## 2. First start
 
-- TurboHUD has no window of its own. You see a small HUD at the top left of the screen and
+- TurboHUD has no window of its own. You see a small HUD (the session time and the local time) and
   the TurboHUD icon in the taskbar's notification area (Windows; maybe behind the **^**
   arrow) or in the menu bar (Mac).
 - Start TSU, before or after TurboHUD. The race sections appear when the cars stand on the
@@ -32,18 +32,27 @@ it goes.
 
 ## 3. Place your HUD (move mode)
 
-1. Press **Ctrl+Shift+L** (or choose **Move mode** in the icon's menu).
-2. Drag each section where you want it. Drag its bottom-right corner: taller or shorter
-   makes the text bigger or smaller, wider gives it room.
-3. The panel that opens shows or hides each section, and keeps up to three layouts
-   (**Save** / **Load** presets 1 to 3). **Undo** goes back a step.
-4. Press **Ctrl+Shift+L** again (or **Lock**) to finish. Your layout is saved.
+1. Press **Ctrl+Shift+L** (or choose **Move mode** in the icon's menu). A faint grid helps
+   line things up.
+2. Drag each section where you want it, or click it and nudge it with the arrow keys (Shift:
+   10 px). Drag a corner to size its text, an edge to give it more room.
+3. The panel that opens shows or hides each section, sets its text size (**Size px**) and
+   line spacing (**Lines %**), and keeps up to three layouts (**Save** / **Load** presets 1
+   to 3). **Undo** goes back a step, **Redo** forward again.
+4. **Load screen default** gives you TurboHUD's layout for your screen size; **Export…** and
+   **Import…** share layouts as files (in the `customization/display_presets` folder beside
+   TurboHUD); **Design for** lays one out for another screen size.
+5. Press **Ctrl+Shift+L** again (or **Lock**) to finish; a race starting also locks it. Your
+   layout is saved.
 
 ## 4. Settings
 
 Icon menu, **Settings...**: text colours, all sections bigger or smaller, km/h or mph, a
 light tint behind the sections, which columns the lap times show (flag, lap, tire, best,
-last), when the blue flag and the radar warn, and **Car classes...**, a list of every car
+last), when the blue flag and the radar warn, how many times a second the race is read, and
+the on/off options (also under **Options** in the icon's menu): the radar's slipstream cones
+and the radar only in cockpit cameras, sector bars, yellow flags, gear and revs, classes and
+clan tags in the lap times, other cars on the map. **Car classes...** is a list of every car
 class you can put in your clan tag (such as [GT3] or [LMP]) with its colour. **About...**
 (also **About TurboHUD...** in the icon's menu) shows the version you have.
 
@@ -61,21 +70,23 @@ listed in the panel under four headings:
   the fastest of the race, green your own best, yellow slower).
 - **Lap times**: every driver's best and last lap, the race's fastest in purple, the tire
   compound as a coloured ring (S red, M yellow, H white), **CUT** for a shortcut penalty,
-  **JUMP** for a false start and **PIT** with the time in the pits.
+  **JUMP** for a false start, **PIT** with the time in the pits and **DNF** for a car out of
+  the race.
 
 **Car**
 - **Fuel** and **Fuel to finish**: fuel left, how many laps it lasts, and whether it lasts to
   the end (green: laps to spare; red: you need to pit).
 - **Tires** and **Health**: tire wear and damage left, where the event has them on.
 - **Draft**: how much you are in someone's slipstream.
-- **Speed**: with throttle and brake bars.
+- **Speed**: with throttle and brake bars, and as an option the gear and rev lights.
 
 **Race**
 - **Players**: the leader on top, then the 3 cars ahead of and the 3 behind you on the track,
   with the gap to each.
 - **Track map**: learnt from three clean laps of yours; the cars as dots, incidents ringed.
 - **Proximity radar**: cars close to you, red right beside you and yellow closing in, with the
-  slipstream behind the cars ahead; arrows at its edge for cars just out of view.
+  slipstream behind the cars ahead; arrows at its bottom edge for cars just out of view behind.
+  By default only in the cockpit cameras.
 - **Blue flag**: a faster car about to lap you.
 - **Yellow flag**: trouble ahead (a car stopped, spun, off the track, the wrong way round or
   wrecked) and in which sector.
@@ -123,6 +134,9 @@ icon's menu always works. The icon's tooltip says when Ctrl+Shift+L is taken. Ot
   a blue **W** tire.
 - **Replays**: TurboHUD also works in TSU's replays, as if you were driving the car the
   camera follows.
+- **Custom races**: TurboHUD reads these too, as offline and online races (a Single Player
+  event should work the same way, but has not been tried yet).
+- **One at a time**: starting TurboHUD while it runs opens no second copy.
 - **Settings and the log** (`settings.json`, `turbohud.log`): Windows `%APPDATA%\TurboHUD`,
   macOS `~/Library/Application Support/TurboHUD`, Linux `~/.config/TurboHUD`. When reporting
   a problem, send `turbohud.log` right after it happened: it is replaced at the next start.
