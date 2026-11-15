@@ -1577,6 +1577,18 @@ class MovePanel(QWidget):
         for text in ('Load screen default', 'Import…'):
             self.layout_buttons[text].setEnabled(not designing)
 
+    def set_own_screen(self, size):
+        """The Design for list with this screen's `size` (width, height) chosen, so Design shows
+        one's own layout at 100% straight away (asked for by the user on 2026-11-15); a size the
+        list lacks is put in it, in order. It is marked "(this screen)"."""
+        own = tuple(size)
+        sizes = sorted(set(SCREENS) | {own})
+        self.design_size.clear()
+        for width, height in sizes:
+            mark = ' (this screen)' if (width, height) == own else ''
+            self.design_size.addItem(f'{width}x{height}{mark}', (width, height))
+        self.design_size.setCurrentIndex(sizes.index(own))
+
     def set_relearn_available(self, available):
         """Relearn map works only while a track is known (in a race)."""
         if self.relearn is not None:

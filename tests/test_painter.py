@@ -1102,6 +1102,24 @@ class MovePanelPresetTests(unittest.TestCase):
         self.assertEqual(len(found), 1)
         return found[0]
 
+    def test_design_for_starts_on_this_screens_size(self):
+        """Asked for by the user on 2026-11-15: one's own size chosen, marked, any size added."""
+        from turbohud.core.presets import SCREENS
+
+        panel = self.panel()
+        sizes = panel.design_size
+        panel.set_own_screen((2560, 1440))
+        self.assertEqual(sizes.currentData(), (2560, 1440))
+        self.assertEqual(sizes.currentText(), '2560x1440 (this screen)')
+        self.assertEqual(sizes.count(), len(SCREENS))
+        panel.set_own_screen((1707, 960))  # a scaled screen the list lacks: put in, in order
+        self.assertEqual(sizes.currentData(), (1707, 960))
+        self.assertEqual([sizes.itemData(i) for i in range(sizes.count())], sorted({*SCREENS, (1707, 960)}))
+        self.assertEqual(sum('(this screen)' in sizes.itemText(i) for i in range(sizes.count())), 1)
+        panel.set_own_screen((1920, 1080))  # another screen: the added size goes again
+        self.assertEqual(sizes.count(), len(SCREENS))
+        self.assertEqual(sizes.currentData(), (1920, 1080))
+
     def test_only_a_saved_preset_can_be_loaded(self):
         panel = self.panel(saved_presets=(2,))
         self.assertFalse(self.button(panel, 1, 'Load').isEnabled())
