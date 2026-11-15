@@ -3,7 +3,7 @@
 Open items, most valuable first. Finished items move to `docs/PROGRESS.md`. Where the work
 last stopped: `docs/CONTINUE_HERE.md`.
 
-## 0. The tester's stutter with build 2026.11.12.4 (macOS): on hold, most likely his disk and memory
+## 0. The tester's stutter with build 2026.11.12.4 (macOS): disk freed; waiting on his stutter times
 Reported 2026-11-12, after the day's features (class colours, tire column, the player list around the player).
 His log (four online races): reads of 4 ms, frames 53 ms apart, content 2 to 4% and drawing 20 to 24% of the
 time (16 to 19% on 2026-11-10), about the same with the lap times hidden; no CrossOver graphics warning.
@@ -39,6 +39,25 @@ again. On hold until he reports. If the huge stutters come back with that free: 
 Activity Monitor's Memory Pressure, Swap Used and the largest processes (TurboHUD's own memory, not yet measured
 in a race), and the clock times with the log; if only with TurboHUD, its windows over the game (the old FPS cost),
 not the reads.
+His log with 2026.11.14 (received 2026-11-15, one online race of about 11 minutes, after he freed his disk to
+about 244 GB): TurboHUD ran clean. Drawing 9 to 16% of the time (10% once the track map was learnt; was 19 to 24%),
+frames steady 53 to 54 ms apart, collections of at most 6 ms, and no stall on the 30 s beat (slowest read 18 to
+64 ms, 3 over 50 ms). Left to look at:
+- TSU's race data spread from 350 to 417 MiB to 3,086 to 3,110 MiB at one moment (20:51:55 in his log) and stayed
+  there, as on his evening of huge stutters (the user's: 375 to 435). TSU's own memory likely grows during his
+  sessions. The slowest frames went from 60 to 75 ms to 90 to 95 ms just after. Ask whether his stutter began then.
+- One frame 103 ms late (20:57:26 in his log) with 6.3 ms of TurboHUD's own work and no collection: the system did
+  not run TurboHUD for about 0.1 s, a hitch of the whole Mac (memory pressure or swap), not TurboHUD's.
+- His race reads cost about twice those with 2026.11.13.5: 57 to 69 reads of the game and about 15 ms a read (were
+  33 to 54 and 7 to 8 ms), from just after the track map was learnt (107 to 128 pages). At 20 a second the reader
+  reads TSU's memory about 30% of the time: the first thing to cut if the stutter comes only with TurboHUD (fewer
+  reads a second, fewer pages).
+- Searches are long: 13 to 16 s each while on a server with no race (were 8 to 10 s), 10 to 60 s apart, and 38.5 s
+  for the search from the last race after it ended. The suspect if his stutter is in the lobby or between races.
+Asked of him: whether this session stuttered, at what clock times, while driving or between races; Activity
+Monitor's Memory Pressure, Swap Used and TSU's (wine) and TurboHUD's memory in a race; if it stutters, the same
+race with TurboHUD closed. With the disk free, swap no longer runs short; the next suspect is memory (18 GB, about
+3 GB left) and TSU's growth.
 
 ## 1. Windows: the overlay, then live data
 Over TSU on Windows, in windowed, Fullscreen and Fullscreen Exclusive: the built app
