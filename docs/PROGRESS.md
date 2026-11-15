@@ -2194,3 +2194,7 @@ its "Recent changes".
     sections. On the Mac (Native.dialogs_on_top) they and the warnings and About now use Qt's own window, raised to
     TurboHUD's level as it opens (`turbohud/overlay/dialogs.py`); checked on the Mac: the export window at level 1000,
     as the layouts window. Windows and Linux keep the system's own, as before. Tests for the helpers.
+  - 2026-11-16: A switch for move mode's grid, asked for by the user (`feature/grid-switch`): "Move mode grid", in the
+    settings window's Look and the tray's Options, on by default; turned off in move mode the grid goes at once, and
+    comes back when turned on. The User Guide says so. A settings test; a 6 s start in move mode clean (grid shown).
+    Not tried with the grid off by hand.

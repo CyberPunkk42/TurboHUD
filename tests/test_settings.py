@@ -310,6 +310,14 @@ class PresetTests(unittest.TestCase):
         s.save_settings(path, s.Settings(group_tint=False))
         self.assertFalse(s.load_settings(path).group_tint)
 
+    def test_the_move_mode_grid_is_on_unless_turned_off(self):
+        # A switch since 2026-11-16 (asked for by the user).
+        path = self.path()
+        path.write_text('{}')
+        self.assertTrue(s.load_settings(path).grid)
+        s.save_settings(path, s.Settings(grid=False))
+        self.assertFalse(s.load_settings(path).grid)
+
     def test_nearby_cars_short_list_is_on_unless_turned_off(self):
         path = self.path()
         path.write_text('{}')

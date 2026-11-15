@@ -124,6 +124,9 @@ class Settings:
     # One tint behind each group's tinted sections, the room between them too, while locked; where the
     # sections are drawn in one window (the Mac). Asked for by the user on 2026-11-15, on by default.
     group_tint: bool = True
+    grid: bool = (
+        True  # move mode's grid on the main screen (a switch since 2026-11-16, asked for by the user)
+    )
     map_others: bool = False  # the track map also shows the other cars, as faint grey dots
     # Nearby cars shows only the leader, the car ahead, you and the car behind (asked for by players
     # on 2026-11-15, on by default); off: the 3 cars ahead and the 3 behind.
@@ -353,6 +356,7 @@ def load_settings(path):
         speed_unit=data.get('speed_unit') if data.get('speed_unit') in SPEED_UNITS else 'kmh',
         backdrop=data.get('backdrop') is True,
         group_tint=data.get('group_tint') is not False,
+        grid=data.get('grid') is not False,
         map_others=data.get('map_others') is True,
         nearby_short=data.get('nearby_short') is not False,
         radar_cone=data.get('radar_cone') is not False,
@@ -396,6 +400,7 @@ def save_settings(path, settings):
         'speed_unit': settings.speed_unit,
         'backdrop': settings.backdrop,
         'group_tint': settings.group_tint,
+        'grid': settings.grid,
         'map_others': settings.map_others,
         'nearby_short': settings.nearby_short,
         'radar_cone': settings.radar_cone,

@@ -100,6 +100,10 @@
    race on each and note the FPS per phase; it decides how one tint per group is made (item 3b).
 
 ## Recent changes
+  - 2026-11-16: A switch for move mode's grid, asked for by the user (`feature/grid-switch`): "Move mode grid", in the
+    settings window's Look and the tray's Options, on by default; turned off in move mode the grid goes at once, and
+    comes back when turned on. The User Guide says so. A settings test; a 6 s start in move mode clean (grid shown).
+    Not tried with the grid off by hand.
   - 2026-11-16: The save window opened behind TurboHUD on the Mac, reported by the user (`fix/save-window-on-top`):
     TurboHUD's windows sit at window level 1000 (above TSU's Fullscreen), and the system's own save and open windows
     at the normal level, so Export, Import and Save design opened behind the panel, the layouts window and the

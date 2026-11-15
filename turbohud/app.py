@@ -778,9 +778,10 @@ def run(args, folder):
     grid_window = None  # move mode's grid, on the main screen only, made the first time
 
     def show_grid(shown):
-        """Move mode's grid on the main screen, beneath the sections; gone while locked."""
+        """Move mode's grid on the main screen, beneath the sections; gone while locked, and
+        always with its switch off (Move mode grid)."""
         nonlocal grid_window
-        if not shown:
+        if not shown or not settings.grid:
             if grid_window is not None:
                 grid_window.hide()
             return
@@ -863,6 +864,16 @@ def run(args, folder):
         save()
         log.info('one tint for each group %s', 'on' if on else 'off')
 
+    def set_grid(shown):
+        """Move mode's grid on or off; in move mode it goes or comes at once."""
+        nonlocal settings
+        settings = replace(settings, grid=shown)
+        grid_action.setChecked(shown)
+        show_option('grid', shown)
+        show_grid(shown and not locked)
+        save()
+        log.info('move mode grid %s', 'on' if shown else 'off')
+
     def show_all_tinted():
         backdrop_action.setChecked(all_tinted())
         show_option('backdrop', all_tinted())
@@ -883,6 +894,12 @@ def run(args, folder):
                 'Light tint behind all sections',
                 all_tinted(),
                 'A light tint behind every section; each has its own Tint in the move-mode panel',
+            ),
+            (
+                'grid',
+                'Move mode grid',
+                settings.grid,
+                'The faint grid on the main screen in move mode, to line the sections up',
             ),
         ]
         if canvas is not None:  # where the sections are drawn in one window (the Mac)
@@ -1306,6 +1323,7 @@ def run(args, folder):
                 'mph': set_mph,
                 'backdrop': set_backdrop,
                 'group_tint': set_group_tint,
+                'grid': set_grid,
                 'radar_cone': set_radar_cone,
                 'radar_cockpit_only': set_radar_cockpit_only,
                 'map_others': set_map_others,
@@ -1826,6 +1844,10 @@ def run(args, folder):
     group_tint_action.triggered.connect(lambda checked: set_group_tint(checked))
     if canvas is not None:
         options_menu.addAction(group_tint_action)
+    grid_action = QAction('Move mode grid', menu, checkable=True)
+    grid_action.setChecked(settings.grid)
+    grid_action.triggered.connect(lambda checked: set_grid(checked))
+    options_menu.addAction(grid_action)
     radar_cone_action = QAction('Slipstream cones on the radar', menu, checkable=True)
     radar_cone_action.setChecked(settings.radar_cone)
     radar_cone_action.triggered.connect(lambda checked: set_radar_cone(checked))

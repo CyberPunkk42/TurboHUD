@@ -39,7 +39,7 @@ COLOURS = (
 )
 # Where each option goes: under its heading, in this order. Options not named here show under More.
 GROUPS = {
-    'look': ('backdrop', 'group_tint', 'mph'),
+    'look': ('backdrop', 'group_tint', 'grid', 'mph'),
     'standings': ('classes', 'clan_tags'),
     'sections': ('nearby_short', 'sector_bars', 'gear', 'map_others'),
     'radar': ('radar_cone',),
