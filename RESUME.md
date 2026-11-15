@@ -88,6 +88,11 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+  - 2026-11-15: The design screen showed one's own screen size at 88%, asked about by users (`fix/design-own-size-full`):
+    the frame for a chosen size could take at most 94% of the screen's width and 88% of its height, even for a size
+    that fits as it is. Now a size that fits on the screen (one's own, or smaller) is shown at 100%, the frame covering
+    exactly that much of the screen (all of it for one's own size); only a larger size is shrunk, within that margin as
+    before. A test (fails on the old code). All 1198 tests pass. Not yet: seen in move mode.
   - 2026-11-14: "Quit TurboHUD" was missing from the tray menu on Linux, reported by the user
     (`fix/tray-quit-in-sight`): TurboHUD offered it (seen in the menu it gives the desktop over D-Bus), but omarchy's bar
     shows a tray menu up to 420 px, about 13 rows, and scrolls the rest; with every option the menu had 15 rows and a

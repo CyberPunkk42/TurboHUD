@@ -235,14 +235,19 @@ def on_screen(places, size):
     }
 
 
-DESIGN_ROOM = (0.94, 0.88)  # share of the screen's width and height the design frame may take
+DESIGN_ROOM = (0.94, 0.88)  # share of the screen's width and height a shrunken design frame may take
 
 
 def design_frame(size, screen):
     """(the frame (x, y, width, height), its scale) that stands for a screen of `size` on `screen`
-    (x, y, width, height): as large as fits, at most at full size, in the middle of it (the design
-    screen, asked for by the user on 2026-11-13: presets for screens one does not have)."""
-    scale = min(screen[2] * DESIGN_ROOM[0] / size[0], screen[3] * DESIGN_ROOM[1] / size[1], 1.0)
+    (x, y, width, height), in the middle of it (the design screen, asked for by the user on
+    2026-11-13: presets for screens one does not have). A size that fits on the screen, one's own
+    among them, is shown at full size (100%, reported by users on 2026-11-15: their own size came
+    out at 88%); a larger one is shrunk to fit within DESIGN_ROOM of it."""
+    if size[0] <= screen[2] and size[1] <= screen[3]:
+        scale = 1.0
+    else:
+        scale = min(screen[2] * DESIGN_ROOM[0] / size[0], screen[3] * DESIGN_ROOM[1] / size[1])
     width, height = round(size[0] * scale), round(size[1] * scale)
     return (screen[0] + (screen[2] - width) // 2, screen[1] + (screen[3] - height) // 2, width, height), scale
 

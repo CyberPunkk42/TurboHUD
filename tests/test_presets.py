@@ -182,6 +182,17 @@ class DesignScreenTests(unittest.TestCase):
         _frame, full = presets.design_frame((1920, 1080), self.MINE)
         self.assertEqual(full, 1.0)  # fits at full size: not larger
 
+    def test_the_own_screen_size_is_shown_at_full_size(self):
+        """Reported by users on 2026-11-15: their own size came out at 88%."""
+        screen = (0, 0, 2560, 1440)
+        frame, scale = presets.design_frame((2560, 1440), screen)
+        self.assertEqual(scale, 1.0)
+        self.assertEqual(frame, screen)  # the whole screen
+        frame, scale = presets.design_frame((2560, 1080), screen)  # fits, though wider than 94%
+        self.assertEqual((scale, frame), (1.0, (0, 180, 2560, 1080)))
+        _frame, scale = presets.design_frame((2560, 1441), screen)  # a pixel too tall: shrunk
+        self.assertAlmostEqual(scale, 1440 * presets.DESIGN_ROOM[1] / 1441)
+
     def test_into_the_frame_and_back(self):
         size = (3840, 2160)
         frame, scale = presets.design_frame(size, self.MINE)

@@ -1951,3 +1951,8 @@ its "Recent changes".
     separator, so Quit was out of sight. The ten on/off options, all in Settings too, are now in an Options submenu: the
     menu is Move mode, Options, Relearn this track's map, Settings, About and Quit. All tests pass. Not yet: seen in
     omarchy's bar, the Mac's menu bar and Windows' tray.
+  - 2026-11-15: The design screen showed one's own screen size at 88%, asked about by users (`fix/design-own-size-full`):
+    the frame for a chosen size could take at most 94% of the screen's width and 88% of its height, even for a size
+    that fits as it is. Now a size that fits on the screen (one's own, or smaller) is shown at 100%, the frame covering
+    exactly that much of the screen (all of it for one's own size); only a larger size is shrunk, within that margin as
+    before. A test (fails on the old code). All 1198 tests pass. Not yet: seen in move mode.
