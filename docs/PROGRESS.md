@@ -2154,3 +2154,9 @@ its "Recent changes".
     mode, not when empty; practice cannot be told from a race. At the user's wish the presets, files and Design
     moved from the panel into a Layouts window (**Layouts…**). Tests for the settings, the modes and the window;
     the guides, README and read-me updated. Not yet tried by hand nor in TSU (backlog item 3).
+  - 2026-11-15: The window count probe runs on Windows and Linux too (`feature/window-probe-everywhere`), to tell
+    whether one window per screen (as the Mac draws locked) would help there: it reads TurboHUD's settings in
+    each system's folder, keeps its windows on top through each system's Native (on Hyprland floated and pinned,
+    each with its own title), and has a third phase, one window per screen, as TurboHUD's HudCanvas. Fixed:
+    closing the windows for the last phase quit it, so "nothing again" was cut short. Run on the Mac (all five
+    phases); not yet on Windows or Linux (backlog item 1c). The day's other requests are backlog item 3b.

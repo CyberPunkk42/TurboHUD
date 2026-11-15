@@ -88,6 +88,14 @@ second mode for windowed TSU. Next: the Qt overlay probe in the bottle (plan ste
 against the native app with TSU windowed. Item 1's live data in-process, needed for the real app,
 is built (2026-11-11).
 
+## 1c. One window on Windows and Linux: measure first (probe ready, 2026-11-15)
+Locked, the Mac draws every section in one window per screen; Windows and Linux keep a window per section.
+Whether one window helps there is not measured. `experiments/window_count_probe.py` runs on all three since
+2026-11-15 (`feature/window-probe-everywhere`): 17 windows, one window round the boxes, one window per screen,
+each 45 s, between two rests; `experiments/README.md` says how. Next: the user runs it with TSU in a race on
+Windows and on Hyprland, with Steam's FPS counter, and notes the FPS of each phase. If one window wins, turn
+on HudCanvas there (`one_window` in the Native), which also makes one tint per group simple (item 3b).
+
 ## 2. macOS: live data in CrossOver
 Answered 2026-11-04 (`experiments/README.md`, "Memory inside the CrossOver bottle"):
 macOS refuses `task_for_pid` on CrossOver's signed Wine loader, but a Windows program
@@ -154,6 +162,17 @@ presets with their shortcuts, groups, the Centre buttons, Centre text and Undo. 
   (keyboard focus on Hyprland), Ctrl+Shift+4 and 5 on each system, and each mode in TSU: a recording, a
   hotlapping event, a race, and an arena event (Sumo, Battle, King of the Hill, Tag), whose mode is read a
   moment after the race (the log says `event type:` and `a ... began`).
+
+## 3b. Asked for on 2026-11-15: more groups, Nearby cars, one tint per group
+- Groups A to G (now A to D): no decision needed.
+- Nearby cars: an option showing only the leader, the car ahead and the car behind. Open: whether the
+  player's own row stays (leader, ahead, you, behind).
+- Nearby cars' text too small (a player): the shipped layouts give it 8 px at 1920x1080 and 10 px at
+  2560x1440 (Standings 10 and 14), and Size px already sets it. Open: a bigger shipped default, or only
+  the guides pointing to Size px.
+- One tint across a group of sections: on the Mac's one window one rectangle per group; on Windows and
+  Linux, a window per section cannot draw in the gaps. Waits on item 1c: with one window there too it is
+  one rectangle everywhere; else the touching sides square and the windows stretched over half the gap.
 
 ## 4. Builds and release
 The Mac app for a tester (2026-11-06): build with `sh tools/get_mac_python.sh`, then

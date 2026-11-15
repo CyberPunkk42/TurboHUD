@@ -37,11 +37,35 @@ class LayoutTests(unittest.TestCase):
         boxes = [(857, 40, 342, 47), (-1, 1123, 286, 46), (1706, 980, 348, 347)]
         self.assertEqual(probe.bounds(boxes), (-1, 40, 2055, 1287))
 
-    def test_the_phases_run_from_nothing_through_both_kinds_to_nothing(self):
+    def test_the_phases_run_from_nothing_through_the_three_kinds_to_nothing(self):
+        # Since 2026-11-15 also one window per screen, as TurboHUD locked on the Mac.
         plan = probe.phases(30.0, 45.0, 17)
-        self.assertEqual([mode for _name, _seconds, mode in plan], [None, 'many', 'one', None])
-        self.assertEqual(sum(seconds for _name, seconds, _mode in plan), 150.0)
+        self.assertEqual([mode for _name, _seconds, mode in plan], [None, 'many', 'one', 'screen', None])
+        self.assertEqual(sum(seconds for _name, seconds, _mode in plan), 195.0)
         self.assertEqual(plan[1][0], '17 windows')
+
+    def test_one_window_per_screen_that_has_boxes(self):
+        left, right, unused = (0, 0, 1920, 1080), (1920, 0, 2560, 1440), (0, 1080, 1920, 1080)
+        boxes = [(10, 10, 300, 40), (2000, 50, 300, 40), (1900, 500, 100, 40), (-500, -500, 50, 50)]
+        held = probe.screens_with_boxes([left, right, unused], boxes)
+        # A box goes by its middle (1950: the right screen); one on no screen to the first.
+        self.assertEqual(
+            held,
+            [
+                (left, [(10, 10, 300, 40), (-500, -500, 50, 50)]),
+                (right, [(2000, 50, 300, 40), (1900, 500, 100, 40)]),
+            ],
+        )
+        self.assertEqual(probe.screens_with_boxes([], boxes), [])
+
+    def test_it_reads_turbohuds_settings_on_every_system(self):
+        # Since 2026-11-15 on Windows and Linux too, not only the Mac's folder.
+        from turbohud.core.settings import SETTINGS_FILE, settings_dir
+
+        self.assertEqual(probe.SETTINGS, settings_dir() / SETTINGS_FILE)
+        self.assertEqual(probe.parse_args([]).settings, probe.SETTINGS)
+        for platform in ('darwin', 'win32', 'linux'):
+            self.assertIn(platform, probe.FPS_COUNTERS)
 
     def test_the_options(self):
         args = probe.parse_args(['--rest', '10', '--each', '20'])
