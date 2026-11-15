@@ -17,10 +17,11 @@ nothing to other players or servers, and gives no control over the car.
   show, and clicks go straight through to the game. In **move mode** every section gets a
   blue tint and can be dragged and sized, and a panel with all the settings for the layout
   opens (see section 4).
-- **When the race sections show.** Without a race, only **Time since start** and **Clock
-  time** show. The race sections appear when the cars stand on the grid, before the
-  lights, stay after you finish until the race is over, and go away in the lobby and the
-  menus. Online, finding the race takes a few seconds after the event starts.
+- **When the race sections show.** While TurboHUD waits for TSU, nothing shows but its icon.
+  Once TSU runs, the **Clock** shows, also in the menus and the lobby. The race sections
+  appear when the cars stand on the grid, before the lights, stay after you finish until
+  the race is over, and go away in the lobby and the menus. Online, finding the race takes a
+  few seconds after the event starts.
 - **What TurboHUD is waiting for.** Rest the pointer on the TurboHUD icon: its tooltip says
   "TurboHUD - " and what it is doing ("waiting for game", "waiting for race", racing,
   replay ...), and warns when something is wrong (for example when another program has
@@ -102,8 +103,8 @@ map's road shows purple or green for 6 seconds.
 **Standings**
 Every driver in race order (in qualifying, which TSU runs as hotlapping, by best lap). The
 place and the name always show; every other column can be turned off under **Settings…**:
-- the place, the country flag, the name (up to 18 letters, as in Nearby cars; a longer one ends in "…") and, in a race without classes,
-  the clan tag (`FTR` for `[FTR]`)
+- the place, the country flag, the name (up to 18 letters, as in Nearby cars; a longer one
+  ends in "…") and, in a race without classes, the clan tag (`FTR` for `[FTR]`)
 - the lap each driver is on (`L3`)
 - the gap to the leader (`+7.231`, or `+1 L` a lap or more behind; nothing for the leader
   and for a car out of the race). In a race with classes, the gap to that class's leader.
@@ -115,9 +116,10 @@ place and the name always show; every other column can be turned off under **Set
   exit with the time standing in the box in brackets; an orange **CUT** with the seconds
   left while TSU slows that driver for a shortcut; an orange **JUMP** for a false start;
   **DNF** for a car out of the race.
-Your own row is in the highlight colour. With more than 20 drivers it shows the leader and
-the drivers around you. While clan tags show, the list's text may get a little smaller to
-fit its box.
+A heading row names the columns (**Driver**, **Ovr**, **Gap**, **Best**, **Last**). Your own
+row is in the highlight colour. With more than 20 drivers it shows the leader and the
+drivers around you. Every column keeps room for its widest entry, so a pit stop, a penalty
+or a DNF never moves the others, and the box is only as wide as the columns you show.
 
 The **country flags** here and in **Nearby cars** are TSU's own pictures: at its start
 TurboHUD reads them from your copy of the game (only reading) and keeps them, made small,
@@ -129,8 +131,10 @@ which has none, the country code).
 class, each below a thin line with its name in the class's colour, numbered within the
 class, with the class's fastest lap in purple, each driver's class after the name and the
 overall place (`P7`) in an **Ovr** column. The **Class** and **Overall** columns can be turned
-off under **Settings…**; the class lines still divide the list. A driver without a class tag (or with a team's tag) gets the class most tagged
-drivers in the same car have; drivers in a car no one tagged come last under **Other**.
+off under **Settings…**; the class lines still divide the list. A driver without a class tag
+(or with a team's tag) gets the class most tagged drivers in the same car have; drivers in a
+car no one tagged come last under **Other**. Classes need two different cars: when everyone
+drives the same car, the tags name no classes.
 **Settings… > Car classes...** lists every class a tag can name, in its colour. The tags
 that count are in `settings.json` as `class_tags` (change it while TurboHUD is closed).
 
@@ -190,10 +194,12 @@ your gamepad's triggers smoothly; on the Mac and Windows they move in TSU's own 
 **Nearby cars**
 The race leader on top, then the 3 cars ahead of you and the 3 behind you on the track,
 with you always in the same row, whatever lap each car is on. Each row has the place, the
-flag, the name, the tire compound, **PIT** with its timers while in the pits, and the live
-gap to you (or `+1 L` for a lap). A name in orange is a lap or more ahead of you in the race
-(let it by), in blue a lap or more behind. **DNF** marks a car out of the race. Spectating,
-it shows the gaps to the leader.
+flag, the name (up to 18 letters), **PIT** with its timers while in the pits (the name then
+gives up letters to them and ends in "…"), the clan tag (in a race with classes: the class
+and the place in it, `GT3 P7`, in the class's colour), the tire compound, and the live gap to
+you (or `+1 L` for a lap). A name in orange is a lap or more ahead of you in the race (let it
+by), in blue a lap or more behind. **DNF** marks a car out of the race. Spectating, it shows
+the gaps to the leader.
 
 **Track map**
 The track from above, with you as a white ring (always on top, ringed in yellow when you
@@ -212,15 +218,33 @@ in move mode turns its dark square on (the default) or off. It is square: size i
 corner.
 
 **Radar**
-Your car and the cars around you, when one is within half a second behind or ahead (faint)
-up to alongside (fully visible): red right beside you, yellow closing in. It shows about six
-car lengths ahead and behind; a car further behind that already counts is an arrow at the
-bottom edge, fainter the further away. In a multi-class race a car of another class is
-filled in its class's colour. With **Slipstream cones on the radar**, the
-slipstream behind each car ahead shows as a cone. By default it shows only in the cockpit
-cameras; **Every camera** in the settings window (or **Radar in every camera** in the icon's
-menu) shows it in the views from outside the car too. How soon it shows is set under
-**Settings…**.
+The cars around you, seen from above, so you know where they are without looking round:
+your car in the middle, heading up; what is above the middle line is ahead of you, below it
+behind. It shows about six car lengths ahead and behind, and the cars are drawn a little
+bigger than they are, to be seen at a glance.
+
+It appears only when a car is close: faintly once one is within half a second behind or
+ahead of you, fully once it is alongside or within a tenth of a second, and it fades away
+again shortly after the last one has gone. Standing (on the grid) it stays away. How soon it
+appears is set under **Settings…** (**Shows a car within:**, 0.5 s by default).
+
+What you see on it:
+
+| On the radar | Means |
+|---|---|
+| Light grey car in the middle | You |
+| **Red** car | Right beside you, or less than 0.1 s behind: no room there |
+| **Yellow** car | Closing in, within the time set (0.5 s by default) |
+| **Grey** car | Near but no danger: far to the side (another part of the track) or further off |
+| Car filled in a **class colour** (blue, green, purple or pink) | In a race with classes, a car of another class than yours; red or yellow round it when it is close, as above |
+| **Cyan cone** behind a car ahead | Its slipstream, as far and as wide as the event has it; brighter while you are in it |
+| **Cyan outline** round a car ahead | The car whose slipstream you are in now |
+| **Arrow** at the top or bottom edge | A car that already counts but is further away than the radar shows, ahead or behind: coloured as a car would be, fainter the further off it is |
+
+The cones can be turned off with **Slipstream cones on the radar**. By default the radar
+shows only in the cockpit cameras; **Every camera** in the settings window (or **Radar in
+every camera** in the icon's menu) shows it in the views from outside the car too. In move
+mode the preview shows each of these at once.
 
 **Blue flag**
 A navy bar that fades in when a car about to lap you is within 2 seconds behind (faint at
@@ -249,8 +273,9 @@ for a false start (throttle on the red lights) and 1.5 s more.
 Your computer's clock.
 
 **Time since start**
-"TurboHUD - time since start": how long TurboHUD has been running. It shows while there is no
-race.
+"TurboHUD - time since start": how long TurboHUD has been running. It shows, instead of the
+race sections, only on a system TurboHUD cannot read TSU on; on Windows, the Mac and Linux
+you do not see it.
 
 
 ## 4. Move mode and the panel
@@ -276,8 +301,10 @@ from its name while they show, and no name ever runs into the next column.
 - **Drag** a section to move it anywhere, also to another screen.
 - **Click** a section to select it (a frame in the highlight colour), then **nudge** it with
   the arrow keys: 1 px, with Shift 10 px.
-- **Drag a corner** to make its text bigger or smaller; **drag an edge** to give it more
-  room. Rest the pointer on a section to see its name.
+- **Drag a corner**, or the top or bottom edge, to make its text bigger or smaller; **drag a
+  side edge** to give it more room. A box is never narrower than its text needs at its size:
+  a side dragged further in springs back. The standings are always exactly as wide as their
+  columns. Rest the pointer on a section to see its name and what it shows.
 
 **The panel's columns**, one row per section, under the headings Timing, Car, Race, Other:
 - **Show**: tick to show the section. **All** and **None** show or hide every section at once.

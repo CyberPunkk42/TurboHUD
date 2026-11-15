@@ -31,22 +31,21 @@ off. On Linux and Windows each section keeps its own window for now.
 | Car health | car health as the game counts it; yellow with less downforce, red when slowed; a level bar |
 | Slipstream | how strong the slipstream is (of the event's most), with a bar; the downforce it costs; the event's drafting at the start ("Up to -10% drag, -80% downforce, 30 m, 20°": the most it takes off the air resistance and the downforce, how far behind a car it reaches and how far off its line), then the last lap's time in a slipstream; who drafts you |
 | Speed and pedals | km/h or mph, yellow while coasting; throttle and brake bars beside it; as an option the gear and rev lights |
-| Nearby cars | the leader, then the 3 cars ahead of and 3 behind you on the track: position, flag, name, tire, PIT, and the live gap to you (or +1 L for laps), DNF for a car out of the race |
-| Standings | every driver in race order (by class in a multi-class race) with flag, name and clan tag or class, lap, tire, their best lap (the race's fastest in purple) and their last lap, or CUT, JUMP, PIT or DNF |
+| Nearby cars | the leader, then the 3 cars ahead of and 3 behind you on the track: position, flag, name, PIT with its timers, clan tag (or class and place in it), tire, and the live gap to you (or +1 L for laps), DNF for a car out of the race |
+| Standings | every driver in race order (by class, under class lines, in a multi-class race) with place and name, and as chosen: flag, clan tag or class, overall place, lap, gap to the leader (of the class), tire, best lap (the race's fastest in purple) and last lap, or CUT, JUMP, PIT or DNF |
 | Blue flag | a navy bar that fades in when a car about to lap you is within 2 s |
 | Yellow flag | a car off the track, slow, stopped, spun, the wrong way or put back in your sector or the next, by sector and driver; CAR STOPPED AHEAD or WRONG WAY AHEAD for one up to 5 s ahead on the road |
 | Penalties | SHORTCUT with the seconds TSU slows you for a shortcut; JUMP START for a false start |
-| Radar | your car and the cars around you, when one is within 0.5 s behind, beside or ahead; the slipstream behind cars ahead; by default only in cockpit cameras |
+| Radar | your car and the cars around you, when one is within 0.5 s behind, beside or ahead: red beside, yellow closing in, grey not counting, a class colour for another class, arrows for cars past its edge; the slipstream behind cars ahead and the car you draft outlined; by default only in cockpit cameras |
 | Track map | the track from above, with you, the race leader (gold), the next car ahead (red), the next car behind (green), backmarkers between you and the car ahead (small, bluish), and as an option the other cars (faint grey) |
-| Clock | the clock |
-| Time since start | how long TurboHUD has run (shown while there is no race) |
+| Clock | your computer's clock, once TSU runs |
+| Time since start | how long TurboHUD has run; only on a system TurboHUD cannot read TSU on, instead of the race sections |
 
-Spectating an online race, only the lap section (with "Spectating" and the leader's lap),
-the player list (gaps to the leader), the lap times, the track map (every car) and the
-local time show.
+Spectating an online race, only Race progress (with "Spectating" and the leader's lap),
+Nearby cars (gaps to the leader), Standings, the track map (every car) and the Clock show.
 
 The race sections appear once the cars are on the grid and go away in the lobby. In
-the menus only the local time shows.
+the menus only the Clock shows; while TurboHUD waits for TSU, nothing does.
 
 ## The three parts
 

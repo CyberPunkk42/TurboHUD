@@ -37,7 +37,7 @@ anything goes wrong there, the game still starts as usual.
 
 WHAT TO EXPECT
 TurboHUD opens no window. You see its icon in the tray of your desktop's panel (a
-speedometer) and a small clock on the screen. On GNOME the tray needs the
+speedometer) and, once TSU runs, a small clock on the screen. On GNOME the tray needs the
 "AppIndicator and KStatusNotifierItem Support" extension (Ubuntu has it already).
 
 The race sections appear when the cars stand on the grid. Online, finding the race can take
