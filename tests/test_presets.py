@@ -59,6 +59,15 @@ class FileTests(unittest.TestCase):
         self.assertEqual((on_it['lap'].x, on_it['lap'].y), (10, 120))
         self.assertEqual(presets.absolute(on_it, screen), places)
 
+    def test_nearby_cars_reads_as_well_as_the_standings(self):
+        # A player found Nearby cars' text too small (2026-11-15): 8 px at 1920x1080, Standings 10.
+        for size in presets.SCREENS:
+            with self.subTest(size=size):
+                sections = json.loads((FOLDER / presets.file_name(size)).read_text(encoding='utf-8'))[
+                    'sections'
+                ]
+                self.assertGreaterEqual(sections['players']['font'], sections['laptimes']['font'])
+
     def test_the_shipped_presets_hold_nothing_but_the_layout(self):
         for size in presets.SCREENS:
             with self.subTest(size=size):

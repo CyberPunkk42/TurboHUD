@@ -100,6 +100,11 @@
    race on each and note the FPS per phase; it decides how one tint per group is made (item 3b).
 
 ## Recent changes
+  - 2026-11-15: Nearby cars' text as large as the Standings' in the shipped layouts (`feature/nearby-cars-bigger-default`,
+    a player found it too small; the user chose a bigger default): 10 px at 1920x1080 (was 8), 14 at 2560x1440 (was
+    10), 20 at 5120x1440 (was 15) and so on, its line spacing lowered (225% to 100 or 125%) so its box is no taller
+    and touches no other section. Layouts players placed stay as they are: the User Guide points to Size px. A test
+    keeps it at least the Standings' size. Not yet seen on screen.
   - 2026-11-15: The window count probe runs on Windows and Linux too (`feature/window-probe-everywhere`), to tell
     whether one window per screen (as the Mac draws locked) would help there: it reads TurboHUD's settings in
     each system's folder, keeps its windows on top through each system's Native (on Hyprland floated and pinned,

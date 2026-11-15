@@ -2160,3 +2160,8 @@ its "Recent changes".
     each with its own title), and has a third phase, one window per screen, as TurboHUD's HudCanvas. Fixed:
     closing the windows for the last phase quit it, so "nothing again" was cut short. Run on the Mac (all five
     phases); not yet on Windows or Linux (backlog item 1c). The day's other requests are backlog item 3b.
+  - 2026-11-15: Nearby cars' text as large as the Standings' in the shipped layouts (`feature/nearby-cars-bigger-default`,
+    a player found it too small; the user chose a bigger default): 10 px at 1920x1080 (was 8), 14 at 2560x1440 (was
+    10), 20 at 5120x1440 (was 15) and so on, its line spacing lowered (225% to 100 or 125%) so its box is no taller
+    and touches no other section. Layouts players placed stay as they are: the User Guide points to Size px. A test
+    keeps it at least the Standings' size. Not yet seen on screen.

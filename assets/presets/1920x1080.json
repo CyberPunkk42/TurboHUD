@@ -140,14 +140,14 @@
     "players": {
       "x": 400,
       "y": 857,
-      "width": 267,
-      "height": 143,
+      "width": 375,
+      "height": 141,
       "visible": true,
       "group": "B",
       "text_centred": false,
       "tint": true,
-      "font": 8,
-      "spacing": 2.25
+      "font": 10,
+      "spacing": 1.25
     },
     "laptimes": {
       "x": 0,
