@@ -37,6 +37,7 @@ class Line:
     overall: str = (
         ''  # a column lined up on the right just after the text (the overall place in the lap times)
     )
+    lead: str = ''  # a column lined up on the right just before `middle` (the gap to the leader)
 
 
 @dataclass(frozen=True)
@@ -65,6 +66,7 @@ class Row:
     overall: str = (
         ''  # a column lined up on the right just after the text (the overall place in the lap times)
     )
+    lead: str = ''  # a column lined up on the right just before `middle` (the gap to the leader)
 
 
 FLAG_WIDTH = 1.5  # a flag's room before the text, in font sizes
@@ -172,6 +174,7 @@ def _content(rows, sizes):
                 row.tyre,
                 row.tyre_color,
                 row.overall,
+                row.lead,
             )
         )
     return lines, baseline
@@ -201,6 +204,8 @@ def line_width(line, measure):
         width += COLUMN_GAP * line.size + measure(line.before, line.size)
     if line.tyre:
         width += (COLUMN_GAP + TYRE_WIDTH) * line.size
+    if line.lead:
+        width += COLUMN_GAP * line.size + measure(line.lead, line.size)
     if line.middle:
         width += COLUMN_GAP * line.size + measure(line.middle, line.size)
     if line.right:
@@ -218,12 +223,14 @@ def lines_width(lines, measure):
     tag = max((measure(line.tag, line.size) for line in lines if line.tag), default=None)
     overall = max((measure(line.overall, line.size) for line in lines if line.overall), default=None)
     tyre = tyre_width(lines)
+    lead = max((measure(line.lead, line.size) for line in lines if line.lead), default=None)
     return (
         max(_left_width(line, measure) for line in lines)
         + (overall + gap if overall is not None else 0)
         + (tag + gap if tag is not None else 0)
         + (before + gap if before is not None else 0)
         + (tyre + gap if tyre is not None else 0)
+        + (lead + gap if lead is not None else 0)
         + gap
         + max((measure(line.middle, line.size) for line in lines if line.middle), default=0)
         + gap
@@ -253,12 +260,22 @@ def tyre_width(lines):
     return max((TYRE_WIDTH * line.size for line in lines if line.tyre), default=None)
 
 
-def tyre_right(lines, middle_end, measure):
-    """Where the tire column ends: before the widest middle column, whose right edge is at
-    `middle_end`, with a gap."""
+def lead_right(lines, middle_end, measure):
+    """Where the `lead` column (the gap to the leader) ends, right-aligned: before the widest
+    middle column, whose right edge is at `middle_end`, with a gap."""
     middle = max((measure(line.middle, line.size) for line in lines if line.middle), default=0)
     gap = max((COLUMN_GAP * line.size for line in lines if line.middle), default=0)
     return middle_end - middle - gap
+
+
+def tyre_right(lines, middle_end, measure):
+    """Where the tire column ends: before the gap to the leader if there is one, else before
+    the widest middle column, whose right edge is at `middle_end`, with a gap."""
+    end = lead_right(lines, middle_end, measure)
+    lead = max((measure(line.lead, line.size) for line in lines if line.lead), default=None)
+    if lead is None:
+        return end
+    return end - lead - max(COLUMN_GAP * line.size for line in lines)
 
 
 def before_right(lines, middle_end, measure, tyre_end=None):
@@ -307,6 +324,9 @@ def first_column(lines, measure, middle_end, tyre_end, before_end, tag_start, ov
         overall_end - widest('overall') if overall_end is not None and widest('overall') else None,
         tag_start,
         before_end - widest('before') if before_end is not None and widest('before') else None,
+        lead_right(lines, middle_end, measure) - widest('lead')
+        if middle_end is not None and widest('lead')
+        else None,
         tyre_end - tyre_width(lines) if tyre_end is not None and tyre_width(lines) is not None else None,
         middle_end - widest('middle') if middle_end is not None and widest('middle') else None,
     ]
@@ -378,6 +398,7 @@ def steady_rows(rows):
             middle=steady_text(row.middle),
             before=steady_text(row.before),
             overall=steady_text(row.overall),
+            lead=steady_text(row.lead),
             tag=steady_text(row.tag),
             right=steady_text(row.right),
         )
@@ -549,7 +570,7 @@ RACE_SECTIONS = (
         'laptimes',
         'Standings',
         (
-            (Row('Driver', 'small', 'accent', middle='Best', right='Lap'),)
+            (Row('Driver', 'small', 'accent', middle='Best', right='Lap', lead='Gap'),)
             + tuple(
                 Row(
                     f'{n}. Playername12345678',  # an 18-letter name (race.LAP_NAME_SHOWN)
@@ -561,6 +582,7 @@ RACE_SECTIONS = (
                     tag='PROAM',  # a clan tag or class has up to 5 letters
                     tyre='M',
                     overall='P20',  # the overall place, in a multi-class race
+                    lead='+00.000',  # the gap to the leader (a lapped car: +1 L)
                 )
                 for n in range(10, 10 + LAP_TIME_ROWS)
             ),

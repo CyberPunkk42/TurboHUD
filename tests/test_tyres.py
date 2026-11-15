@@ -91,7 +91,7 @@ class TyreColumnTests(unittest.TestCase):
         before_end = hud.before_right(lines, middle_end, measure)
         self.assertLess(tyre_end, middle_end)
         self.assertAlmostEqual(tyre_end - before_end, (hud.TYRE_WIDTH + hud.COLUMN_GAP) * lines[1].size)
-        without = hud.hud_lines(self.rows(columns=('flag', 'lap', 'best', 'current')))
+        without = hud.hud_lines(self.rows(columns=('flag', 'lap', 'gap', 'best', 'current')))
         self.assertEqual(hud.before_right(without, middle_end, measure), tyre_end)  # no room kept
         self.assertGreater(hud.lines_width(lines, measure), hud.lines_width(without, measure))
 
@@ -149,7 +149,16 @@ class SettingsTests(unittest.TestCase):
             s.save_settings(path, s.Settings(lap_columns=()))
             self.assertEqual(s.load_settings(path).lap_columns, ())  # all off stays off
             path.write_text(json.dumps({'lap_columns': ['best', 'nonsense', 'flag', 7]}))
-            self.assertEqual(s.load_settings(path).lap_columns, ('flag', 'best'))  # in order, known only
+            # In order, known only; a file from before the gap, class and overall columns shows those.
+            self.assertEqual(s.load_settings(path).lap_columns, ('flag', 'gap', 'best', 'class', 'overall'))
+
+    def test_a_column_added_later_shows_one_turned_off_stays_off(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / 'settings.json'
+            path.write_text(json.dumps({'lap_columns': ['flag', 'lap', 'tyre', 'best', 'current']}))
+            self.assertEqual(s.load_settings(path).lap_columns, s.LAP_COLUMNS)  # class and overall as before
+            s.save_settings(path, s.Settings(lap_columns=('flag', 'best')))
+            self.assertEqual(s.load_settings(path).lap_columns, ('flag', 'best'))  # gap off stays off
 
 
 if __name__ == '__main__':

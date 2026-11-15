@@ -158,3 +158,41 @@ class NameFieldTests(unittest.TestCase):
         exact = text_box(laptimes, (0, 0, 10, 10), 13, measure, ink, False)[2]
         self.assertEqual(text_box(laptimes, (0, 0, 2000, 10), 13, measure, ink)[2], exact)
         self.assertEqual(text_box(players, (0, 0, 2000, 10), 13, measure, ink)[2], 2000)  # room kept there
+
+
+class StandingsColumnsTests(unittest.TestCase):
+    """Every column but the place and the name can be turned off; the gap to the leader; the class
+    lines without the class column (asked for by the user on 2026-11-15)."""
+
+    def sections(self, columns=race.LAP_COLUMNS, classes=False):
+        from turbohud.core.settings import Settings
+
+        return preview.preview_sections(
+            columns=columns, classes=classes, class_tags=tuple(Settings().class_tags)
+        )
+
+    def test_the_gap_to_the_leader(self):
+        rows = self.sections()['laptimes']
+        self.assertEqual(rows[0].lead, 'Gap')
+        self.assertEqual(rows[1].lead, '')  # the leader
+        self.assertRegex(rows[2].lead, r'^\+\d+\.\d{3}$')
+        self.assertEqual(rows[-1].lead, '')  # out of the race
+        self.assertFalse(any(row.lead for row in self.sections(columns=('best',))['laptimes']))
+
+    def test_with_classes_the_gap_to_the_class_leader(self):
+        rows = self.sections(classes=True)['laptimes'][1:]
+        firsts = [row for row in rows if row.rule]
+        self.assertEqual([row.lead for row in firsts], ['', ''])  # each class's leader
+
+    def test_the_class_lines_stay_without_the_class_and_overall_columns(self):
+        columns = tuple(c for c in race.LAP_COLUMNS if c not in ('class', 'overall'))
+        rows = self.sections(columns, classes=True)['laptimes']
+        self.assertEqual([row.rule for row in rows if row.rule], ['GT3', 'GT4'])
+        self.assertFalse(any(row.tag or row.overall for row in rows))
+
+    def test_with_every_column_off_the_place_and_the_name_stay(self):
+        rows = self.sections(columns=())['laptimes'][1:]
+        self.assertTrue(all(row.text.strip()[0].isdigit() and '. ' in row.text for row in rows))
+        self.assertFalse(
+            any(row.middle or row.right or row.before or row.lead or row.tyre or row.flag for row in rows)
+        )
