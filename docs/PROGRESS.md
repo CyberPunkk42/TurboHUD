@@ -2175,3 +2175,9 @@ its "Recent changes".
   - 2026-11-15: Seven section groups, A to G (`feature/groups-a-to-g`, asked for by players; A to D before): in the
     move-mode panel's Group lists and its "Same text size and width" buttons; the User Guide says A to G. Tests for
     the settings and the panel; the panel stays within its width.
+  - 2026-11-15: The Layouts window's buttons cut off, and window titles in capitals, reported by the user
+    (`fix/layouts-buttons-and-titles`): at move mode's start Design for shows "5120x1440 (this screen)", wider than
+    the window was made for, so the list, Design, Save design and Cancel were cut off. The list now sizes to its
+    longest entry and the window grows with it. Titles: TurboHUD - Layouts, Move Mode, Settings, Car Classes, Design
+    Screen, Grid. A test makes the list as the app does and checks every button's width; seen in a render with the
+    Mac's own style.

@@ -122,6 +122,21 @@ class LayoutsWindowTests(unittest.TestCase):
         for button in buttons:
             self.assertGreaterEqual(button.width(), button.sizeHint().width(), button.text())
 
+    def test_nothing_is_cut_off_once_this_screens_size_is_in_the_list(self):
+        # Reported by the user on 2026-11-15: at move mode's start the list shows "5120x1440 (this
+        # screen)", wider than the window was made for, and Design, Save design and Cancel were cut off.
+        from PySide6.QtWidgets import QPushButton
+
+        window = self.window(saved=(1,))
+        window.show()
+        window.set_own_screen((5120, 1440))
+        self.app.processEvents()
+        for button in window.findChildren(QPushButton):
+            self.assertGreaterEqual(button.width(), button.sizeHint().width(), button.text())
+        combo = window.design_size
+        self.assertGreaterEqual(combo.width(), combo.sizeHint().width())
+        self.assertIn('(this screen)', combo.currentText())
+
     def test_the_panel_opens_it_and_passes_its_signals_on(self):
         from turbohud.core.hud import RACE_SECTIONS
         from turbohud.overlay.window import MovePanel

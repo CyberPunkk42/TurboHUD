@@ -130,13 +130,13 @@ class SettingsWindow(QWidget):
         self.flags = flags
         self.theme = theme
         self.class_sheet = None  # made when first opened (open_class_sheet)
-        self.setWindowTitle('TurboHUD - settings')
+        self.setWindowTitle('TurboHUD - Settings')
         self.setAttribute(Qt.WA_TranslucentBackground)
         self.setAttribute(Qt.WA_ShowWithoutActivating)
         self.setStyleSheet('QLabel { color: white; }')
         outer = QVBoxLayout(self)
         outer.setContentsMargins(14, 12, 14, 12)
-        outer.addWidget(QLabel('<b>TurboHUD - settings</b>'))
+        outer.addWidget(QLabel('<b>TurboHUD - Settings</b>'))
         columns = QHBoxLayout()
         columns.setSpacing(24)
         left, right = QVBoxLayout(), QVBoxLayout()

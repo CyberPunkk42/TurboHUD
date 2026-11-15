@@ -48,13 +48,13 @@ class ClassSheet(QWidget):
     def __init__(self, native, flags):
         super().__init__(None, flags)
         self.native = native
-        self.setWindowTitle('TurboHUD - car classes')
+        self.setWindowTitle('TurboHUD - Car Classes')
         self.setAttribute(Qt.WA_TranslucentBackground)
         self.setAttribute(Qt.WA_ShowWithoutActivating)
         self.setStyleSheet('QLabel { color: white; }')
         column = QVBoxLayout(self)
         column.setContentsMargins(14, 12, 14, 12)
-        column.addWidget(QLabel('<b>TurboHUD - car classes</b>'))
+        column.addWidget(QLabel('<b>TurboHUD - Car Classes</b>'))
         how_to = QLabel(HOW_TO)
         how_to.setWordWrap(True)
         column.addWidget(how_to)

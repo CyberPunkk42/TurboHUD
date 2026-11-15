@@ -158,7 +158,7 @@ class PlainTests(unittest.TestCase):
         self.assertEqual(plain('Export…'), 'export...')
 
     def test_symbols_numbers_and_titles_are_no_names(self):
-        for text in ('↔', 'A', '20', '<b>1</b>', '<b>TurboHUD - settings</b>', ''):
+        for text in ('↔', 'A', '20', '<b>1</b>', '<b>TurboHUD - Settings</b>', ''):
             self.assertIsNone(label(text))
         self.assertEqual(label('Presets:'), 'presets')
 
