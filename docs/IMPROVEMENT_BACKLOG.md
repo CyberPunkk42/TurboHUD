@@ -163,7 +163,10 @@ one-page `QUICK_START.md`, in every download as `Quick Start.txt`, since 2026-11
 `USER_GUIDE.md` as `User Guide.txt` since 2026-11-15).
 
 ## 5. Linux: other desktops
-Commands for the running TurboHUD (`run_turbohud.sh --toggle` and so on) are done, and
+Commands for the running TurboHUD (`run_turbohud.sh --toggle` and so on) are done; on
+Hyprland the shortcuts too (2026-11-15: Ctrl+Shift+L, Q, 1, 2, 3 in Hyprland's live keymap
+while TurboHUD runs; still to press them in a race). KDE and GNOME could get theirs through
+the GlobalShortcuts portal, where the desktop asks the player for the keys. And
 on Wayland desktops other than Hyprland TurboHUD runs through XWayland, where staying on
 top should work. Still to try on KDE and GNOME: on top over the game, clicks going
 through. If XWayland is not enough there, the layer-shell extension (KDE, Sway; not

@@ -22,6 +22,11 @@ class NoteTests(unittest.TestCase):
         self.assertIn('Ctrl+Shift+L is taken', note)
         self.assertIn('Ctrl+Shift+F12 switches move mode', note)
 
+    def test_on_hyprland_the_note_names_a_bind(self):
+        note = app.taken_note(['Ctrl+Shift+F12'], taken_by='another Hyprland bind')
+        self.assertIn('Ctrl+Shift+L is taken by another Hyprland bind', note)
+        self.assertNotIn('AMD', note)
+
     def test_the_hint_names_the_key_that_works(self):
         self.assertIn('Ctrl+Shift+L', hud.help_lines(True)[-1])
         self.assertIn('Ctrl+Shift+F12 or Lock', hud.help_lines(True, lock_key='Ctrl+Shift+F12')[-1])

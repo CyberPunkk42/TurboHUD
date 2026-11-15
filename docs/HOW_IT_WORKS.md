@@ -246,6 +246,17 @@ configuration file or setting, and nothing it asks for outlives TurboHUD. In mov
 it lets its windows take the mouse so they can be dragged; when locked they let every
 click through to the game.
 
+Shortcuts: Wayland lets no program catch keys meant for another window, so while TurboHUD
+runs it adds Ctrl+Shift+L, Q, 1, 2 and 3 to Hyprland's live keys (`hyprctl eval` with
+`hl.bind`, on older Hyprland `hyprctl keyword bindd`), each running the command below. It
+first looks at `hyprctl binds` and leaves every key something else has (Ctrl+Shift+F12 for
+move mode where Ctrl+Shift+L is taken). Its binds are labelled "TurboHUD shortcut", and it
+removes only those at quit. They live in Hyprland's memory only: a reload of Hyprland's
+settings drops them, and TurboHUD, listening on Hyprland's event socket, adds them again; a
+restart of Hyprland ends them, also after TurboHUD crashed. A TurboHUD that did not quit
+leaves them until then (pressing them does nothing), and the next start
+takes them over.
+
 ## Commands from the command line (Linux, macOS)
 
 `run_turbohud.sh --toggle`, `--move`, `--lock`, `--settings`, `--preset 1` (or 2, or 3)

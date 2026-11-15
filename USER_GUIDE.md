@@ -230,8 +230,8 @@ race.
 
 ## 4. Move mode and the panel
 
-Press **Ctrl+Shift+L** (Windows, Mac), choose **Move mode** in the icon's menu, or on Linux
-run `TurboHUD --toggle`. Every section gets a blue tint, a faint **grid** on the main
+Press **Ctrl+Shift+L** (Windows, Mac, Hyprland), choose **Move mode** in the icon's menu, or
+on other Linux desktops run `TurboHUD --toggle`. Every section gets a blue tint, a faint **grid** on the main
 screen helps line them up (a line every 20 px, a stronger one every 100 px, the screen's
 middle in yellow), and the panel opens.
 
@@ -329,17 +329,25 @@ Open it with **Settings…** in the icon's menu or in the move-mode panel.
 
 | Keys | Does | Where |
 |---|---|---|
-| **Ctrl+Shift+L** | Move mode on / off | Windows, Mac |
-| **Ctrl+Shift+F12** | The same, when another program has Ctrl+Shift+L | Windows |
-| **Ctrl+Shift+1**, **2**, **3** | Load layout preset 1, 2 or 3 | Windows, Mac |
-| **Ctrl+Shift+Q** | Quit TurboHUD | Windows, Mac |
+| **Ctrl+Shift+L** | Move mode on / off | Windows, Mac, Hyprland |
+| **Ctrl+Shift+F12** | The same, when another program has Ctrl+Shift+L | Windows, Hyprland |
+| **Ctrl+Shift+1**, **2**, **3** | Load layout preset 1, 2 or 3 | Windows, Mac, Hyprland |
+| **Ctrl+Shift+Q** | Quit TurboHUD | Windows, Mac, Hyprland |
 | **Arrow keys** (Shift: 10 px) | Nudge the selected section | move mode |
 
 They work while you play. If Ctrl+Shift+L does nothing on Windows, another program has it
 (AMD Software: Adrenalin Edition does by default): see `Quick Start.txt`.
 
-Linux has no shortcuts in TurboHUD. Use the icon's menu, or these commands, which you can
-put on keys in your desktop's own keyboard settings:
+On Hyprland (for example Omarchy), TurboHUD adds these keys to Hyprland while it runs and
+takes them away when it quits. Only keys nothing else uses: where your own setup already has
+Ctrl+Shift+L, TurboHUD takes Ctrl+Shift+F12 for move mode, and a key you use for something
+else stays yours (TurboHUD's log names it). Your Hyprland files are not changed; after a
+reload of Hyprland's settings (Omarchy does one when you change the theme) TurboHUD adds
+the keys again within a moment.
+
+Other Linux desktops (KDE, GNOME ...) have no shortcuts in TurboHUD. Use the icon's menu, or
+these commands (on Hyprland too), which you can put on keys in your desktop's own keyboard
+settings:
 
 | Command | Does |
 |---|---|

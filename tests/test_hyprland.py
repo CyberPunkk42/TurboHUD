@@ -1,6 +1,8 @@
 import json
+import re
 import subprocess
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -179,3 +181,131 @@ class GroupMoveTests(unittest.TestCase):
         fake = FakeHyprctl(lua=False)
         self.assertTrue(hyprland.Hyprland(fake).move('0xaaa', 70, 80))
         self.assertEqual(fake.dispatched()[-1], 'movewindowpixel exact 70 80,address:0xaaa')
+
+
+class FakeKeymap:
+    """Hyprland's live keymap behind hyprctl: binds, eval of hl.bind / hl.unbind (Lua) or
+    keyword bindd / unbind (older Hyprland). `binds` start as the desktop's own."""
+
+    BIND = re.compile(
+        r'hl\.bind\("([^"]+)", hl\.dsp\.exec_cmd\("((?:[^"\\]|\\.)*)"\), \{ description = "([^"]+)" \}\)'
+    )
+    UNBIND = re.compile(r'hl\.unbind\("([^"]+)"\)')
+
+    def __init__(self, binds=(), lua=True):
+        self.binds = [dict(bind) for bind in binds]
+        self.lua = lua
+        self.calls = []
+
+    def entry(self, keys, description, arg=''):
+        mods, key = hyprland.key_of(keys)
+        return {'modmask': mods, 'key': key, 'submap': '', 'description': description, 'arg': arg}
+
+    def remove(self, keys):
+        mods, key = hyprland.key_of(keys)
+        self.binds = [b for b in self.binds if (b['modmask'], b['key'].upper()) != (mods, key)]
+
+    def __call__(self, args):
+        self.calls.append(args)
+        if args == ['-j', 'binds']:
+            return json.dumps(self.binds)
+        if args[0] == 'eval' and self.lua:
+            if match := self.BIND.fullmatch(args[1]):
+                self.binds.append(self.entry(match[1], match[3], match[2]))
+                return 'ok'
+            if match := self.UNBIND.fullmatch(args[1]):
+                self.remove(match[1])
+                return 'ok'
+            return 'error: bad lua'
+        if args[0] == 'eval':
+            return 'error: unknown request'
+        if args[0] == 'keyword' and not self.lua:
+            mods, key, *rest = [part.strip() for part in args[2].split(',', 4)]
+            keys = ' + '.join([*mods.split(), key])
+            if args[1] == 'bindd':
+                self.binds.append(self.entry(keys, rest[0], rest[2]))
+            else:
+                self.remove(keys)
+            return 'ok'
+        return 'error: invalid'
+
+    def ours(self):
+        return [b for b in self.binds if b['description'].startswith(hyprland.BIND_LABEL)]
+
+
+class ShortcutCommandTests(unittest.TestCase):
+    def test_keys_as_hyprctl_lists_them(self):
+        self.assertEqual(hyprland.key_of('CTRL + SHIFT + L'), (5, 'L'))
+        self.assertEqual(hyprland.key_of('ctrl + shift + f12'), (5, 'F12'))
+        self.assertEqual(hyprland.key_of('SUPER + SHIFT + H'), (65, 'H'))
+
+    def test_bind_runs_the_command_with_turbohuds_label(self):
+        lua, classic = hyprland.bind_commands(
+            'CTRL + SHIFT + L', ['/opt/Turbo HUD/TurboHUD', '--toggle'], 'move mode'
+        )
+        self.assertEqual(
+            lua,
+            'hl.bind("CTRL + SHIFT + L", hl.dsp.exec_cmd("\'/opt/Turbo HUD/TurboHUD\' --toggle"), '
+            '{ description = "TurboHUD shortcut: move mode" })',
+        )
+        self.assertEqual(
+            classic, "CTRL SHIFT, L, TurboHUD shortcut: move mode, exec, '/opt/Turbo HUD/TurboHUD' --toggle"
+        )
+        self.assertEqual(
+            hyprland.unbind_commands('CTRL + SHIFT + 1'), ('hl.unbind("CTRL + SHIFT + 1")', 'CTRL SHIFT, 1')
+        )
+
+    def test_lua_strings_are_escaped_and_single_line(self):
+        self.assertEqual(hyprland.lua_string('a "b" \\c'), '"a \\"b\\" \\\\c"')
+        with self.assertRaises(ValueError):
+            hyprland.lua_string('a\nb')
+
+    def test_the_event_socket(self):
+        with tempfile.TemporaryDirectory() as folder:
+            env = {'HYPRLAND_INSTANCE_SIGNATURE': 'sig', 'XDG_RUNTIME_DIR': folder}
+            self.assertIsNone(hyprland.event_socket(env))
+            path = Path(folder) / 'hypr' / 'sig' / '.socket2.sock'
+            path.parent.mkdir(parents=True)
+            path.touch()
+            self.assertEqual(hyprland.event_socket(env), str(path))
+        self.assertIsNone(hyprland.event_socket({}))
+
+
+class ShortcutTests(unittest.TestCase):
+    def test_who_has_a_key(self):
+        keymap = FakeKeymap()
+        own = keymap.entry('CTRL + SHIFT + L', 'TurboHUD shortcut: move mode')
+        other = keymap.entry('CTRL + SHIFT + Q', 'Close window')
+        in_submap = {**keymap.entry('CTRL + SHIFT + 1', 'Resize'), 'submap': 'resize'}
+        hypr = hyprland.Hyprland(run=keymap)
+        binds = [own, other, in_submap]
+        self.assertEqual(hypr.bind_owner('CTRL + SHIFT + L', binds), 'turbohud')
+        self.assertEqual(hypr.bind_owner('CTRL + SHIFT + Q', binds), 'other')
+        self.assertIsNone(hypr.bind_owner('CTRL + SHIFT + 1', binds))  # only inside its submap
+        self.assertIsNone(hypr.bind_owner('SUPER + SHIFT + L', binds))
+        self.assertEqual(hypr.bind_owner('CTRL + SHIFT + L', [own, {**other, 'key': 'L'}]), 'other')
+
+    def test_bind_and_unbind_in_lua(self):
+        keymap = FakeKeymap()
+        hypr = hyprland.Hyprland(run=keymap)
+        self.assertTrue(hypr.bind('CTRL + SHIFT + L', ['TurboHUD', '--toggle'], 'move mode'))
+        self.assertEqual(len(keymap.ours()), 1)
+        self.assertTrue(hypr.unbind('CTRL + SHIFT + L'))
+        self.assertEqual(keymap.ours(), [])
+        self.assertNotIn('keyword', [call[0] for call in keymap.calls])
+
+    def test_older_hyprland_takes_keywords(self):
+        keymap = FakeKeymap(lua=False)
+        hypr = hyprland.Hyprland(run=keymap)
+        self.assertTrue(hypr.bind('CTRL + SHIFT + 2', ['TurboHUD', '--preset', '2'], 'layout 2'))
+        self.assertEqual(keymap.ours()[0]['arg'], 'TurboHUD --preset 2')
+        self.assertTrue(hypr.unbind('CTRL + SHIFT + 2'))
+        self.assertEqual(keymap.ours(), [])
+
+    def test_a_missing_hyprctl_binds_nothing(self):
+        def broken(args):
+            raise FileNotFoundError('hyprctl')
+
+        hypr = hyprland.Hyprland(run=broken)
+        self.assertFalse(hypr.bind('CTRL + SHIFT + L', ['TurboHUD'], 'move mode'))
+        self.assertEqual(hypr.binds(), [])

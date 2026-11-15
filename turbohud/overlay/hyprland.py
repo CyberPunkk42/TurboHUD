@@ -4,8 +4,15 @@ On Wayland a window cannot put itself on top; Qt's stay-on-top hint is ignored, 
 Hyprland tiles TurboHUD like any other window. So TurboHUD asks Hyprland at runtime,
 through `hyprctl`, to float, place and pin its own window and never give it the keyboard
 focus. Every command names TurboHUD's own window by its address; nothing else is
-touched, and no Hyprland configuration is read or changed. The requests end with the
+touched, and no Hyprland configuration file is read or changed. The requests end with the
 window.
+
+Shortcuts (asked for by the user on 2026-11-15): Wayland lets no app catch keys meant for
+another window, so while TurboHUD runs it adds its own keys to Hyprland's live keymap
+(Ctrl+Shift+L, Q, 1, 2, 3, as on Windows and the Mac), each running TurboHUD's command line
+(turbohud.control). Only keys nothing else uses get one; at quit TurboHUD takes them away
+again. They live in Hyprland's memory only: a config reload drops them (TurboHUD adds them
+again), and a restart of Hyprland ends them, also after a crash of TurboHUD.
 
 Hyprland 0.55 and later take Lua commands (`hl.dsp.window.pin({...})`); older versions
 the classic ones (`pin address:0x...`). Each command is tried in the Lua form first.
@@ -14,6 +21,7 @@ the classic ones (`pin address:0x...`). Each command is tried in the Lua form fi
 import json
 import logging
 import os
+import shlex
 import shutil
 import subprocess
 
@@ -33,6 +41,67 @@ WINDOW_PROPS = [
     ('no_anim', 'noanim', '1'),
     ('opacity', 'alpha', '1.0'),
 ]
+
+
+# TurboHUD's keys: (Hyprland's name, the command line's arguments). Ctrl+Shift+F12 switches move
+# mode where something else has Ctrl+Shift+L (as on Windows).
+LOCK_BIND = 'CTRL + SHIFT + L'
+LOCK_BIND_BACKUP = 'CTRL + SHIFT + F12'
+SHORTCUTS = (
+    (LOCK_BIND, ('--toggle',)),
+    ('CTRL + SHIFT + Q', ('--quit',)),
+    ('CTRL + SHIFT + 1', ('--preset', '1')),
+    ('CTRL + SHIFT + 2', ('--preset', '2')),
+    ('CTRL + SHIFT + 3', ('--preset', '3')),
+)
+BIND_LABEL = 'TurboHUD shortcut'  # the binds' description: how TurboHUD knows its own
+MODS = {'SHIFT': 1, 'CAPS': 2, 'CTRL': 4, 'ALT': 8, 'MOD2': 16, 'MOD3': 32, 'SUPER': 64, 'MOD5': 128}
+
+
+def key_of(keys):
+    """(modmask, key) of 'CTRL + SHIFT + L', as `hyprctl binds -j` lists a bind."""
+    *mods, key = [part.strip().upper() for part in keys.split('+')]
+    return sum(MODS[mod] for mod in mods), key
+
+
+def lua_string(text):
+    if '\n' in text or '\r' in text:
+        raise ValueError('no line breaks in a bind')
+    return '"' + text.replace('\\', '\\\\').replace('"', '\\"') + '"'
+
+
+def bind_commands(keys, command, what):
+    """(lua, classic) ways to bind `keys` to run `command` (a list of arguments)."""
+    line = shlex.join(command)
+    label = f'{BIND_LABEL}: {what}'
+    return (
+        f'hl.bind({lua_string(keys)}, hl.dsp.exec_cmd({lua_string(line)}), {{ description = {lua_string(label)} }})',
+        f'{classic_keys(keys)}, {label}, exec, {line}',
+    )
+
+
+def unbind_commands(keys):
+    return (f'hl.unbind({lua_string(keys)})', classic_keys(keys))
+
+
+def classic_keys(keys):
+    """'CTRL + SHIFT + L' as older Hyprland writes it: 'CTRL SHIFT, L'."""
+    *mods, key = [part.strip() for part in keys.split('+')]
+    return f'{" ".join(mods)}, {key}'
+
+
+def event_socket(environ=None):
+    """Hyprland's event socket (it says `configreloaded>>` after a reload), or None."""
+    environ = os.environ if environ is None else environ
+    signature = environ.get('HYPRLAND_INSTANCE_SIGNATURE')
+    runtime = environ.get('XDG_RUNTIME_DIR')
+    if not signature:
+        return None
+    for folder in ([os.path.join(runtime, 'hypr')] if runtime else []) + ['/tmp/hypr']:
+        path = os.path.join(folder, signature, '.socket2.sock')
+        if os.path.exists(path):
+            return path
+    return None
 
 
 def available(environ=None, which=shutil.which):
@@ -192,3 +261,44 @@ class Hyprland:
 
     def focus(self, address):
         return self.dispatch(focus_command(f'address:{address}'))
+
+    def binds(self):
+        """Every bind Hyprland has now, as `hyprctl binds -j` lists them ([] if none known)."""
+        found = self._json('binds')
+        return found if isinstance(found, list) else []
+
+    def bind_owner(self, keys, binds):
+        """'turbohud' where the key has TurboHUD's bind, 'other' where anything else has it
+        (in the main keymap), None where it is free."""
+        mods, key = key_of(keys)
+        owner = None
+        for bind in binds:
+            if bind.get('submap') or bind.get('modmask') != mods or str(bind.get('key', '')).upper() != key:
+                continue
+            if str(bind.get('description', '')).startswith(BIND_LABEL):
+                owner = owner or 'turbohud'
+            else:
+                return 'other'
+        return owner
+
+    def _eval_or_keyword(self, lua, keyword, classic):
+        try:
+            if self.run(['eval', lua]) == 'ok':
+                return True
+            answer = self.run(['keyword', keyword, classic])
+        except (OSError, subprocess.SubprocessError) as error:
+            log.info('hyprctl failed: %s', error)
+            return False
+        if answer == 'ok':
+            return True
+        log.info('Hyprland refused %s: %s', lua, answer.splitlines()[0] if answer else '(no answer)')
+        return False
+
+    def bind(self, keys, command, what):
+        """Bind keys to run command in Hyprland's live keymap; True if taken."""
+        lua, classic = bind_commands(keys, command, what)
+        return self._eval_or_keyword(lua, 'bindd', classic)
+
+    def unbind(self, keys):
+        lua, classic = unbind_commands(keys)
+        return self._eval_or_keyword(lua, 'unbind', classic)
