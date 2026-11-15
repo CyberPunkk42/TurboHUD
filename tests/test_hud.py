@@ -1343,3 +1343,30 @@ class NudgeTests(unittest.TestCase):
         self.assertEqual(hud.nudge('up', True), (0, -10))
         self.assertEqual(hud.nudge('down', True), (0, 10))
         self.assertIsNone(hud.nudge('a', False))
+
+
+class FittedNameTests(unittest.TestCase):
+    """A name never reaches the first column, whatever its letters (2026-11-15)."""
+
+    @staticmethod
+    def measure(text, size):
+        return sum(2 * size if c in 'MW' else size for c in text)  # capitals twice as wide
+
+    def test_a_name_that_fits_stays(self):
+        self.assertEqual(hud.fitted_name('Ann Lee', '  PIT', 100, 1, self.measure), 'Ann Lee')
+
+    def test_wide_letters_are_cut_before_the_column_with_the_pit_time_kept_room(self):
+        name = hud.fitted_name('MMMMWWWW', '  PIT 24.6s', 20, 1, self.measure)
+        self.assertTrue(name.endswith('…'))
+        self.assertLessEqual(self.measure(name + '  PIT 24.6s', 1), 20)
+        self.assertEqual(hud.fitted_name('Nora Vest…', '', 6, 1, self.measure), 'Nora…')  # no '……'
+
+    def test_the_first_column_is_the_leftmost(self):
+        lines = hud._content(
+            [hud.Row('A', 'small', middle='1:23', before='L3', tag='FTR', tyre='M')], hud.Sizes.for_scale(1.0)
+        )[0]
+        size = lines[0].size
+        measure = lambda text, s: len(text) * s
+        self.assertEqual(hud.first_column(lines, measure, 400, 350, 300, 200, None), 200)  # the tag
+        self.assertEqual(hud.first_column(lines, measure, 400, None, None, None, None), 400 - 4 * size)
+        self.assertIsNone(hud.first_column(lines, measure, None, None, None, None, None))

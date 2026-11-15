@@ -1,6 +1,7 @@
 import math
 import sys
 from collections import OrderedDict
+from dataclasses import replace
 from functools import lru_cache
 
 from PySide6.QtCore import QPointF, QRectF, Qt
@@ -18,11 +19,14 @@ from PySide6.QtGui import (
 )
 
 from turbohud.core.hud import (
+    COLUMN_GAP,
     FLAG_WIDTH,
     MARGIN,
     TYRE_WIDTH,
     before_right,
     blend,
+    first_column,
+    fitted_name,
     middle_right,
     overall_right,
     snug_width,
@@ -539,6 +543,11 @@ def draw_hud(painter, lines, theme, scale=None, left=0, width=None, centre=False
         before_end = before_right(placed, middle_end, steady_advance, tyre_end)
         tag_start = tag_left(placed, before_end, steady_advance)
         overall_end = overall_right(placed, middle_end, tyre_end, before_end, tag_start, steady_advance)
+        columns_start = first_column(
+            placed, steady_advance, middle_end, tyre_end, before_end, tag_start, overall_end
+        )
+    else:
+        columns_start = None
     for line in lines:
         text_x = centred_x(line, width, margin) if (centre or line.centred) and width is not None else x
         if line.rule:
@@ -551,6 +560,15 @@ def draw_hud(painter, lines, theme, scale=None, left=0, width=None, centre=False
         # stays put: only the number changes.
         slot = text_advance(steady_text(line.slot), line.size) if line.slot else None
         number_x = text_x + slot - text_advance(line.text, line.size) if line.slot else text_x
+        if columns_start is not None and not line.slot and not line.rule and not (centre or line.centred):
+            # Never into the first column: a name of wide letters is cut there.
+            gap = COLUMN_GAP * line.size
+            line = replace(
+                line,
+                text=fitted_name(
+                    line.text, line.tail, columns_start - gap - text_x, line.size, steady_advance
+                ),
+            )
         outlined_text(
             painter, number_x, line.baseline, line.text, line.size, _pick(colors, line.color), outline
         )

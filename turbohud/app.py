@@ -587,6 +587,8 @@ def run(args, folder):
                 settings.clan_tags,
                 tuple(settings.lap_columns),
                 settings.radar_cone,
+                settings.classes,
+                tuple(settings.class_tags),
             )
         except Exception:
             log.exception('move mode: no preview race')

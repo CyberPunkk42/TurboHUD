@@ -295,6 +295,37 @@ def unused_dropped(lines, reserve):
     return [replace(line, **drop) for line in reserve] if drop else list(reserve)
 
 
+def first_column(lines, measure, middle_end, tyre_end, before_end, tag_start, overall_end):
+    """Where the leftmost column starts (x), for a name to end before; None without columns."""
+
+    def widest(name):
+        return max(
+            (measure(getattr(line, name), line.size) for line in lines if getattr(line, name)), default=0
+        )
+
+    starts = [
+        overall_end - widest('overall') if overall_end is not None and widest('overall') else None,
+        tag_start,
+        before_end - widest('before') if before_end is not None and widest('before') else None,
+        tyre_end - tyre_width(lines) if tyre_end is not None and tyre_width(lines) is not None else None,
+        middle_end - widest('middle') if middle_end is not None and widest('middle') else None,
+    ]
+    starts = [start for start in starts if start is not None]
+    return min(starts) if starts else None
+
+
+def fitted_name(text, tail, room, size, measure):
+    """`text` cut with '…' so that it and its `tail` (a pit time) fit in `room` pixels: names are
+    cut by letters to leave room for the columns, but a name of wide letters (MMWW) could still
+    reach the next column (asked about by the user on 2026-11-15). Unchanged where it fits."""
+    if measure(text + tail, size) <= room:
+        return text
+    base = text.removesuffix('…')
+    while len(base) > 1 and measure(base + '…' + tail, size) > room:
+        base = base[:-1]
+    return base.rstrip() + '…'
+
+
 def overall_right(lines, middle_end, tyre_end, before_end, tag_start, measure):
     """Where the `overall` column ends (it is right-aligned there): a gap before the leftmost
     of the other columns (the tag, `before`, the tire, the middle one); None without it."""
