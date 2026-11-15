@@ -2092,3 +2092,10 @@ its "Recent changes".
     standings in earlier images was the drawing script's (no text size set); drawn as the app draws, the last
     column ends at the margin. Tests: the timed title and leader, the pit times close by, the class race and
     its fallback without GT3 and GT4, the fitted name and first column. Not yet: seen on the screen.
+  - 2026-11-15: The standings' names 18 letters, as the nearby cars', asked for by the user
+    (`feature/name-field-18`): `LAP_NAME_SHOWN` is `MAX_NAME_SHOWN` (18, was 20), a longer name cut with '…'; the
+    standings box at the default size 484 px (was 499); the shipped layouts' standings widths to match (only
+    those numbers, CRLF kept). A snug section's box (the standings) is never wider than its columns need, also
+    when a layout or preset is loaded (`text_box`). A tooltip with the whole name on a cut one was built and taken
+    out again at the user's word: move mode, the only time one can hover, shows the preview's made-up names.
+    Tests: 18 in both, the sample as long, the snug box. Not yet: seen on the screen.
