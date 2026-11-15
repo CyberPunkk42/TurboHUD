@@ -269,7 +269,7 @@ class CommandLineTests(unittest.TestCase):
 
     def test_only_presets_that_exist(self):
         with self.assertRaises(SystemExit):
-            app.parse_args(['--preset', '4'])
+            app.parse_args(['--preset', '6'])
         self.assertTrue(set(control.COMMANDS) >= {f'preset{n}' for n in settings.PRESETS})
 
     def test_an_empty_preset_is_reported(self):

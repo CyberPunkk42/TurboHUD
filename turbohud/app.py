@@ -505,6 +505,7 @@ def run(args, folder):
         from turbohud.core.race import (
             RACING,
             DeltaBar,
+            EventModes,
             LapReader,
             RaceStarts,
             Radar,
@@ -537,6 +538,7 @@ def run(args, folder):
         )  # not `shortcuts`: that name holds whether the hotkeys are there
         track_map = TrackMap(settings.map_others, folder)  # learnt tracks beside the settings
         race_starts = RaceStarts()
+        event_modes = EventModes()
         retirements = Retirements()
 
         def contents():
@@ -546,6 +548,9 @@ def run(args, folder):
             if race_starts.started(snapshot, time.monotonic()) and not locked:
                 log.info('a race began: locking')
                 set_locked(True)  # move mode forgotten: the race is no time for it
+            mode = event_modes.began(snapshot, time.monotonic())
+            if mode is not None:
+                QTimer.singleShot(0, lambda: preset_for_mode(mode))  # after this read is shown
             track_map.others = settings.map_others
             radar.within = settings.radar_seconds
             radar.cone = settings.radar_cone
@@ -783,6 +788,7 @@ def run(args, folder):
         if value:
             design_end()  # locking leaves the design screen
             select(None)
+            panel.layouts.hide()
             panel.hide()
             native.give_focus_back()
             history.record(layout_state())
@@ -1404,6 +1410,40 @@ def run(args, folder):
         panel.set_presets_saved(presets)
         log.info('preset %d deleted', number)
 
+    def rename_preset(number, name):
+        """A preset's name, as typed in the layouts window ('' for none)."""
+        nonlocal settings
+        names = {kept: called for kept, called in settings.preset_names.items() if kept != number}
+        if name:
+            names[number] = name
+        settings = replace(settings, preset_names=names)
+        write_settings()
+        log.info('preset %d named %r', number, name)
+
+    def set_auto_preset(mode, number):
+        """The preset that loads as an event of `mode` begins (0: none)."""
+        nonlocal settings
+        chosen = {kept: n for kept, n in settings.auto_presets.items() if kept != mode}
+        if number in PRESETS:
+            chosen[mode] = number
+        settings = replace(settings, auto_presets=chosen)
+        write_settings()
+        log.info('as a %s begins: %s', mode, f'preset {number}' if number in PRESETS else 'no preset')
+
+    def preset_for_mode(mode):
+        """An event of `mode` began (race.EventModes): its preset, where one is chosen and saved.
+        Not in move mode or on the design screen, where the player is placing sections."""
+        number = settings.auto_presets.get(mode)
+        if number is None:
+            log.info('a %s began; no preset chosen for it', mode)
+        elif not locked or design is not None:
+            log.info('a %s began; preset %d not loaded in move mode', mode, number)
+        elif number not in settings.presets:
+            log.info('a %s began; preset %d is empty', mode, number)
+        else:
+            log.info('a %s began: preset %d', mode, number)
+            load_preset(number)
+
     @undoable
     def load_preset(number):
         """Put every section as the preset has it. What the desktop reports may lag behind
@@ -1826,8 +1866,12 @@ def run(args, folder):
         commands,
         tuple(settings.presets),
         lock_keys[0] if lock_keys else LOCK_KEY,
+        settings.preset_names,
+        settings.auto_presets,
     )
     panel.preset_save_requested.connect(save_preset)
+    panel.preset_renamed.connect(rename_preset)
+    panel.auto_preset_changed.connect(set_auto_preset)
     panel.preset_load_requested.connect(load_preset)
     panel.preset_delete_requested.connect(delete_preset)
     panel.match_requested.connect(match_group)

@@ -147,6 +147,13 @@ presets with their shortcuts, groups, the Centre buttons, Centre text and Undo. 
 - Since 2026-11-14 the tray menu's on/off options are in an Options submenu, so Quit shows in omarchy's bar
   (it cut the menu off at about 13 rows; confirmed there by the user on 2026-11-14): check the submenu in the
   Mac's menu bar and in Windows' tray.
+- Since 2026-11-15 (`feature/named-presets-by-mode`, asked for by players and the user): five named presets,
+  Ctrl+Shift+4 and 5, a preset per kind of event (Recording, Hotlapping, Race, Special event) loaded as one
+  begins, and the presets, files and design screen in a Layouts window opened from the panel. Tested offscreen
+  only. To try by hand: the Layouts window beside the panel (Mac, Hyprland, Windows), typing a name there
+  (keyboard focus on Hyprland), Ctrl+Shift+4 and 5 on each system, and each mode in TSU: a recording, a
+  hotlapping event, a race, and an arena event (Sumo, Battle, King of the Hill, Tag), whose mode is read a
+  moment after the race (the log says `event type:` and `a ... began`).
 
 ## 4. Builds and release
 The Mac app for a tester (2026-11-06): build with `sh tools/get_mac_python.sh`, then

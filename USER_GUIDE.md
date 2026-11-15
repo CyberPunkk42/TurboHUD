@@ -324,19 +324,8 @@ from its name while they show, and no name ever runs into the next column.
   to go back).
 - **Global text size (px)**: the text size of every section set to global. **All global**
   sets every text section back to the global size.
-- **Presets** (1, 2, 3): **Save** keeps the layout as it is now in that preset (replacing
-  what was there), **Load** puts the sections back as it has them (also Ctrl+Shift+1, 2, 3,
-  at any time, also during a race), **Delete** deletes it. A preset holds where each
-  section sits, its size, whether it shows and its group; colours and options stay as they
-  are.
-- **Load screen default**: TurboHUD's layout for this screen's size (your own for that
-  size first, see section 5).
-- **Export…** saves the layout to a file, to share or keep. **Import…** loads one, fitted
-  to this screen if it was made for another.
-- **Design for:** picks a screen size, this screen's first, marked "(this screen)".
-  **Design** shows that size as a frame on your screen, to scale, with its layout inside to
-  arrange; **Save design…** saves it at full size as a file for that size, and **Cancel**
-  brings your own layout back.
+- **Layouts…** opens the layouts window beside the panel: the presets, which preset loads
+  for each kind of event, layout files and the design screen (see below).
 - **Undo** goes back one change to the layout at a time (moving, sizing, showing, groups,
   centring, matching, presets); a drag or a run of nudges is one change. **Redo** goes
   forward again. Colours and options are not in it, and it starts afresh at each start.
@@ -345,6 +334,35 @@ from its name while they show, and no name ever runs into the next column.
 
 Move mode ends with Ctrl+Shift+L, **Lock**, or when a race begins; a click on the game does
 not end it. Your layout is saved as you change it.
+
+**The layouts window** (**Layouts…** in the panel; it closes with **Close**, and when move
+mode ends):
+- **Presets** (1 to 5): each has a **Name** box: call it what it is for, such as Race,
+  Hotlapping, Practice or Recordings (up to 24 letters). **Save** keeps the layout as it is
+  now in that preset (replacing what was there), **Load** puts the sections back as it has
+  them (also Ctrl+Shift+1 to 5, at any time, also during a race), **Delete** deletes it. A
+  preset holds where each section sits, its size, whether it shows and its group; colours
+  and options stay as they are.
+- **Load by itself**: "As an event begins, the preset chosen for its mode". For each kind of
+  event, pick a preset (**1** to **5**) or **Off** (all are Off at first):
+  - **Recording**: a recording (replay) TSU plays.
+  - **Hotlapping**: a hotlapping event, which is how qualifying is run.
+  - **Race**: laps of a circuit, or a race from A to B.
+  - **Special event**: an arena event: Battle (deathmatch and team deathmatch), Sumo, King of
+    the Hill, Tag, Soccer and the others.
+
+  The preset loads once, as an event of another kind than the last one begins (also one
+  already running when TurboHUD starts). So a section you move during a race stays where you
+  put it through the next races, until an event of another kind comes. Nothing loads in move
+  mode, or when the chosen preset is empty. TurboHUD cannot tell practice from a race, so a
+  practice preset is one you load yourself.
+- **Files and screens**: **Load screen default** is TurboHUD's layout for this screen's size
+  (your own for that size first, see section 5). **Export…** saves the layout to a file, to
+  share or keep. **Import…** loads one, fitted to this screen if it was made for another.
+- **Design**: **Design for:** picks a screen size, this screen's first, marked "(this
+  screen)". **Design** shows that size as a frame on your screen, to scale, with its layout
+  inside to arrange; **Save design…** saves it at full size as a file for that size, and
+  **Cancel** brings your own layout back.
 
 
 ## 5. Layouts for every screen size
@@ -423,7 +441,7 @@ At the bottom:
 |---|---|---|
 | **Ctrl+Shift+L** | Move mode on / off | Windows, Mac, Hyprland |
 | **Ctrl+Shift+F12** | The same, when another program has Ctrl+Shift+L | Windows, Hyprland |
-| **Ctrl+Shift+1**, **2**, **3** | Load layout preset 1, 2 or 3 | Windows, Mac, Hyprland |
+| **Ctrl+Shift+1** to **Ctrl+Shift+5** | Load layout preset 1 to 5 | Windows, Mac, Hyprland |
 | **Ctrl+Shift+Q** | Quit TurboHUD | Windows, Mac, Hyprland |
 | **Arrow keys** (Shift: 10 px) | Nudge the selected section | move mode |
 
@@ -446,7 +464,7 @@ settings:
 | `TurboHUD --toggle` | move mode on or off |
 | `TurboHUD --move` / `--lock` | move mode on / off |
 | `TurboHUD --settings` | open the settings window |
-| `TurboHUD --preset 1` | load layout preset 1 (or 2, or 3) |
+| `TurboHUD --preset 1` | load layout preset 1 (or 2 to 5) |
 | `TurboHUD --quit` | quit TurboHUD |
 
 On Linux, live race data needs TSU started through TurboHUD: `TurboHUD --launch-option`

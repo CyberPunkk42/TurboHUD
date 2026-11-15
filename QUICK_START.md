@@ -35,10 +35,11 @@ it goes.
    and outside a race every section shows a made-up race at Laguna Seca, so you see it filled.
 2. Drag a section, or click it and nudge it with the arrow keys (Shift: 10 px). A corner sizes
    its text, an edge adds room.
-3. The panel shows or hides each section, sets its text size and line spacing, keeps three
-   layouts (**Save** / **Load** presets 1 to 3), and has **Undo** and **Redo**. **Load screen
-   default**, **Export…**, **Import…** and **Design for** work with layout files per screen size
-   (in `customization/display_presets`; TurboHUD's own never replace yours).
+3. The panel shows or hides each section, sets its text size and line spacing, and has **Undo**
+   and **Redo**. Its **Layouts…** window keeps five named layouts (**Save** / **Load** presets 1
+   to 5), can load one by itself as a recording, hotlapping, race or special event begins, and has
+   **Load screen default**, **Export…**, **Import…** and **Design for** for layout files per screen
+   size (in `customization/display_presets`; TurboHUD's own never replace yours).
 4. Press **Ctrl+Shift+L** again (or **Lock**) to finish; a race starting also locks it. Your
    layout is saved.
 
@@ -89,7 +90,7 @@ Hover over a section's name in the move-mode panel for a short explanation.
 |---|---|---|
 | **Ctrl+Shift+L** | Move mode on / off | Windows, Mac, Hyprland |
 | **Ctrl+Shift+F12** | The same, if another program has Ctrl+Shift+L (see below) | Windows, Hyprland |
-| **Ctrl+Shift+1**, **2**, **3** | Load layout preset 1, 2 or 3, also during a race | Windows, Mac, Hyprland |
+| **Ctrl+Shift+1** to **Ctrl+Shift+5** | Load layout preset 1 to 5, also during a race | Windows, Mac, Hyprland |
 | **Ctrl+Shift+Q** | Quit TurboHUD | Windows, Mac, Hyprland |
 
 They work while you play. On Hyprland (Omarchy, for example) TurboHUD adds them while it runs,

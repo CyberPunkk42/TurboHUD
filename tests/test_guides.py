@@ -20,7 +20,7 @@ from turbohud.core.hud import CLOCK_SECTIONS, PANEL_CATEGORIES, RACE_SECTIONS, h
 
 QUICK_START = ROOT / 'QUICK_START.md'
 USER_GUIDE = ROOT / 'USER_GUIDE.md'
-SHORTCUTS = ('Ctrl+Shift+L', 'Ctrl+Shift+F12', 'Ctrl+Shift+1', 'Ctrl+Shift+Q')
+SHORTCUTS = ('Ctrl+Shift+L', 'Ctrl+Shift+F12', 'Ctrl+Shift+1', 'Ctrl+Shift+5', 'Ctrl+Shift+Q')
 COMMANDS = ('--toggle', '--move', '--lock', '--settings', '--preset', '--quit', '--launch-option')
 _TAG = re.compile(r'<[^>]+>')
 _ACTION = re.compile(r"""(?:QAction\(|addMenu\()\s*'((?:[^'\\]|\\.)+)'""")
@@ -121,9 +121,23 @@ class UserGuideWindowTests(GuideTestCase):
         from turbohud.overlay.window import MovePanel
 
         panel = MovePanel(self.Native(), RACE_SECTIONS, True)
+        self.addCleanup(panel.layouts.close)
         names = self.names(panel, help_lines(True))
-        for expected in ('load screen default', 'design for', 'redo', 'size px', 'lines %'):
+        for expected in ('layouts...', 'redo', 'size px', 'lines %'):
             self.assertIn(expected, names)  # the panel is read as meant
+        self.assertMentions(USER_GUIDE, names)
+
+    def test_every_layouts_window_control(self):
+        from turbohud.core.settings import EVENT_MODES
+        from turbohud.overlay.layouts_window import LayoutsWindow
+        from turbohud.overlay.window import window_flags
+
+        window = LayoutsWindow(self.Native(), window_flags(), True)
+        names = self.names(window)
+        for expected in ('load screen default', 'design for', 'load by itself', 'off'):
+            self.assertIn(expected, names)  # the window is read as meant
+        for _mode, text in EVENT_MODES:
+            self.assertIn(label(text), names)  # every kind of event is read from the window
         self.assertMentions(USER_GUIDE, names)
 
     def test_every_settings_window_control(self):

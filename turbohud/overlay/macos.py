@@ -19,7 +19,7 @@ COLLECTION_BEHAVIOR = (1 << 0) | (1 << 4) | (1 << 6) | (1 << 8)
 # Carbon hotkeys: virtual key codes (kVK_ANSI_*) and modifier flags (controlKey, shiftKey).
 KEY_L = 0x25
 KEY_Q = 0x0C
-KEYS_PRESET = {1: 0x12, 2: 0x13, 3: 0x14}  # the keys 1, 2 and 3
+KEYS_PRESET = {1: 0x12, 2: 0x13, 3: 0x14, 4: 0x15, 5: 0x17}  # the keys 1 to 5 (kVK_ANSI_1 ...)
 CARBON_CONTROL = 1 << 12
 CARBON_SHIFT = 1 << 9
 

@@ -158,13 +158,15 @@ class HyprlandShortcutTests(unittest.TestCase):
     def keys(self, keymap):
         return sorted((b['modmask'], b['key']) for b in keymap.ours())
 
-    def test_all_five_keys_while_it_runs_and_none_after(self):
+    def test_all_seven_keys_while_it_runs_and_none_after(self):
         desktop = self.Keymap().entry('SUPER + SHIFT + H', 'TurboHUD move mode')  # the player's own
         keymap = self.Keymap([desktop])
         native = self.native(keymap)
         self.assertTrue(native.register_hotkeys(lambda number: None))
         self.assertEqual(native.lock_keys, ['Ctrl+Shift+L'])
-        self.assertEqual(self.keys(keymap), [(5, '1'), (5, '2'), (5, '3'), (5, 'L'), (5, 'Q')])
+        self.assertEqual(
+            self.keys(keymap), [(5, '1'), (5, '2'), (5, '3'), (5, '4'), (5, '5'), (5, 'L'), (5, 'Q')]
+        )
         commands = {b['key']: b['arg'] for b in keymap.ours()}
         self.assertTrue(commands['L'].endswith('--toggle'))
         self.assertTrue(commands['2'].endswith('--preset 2'))
@@ -183,7 +185,7 @@ class HyprlandShortcutTests(unittest.TestCase):
         native = self.native(keymap)
         self.assertTrue(native.register_hotkeys(lambda number: None))
         self.assertEqual(native.lock_keys, ['Ctrl+Shift+F12'])  # the second key, as on Windows
-        self.assertEqual(self.keys(keymap), [(5, '1'), (5, '2'), (5, 'F12'), (5, 'Q')])
+        self.assertEqual(self.keys(keymap), [(5, '1'), (5, '2'), (5, '4'), (5, '5'), (5, 'F12'), (5, 'Q')])
         native.unregister_hotkeys()
         self.assertEqual(keymap.binds, taken)
 
@@ -209,7 +211,7 @@ class HyprlandShortcutTests(unittest.TestCase):
         native.register_hotkeys(lambda number: None)
         keymap.binds = []  # what a reload does to them
         native._rebind()
-        self.assertEqual(len(keymap.ours()), 5)
+        self.assertEqual(len(keymap.ours()), 7)
 
     def test_a_reload_event_starts_it(self):
         native = self.native(self.Keymap())

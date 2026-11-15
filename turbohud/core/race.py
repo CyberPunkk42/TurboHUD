@@ -2360,6 +2360,41 @@ class RaceStarts:
         return began
 
 
+def event_mode(state):
+    """The kind of event `state` (a LapState) is, as the presets by mode know it
+    (settings.EVENT_MODES): 'recording' for a replay, 'hotlapping' (how qualifying is run),
+    'special' for an arena mode (Battle, Sumo, King of the Hill, Tag, Soccer and the others,
+    which are no TS.RaceEventMode), else 'race' (a circuit, or A to B)."""
+    if state.replay:
+        return 'recording'
+    if state.hotlapping:
+        return 'hotlapping'
+    if not state.on_a_track:
+        return 'special'
+    return 'race'
+
+
+class EventModes:
+    """Tells once when an event begins whose mode (event_mode) differs from the last one told:
+    the preset for it then loads (asked for by players on 2026-11-15). So a section moved during
+    an event stays through the next ones of the same mode, and a replay that was rewound (TSU
+    rebuilds it for a moment) does not count as a new one. An event already running when TurboHUD
+    starts counts. A mode read late (an arena's, after the first look) is told when it is known."""
+
+    def __init__(self):
+        self._told = None  # the mode told last
+
+    def began(self, snapshot, now):
+        """The new event's mode, or None."""
+        if not on_grid(snapshot, now):
+            return None
+        mode = event_mode(snapshot.state)
+        if mode == self._told:
+            return None
+        self._told = mode
+        return mode
+
+
 def status_text(snapshot, platform=sys.platform):
     """What TurboHUD is waiting for, for the tray icon's tooltip. On the Mac TurboHUD
     finds TSU by itself, so what is in the way is the reader's own message."""

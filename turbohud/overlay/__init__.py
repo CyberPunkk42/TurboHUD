@@ -12,7 +12,8 @@ import sys
 
 HOTKEY_LOCK = 1
 HOTKEY_QUIT = 2
-HOTKEY_PRESETS = {3: 1, 4: 2, 5: 3}  # hotkey number -> the layout preset it loads
+# Hotkey number -> the layout preset it loads (Ctrl+Shift+1 to 5); 6 is HOTKEY_LOCK_BACKUP.
+HOTKEY_PRESETS = {3: 1, 4: 2, 5: 3, 7: 4, 8: 5}
 # Move mode's second key, on Windows: AMD Software takes Ctrl+Shift+L (reported by the user on
 # 2026-11-12, and seen on 2026-11-11 as error 1409). Not Ctrl+Alt+L: that is AltGr+L, which types
 # a letter on some keyboards (Polish l with a stroke), and a game's chat would switch move mode.

@@ -22,8 +22,9 @@
   per screen (2026-11-09), for the frames; seen over TSU on 2026-11-10, with no gain showing yet. On Windows it
   reads the race through the Rust reader started beside TSU (first run on 2026-11-11: an online race found once a hang in the search was fixed). Start from the source with
   `run_turbohud.sh` / `run_turbohud.cmd`.
-- Layout, in the move-mode panel: a text section's box fits closely round its text, three
-  presets (Ctrl+Shift+1, 2, 3 load them; Linux: `--preset`), groups that move and resize
+- Layout, in the move-mode panel: a text section's box fits closely round its text, five named
+  presets (Ctrl+Shift+1 to 5 load them; Linux: `--preset`; since 2026-11-15, with a preset per kind of
+  event loaded as one begins, in the panel's Layouts window), groups that move and resize
   together and can match their text size and width, Centre buttons for every section, and
   Centre text, and Undo. Checked by hand on the Mac. Since 2026-11-13 to 2026-11-15: text sizes
   in pixels and line spacing per section, a corner sizes the text and an edge adds room, arrow-key
@@ -90,12 +91,22 @@
 2. macOS: live data is connected; check it in races (offline and online), over
    Fullscreen, and listen for stutter while the race is searched for.
 3. Layout: checked by hand on the Mac; what is left is in races, on Linux and on Windows
-   (backlog item 3).
+   (backlog item 3). New on 2026-11-15: the Layouts window, five named presets and presets by kind of
+   event: try them by hand, and each kind of event in TSU.
 4. Builds and release: Linux players try the `.tar.gz` (2026-11-14) on their distros, an AppImage; before the repository
    goes public, the privacy check, a licence and a README for players.
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+  - 2026-11-15: Five named presets, loaded by the kind of event, in a Layouts window (asked for by players,
+    `feature/named-presets-by-mode`): presets 1 to 5 (Ctrl+Shift+4 and 5 on Windows, the Mac and Hyprland, and
+    `--preset 4`/`5`; AGENTS.md's Hyprland exception says so, approved by the user), each with a name of up to
+    24 letters. Per kind of event (Recording, Hotlapping, Race, Special event: an arena's Battle, Sumo, King of
+    the Hill, Tag ...) a preset or Off, all Off at first: it loads once as an event of another kind than the
+    last begins (race.EventModes, from the replay and hotlapping flags and the event mode's class), not in move
+    mode, not when empty; practice cannot be told from a race. At the user's wish the presets, files and Design
+    moved from the panel into a Layouts window (**Layouts…**). Tests for the settings, the modes and the window;
+    the guides, README and read-me updated. Not yet tried by hand nor in TSU (backlog item 3).
   - 2026-11-15: The test command in RESUME.md runs in `.buildtools/venv` (`docs/resume-test-command`):
     with Homebrew's `python3.13` alone the Qt tests failed for want of PySide6; in the venv all pass.
     README and AGENTS.md say the same for macOS and Linux; Ruff's line names the Mac too. Windows unchanged.

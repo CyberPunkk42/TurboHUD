@@ -1096,8 +1096,11 @@ class MovePanelPresetTests(unittest.TestCase):
     def button(self, panel, number, text):
         from PySide6.QtWidgets import QPushButton
 
+        # Since 2026-11-15 in the layouts window the panel opens (panel.layouts).
         found = [
-            b for b in panel.findChildren(QPushButton) if b.text() == text and str(number) in b.toolTip()
+            b
+            for b in panel.layouts.findChildren(QPushButton)
+            if b.text() == text and f'preset {number}' in b.toolTip()
         ]
         self.assertEqual(len(found), 1)
         return found[0]
@@ -1107,7 +1110,7 @@ class MovePanelPresetTests(unittest.TestCase):
         from turbohud.core.presets import SCREENS
 
         panel = self.panel()
-        sizes = panel.design_size
+        sizes = panel.layouts.design_size
         panel.set_own_screen((2560, 1440))
         self.assertEqual(sizes.currentData(), (2560, 1440))
         self.assertEqual(sizes.currentText(), '2560x1440 (this screen)')
@@ -1209,20 +1212,21 @@ class MovePanelPresetTests(unittest.TestCase):
         self.assertFalse(panel.redo.isEnabled())
         panel.set_redo_available(True)
         panel.redo.click()
+        layouts = panel.layouts  # since 2026-11-15 in a window of their own
         for text in ('Load screen default', 'Export…', 'Import…'):
-            next(b for b in panel.findChildren(type(panel.undo)) if b.text() == text).click()
-        self.assertFalse(panel.design_save.isEnabled())  # only while designing
-        panel.design_size.setCurrentText('3840x2160')
-        panel.design.click()
+            next(b for b in layouts.findChildren(type(panel.undo)) if b.text() == text).click()
+        self.assertFalse(layouts.design_save.isEnabled())  # only while designing
+        layouts.design_size.setCurrentText('3840x2160')
+        layouts.design.click()
         panel.set_designing(True)
         # Loading a full-size layout would cover the design: off while designing; Export saves it.
-        self.assertFalse(panel.layout_buttons['Load screen default'].isEnabled())
-        self.assertFalse(panel.layout_buttons['Import…'].isEnabled())
-        self.assertTrue(panel.layout_buttons['Export…'].isEnabled())
-        panel.design_save.click()
-        panel.design_cancel.click()
+        self.assertFalse(layouts.layout_buttons['Load screen default'].isEnabled())
+        self.assertFalse(layouts.layout_buttons['Import…'].isEnabled())
+        self.assertTrue(layouts.layout_buttons['Export…'].isEnabled())
+        layouts.design_save.click()
+        layouts.design_cancel.click()
         panel.set_designing(False)
-        self.assertTrue(panel.layout_buttons['Import…'].isEnabled())
+        self.assertTrue(layouts.layout_buttons['Import…'].isEnabled())
         self.assertEqual(
             got, ['redo', 'screen_default', 'export', 'import', (3840, 2160), 'design_save', 'design_cancel']
         )
@@ -1313,13 +1317,14 @@ class MovePanelPresetTests(unittest.TestCase):
         panel = self.panel(saved_presets=(2,))
         got = []
         panel.preset_delete_requested.connect(got.append)
-        self.assertFalse(panel.preset_deletes[1].isEnabled())
-        self.assertTrue(panel.preset_deletes[2].isEnabled())
-        panel.preset_deletes[2].click()
+        deletes = panel.layouts.preset_deletes
+        self.assertFalse(deletes[1].isEnabled())
+        self.assertTrue(deletes[2].isEnabled())
+        deletes[2].click()
         self.assertEqual(got, [2])
         panel.set_presets_saved(())
-        self.assertFalse(panel.preset_deletes[2].isEnabled())
-        self.assertEqual(panel.preset_deletes[2].text(), 'Delete')  # a word, as Save and Load
+        self.assertFalse(deletes[2].isEnabled())
+        self.assertEqual(deletes[2].text(), 'Delete')  # a word, as Save and Load
 
     def test_a_preset_can_go_back_to_empty(self):
         panel = self.panel(saved_presets=(1, 2))
@@ -1408,11 +1413,9 @@ class MovePanelPresetTests(unittest.TestCase):
         words = (
             'All',
             'None',
-            'Save',
-            'Load',
-            'Delete',
             'Undo',
             'Relearn map',
+            'Layouts…',
             'Lock',
             'Settings…',
             'Quit TurboHUD',
