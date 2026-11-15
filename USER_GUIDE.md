@@ -351,7 +351,7 @@ The window has two columns, under headings. The on/off options are the same as u
   flag, 1 to 10 seconds (2 by default).
 
 **Reading the race**
-- **Race reads a second:** 20, 10 or 5. Fewer ask less of the game, but the delta and the
+- **Race reads a second:** 20, 10 (the default) or 5. Fewer ask less of the game, but the delta and the
   track map move less smoothly, and a track first learnt at 5 gets a coarser line.
 
 At the bottom:

@@ -120,7 +120,9 @@ class Settings:
     presets: dict = field(default_factory=dict)  # number (one of PRESETS) -> a kept `sections`
     blue_seconds: float = 2.0  # how far behind a car about to lap the player shows the blue flag
     radar_seconds: float = 0.5  # how far ahead or behind a car shows the proximity radar
-    reads_per_second: int = 20  # how often a race is read and its sections updated (READS_PER_SECOND)
+    # How often a race is read and its sections updated (READS_PER_SECOND); 10 by default since
+    # 2026-11-15 (asked for by the user): smooth enough, and half the work for the game.
+    reads_per_second: int = 10
     font_size: int = DEFAULT_FONT  # the global text size in pixels, for text sections without their own
     # The digest of the layout file from customization/display_presets last taken at a start: a file is
     # taken once each time it is new or has changed (turbohud.core.presets.custom_for).

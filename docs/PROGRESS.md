@@ -2052,3 +2052,11 @@ its "Recent changes".
     (ticked: third person too). Guides say so. Tests: the two buttons, shown and said, set from the menu; the
     headings and More; compact with every option (rows 6 px apart: a layout inside another took the columns' 24
     px). Not yet: seen on the screen.
+  - 2026-11-15: Race reads 10 times a second by default, and the clan tags right after the names, asked for by the
+    user (`fix/standings-tag-gap-reads-default`): `reads_per_second` defaults to 10 (was 20); a saved setting
+    stays as it is. In Standings and Nearby cars the clan tag (and the overall place in a multi-class race) comes
+    right after the longest name shown (`packed_after_names`), not after the longest a driver can have (20
+    letters), which left a big gap; the columns on the right stay put. Tests: after the longest name shown, never
+    right of where it was, the overall place between name and tag, an overall column only in the reserve stays
+    (that case first raised inside a paint event, which crashed the test run), the new default. Not yet: seen in
+    a race.

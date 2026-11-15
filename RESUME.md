@@ -95,6 +95,14 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+  - 2026-11-15: Race reads 10 times a second by default, and the clan tags right after the names, asked for by the
+    user (`fix/standings-tag-gap-reads-default`): `reads_per_second` defaults to 10 (was 20); a saved setting
+    stays as it is. In Standings and Nearby cars the clan tag (and the overall place in a multi-class race) comes
+    right after the longest name shown (`packed_after_names`), not after the longest a driver can have (20
+    letters), which left a big gap; the columns on the right stay put. Tests: after the longest name shown, never
+    right of where it was, the overall place between name and tag, an overall column only in the reserve stays
+    (that case first raised inside a paint event, which crashed the test run), the new default. Not yet: seen in
+    a race.
   - 2026-11-15: A tidier settings window, and the radar in third person, asked for by the user
     (`feature/settings-tidy-radar-cameras`): the window has two columns under headings (Look, Standings, Sections;
     Radar, Flags, Reading the race; More for an option not placed), the standings' columns in one row (Flag, Lap,

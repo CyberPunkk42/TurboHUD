@@ -283,6 +283,33 @@ def tag_left(lines, before_end, measure):
     return start - tag
 
 
+def packed_after_names(lines, left, measure, tag_start, overall_end):
+    """(tag_start, overall_end) moved left to just after the longest name shown in `lines`
+    (from `left`, past a flag), never further right than they were. The other columns are
+    placed from the box's right edge for the longest name a driver can have, which left a big
+    gap before the clan tags (reported by the user on 2026-11-15); the tag and the overall
+    place belong to the name, the rest stays put."""
+    rows = [
+        line
+        for line in lines
+        if not line.rule and (line.tag or line.overall or line.before or line.middle or line.right)
+    ]
+    if not rows or (tag_start is None and overall_end is None):
+        return tag_start, overall_end
+    gap = max(COLUMN_GAP * line.size for line in lines)
+    after = max(
+        left + (FLAG_WIDTH * line.size if line.flag else 0) + measure(line.text, line.size) for line in rows
+    )
+    after += gap
+    widest = max((measure(line.overall, line.size) for line in rows if line.overall), default=None)
+    if overall_end is not None and widest is not None:  # none shown: it stays where it was
+        overall_end = min(overall_end, after + widest)
+        after = overall_end + gap
+    if tag_start is not None:
+        tag_start = min(tag_start, after)
+    return tag_start, overall_end
+
+
 def overall_right(lines, middle_end, tyre_end, before_end, tag_start, measure):
     """Where the `overall` column ends (it is right-aligned there): a gap before the leftmost
     of the other columns (the tag, `before`, the tire, the middle one); None without it."""
