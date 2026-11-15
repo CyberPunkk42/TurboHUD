@@ -100,11 +100,13 @@ green, or dark yellow when slower than your best). After you set such a lap, the
 map's road shows purple or green for 6 seconds.
 
 **Standings**
-Every driver in race order (in qualifying, which TSU runs as hotlapping, by best lap). Each
-row has, as chosen under **Settings…**:
+Every driver in race order (in qualifying, which TSU runs as hotlapping, by best lap). The
+place and the name always show; every other column can be turned off under **Settings…**:
 - the place, the country flag, the name (up to 18 letters, as in Nearby cars; a longer one ends in "…") and, in a race without classes,
   the clan tag (`FTR` for `[FTR]`)
 - the lap each driver is on (`L3`)
+- the gap to the leader (`+7.231`, or `+1 L` a lap or more behind; nothing for the leader
+  and for a car out of the race). In a race with classes, the gap to that class's leader.
 - the tire compound as a letter in a coloured ring, as in F1: **S** red, **M** yellow,
   **H** white; on a wet track (one whose name has `(WET)`, `(RW)`, `(QW)` or `(W)`) every
   car shows a blue **W**
@@ -125,8 +127,9 @@ which has none, the country code).
 **Car classes (multi-class races).** Drivers name their class with their clan tag in TSU
 (`[GT3]`, `[LMP]`, `[LMP2]` ...). With two or more classes in a race, the standings come by
 class, each below a thin line with its name in the class's colour, numbered within the
-class, with the class's fastest lap in purple and the overall place (`P7`) in an **Ovr**
-column. A driver without a class tag (or with a team's tag) gets the class most tagged
+class, with the class's fastest lap in purple, each driver's class after the name and the
+overall place (`P7`) in an **Ovr** column. The **Class** and **Overall** columns can be turned
+off under **Settings…**; the class lines still divide the list. A driver without a class tag (or with a team's tag) gets the class most tagged
 drivers in the same car have; drivers in a car no one tagged come last under **Other**.
 **Settings… > Car classes...** lists every class a tag can name, in its colour. The tags
 that count are in `settings.json` as `class_tags` (change it while TurboHUD is closed).
@@ -337,8 +340,10 @@ The window has two columns, under headings. The on/off options are the same as u
 
 **Standings**
 - **Classes in the standings** and **Clan tags in the standings**.
-- **Columns:** **Flag**, **Lap** (the lap each driver is on), **Tire**, **Best** and **Last**
-  (the last lap): which columns the standings show.
+- **Columns:** **Flag**, **Lap** (the lap each driver is on), **Tire**, **Gap** (to the
+  leader), **Best**, **Last** (the last lap), **Class** and **Overall** (in a race with
+  classes): which columns the standings show. The place and the name always show. Each
+  column left out makes the box narrower.
 
 **Sections**
 - **Sector bars in My laps**, **Gear and revs in the speed section** and **Other cars on the

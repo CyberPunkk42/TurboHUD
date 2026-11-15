@@ -51,6 +51,7 @@ CAMERA_CHOICES = (
     (True, 'Cockpit cameras', 'Only while the camera sits at the driver: first person, "CAM 5"'),
     (False, 'Every camera', 'Also in the views from behind and outside the car (third person)'),
 )
+COLUMNS_PER_ROW = 4  # the standings' column switches in a row
 HEADING = '#9fb8d8'  # the headings, as in the move-mode panel
 SIZE_STEP = 1.1  # Bigger: 10 % larger; Smaller: the same back
 SWATCH = 22  # pixels
@@ -181,12 +182,15 @@ class SettingsWindow(QWidget):
             left.addWidget(self._heading('Standings'))
             self._boxes(left, listed, standings)
             if column_keys:
-                line = QHBoxLayout()
-                line.addWidget(QLabel('Columns:'))
-                for key in column_keys:
-                    line.addWidget(self._box(key, *listed[key]))
-                line.addStretch()
-                left.addLayout(line)
+                # Rows of COLUMNS_PER_ROW, so the window keeps its width as columns are added.
+                grid = QGridLayout()
+                grid.setHorizontalSpacing(14)
+                grid.addWidget(QLabel('Columns:'), 0, 0)
+                for index, key in enumerate(column_keys):
+                    row, place = divmod(index, COLUMNS_PER_ROW)
+                    grid.addWidget(self._box(key, *listed[key]), row, place + 1)
+                grid.setColumnStretch(COLUMNS_PER_ROW + 1, 1)
+                left.addLayout(grid)
         if any(key in listed for key in GROUPS['sections']):
             left.addWidget(self._heading('Sections'))
             self._boxes(left, listed, GROUPS['sections'])

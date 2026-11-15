@@ -3671,6 +3671,7 @@ def lap_times_rows(
         best = bests[id(player)]
         if best is not None and (group not in fastest or best < fastest[group]):
             fastest[group] = best
+    show_class, show_overall = 'class' in columns, 'overall' in columns
     rows = [
         Row(
             'Driver',
@@ -3680,9 +3681,15 @@ def lap_times_rows(
             middle_color='accent',
             right='Last',
             right_color='accent',
-            overall='Ovr' if overall else '',
+            overall='Ovr' if overall and show_overall else '',
+            lead='Gap',
         )
     ]
+    # The gap to the leader (asked for by a player, 2026-11-15): of the class in a multi-class
+    # race, as the places are; at the last checkpoint both passed, so it holds still between them.
+    leaders = {}
+    for player in order:
+        leaders.setdefault(classes.get(id(player)), player)
     last_class = None
     for position, player in shown:
         name = player.name or '?'
@@ -3727,8 +3734,9 @@ def lap_times_rows(
                 right_color=SHORTCUT_COLOR if cut_text else 'lift' if plain_pit or bracket else 'text',
                 rule=rule,
                 rule_color=colors.get(group, '') if rule else '',
-                overall=f'P{overall[id(player)]}' if overall else '',
-                **_tag_column(player, group, colors, clan_tags),
+                overall=f'P{overall[id(player)]}' if overall and show_overall else '',
+                lead=_leader_gap(player, leaders[group], retired),
+                **_tag_column(player, group, colors, clan_tags, show_class),
                 **_tyre_column(player, compounds, wet),
             )
         )
@@ -3751,6 +3759,8 @@ def _only_columns(row, columns):
         changes['before'] = ''
     if 'tyre' not in columns:
         changes['tyre'] = ''
+    if 'gap' not in columns:
+        changes['lead'] = ''
     best, current = 'best' in columns, 'current' in columns
     if not best and current:  # the current lap in the best lap's place
         changes.update(middle=row.right, middle_color=row.right_color, right='')
@@ -3767,10 +3777,10 @@ def standings_section(section, columns=LAP_COLUMNS, clan_tags=True, classes=True
     unticking a column left its room). Without classes no overall place; without classes and
     clan tags no tag column."""
     drop = {}
-    if not classes:
+    if not classes or 'overall' not in columns:
         drop['overall'] = ''
-        if not clan_tags:
-            drop['tag'] = ''
+    if not clan_tags and not (classes and 'class' in columns):
+        drop['tag'] = ''
     samples = tuple(
         tuple(dataclasses.replace(_only_columns(row, columns), **drop) for row in sample)
         for sample in section.samples
@@ -3783,12 +3793,23 @@ def _class_name(group):
     return group if group == OTHER_CLASS else shown_code(group)
 
 
-def _tag_column(player, group, colors, clan_tags):
+def _leader_gap(player, leader, retired=frozenset()):
+    """`player`'s gap to `leader` for the standings: '+12.345' or '+1 L'; nothing for the
+    leader itself, a car out of the race, or before both passed a checkpoint."""
+    if player is leader or player.name in retired:
+        return ''
+    return gap_text(gap(player, leader))
+
+
+def _tag_column(player, group, colors, clan_tags, show_class=True):
     """The tag column's text and colour for `player` of class `group` (None outside a
-    multi-class race): see lap_times_rows."""
+    multi-class race): see lap_times_rows. Without `show_class` (its column turned off, asked
+    for by the user on 2026-11-15) no class there; the class lines still divide the list."""
     own = (player.tag or '').strip()
     if group is None or group == OTHER_CLASS:
         return {'tag': own[:MAX_TAG_SHOWN] if clan_tags else ''}
+    if not show_class:
+        return {'tag': ''}
     if class_tag(own) == group:
         return {'tag': own[:MAX_TAG_SHOWN], 'tag_color': colors[group]}
     return {'tag': shown_code(group), 'tag_color': paler(colors[group])}

@@ -77,16 +77,21 @@ OLD_CLASS_TAGS = (
 
 
 # The lap times' columns one can turn off (asked for by the user on 2026-11-12): the flag, the
-# lap number, the tire compound, the best lap and the current lap. The settings file keeps those
-# shown, in this order.
-LAP_COLUMNS = ('flag', 'lap', 'tyre', 'best', 'current')
+# lap number, the tire compound, the best lap and the current lap; since 2026-11-15 also the gap
+# to the leader, the class (the tag column in a multi-class race) and the overall place: every
+# column but the place and the name. The settings file keeps those shown, in this order, and
+# those it knew of (`lap_columns_known`), so a column added later shows until it is turned off.
+LAP_COLUMNS = ('flag', 'lap', 'tyre', 'gap', 'best', 'current', 'class', 'overall')
+FIRST_LAP_COLUMNS = ('flag', 'lap', 'tyre', 'best', 'current')  # a file without `lap_columns_known`
 
 
-def _lap_columns(value):
-    """The lap times' columns shown, from the settings file: all where there is no list."""
+def _lap_columns(value, known=None):
+    """The lap times' columns shown, from the settings file: all where there is no list; a column
+    the file did not know of yet shows."""
     if not isinstance(value, list):
         return LAP_COLUMNS
-    return tuple(column for column in LAP_COLUMNS if column in value)
+    known = known if isinstance(known, list) else FIRST_LAP_COLUMNS
+    return tuple(column for column in LAP_COLUMNS if column in value or column not in known)
 
 
 def _class_tags(value):
@@ -305,7 +310,7 @@ def load_settings(path):
         classes=data.get('classes') is not False,
         clan_tags=data.get('clan_tags') is not False,
         class_tags=_class_tags(data.get('class_tags')),
-        lap_columns=_lap_columns(data.get('lap_columns')),
+        lap_columns=_lap_columns(data.get('lap_columns'), data.get('lap_columns_known')),
         layout_version=_layout_version(data.get('layout_version')),
         presets=_presets(data.get('presets'), data.get('backdrop') is True),
         blue_seconds=_seconds(data.get('blue_seconds'), Settings.blue_seconds, BLUE_SECONDS),
@@ -344,6 +349,7 @@ def save_settings(path, settings):
         'classes': settings.classes,
         'clan_tags': settings.clan_tags,
         'lap_columns': list(settings.lap_columns),
+        'lap_columns_known': list(LAP_COLUMNS),
         'layout_version': settings.layout_version,
         'blue_seconds': settings.blue_seconds,
         'radar_seconds': settings.radar_seconds,

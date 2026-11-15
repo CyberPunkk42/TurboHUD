@@ -51,8 +51,8 @@ it goes.
 ## 4. Settings
 
 Icon menu, **Settings...**: text colours, all sections bigger or smaller, km/h or mph, a
-light tint behind the sections, which columns the standings show (flag, lap, tire, best,
-last), when the blue flag and the radar warn, how many times a second the race is read, and
+light tint behind the sections, which columns the standings show (flag, lap, tire, gap to
+the leader, best, last, class, overall place), when the blue flag and the radar warn, how many times a second the race is read, and
 the on/off options (also under **Options** in the icon's menu): the radar's slipstream cones
 and the radar in every camera (third person too), sector bars, yellow flags, gear and revs, classes and
 clan tags in the standings, other cars on the map. **Car classes...** is a list of every car

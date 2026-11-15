@@ -57,8 +57,19 @@ LAP_COLUMN_OPTIONS = (
             ' name has (WET), (RW), (QW) or (W))'
         ),
     ),
+    (
+        'gap',
+        'Gap',
+        "Each driver's gap to the leader (to the class's leader in a race with classes); +1 L a lap down",
+    ),
     ('best', 'Best', "Each driver's best lap"),
     ('current', 'Last', "Each driver's last lap, or CUT or PIT"),
+    (
+        'class',
+        'Class',
+        "In a race with classes, each driver's class after the name; off, the class lines still divide the list",
+    ),
+    ('overall', 'Overall', 'In a race with classes, each driver\'s place in the whole race (P7)'),
 )
 log = logging.getLogger('turbohud')
 

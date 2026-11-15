@@ -2099,3 +2099,14 @@ its "Recent changes".
     when a layout or preset is loaded (`text_box`). A tooltip with the whole name on a cut one was built and taken
     out again at the user's word: move mode, the only time one can hover, shows the preview's made-up names.
     Tests: 18 in both, the sample as long, the snug box. Not yet: seen on the screen.
+  - 2026-11-15: Every standings column optional, a gap to the leader, and class lines without the class column,
+    asked for by the user and a player (`feature/standings-columns-gap`): `LAP_COLUMNS` adds `gap`, `class` and
+    `overall` (the place and the name always show). Gap: a new column (`Row.lead`, between the tire and Best;
+    `lead_right`, `tyre_right` before it), "+7.231" or "+1 L", at the last checkpoint both passed so it holds
+    still, to the class's leader in a race with classes, nothing for the leader and a car out of the race; its
+    room for "+00.000" (25 px). Class off: no class in the tag column (a driver of no class keeps a clan tag),
+    the class lines stay; Overall off: no Ovr column. The settings file also keeps the columns it knew of
+    (`lap_columns_known`), so a column added later shows (the class and overall columns as before) until turned
+    off. The settings window's columns in two rows of four. Guides say so. Tests: the gap (leader, a car out,
+    turned off, per class), the class lines without class and overall, every column off, a column added later.
+    Not yet: seen in a race.

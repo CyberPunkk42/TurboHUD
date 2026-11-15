@@ -95,6 +95,17 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+  - 2026-11-15: Every standings column optional, a gap to the leader, and class lines without the class column,
+    asked for by the user and a player (`feature/standings-columns-gap`): `LAP_COLUMNS` adds `gap`, `class` and
+    `overall` (the place and the name always show). Gap: a new column (`Row.lead`, between the tire and Best;
+    `lead_right`, `tyre_right` before it), "+7.231" or "+1 L", at the last checkpoint both passed so it holds
+    still, to the class's leader in a race with classes, nothing for the leader and a car out of the race; its
+    room for "+00.000" (25 px). Class off: no class in the tag column (a driver of no class keeps a clan tag),
+    the class lines stay; Overall off: no Ovr column. The settings file also keeps the columns it knew of
+    (`lap_columns_known`), so a column added later shows (the class and overall columns as before) until turned
+    off. The settings window's columns in two rows of four. Guides say so. Tests: the gap (leader, a car out,
+    turned off, per class), the class lines without class and overall, every column off, a column added later.
+    Not yet: seen in a race.
   - 2026-11-15: The standings' names 18 letters, as the nearby cars', asked for by the user
     (`feature/name-field-18`): `LAP_NAME_SHOWN` is `MAX_NAME_SHOWN` (18, was 20), a longer name cut with '…'; the
     standings box at the default size 484 px (was 499); the shipped layouts' standings widths to match (only
