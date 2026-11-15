@@ -415,24 +415,36 @@ Settled and built (2026-11-04, `turbohud/tsu/bottle.py`, `bottle_reader.py`): Tu
 starts the reader with CrossOver's `wine --bottle` and asks it over its standard input and
 output, so there is no socket, port or secret.
 
-## Window count probe (`window_count_probe.py`)
+## Window count probe (`window_count_probe.py`, macOS, Windows and Linux)
 Do 17 small overlay windows cost the game more frames than one large window holding the same 17
-boxes? TurboHUD draws each section in its own window; on the user's Mac (2026-11-09, Metal HUD) TSU
-ran at 120 FPS with TurboHUD closed or one section shown, and at 80 to 110 with all 17. The probe
-answers whether rebuilding the overlay as one window would help, or whether one large, mostly
-see-through window costs by its area instead.
+boxes, or one window the size of the screen? On the user's Mac (2026-11-09, Metal HUD) TSU ran at
+120 FPS with TurboHUD closed or one section shown, and at 80 to 110 with all 17; this probe then gave
+17 windows 85 FPS and one window 115, so locked the Mac draws every section in one window per screen.
+On Windows and Linux each section still has a window of its own: since 2026-11-15 the probe runs there
+too, to tell whether one window would help there (and make a tint across a group of sections easy).
 
-1. Quit TurboHUD. Start TSU with the Metal HUD (`docs/CONTINUE_HERE.md`, "FPS on the user's Mac with
-   the Metal HUD"), in Fullscreen, and start a race.
-2. From the repository: `.buildtools/venv/bin/python -B experiments/window_count_probe.py`
-3. It runs by itself and quits: nothing (30 s), 17 small windows (45 s), one large window with all 17
-   boxes (45 s), nothing again (30 s). The boxes show the phase's name; the terminal prints each
-   phase's start. Note the FPS in each. `--rest` and `--each` change the times; Ctrl+C quits early.
+1. Quit TurboHUD. Turn on an FPS counter: on the Mac the Metal HUD (`docs/CONTINUE_HERE.md`, "FPS on
+   the user's Mac with the Metal HUD"); on Windows and Linux Steam's own (Steam > Settings > In Game >
+   In-game FPS counter), or MangoHud on Linux. Start TSU as you play it (Fullscreen or windowed) and
+   start a race, best offline with AI so the race does not end during the run.
+2. From the repository:
+   - macOS, Linux: `.buildtools/venv/bin/python -B experiments/window_count_probe.py`
+   - Windows: `.buildtools\venv\Scripts\python.exe -B experiments\window_count_probe.py`
 
-The boxes have the places and sizes of TurboHUD's sections, read (only read) from its settings file,
-and change 20 times a second. With the user's layout the one window is nearly the whole screen
-(2055 x 1290). Checked 2026-11-09 with real windows on the Mac (all four phases, quits by itself); not
-yet measured over TSU.
+   (`.buildtools/venv` is the environment the start script `run_turbohud.sh` / `run_turbohud.cmd`
+   sets up on its first run.)
+3. It runs by itself for about 3 minutes and quits: nothing (30 s), 17 small windows (45 s), one
+   large window with all 17 boxes (45 s), one window per screen (45 s), nothing again (30 s). The
+   boxes show the phase's name; the terminal prints each phase's start. Note the FPS in each (the
+   lowest and highest it shows). `--rest` and `--each` change the times; Ctrl+C quits early.
+
+The boxes have the places and sizes of TurboHUD's sections, read (only read) from its settings file
+in its usual folder on each system, and change 20 times a second. The windows let clicks through and
+stay on top as TurboHUD's do: on Hyprland each is floated and pinned through requests for the probe's
+own windows only (each has its own title, `TurboHUD probe 1` and on); on other Wayland desktops it
+runs through XWayland, as TurboHUD does. Checked 2026-11-15 on the Mac (all five phases, quits by
+itself; the last phase was cut short before, as closing the windows quit the program). Not yet run
+on Windows or Linux, nor measured over TSU there.
 
 ## Every car of a race, for yellow flags (`tsu_race_recorder.py`, macOS and Windows)
 

@@ -96,8 +96,16 @@
 4. Builds and release: Linux players try the `.tar.gz` (2026-11-14) on their distros, an AppImage; before the repository
    goes public, the privacy check, a licence and a README for players.
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
+6. One window on Windows and Linux (backlog item 1c): run `experiments/window_count_probe.py` with TSU in a
+   race on each and note the FPS per phase; it decides how one tint per group is made (item 3b).
 
 ## Recent changes
+  - 2026-11-15: The window count probe runs on Windows and Linux too (`feature/window-probe-everywhere`), to tell
+    whether one window per screen (as the Mac draws locked) would help there: it reads TurboHUD's settings in
+    each system's folder, keeps its windows on top through each system's Native (on Hyprland floated and pinned,
+    each with its own title), and has a third phase, one window per screen, as TurboHUD's HudCanvas. Fixed:
+    closing the windows for the last phase quit it, so "nothing again" was cut short. Run on the Mac (all five
+    phases); not yet on Windows or Linux (backlog item 1c). The day's other requests are backlog item 3b.
   - 2026-11-15: Five named presets, loaded by the kind of event, in a Layouts window (asked for by players,
     `feature/named-presets-by-mode`): presets 1 to 5 (Ctrl+Shift+4 and 5 on Windows, the Mac and Hyprland, and
     `--preset 4`/`5`; AGENTS.md's Hyprland exception says so, approved by the user), each with a name of up to
