@@ -2188,3 +2188,9 @@ its "Recent changes".
     longest entry and the window grows with it. Titles: TurboHUD - Layouts, Move Mode, Settings, Car Classes, Design
     Screen, Grid. A test makes the list as the app does and checks every button's width; seen in a render with the
     Mac's own style.
+  - 2026-11-16: The save window opened behind TurboHUD on the Mac, reported by the user (`fix/save-window-on-top`):
+    TurboHUD's windows sit at window level 1000 (above TSU's Fullscreen), and the system's own save and open windows
+    at the normal level, so Export, Import and Save design opened behind the panel, the layouts window and the
+    sections. On the Mac (Native.dialogs_on_top) they and the warnings and About now use Qt's own window, raised to
+    TurboHUD's level as it opens (`turbohud/overlay/dialogs.py`); checked on the Mac: the export window at level 1000,
+    as the layouts window. Windows and Linux keep the system's own, as before. Tests for the helpers.

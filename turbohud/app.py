@@ -435,7 +435,6 @@ def run(args, folder):
         QAbstractSpinBox,
         QApplication,
         QComboBox,
-        QFileDialog,
         QLineEdit,
         QMenu,
         QMessageBox,
@@ -479,6 +478,7 @@ def run(args, folder):
         choose_platform,
         native_for,
     )
+    from turbohud.overlay.dialogs import on_top, open_path, save_path, warn
     from turbohud.overlay.settings_window import SettingsWindow
     from turbohud.overlay.window import (
         DesignFrame,
@@ -1629,9 +1629,7 @@ def run(args, folder):
         # customization/display_presets beside the app (asked for by the user on 2026-11-13).
         folder = layout_presets.ready_folder(own_folder) or Path.home()
         suggested = folder / layout_presets.file_name(target[2:])
-        chosen, _ = QFileDialog.getSaveFileName(
-            panel, 'Export layout', str(suggested), 'TurboHUD layouts (*.json)'
-        )
+        chosen = save_path(panel, native, 'Export layout', suggested, 'TurboHUD layouts (*.json)')
         if not chosen:
             return
         places = layout_presets.relative(layout_state()[0], target)
@@ -1639,21 +1637,19 @@ def run(args, folder):
             layout_presets.save_file(chosen, places, target[2:], settings.font_size)
         except OSError as error:
             log.warning('the layout could not be exported: %s', error.strerror or error)
-            QMessageBox.warning(panel, 'TurboHUD', f'The layout could not be saved there ({error.strerror}).')
+            warn(panel, native, f'The layout could not be saved there ({error.strerror}).')
             return
         log.info('layout exported, for %dx%d', target[2], target[3])
 
     def import_layout():
         """A layout from a file, fitted to the screen the sections are on where made for another."""
         start = layout_presets.ready_folder(own_folder) or Path.home()
-        chosen, _ = QFileDialog.getOpenFileName(
-            panel, 'Import layout', str(start), 'TurboHUD layouts (*.json)'
-        )
+        chosen = open_path(panel, native, 'Import layout', start, 'TurboHUD layouts (*.json)')
         if not chosen:
             return
         found = layout_presets.load_file(chosen)
         if found is None:
-            QMessageBox.warning(panel, 'TurboHUD', 'That file is not a TurboHUD layout.')
+            warn(panel, native, 'That file is not a TurboHUD layout.')
             return
         size, places = found
         target = busiest_screen()
@@ -1705,16 +1701,14 @@ def run(args, folder):
         places = layout_presets.out_of_frame(shown, frame, scale, size)
         folder = layout_presets.ready_folder(own_folder) or Path.home()
         suggested = folder / layout_presets.file_name(size)
-        chosen, _ = QFileDialog.getSaveFileName(
-            panel, 'Save design', str(suggested), 'TurboHUD layouts (*.json)'
-        )
+        chosen = save_path(panel, native, 'Save design', suggested, 'TurboHUD layouts (*.json)')
         if not chosen:
             return  # still designing
         try:
             layout_presets.save_file(chosen, places, size, settings.font_size)
         except OSError as error:
             log.warning('the design could not be saved: %s', error.strerror or error)
-            QMessageBox.warning(panel, 'TurboHUD', f'The design could not be saved there ({error.strerror}).')
+            warn(panel, native, f'The design could not be saved there ({error.strerror}).')
             return
         log.info('design for %dx%d saved', size[0], size[1])
         design_end()
@@ -1809,7 +1803,7 @@ def run(args, folder):
         box.setTextFormat(Qt.RichText)
         box.setText(about_text(__version__))
         box.setIconPixmap(icon.pixmap(96, 96))
-        box.exec()
+        on_top(box, native).exec()  # above TurboHUD's windows on the Mac, as the settings it opens from
 
     about_action = QAction('About TurboHUD…', menu)
     about_action.triggered.connect(lambda: show_about())

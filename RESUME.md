@@ -100,6 +100,12 @@
    race on each and note the FPS per phase; it decides how one tint per group is made (item 3b).
 
 ## Recent changes
+  - 2026-11-16: The save window opened behind TurboHUD on the Mac, reported by the user (`fix/save-window-on-top`):
+    TurboHUD's windows sit at window level 1000 (above TSU's Fullscreen), and the system's own save and open windows
+    at the normal level, so Export, Import and Save design opened behind the panel, the layouts window and the
+    sections. On the Mac (Native.dialogs_on_top) they and the warnings and About now use Qt's own window, raised to
+    TurboHUD's level as it opens (`turbohud/overlay/dialogs.py`); checked on the Mac: the export window at level 1000,
+    as the layouts window. Windows and Linux keep the system's own, as before. Tests for the helpers.
   - 2026-11-15: The Layouts window's buttons cut off, and window titles in capitals, reported by the user
     (`fix/layouts-buttons-and-titles`): at move mode's start Design for shows "5120x1440 (this screen)", wider than
     the window was made for, so the list, Design, Save design and Cancel were cut off. The list now sizes to its
