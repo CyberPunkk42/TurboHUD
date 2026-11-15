@@ -105,7 +105,8 @@ The user approves every change by merging it locally. There are no pull requests
 - New or changed behavior gets tests in the same pull request. Tests use temporary
   folders and never real liveries. All tests must pass before committing.
 - Python: on Windows use `py -3`; on the user's Mac use `/opt/homebrew/bin/python3.13`
-  (Apple's `python3` is too old).
+  (Apple's `python3` is too old). On the Mac and Linux, run the tests with
+  `.buildtools/venv/bin/python` (the environment with PySide6 that `run_turbohud.sh` sets up).
 - Line endings: `.gitattributes` stores files byte for byte. Keep each file's endings
   when editing; a script that reads and writes text can silently convert a whole file
   (`git diff --stat` shows it).
