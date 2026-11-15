@@ -1977,3 +1977,13 @@ its "Recent changes".
     modules since 2026-11-03, the reader on Windows, the Linux build, the workflow), HOW_IT_WORKS (Windows, the
     Custom race, the search waits, every section, the files), WINDOWS_AND_CROSSOVER (what is built and left),
     CONTINUE_HERE (today's next steps, stale lines) and backlog items 1, 1b and 3. No code changed. All tests pass.
+  - 2026-11-15: A user guide in every build, asked for by the user (`feature/user-guide-in-builds`):
+    `USER_GUIDE.md` explains every section (what it shows, its colours, when it shows), the tray menu and its
+    Options, move mode and every column and button of its panel, layouts per screen size, the settings window,
+    the shortcuts and Linux commands, and the files. `tools/build_app.py` ships it as `User Guide.txt` beside
+    `Quick Start.txt` in the Windows zip, the Linux tar and the Mac disk image (`GUIDES`). The README's long Use
+    part is now a summary that points to it. New `tests/test_guides.py`: both guides name every section and
+    shortcut; the user guide every panel heading, tray menu item, lap times column and Linux command, and every
+    button and label of the move-mode panel and the settings window as the app makes them (offscreen); checked
+    to fail with "Redo" and "Penalties" taken out. AGENTS.md: a change a player sees updates both guides in the
+    same branch. HOW_IT_WORKS no longer names "Fin" in the lap times (the app has none). All tests pass.

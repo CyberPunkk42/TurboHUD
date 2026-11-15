@@ -103,6 +103,7 @@ Built on 2026-10-24; as of 2026-11-15:
 
 ```
 launch_turbohud.py      start file; the bundles run the same code
+QUICK_START.md, USER_GUIDE.md  the players' guides, in every download (Quick Start.txt, User Guide.txt)
 run_turbohud.sh/.cmd    start from the source, setting up PySide6 in .buildtools/venv;
                         also --toggle, --move, --lock, --settings, --quit (Linux, macOS)
 requirements.txt        PySide6, pinned; requirements-build.txt adds PyInstaller

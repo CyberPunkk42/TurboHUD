@@ -32,7 +32,7 @@ off. On Linux and Windows each section keeps its own window for now.
 | Draft | how strong the slipstream is (of the event's most), with a bar; the downforce it costs; the event's drafting at the start, then the last lap's time in a slipstream; who drafts you |
 | Speed | km/h or mph, yellow while coasting; throttle and brake bars beside it; as an option the gear and rev lights |
 | Players | the leader, then the 3 cars ahead of and 3 behind you on the track: position, flag, name, tire, PIT, and the live gap to you (or +1 L for laps), DNF for a car out of the race |
-| Lap times | every driver in race order (by class in a multi-class race) with flag, name and clan tag or class, lap, tire, their best lap (the race's fastest in purple) and their last lap, or CUT, JUMP, PIT, DNF or Fin |
+| Lap times | every driver in race order (by class in a multi-class race) with flag, name and clan tag or class, lap, tire, their best lap (the race's fastest in purple) and their last lap, or CUT, JUMP, PIT or DNF |
 | Blue flag | a navy bar that fades in when a car about to lap you is within 2 s |
 | Yellow flag | a car off the track, slow, stopped, spun, the wrong way or put back in your sector or the next, by sector and driver; CAR STOPPED AHEAD or WRONG WAY AHEAD for one up to 5 s ahead on the road |
 | Penalties | SHORTCUT with the seconds TSU slows you for a shortcut; JUMP START for a false start |

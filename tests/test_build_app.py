@@ -146,8 +146,16 @@ class NamingTests(unittest.TestCase):
             try:
                 self.assertEqual(
                     sorted(path.name for path in mount.iterdir() if not path.name.startswith('.')),
-                    ['Applications', 'Quick Start.txt', 'Read Me First.txt', 'TurboHUD.app'],
+                    [
+                        'Applications',
+                        'Quick Start.txt',
+                        'Read Me First.txt',
+                        'TurboHUD.app',
+                        'User Guide.txt',
+                    ],
                 )
+                for guide, name in build_app.GUIDES:
+                    self.assertEqual((mount / name).read_bytes(), guide.read_bytes())
                 self.assertEqual(os.readlink(mount / 'Applications'), '/Applications')
                 read_me = (mount / 'Read Me First.txt').read_text(encoding='utf-8')
                 self.assertIn('macOS 13.0 or newer', read_me)
@@ -186,11 +194,14 @@ class PackTests(unittest.TestCase):
             build_app.pack(self.make_dist(folder), archive, system='win32')
             with zipfile.ZipFile(archive) as zip_file:
                 self.assertEqual(sorted(zip_file.namelist()), [
-                    'TurboHUD/Quick Start.txt', 'TurboHUD/TurboHUD.exe', 'TurboHUD/_internal/',
-                    'TurboHUD/_internal/lib.dll', 'TurboHUD/customization/display_presets/README.txt',
+                    'TurboHUD/Quick Start.txt', 'TurboHUD/TurboHUD.exe', 'TurboHUD/User Guide.txt',
+                    'TurboHUD/_internal/', 'TurboHUD/_internal/lib.dll',
+                    'TurboHUD/customization/display_presets/README.txt',
                 ])  # fmt: skip
-                guide = zip_file.read('TurboHUD/Quick Start.txt')
-                self.assertEqual(guide, build_app.QUICK_START.read_bytes())
+                self.assertEqual(
+                    zip_file.read('TurboHUD/Quick Start.txt'), build_app.QUICK_START.read_bytes()
+                )
+                self.assertEqual(zip_file.read('TurboHUD/User Guide.txt'), build_app.USER_GUIDE.read_bytes())
             self.check_digest(archive)
 
     def test_tar_holds_the_app_folder(self):
@@ -199,7 +210,8 @@ class PackTests(unittest.TestCase):
             build_app.pack(self.make_dist(folder), archive, system='linux')
             with tarfile.open(archive) as tar:
                 self.assertIn('TurboHUD/_internal/lib.dll', tar.getnames())
-                self.assertIn('TurboHUD/Quick Start.txt', tar.getnames())
+                for guide, name in build_app.GUIDES:
+                    self.assertEqual(tar.extractfile(f'TurboHUD/{name}').read(), guide.read_bytes())
                 read_me = tar.extractfile('TurboHUD/Read Me First.txt').read()
                 self.assertEqual(read_me, build_app.LINUX_READ_ME.read_bytes())
                 readme = tar.extractfile('TurboHUD/customization/display_presets/README.txt').read()

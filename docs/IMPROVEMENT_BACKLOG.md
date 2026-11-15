@@ -159,7 +159,8 @@ option `"…/TurboHUD" --probe %command%`, printed by `TurboHUD --launch-option`
 (Docker or Podman) so it starts on glibc 2.35 and newer. Still open: tried by players on other distros
 and desktops; an AppImage instead of the `.tar.gz`. Before the repository goes public for the
 TSU community: the privacy check (pre-push hook), a licence, a README for players (begun: the
-one-page `QUICK_START.md`, in every download as `Quick Start.txt`, since 2026-11-12).
+one-page `QUICK_START.md`, in every download as `Quick Start.txt`, since 2026-11-12, and the full
+`USER_GUIDE.md` as `User Guide.txt` since 2026-11-15).
 
 ## 5. Linux: other desktops
 Commands for the running TurboHUD (`run_turbohud.sh --toggle` and so on) are done, and
