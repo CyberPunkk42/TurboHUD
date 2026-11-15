@@ -123,6 +123,31 @@ COUNTRIES = (
 )
 COMPOUNDS = (1, 1, 0, 1, 1, 0, 1, 2, 1, 1, 0, 1, 2, 1, 1, 1, 0, 2, 0, 1)  # 0 soft, 1 medium, 2 hard
 IN_PIT = 18  # the driver who lost time in the pits is in them now
+# So that every kind of entry the standings can show is there, as their columns make room for them
+# (asked for by the user on 2026-11-15): a car just out of the pits with its times, a shortcut
+# penalty, and a car out of the race.
+PITTED = 10  # out of the pits: PIT 24.6s for the stop, (8.20s) standing in the box
+PITTED_TIMES = (24.6, 8.2)
+CUT = 14  # slowed for a shortcut, with the seconds left
+CUT_LEFT = 2.4
+RETIRED = 19  # out of the race: DNF
+
+
+class _Penalties:
+    """Stands in for race.ShortcutPenalties: one car slowed for a shortcut."""
+
+    def left(self, _state):
+        return {NAMES[CUT]: CUT_LEFT}
+
+    def jump_starts(self, _state):
+        return frozenset()
+
+
+class _Retired:
+    """Stands in for race.Retirements: one car out of the race."""
+
+    def update(self, _state):
+        return frozenset({NAMES[RETIRED]})
 
 
 def _flag(country):
@@ -233,6 +258,8 @@ def _driver(index, clock, lap):
         compound=COMPOUNDS[index],
         in_box=in_pit,
         draft_drag=0.93 if index == LOCAL + 1 else None,
+        pit_seconds=PITTED_TIMES[0] if index == PITTED else None,
+        pit_stopped=PITTED_TIMES[1] if index == PITTED else 0.0,
     )
 
 
@@ -316,6 +343,8 @@ def preview_sections(
         'sector_bars': sector_bars,
         'clan_tags': clan_tags,
         'columns': tuple(columns),
+        'shortcuts': _Penalties(),
+        'retirements': _Retired(),
     }
     # Twice, as the radar and the delta bar follow the cars from one read to the next.
     race.race_sections(snapshot, 1.0, speed_unit, race.Standings(), radar, track_map, **options)

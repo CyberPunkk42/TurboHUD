@@ -48,9 +48,16 @@ class PreviewTests(unittest.TestCase):
             self.assertIn(shown, names)
         self.assertEqual(len(names), len(preview.RESULTS))
 
-    def test_one_car_in_the_pits_and_cars_close_by(self):
-        rows = self.sections['laptimes'][1:]
-        self.assertEqual(sum('PIT' in text(row) for row in rows), 1)
+    def test_every_kind_of_entry_the_standings_make_room_for(self):
+        # So the columns' room is seen filled (asked for by the user on 2026-11-15).
+        rows = {row.text.split('. ', 1)[1]: row for row in self.sections['laptimes'][1:]}
+        pitted = rows[preview.NAMES[preview.PITTED]]
+        self.assertEqual((pitted.middle, pitted.right), ('PIT 24.6s', '(8.20s)'))
+        self.assertEqual(rows[preview.NAMES[preview.IN_PIT]].right, 'PIT')
+        self.assertEqual(rows[preview.NAMES[preview.CUT]].right, 'CUT 2.4s')
+        self.assertEqual(rows[preview.NAMES[preview.RETIRED]].right, race.DNF_TEXT)
+
+    def test_cars_close_by(self):
         self.assertTrue(self.sections['radar'].blips)
         roles = {dot.role for dot in self.sections['trackmap'].dots}
         self.assertLessEqual({'me', 'leader', 'ahead', 'behind'}, roles)

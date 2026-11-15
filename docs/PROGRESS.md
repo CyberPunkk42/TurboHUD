@@ -2076,3 +2076,8 @@ its "Recent changes".
     left out, tags and the overall place with their options, the new size in the downloads and default files.
     Checked: the app started and quit on a copy of the user's settings (layout 7: standings 818 to 769 px). Not
     yet: seen on the screen.
+  - 2026-11-15: The preview's standings show every kind of entry, asked for by the user
+    (`feature/preview-standings-markers`): a car just out of the pits (PIT 24.6s, (8.20s) standing), the car in the
+    pits (PIT), a shortcut penalty (CUT 2.4s) and a car out of the race (DNF), through race_sections with stand-ins
+    for the shortcut penalties and retirements, so the room the columns keep for them is seen filled while
+    placing the section. Tests: each entry where it belongs. Not yet: seen on the screen.

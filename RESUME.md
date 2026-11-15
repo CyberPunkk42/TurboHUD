@@ -95,6 +95,11 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+  - 2026-11-15: The preview's standings show every kind of entry, asked for by the user
+    (`feature/preview-standings-markers`): a car just out of the pits (PIT 24.6s, (8.20s) standing), the car in the
+    pits (PIT), a shortcut penalty (CUT 2.4s) and a car out of the race (DNF), through race_sections with stand-ins
+    for the shortcut penalties and retirements, so the room the columns keep for them is seen filled while
+    placing the section. Tests: each entry where it belongs. Not yet: seen on the screen.
   - 2026-11-15: The standings follow their columns, and the shipped layouts made again, asked for by the user (same
     branch): unticking a standings column in Settings (or classes and clan tags both off) makes its box narrower
     (`race.standings_section`, as `speed_section` does for the gear; at the default size every column 499 px,
