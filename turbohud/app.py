@@ -718,6 +718,7 @@ def run(args, folder):
             history.resume(layout_state())
             show_history(history.current)
             relearn_available()
+            panel.set_own_screen(busiest_screen()[2:])  # Design for: this screen's size first
             panel.show_at(*panel_spot())
             log.info('move mode')
 

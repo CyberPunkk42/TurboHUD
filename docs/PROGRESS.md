@@ -1956,3 +1956,8 @@ its "Recent changes".
     that fits as it is. Now a size that fits on the screen (one's own, or smaller) is shown at 100%, the frame covering
     exactly that much of the screen (all of it for one's own size); only a larger size is shrunk, within that margin as
     before. A test (fails on the old code). All 1198 tests pass. Not yet: seen in move mode.
+  - 2026-11-15: Design for starts on this screen's size, asked for by the user (`feature/design-own-size-first`):
+    each time move mode opens, the list has the size of the screen the sections are on chosen and marked "(this
+    screen)", so Design shows one's own layout straight away; a size the list lacks (a scaled screen, say 1707x960)
+    is put in it, in order, and gone again on another screen. A test for the panel. All 1198 tests pass. Not yet:
+    seen in move mode. Goes with `fix/design-own-size-full` (one's own size shown at 100%, not 88%).
