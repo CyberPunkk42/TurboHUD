@@ -1,41 +1,44 @@
 # Windows, and TurboHUD inside CrossOver
 
-State: 2026-11-09. Two connected questions: what TurboHUD still needs on Windows, and whether
-TurboHUD on the Mac could run as a Windows app inside TSU's CrossOver bottle instead of as a
-native Mac app beside it. Nothing here is built yet; this is the analysis and the plan.
+State: 2026-11-15 (first written 2026-11-09). Two connected questions: what TurboHUD still needs
+on Windows, and whether TurboHUD on the Mac could run as a Windows app inside TSU's CrossOver
+bottle instead of as a native Mac app beside it. Windows live data has been built and used since
+2026-11-11; the trial inside the bottle (backlog item 1b) is still only the analysis and plan below.
 
 ## Windows today
 
 | Part | State |
 | --- | --- |
-| Overlay windows (Qt: on top, see-through, click-through) | built, not yet run over TSU on Windows |
-| Shortcuts (`turbohud/overlay/windows.py`: `RegisterHotKey`, focus hand-back) | built, run only on a build machine |
-| Reading TSU (`turbohud/tsu/winmemory.py`: `find_process`, `WindowsProcess`, page cache, paced search, `connect`) | built and used daily, but only inside the bottle by `bottle_reader.py` |
+| Overlay windows (Qt: on top, see-through, click-through) | built, run on the user's PC with an online race (2026-11-11); not yet checked over Fullscreen and Fullscreen Exclusive |
+| Shortcuts (`turbohud/overlay/windows.py`: `RegisterHotKey`, focus hand-back) | built; Ctrl+Shift+L worked on the user's PC once AMD Adrenalin let go of it, Ctrl+Shift+F12 as the spare |
+| Reading TSU (`turbohud/tsu/winmemory.py`: `find_process`, `WindowsProcess`, page cache, paced search, `connect`) | built; the Python fallback where the Rust reader is missing, and the Python reader in the bottle (`TURBOHUD_PY_READER=1`) |
 | Live race in the app | built 2026-11-11, run on the user's PC since then (an online race found once a hang in the search was fixed; the search reads with 4 threads since 2026-11-12, about 6 s for all of TSU's data): `start_live_race` starts the Rust reader (`reader/`) beside TSU (`LocalReader` in `turbohud/tsu/bottle.py`; the pipe's answers taken by a thread, as Windows cannot select on a pipe), else, where it is missing, reads in Python from TurboHUD itself (`winmemory.connect`). The Windows build ships the Rust reader |
 | Gamepad triggers | Linux only (`/dev/input/js*`); on Windows XInput would be the way |
-| Builds | `tools/build_app.py` makes a Windows ZIP, built on Windows |
+| Custom race | read since 2026-11-13 (`TS.HostEventController`); a Single Player event still to see |
+| One TurboHUD at a time | a lock file (`turbohud.lock`) since 2026-11-13; Windows has no command socket, so a second start only says so |
+| Builds | `tools/build_app.py` makes a Windows ZIP with the Rust reader, built on Windows (Rust in Git Bash with `sh tools/get_rust.sh`) |
 
 Windows lets a program read another of the same user (`OpenProcess` with `PROCESS_VM_READ`,
-`ReadProcessMemory`), so no probe and no launch option are needed. Wiring the live race is mostly
-a `win32` branch in `start_live_race` that gives `LiveRace` a connect function built on
-`winmemory.connect`, in the app's own process. This is backlog item 2, and the same step is
-needed before TurboHUD can be tried inside the bottle (below).
+`ReadProcessMemory`), so no probe and no launch option are needed.
 
-To do on Windows (backlog item 2):
+To do on Windows (backlog item 1):
 1. Over TSU, windowed, Fullscreen and Fullscreen Exclusive: the built app, the Qt probe
    (`experiments/run_qt_overlay_probe.cmd`) and the original probe; results in
    `experiments/README.md`. Expected: windowed and Fullscreen work; Exclusive may not, and an
    overlay that injects into the game is out of scope.
-2. The shortcuts with TSU in front.
-3. Live data in-process, as above; then a race offline, hosting, and as an online client.
+2. The HUD through a whole race offline and hosting (an online race as a client and a Custom
+   race have been read), and listening for stutter during the search at the start of an
+   online race.
+3. A Single Player event.
 
 ## The Mac today: two parts
 
 - **The overlay**: a native Mac Qt app outside the bottle, at window level 1000 (above TSU's
   Fullscreen, which is level 26), on every Space, with Carbon hotkeys.
-- **The reader**: `turbohud/tsu/bottle_reader.py`, run by a portable Windows Python inside the
-  bottle, reading TSU with `winmemory.py`. The app starts it with CrossOver's `wine --bottle`
-  and asks it over a pipe (`turbohud/tsu/bottle.py`). macOS refuses a Mac program access to
+- **The reader**: `turbohud-reader.exe`, a Windows program in Rust (`reader/`, since
+  2026-11-10) inside the bottle; the app starts it with CrossOver's `wine --bottle` and asks it
+  over a pipe (`turbohud/tsu/bottle.py`). The older `turbohud/tsu/bottle_reader.py`, run by a
+  portable Windows Python, is a fallback from the source only (`TURBOHUD_PY_READER=1`). macOS refuses a Mac program access to
   TSU's memory (CrossOver's loader has the hardened runtime), so the reading has to happen in
   the bottle.
 
@@ -62,7 +65,7 @@ user's FPS tests.
 1. One app for Windows and the Mac: tests on the Mac would also run much of the Windows code
    (Wine is not Windows, so it narrows the Windows testing, it does not replace it).
 2. Fewer parts: no looking for CrossOver and the bottle (and no wrong pick when there are two
-   CrossOver copies), no pipe, no separate reader, no Windows Python inside the Mac app.
+   CrossOver copies), no pipe, no separate reader.
 3. Perhaps the pad's real throttle and brake through XInput in Wine, instead of TSU's thirds.
    Not tested.
 
@@ -99,9 +102,9 @@ Not a gain: speed of the reads. Each read is a round trip through the Wine serve
    hour. If Qt does not work in Wine, stop here.
 2. **Fair comparison.** TSU windowed, the Metal HUD: the native TurboHUD against the probe in
    the bottle, with the same boxes, once as many windows and once as one window.
-3. **Only if 1 and 2 look good.** Wire up Windows live data in-process (needed for Windows
-   anyway, backlog item 2), turn on the one-window canvas for the Windows path, and run the
-   real app in the bottle as an option ("inside CrossOver, TSU windowed only").
+3. **Only if 1 and 2 look good.** Turn on the one-window canvas for the Windows path (Windows
+   live data is already built), and run the real app in the bottle as an option ("inside
+   CrossOver, TSU windowed only").
 4. **Decide from the numbers.** As fast as the native app when windowed: keep it as an option.
    The main Mac version: only if windowed TSU turns out to be how most Mac players play.
 

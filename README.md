@@ -8,10 +8,12 @@ Early version. On Linux, with TSU started through TurboHUD's memory probe (see
 [Live lap times on Linux](#live-lap-times-on-linux)), the HUD shows the live race: lap
 times and the delta to your best lap, fuel, tires, health, the draft, speed with pedal
 bars, the player list with gaps, yellow and blue flags, a proximity radar and a track map (see
-[Use](#use)). It works offline, in hotlaps and online. On macOS, with TSU in CrossOver,
+[Use](#use)). It works offline, in hotlaps, in a Custom race, online (as a guest, as a host
+and as a spectator) and in TSU's replays. On macOS, with TSU in CrossOver,
 the same HUD needs no setup (see [Live race data on macOS](#live-race-data-on-macos)). On
-Windows it reads the race the same way, with a small read-only reader started beside TSU (Windows
-lets a program read another of the same user): built, not yet tried on a Windows PC.
+Windows it reads the race with a small read-only reader started beside TSU (Windows lets a
+program read another of the same user), also with no setup: it has read online and Custom races
+there; the overlay over TSU's Fullscreen modes on Windows is still to be tried.
 
 New here? [QUICK_START.md](QUICK_START.md) is a one-page guide: install, first start, placing
 the HUD, all keyboard shortcuts, and what to do when AMD Software takes Ctrl+Shift+L. Every
@@ -25,9 +27,13 @@ it. After that it starts with a double-click.
 
 **What to expect:** TurboHUD opens no window and has no Dock or taskbar button. When it
 runs, you see:
-- the HUD at the top left of the screen ("TurboHUD - session time" and a clock)
-- the TurboHUD icon (black, "TSU TurboHUD") in the menu bar (Mac) or in the taskbar's
+- a small HUD: "TurboHUD - session time" and the local time (until a race shows the rest)
+- the TurboHUD icon (a speedometer) in the menu bar (Mac) or in the taskbar's
   notification area (Windows; it may be hidden behind the **^** arrow)
+
+Only one TurboHUD runs at a time: starting it again says "TurboHUD is already running" (on
+macOS and Linux it also switches the running one to move mode). **About TurboHUD…** in the
+icon's menu shows the version you have.
 
 ### macOS (Apple silicon)
 Needs macOS as said in the download's `Read Me First.txt`.
@@ -39,7 +45,7 @@ Needs macOS as said in the download's `Read Me First.txt`.
 4. Open **System Settings > Privacy & Security** and scroll down to **Security**. Next to
    "TurboHUD was blocked", click **Open Anyway**, enter your password, and click **Open
    Anyway** once more.
-5. TurboHUD starts: look for the HUD at the top left and the TurboHUD icon in the menu
+5. TurboHUD starts: look for the session time on the screen and the TurboHUD icon in the menu
    bar. From now on, a double-click is enough.
 
 ### Windows
@@ -48,7 +54,7 @@ Needs macOS as said in the download's `Read Me First.txt`.
    Starting it from inside the ZIP without extracting does not work.
 3. Open the extracted `TurboHUD` folder and double-click `TurboHUD.exe`.
 4. If "Windows protected your PC" appears, click **More info**, then **Run anyway**.
-5. TurboHUD starts: look for the HUD at the top left and the TurboHUD icon in the
+5. TurboHUD starts: look for the session time on the screen and the TurboHUD icon in the
    notification area.
 
 ### Linux
@@ -60,17 +66,18 @@ Fedora 36, SteamOS 3.5, Arch or newer) and TSU's native Linux version. The downl
 2. Start it: double-click `TurboHUD` in the unpacked `TurboHUD` folder, or in a terminal
    `./TurboHUD/TurboHUD`.
 3. Linux has no shortcuts of its own (Ctrl+Shift+L and Ctrl+Shift+Q do nothing there).
-   Use the TurboHUD icon's menu (in the tray or status bar): **Move mode**, **Settings…**,
-   **Quit TurboHUD**. Or tell the running TurboHUD from a terminal, in a few hundredths
-   of a second:
+   Use the TurboHUD icon's menu (in the tray or status bar): **Move mode**, **Options**,
+   **Settings…**, **Quit TurboHUD**. Or tell the running TurboHUD from a terminal, in a few
+   hundredths of a second (with the download, `~/TurboHUD/TurboHUD --toggle` and so on; from
+   the source, `run_turbohud.sh`):
 
    | Command | Does |
    |---|---|
-   | `run_turbohud.sh --toggle` | move mode on or off |
-   | `run_turbohud.sh --move` / `--lock` | move mode on / off |
-   | `run_turbohud.sh --settings` | open the settings window |
-   | `run_turbohud.sh --preset 1` | load layout preset 1 (or 2, or 3) |
-   | `run_turbohud.sh --quit` | quit TurboHUD |
+   | `TurboHUD --toggle` | move mode on or off |
+   | `TurboHUD --move` / `--lock` | move mode on / off |
+   | `TurboHUD --settings` | open the settings window |
+   | `TurboHUD --preset 1` | load layout preset 1 (or 2, or 3) |
+   | `TurboHUD --quit` | quit TurboHUD |
 
    Starting TurboHUD again while it runs opens no second copy: it switches the running
    one to move mode. To have a key for it, bind the command in your desktop's own key
@@ -130,6 +137,13 @@ triggers are read only on Linux. The reader's errors are in `bottle_reader.log`,
 reads took and when each search ran; it is replaced at the next start, so look before
 starting TurboHUD again.
 
+### Live race data on Windows
+Windows lets a program read another of the same user, so there is no launch option: TurboHUD
+starts its small read-only reader (`turbohud-reader.exe`, in the download) beside TSU.
+1. Start TSU and TurboHUD, in either order.
+2. The race sections appear when the cars stand on the grid; online, finding the race takes a
+   few seconds after the event starts (a search of the game's data, about 6 s at most).
+
 ## Use
 
 - The HUD is made of sections, each in its own small box: lap and time left, the running
@@ -139,11 +153,14 @@ starting TurboHUD again.
   stretch between checkpoints, colour each sector the same way, dark yellow when slower; **Sector bars below the last
   and best lap** in the menu or the settings turns them off), fuel and tires left (with the laps
   they last), health (in events with damage), the draft (slipstream) with the downforce it costs, the fuel to spare or short for the finish, speed with throttle and brake
-  bars (km/h or mph), the player list with flags, pit status and gaps, the lap times
-  (every driver's best lap and running lap), the local time, a blue flag
-  bar, a proximity radar and a track map. On the first start they sit one below the other at the left of your largest
-  screen (laid out as on a 1920x1080 screen), the blue flag at its top centre,
-  **locked**: clicks go through them to the game.
+  bars (km/h or mph; with **Gear and revs in the speed section**, also the gear and rev lights),
+  the player list (the leader, then the cars around you on the track, with flags, tire compound,
+  pit status and gaps), the lap times (every driver's lap, tire, best lap and last lap; a car out
+  of the race shows **DNF**), the local time, a delta bar, a blue flag
+  bar, a yellow flag box, a penalty box, a proximity radar and a track map. On the first start
+  they are laid out as in TurboHUD's own layout for your main screen's size (shipped for
+  1920x1080, 2560x1440, 2560x1600, 3840x2160 and 5120x1440; for other sizes the nearest one,
+  fitted), **locked**: clicks go through them to the game.
 - **Spectating** an online race, you have no car, so the sections about one stay away:
   the lap section says "Spectating" with the leader's lap, the player list shows the gaps
   to the leader, the lap times list every driver, and the track map shows every car with
@@ -165,7 +182,8 @@ starting TurboHUD again.
 - **Clan tags in the lap times**: in a race without classes, each driver's clan tag (such as `FTR` for
   `[FTR]`, at most 5 characters) shows in a column of its own after the name. On by default; the same
   menu or Settings turns it off. While tags show, the list's text may get a little smaller to fit the box.
-- **Settings…** sets how soon the blue flag and the radar show, and how many times a second
+- **Settings…** sets how soon the blue flag and the radar show, which columns the lap times
+  have (flag, lap number, tire compound, best lap, last lap), and how many times a second
   the race is read (20, 10 or 5). Fewer reads ask less of the game, but the delta and the
   track map move less smoothly, and a track first learnt at 5 gets a coarser line.
 - The **blue flag** is a navy bar that shows when a car about to lap you is within 2
@@ -193,8 +211,10 @@ starting TurboHUD again.
 - **Settings…** (TurboHUD icon's menu, or the move-mode panel) picks the text,
   highlight and outline colours, makes all sections bigger or smaller at once, and holds
   the options for the whole HUD: mph, the tint behind all sections, the radar's
-  slipstream cones, other cars on the track map and the sector bars (also in the TurboHUD
-  icon's menu).
+  slipstream cones, the radar only in cockpit cameras, the sector bars, yellow flags, gear
+  and revs, classes and clan tags in the lap times and other cars on the track map (also
+  under **Options** in the TurboHUD icon's menu). **Car classes...** lists every class a clan
+  tag can name, in its colour; **About...** shows the version.
 - **Tint**, for each text section in the move-mode panel, or **Light tint behind all sections**
   for all of them at once (in the settings and the TurboHUD icon's menu), puts
   a faint dark box behind each section's text, for reading it on bright tracks. The track
@@ -202,8 +222,9 @@ starting TurboHUD again.
 - The **proximity radar** shows your car and the cars around you when one is within
   half a second behind or ahead (faint) up to alongside (fully visible): red beside you, yellow
   closing in. It shows at most about six car lengths ahead and behind, so the cars stay large; a car
-  further off that already counts (with a longer warning time in **Settings…**) is an arrow at the
-  top or bottom edge, fainter the further away it is. In a multi-class race (see **Classes in the lap
+  behind further off that already counts (with a longer warning time in **Settings…**) is an arrow
+  at the bottom edge, fainter the further away it is. With **Proximity radar only in cockpit
+  cameras** (on by default) it shows only while TSU's camera is at the driver. In a multi-class race (see **Classes in the lap
   times**), a car of another class than yours is filled in its class's colour (blue, green, purple, pink,
   by the class's name), with the red or yellow as its outline, and its arrow at the edge is in that colour.
 - The **track map** shows the track from above with you (a white ring, a little smaller than the other cars
@@ -233,13 +254,15 @@ starting TurboHUD again.
   one of them then moves the whole group; the others follow a moment later.
 - **Ctrl+Shift+L** (or **Move mode** in the TurboHUD icon's menu) switches to **move
   mode**: every section gets a blue tint; a text section's box fits closely round its
-  text, so rest the pointer on it to see its name. Drag a section anywhere, for
-  example to the edges of a wide screen. At its bottom-right corner, making it taller or
-  shorter makes its text bigger or smaller; making it wider gives the text room (text
-  only shrinks when the box is too narrow for it). A panel lets you show or hide each section, and **Lock** (or
-  Ctrl+Shift+L again) ends move mode. On the Mac, clicking back into the game also locks.
-  On Windows **Ctrl+Shift+F12** does the same, for when another program has Ctrl+Shift+L
-  (AMD Software does): the icon's tooltip then says so.
+  text, so rest the pointer on it to see its name. A faint grid on the main screen (a line
+  every 20 px, a stronger one every 100 px, the middle in yellow) helps line them up. Drag a
+  section anywhere, for example to the edges of a wide screen, or click it and nudge it with
+  the arrow keys (1 px; with Shift 10 px). Dragging a corner sizes its text; dragging an edge
+  gives it more room. In the panel, **Size px** sets a section's text size in pixels (or
+  **global**, the size under **Global text size**) and **Lines %** the room between its rows.
+  **Lock** (or Ctrl+Shift+L again) ends move mode; a click on the game does not, but a race
+  beginning does. On Windows **Ctrl+Shift+F12** does the same, for when another program has
+  Ctrl+Shift+L (AMD Software does): the icon's tooltip then says so.
 - **Groups**: sections with the same group in the panel move together, and resizing one at
   its corner resizes the others by the same factors. **Same text size and width: Group A**
   (or B, C, D) gives the group's text sections the largest text size among them and one
@@ -247,14 +270,27 @@ starting TurboHUD again.
   a preset first to be able to go back.
 - **Undo** in the panel goes back one change to the layout at a time until none is left:
   moving, resizing, showing or hiding, groups, centring, matching, and loading or saving a
-  preset. A drag counts as one change. Colours and options are not in it, and it starts
-  afresh when TurboHUD starts.
+  preset. A drag (or a run of nudges) counts as one change; **Redo** goes forward again.
+  Colours and options are not in it, and it starts afresh when TurboHUD starts.
 - **Layout presets**: the panel can keep three layouts: where each section sits, its size,
   whether it shows, and its group. **Save** keeps the layout as it is now in that preset,
   replacing what was there; **Load** puts the sections back as it has them; **Delete** deletes
   it, and **Undo** brings it back. **Ctrl+Shift+1**,
   **2** and **3** load one at any time, also during a race (Linux: `run_turbohud.sh --preset
   1`, which a key can run). Colours and the other options stay as they are.
+- **Layouts per screen size**: **Load screen default** puts the sections as TurboHUD's layout
+  for this screen's size has them (your own for that size first, see below). **Export…** saves
+  the layout to a file to share or keep, and **Import…** loads one, fitted to this screen if it
+  was made for another (one step for Undo). **Design for** picks a screen size (this screen's,
+  marked "(this screen)", comes first) and **Design** shows it as a frame, to scale, with its
+  layout inside to arrange; **Save design…** saves it at full size as a file for that size,
+  **Cancel** brings your own layout back.
+- **Your own layouts** go in the `customization/display_presets` folder beside TurboHUD (beside
+  `TurboHUD.exe`, the `TurboHUD` program, or on the Mac `TurboHUD.app`; in the settings folder
+  where that one cannot be written to). Export, Import and Save design open it. At a start, a
+  layout there made for the screen's exact size is taken once, each time the file is new or has
+  changed, so moving sections afterwards sticks. Layout files hold only places, sizes, text
+  sizes and options: nothing personal.
 - **Ctrl+Shift+Q** quits; the panel and the icon's menu have **Quit** as well. On Linux
   there are no shortcuts: use the icon, or `run_turbohud.sh --toggle` / `--quit` (see
   Linux above).
@@ -281,4 +317,6 @@ The terminal shows TurboHUD's log while it runs; Ctrl+C there quits it.
 
 Tests: `python3 -B -m unittest discover -s tests` (Windows: `py -3 -B -m unittest
 discover -s tests`). Builds: `python tools/build_app.py --smoke` with the packages in
-`requirements-build.txt`, run on each system you want a build for.
+`requirements-build.txt`, run on each system you want a build for; the Rust reader for
+Windows and the Mac first with `sh tools/get_rust.sh`. The Linux build is made in an Ubuntu
+22.04 container with `sh tools/build_linux.sh <version>`, so it starts on glibc 2.35 and newer.

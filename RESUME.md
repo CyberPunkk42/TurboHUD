@@ -25,7 +25,11 @@
 - Layout, in the move-mode panel: a text section's box fits closely round its text, three
   presets (Ctrl+Shift+1, 2, 3 load them; Linux: `--preset`), groups that move and resize
   together and can match their text size and width, Centre buttons for every section, and
-  Centre text, and Undo. Checked by hand on the Mac.
+  Centre text, and Undo. Checked by hand on the Mac. Since 2026-11-13 to 2026-11-15: text sizes
+  in pixels and line spacing per section, a corner sizes the text and an edge adds room, arrow-key
+  nudges, Redo, a grid on the main screen, shipped layouts per screen size (`assets/presets`), Load
+  screen default, Export, Import and the design screen, one's own layouts in
+  `customization/display_presets`, and the panel scrolling on a short screen.
 - Builds: `tools/build_app.py` (PyInstaller) makes a Windows ZIP and a Mac disk image (each with the
   Rust reader; the Mac one 32.5 MB, no Windows Python since 2026-11-11) and a Linux `.tar.gz`, run locally on each system.
   The Linux one is built in Ubuntu 22.04 with `sh tools/build_linux.sh <version>` (starts on glibc 2.35 and newer), and
@@ -48,8 +52,8 @@
 - Overlay behaviour settled by the probe: a move mode (tinted, draggable, resizable, with
   Lock and Close buttons) and a locked mode (background hidden, click-through, only the
   content shows). Ctrl+Shift+L toggles, Ctrl+Shift+Q quits; no Alt, which Mac keyboards
-  lack. Position and size are remembered. Move mode ends by itself when the game becomes
-  active again.
+  lack. Position and size are remembered. Move mode ends by its shortcut, the panel's Lock or a
+  race beginning (a click on the game no longer ends it, since 2026-11-13).
 - Tests: `/opt/homebrew/bin/python3.13 -B -m unittest discover -s tests` (Windows:
   `py -3 -B -m unittest discover -s tests`). The Rust reader's: `eval "$(sh tools/get_rust.sh --env)"`,
   then `cargo test --offline` in `reader/` (Windows: `cargo +1.99.1 test --offline --target x86_64-pc-windows-gnullvm`);
@@ -91,6 +95,14 @@
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
 
 ## Recent changes
+  - 2026-11-15: Documentation brought up to the app as it is, asked for by the user (`docs/refresh-docs-2026-11-15`):
+    README (Windows live data and its reader, Custom races, the first start's layout per screen size, the Options
+    submenu, one copy at a time, About, move mode's grid, nudges, corner and edge resizing, Size px and Lines %,
+    Redo, layouts per screen size and the design screen, the newer options, the Linux build), Quick Start (the
+    same in short; Single Player marked not yet tried), the Mac and Linux read-mes (the new icon), STACK (the
+    modules since 2026-11-03, the reader on Windows, the Linux build, the workflow), HOW_IT_WORKS (Windows, the
+    Custom race, the search waits, every section, the files), WINDOWS_AND_CROSSOVER (what is built and left),
+    CONTINUE_HERE (today's next steps, stale lines) and backlog items 1, 1b and 3. No code changed. All tests pass.
   - 2026-11-15: The tester's log with build 2026.11.14 in backlog item 0 (`docs/tester-log-2026-11-14`), after he
     freed his disk to about 244 GB: TurboHUD ran clean (drawing 9 to 16%, steady frames, no stall every 30 s). Left:
     TSU's race data spread to about 3,090 MiB mid-race as on his bad evening, one hitch of the whole Mac, race reads

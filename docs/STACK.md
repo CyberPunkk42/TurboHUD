@@ -11,8 +11,9 @@ From the two overlay probes (`experiments/README.md`) and the user's priorities:
 - **Installs on Windows, macOS and Linux with nothing else to install first.** No Python,
   no packages, no command line for the player.
 - **The overlay window is different on each system.**
-  - Windows: an always-on-top, click-through window. Tested on the Mac inside CrossOver
-    so far; the test on Windows itself is backlog item 2.
+  - Windows: an always-on-top, click-through window. Tested on the Mac inside CrossOver,
+    and on the user's Windows PC with an online race (2026-11-11); over Fullscreen and
+    Fullscreen Exclusive it is still to be checked (backlog item 1).
   - Mac: a native macOS window outside CrossOver, at a window level above 26 (TSU's in
     Fullscreen). A window from inside the bottle never shows over TSU's Fullscreen.
 - **The same behaviour everywhere:** move mode (tinted, draggable, resizable) and locked
@@ -79,13 +80,16 @@ Costs accepted:
 Each release is a ready-to-run app with Python and Qt inside, built by PyInstaller:
 - **Windows:** a ZIP with `TurboHUD.exe`. Unpack and run.
 - **macOS:** `TurboHUD.app` in a ZIP or disk image. Drag to Applications.
-- **Linux:** a `.tar.gz` for now (an AppImage is planned, backlog item 4). Unpack and
-  run.
+- **Linux:** a `.tar.gz` for now (an AppImage is planned, backlog item 4), built in an
+  Ubuntu 22.04 container (`tools/build_linux.sh`) so it starts on glibc 2.35 and newer.
+  Unpack and run. The bundled app is also the memory probe: Steam's launch option is
+  `"…/TurboHUD" --probe %command%` (`TurboHUD --launch-option` prints it).
 
 PyInstaller builds only for the system it runs on, so each release is built locally
-with `tools/build_app.py` on each system, from `main`. (A GitHub Actions workflow was
-planned for this; it is kept in `.github/workflows/build.yml` for reference but no
-longer runs, as nothing goes to GitHub.)
+with `tools/build_app.py` on each system, from `main`. The Windows and Mac builds carry
+the Rust reader (`tools/get_rust.sh` builds it first). A GitHub Actions workflow
+(`.github/workflows/build.yml`) runs only for a release tag, a pull request or by hand,
+none of which is used.
 
 Without paid code signing, each system warns once on first start:
 - Windows SmartScreen: **More info**, then **Run anyway**.
@@ -95,7 +99,7 @@ Without paid code signing, each system warns once on first start:
 
 ## Suggested structure
 
-Built on 2026-10-24; as of 2026-11-03:
+Built on 2026-10-24; as of 2026-11-15:
 
 ```
 launch_turbohud.py      start file; the bundles run the same code
@@ -108,47 +112,59 @@ turbohud/
   control.py            the command socket (run_turbohud.sh --toggle and the rest)
   core/                 shared, no Qt
     settings.py         settings and theme, where they live on each system
-    hud.py              the sections, their sizes, places and first-launch layout
+    hud.py              the sections, their sizes, places, nudges and the grid's screen
+    presets.py          layout files per screen size, and fitting one to another size
     il2cpp.py           finds the game's classes and fields by name
     race.py             reads the race and works out what each section shows
     trackmap.py         the track map: the learnt track and which cars show
     flags.py            TSU's flags as country codes
+    flagstack.py        the blue and yellow flags combined where both are in one spot
+    class_registry.py   the car classes a clan tag can name, and their colours
+    stalls.py           short freezes of the whole HUD and slow garbage collections, for the log
+    system_env.py       the environment for system programs TurboHUD starts (TSU, hyprctl)
   tsu/                  the game
     probe.py            Linux: the memory probe (started with TSU by the launch option)
     client.py           the race in a background thread; Linux: talks to the probe
     gamelog.py          TSU's log: whether an event runs
+    gameflags.py        TSU's own flag images, read from the player's copy of the game
     controller.py       Linux: the gamepad's triggers
     winmemory.py        Windows and CrossOver: reading TSU as a Windows program
-    bottle.py           macOS: finds TSU's bottle, starts the reader, asks it over a pipe
-    bottle_reader.py    macOS: the reader inside the bottle in Python (with a Windows Python):
+    bottle.py           macOS: finds TSU's bottle and starts the reader there; Windows:
+                        starts the reader beside TSU (LocalReader); asks it over a pipe
+    bottle_reader.py    the reader in Python (with a Windows Python in the bottle):
                         the fallback, TURBOHUD_PY_READER=1
   hud/painter.py        Qt drawing of text, bars and flags
   overlay/
-    window.py           the section windows (drawings: blue flag, radar, track map) and
-                        the move-mode panel
-    settings_window.py  colours and size
+    window.py           the section windows (drawings: blue flag, delta bar, radar, track
+                        map), the one-window canvas (Mac), the grid and the move-mode panel
+    settings_window.py  colours, size, options, warning times, reads a second
+    class_sheet.py      the list of car classes, opened from the settings
     windows.py          Win32: RegisterHotKey, focus hand-back
     macos.py            Cocoa: window level above Fullscreen, all Spaces; Carbon hotkeys
     linux.py            Linux: Hyprland or XWayland, no shortcuts
     hyprland.py         asks Hyprland to float, place and pin TurboHUD's own windows
+assets/                 the icon, and presets/ (the shipped layouts per screen size)
 experiments/            the probes that settled the design; tsu_memory_probe.py is what
-                        the Steam launch option runs
+                        the Steam launch option runs from the source
+reader/                 the reader in Rust (a Windows program, no dependencies): in the
+                        bottle on macOS, beside TSU on Windows; answers as bottle_reader.py does
 tools/build_app.py      PyInstaller build, archive and smoke test for this system
-tools/get_windows_python.sh  a pinned Windows Python, by hand, for the Python reader (TURBOHUD_PY_READER=1)
-tools/get_rust.sh   Rust and llvm-mingw into .buildtools (pinned), then builds the Rust reader
-reader/             macOS: the reader inside the bottle in Rust (a Windows program, no
-                    dependencies); answers as bottle_reader.py does, and is started first
+tools/build_linux.sh    the Linux build in an Ubuntu 22.04 container
+tools/get_rust.sh       Rust and llvm-mingw into .buildtools (pinned), then builds the Rust reader
+tools/get_mac_python.sh a pinned Python for the Mac build, for older macOS versions too
+tools/get_windows_python.sh  a pinned Windows Python, by hand, for the Python reader
 tools/privacy_check.py  the pre-push hook that keeps personal data out of commits
 tests/                  unit tests on any system
 ```
 
-A tray icon (the menu bar on the Mac) offers Move mode, Settings…, the options and Quit;
+A tray icon (the menu bar on the Mac) offers Move mode, Options (the on/off options),
+Relearn this track's map, Settings…, About and Quit;
 on Linux, which has no shortcuts, the commands above can be bound to a key in the
 desktop's own settings. First build sizes: Windows 40 MB ZIP, Mac 28 MB ZIP (75 MB
 unpacked), Linux 74 MB `.tar.gz` (with Qt's X11 libraries packed in).
 
 ## Still to check
-1. The overlay probe on Windows itself (backlog item 2), especially over Fullscreen
+1. The overlay on Windows itself (backlog item 1), over Fullscreen and Fullscreen
    Exclusive.
 2. The Qt overlay probe (`experiments/qt_overlay_probe.py`) over TSU on Windows. On the
    Mac it works in Fullscreen and Fullscreen Exclusive (2026-10-24).

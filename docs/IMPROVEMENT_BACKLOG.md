@@ -59,7 +59,7 @@ Monitor's Memory Pressure, Swap Used and TSU's (wine) and TurboHUD's memory in a
 race with TurboHUD closed. With the disk free, swap no longer runs short; the next suspect is memory (18 GB, about
 3 GB left) and TSU's growth.
 
-## 1. Windows: the overlay, then live data
+## 1. Windows: the overlay over Fullscreen, and whole races (live data built)
 Over TSU on Windows, in windowed, Fullscreen and Fullscreen Exclusive: the built app
 (`tools/build_app.py`), the Qt probe (`experiments/run_qt_overlay_probe.cmd`) and the
 original probe. Add the results to `experiments/README.md`. Check the shortcuts
@@ -85,7 +85,8 @@ Asked for by the user (2026-11-09): try TurboHUD as a Windows app inside TSU's b
 native Mac app with a reader in the bottle. Analysis and plan: `docs/WINDOWS_AND_CROSSOVER.md`. A
 window from inside CrossOver never shows over TSU's Fullscreen (tested 2026-10-23), so at best a
 second mode for windowed TSU. Next: the Qt overlay probe in the bottle (plan step 1), then FPS
-against the native app with TSU windowed. Needs item 1's live data in-process for the real app.
+against the native app with TSU windowed. Item 1's live data in-process, needed for the real app,
+is built (2026-11-11).
 
 ## 2. macOS: live data in CrossOver
 Answered 2026-11-04 (`experiments/README.md`, "Memory inside the CrossOver bottle"):
@@ -138,7 +139,8 @@ presets with their shortcuts, groups, the Centre buttons, Centre text and Undo. 
   check it reads well over TSU.
 - Since 2026-11-13 the move-mode panel fits the screen it opens on, its rows of sections scrolling on a short
   one: try it by hand on a small Mac laptop (or a screen set to a low resolution).
-- Windows has run none of this (its shortcut code has only ever run on a build machine).
+- Windows: Ctrl+Shift+L worked on the user's PC (2026-11-11, once AMD Adrenalin let go of it); the rest of
+  this list (presets, groups, Undo, the design screen) is still to try there.
 - Since 2026-11-14 the tint fills each section's whole box, and move mode has a grid on the main screen only: the
   grid confirmed by the user on Hyprland on 2026-11-14; check that it stays beneath the sections and lets clicks
   through on the Mac and Windows.
@@ -201,8 +203,8 @@ get an access time when TSU opens a recording (if not, the slower searches find 
 
 ## Design notes for the real overlay
 - Move mode is a short, deliberate step: while the overlay takes the mouse, the game gets
-  no mouse input under it. On the Mac, end move mode as soon as the game becomes active
-  again; playing while the overlay is the active app upsets the game's mouse handling.
+  no mouse input under it. Since 2026-11-13 (asked for by the user) a click on the game no
+  longer ends it; it ends by its shortcut, the panel's Lock, or a race beginning.
 - Set the pointer explicitly in move mode; TSU hides the system pointer at times.
 - Locked: hide the background completely and show only the content, with a shadow for
   readability.

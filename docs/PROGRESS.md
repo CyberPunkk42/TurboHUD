@@ -1969,3 +1969,11 @@ its "Recent changes".
     freed his disk to about 244 GB: TurboHUD ran clean (drawing 9 to 16%, steady frames, no stall every 30 s). Left:
     TSU's race data spread to about 3,090 MiB mid-race as on his bad evening, one hitch of the whole Mac, race reads
     twice as dear as with 2026.11.13.5, and long searches between races; what to ask him. The log stays local.
+  - 2026-11-15: Documentation brought up to the app as it is, asked for by the user (`docs/refresh-docs-2026-11-15`):
+    README (Windows live data and its reader, Custom races, the first start's layout per screen size, the Options
+    submenu, one copy at a time, About, move mode's grid, nudges, corner and edge resizing, Size px and Lines %,
+    Redo, layouts per screen size and the design screen, the newer options, the Linux build), Quick Start (the
+    same in short; Single Player marked not yet tried), the Mac and Linux read-mes (the new icon), STACK (the
+    modules since 2026-11-03, the reader on Windows, the Linux build, the workflow), HOW_IT_WORKS (Windows, the
+    Custom race, the search waits, every section, the files), WINDOWS_AND_CROSSOVER (what is built and left),
+    CONTINUE_HERE (today's next steps, stale lines) and backlog items 1, 1b and 3. No code changed. All tests pass.
