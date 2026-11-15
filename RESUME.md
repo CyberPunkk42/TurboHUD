@@ -100,6 +100,10 @@
    race on each and note the FPS per phase; it decides how one tint per group is made (item 3b).
 
 ## Recent changes
+  - 2026-11-16: The last 3 tests that failed on Windows pass (`fix/windows-test-failures`; backlog item 1): all
+    three were Linux-only code with Linux assumptions. `system_env` splits LD_LIBRARY_PATH with ':' (was
+    os.pathsep, ';' on Windows), the probe's `run_game` passes on SIGHUP only where there is one, and the Steam
+    launch option's path uses '/' everywhere. Nothing changes on Linux. Full run on Windows: 1323 tests, OK.
   - 2026-11-16: The full test run on Windows stopped with an access violation (`fix/dialog-tests-fonts-windows`):
     `tests/test_dialogs.py`, the first Qt tests in a run, started Qt without the Windows fonts folder that the
     other Qt tests give it, so the font tests after them crashed. It now sets it too; the app was not affected.

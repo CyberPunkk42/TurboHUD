@@ -73,7 +73,7 @@ client, and the log's `reading TSU through the Rust reader` and `race reads` lin
 First run on the user's PC (2026-11-11): the reader started, Ctrl+Shift+L worked once AMD
 Adrenalin let go of it, and an online race was found once a hang in the search was fixed. Still to
 see: the HUD through a whole race, offline and hosting, and the overlay over Fullscreen Exclusive.
-Also: a spare shortcut when another app holds Ctrl+Shift+L, and the 9 tests that fail on Windows.
+Also: a spare shortcut when another app holds Ctrl+Shift+L. (The tests all pass on Windows since 2026-11-16.)
 The race search reads with 4 threads on Windows since 2026-11-12 (about 6 s for all of TSU's data, from 19 s):
 listen for stutter in those seconds at the start of an online race.
 A Custom race is read since 2026-11-13 (its `TS.HostEventController` found by the search); a Single Player
