@@ -271,6 +271,10 @@ class SectionWindow(QWidget):
         self.place_label = ''
         self.screens = None  # the screens (x, y, width, height) its place is counted on; the app sets them
         self._place_seen = None  # its place when Qt last said it moved (_moved)
+        # On the design screen: (frame, scale), so its place is shown on the designed size (place_text).
+        self.design = None
+        # Until then (time.monotonic) TurboHUD moves it (a preset, Undo, the design screen): no label.
+        self._quiet_until = 0.0
         self._place_timer = QTimer(self)
         self._place_timer.setSingleShot(True)
         self._place_timer.setInterval(PLACE_LABEL_MS)
@@ -312,9 +316,9 @@ class SectionWindow(QWidget):
 
     def show_place(self, place=None):
         """Move mode: show where it is (`place`, else where Qt has it) and its size for a moment."""
-        if self.locked or not self.wanted or self.screens is None:
+        if self.locked or not self.wanted or self.screens is None or time.monotonic() < self._quiet_until:
             return
-        text = place_text(place or self.geometry().getRect(), self.screens)
+        text = place_text(place or self.geometry().getRect(), self.screens, self.design)
         if text != self.place_label:
             self.place_label = text
             self.update()
@@ -324,6 +328,12 @@ class SectionWindow(QWidget):
         if self.place_label:
             self.place_label = ''
             self.update()
+
+    def quiet_place(self, until):
+        """TurboHUD moves it now, not the player (a preset, Undo or Redo, the design screen): no label
+        until `until` (time.monotonic), as the moves may still be arriving (Wayland lags)."""
+        self._quiet_until = until
+        self.hide_place()
 
     def _follows_live(self):
         """Whether Qt knows where it is while it moves (not on Wayland, where the app asks the desktop)."""

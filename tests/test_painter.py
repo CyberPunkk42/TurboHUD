@@ -1782,6 +1782,28 @@ class PlaceLabelTests(unittest.TestCase):
         window.set_locked(True)
         self.assertEqual(window.place_label, '')  # gone as it locks
 
+    def test_moved_by_turbohud_no_label(self):
+        # A preset, Undo or the design screen moves many sections at once: no labels on them all.
+        import time
+
+        window = self.window()
+        window.set_locked(False)
+        window.move(150, 100)
+        window.quiet_place(time.monotonic() + 60)
+        self.assertEqual(window.place_label, '')  # the one shown goes too
+        window.move(400, 100)
+        self.assertEqual(window.place_label, '')
+        window.quiet_place(time.monotonic() - 1)  # over: a drag shows it again
+        window.move(450, 100)
+        self.assertEqual(window.place_label, 'X 450  Y 100  300×60')
+
+    def test_on_the_design_screen_its_place_on_the_designed_size(self):
+        window = self.window()
+        window.set_locked(False)
+        window.design = ((1000, 200, 960, 540), 0.5)  # 1920x1080 shown at 50%
+        window.setGeometry(1100, 300, 200, 50)
+        self.assertEqual(window.place_label, 'X 200  Y 200  400×100')
+
     def test_on_wayland_the_app_shows_what_the_desktop_says(self):
         window = self.window(placement=lambda self, widget: (500, 400, 300, 60))
         window.set_locked(False)

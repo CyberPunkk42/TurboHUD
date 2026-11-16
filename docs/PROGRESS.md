@@ -2248,3 +2248,10 @@ its "Recent changes".
   race frame was logged, about 9 lines a second, and real stalls were lost among them. Now slow from 1.5 read
   intervals and never under 100 ms (`hud.slow_frame_after`): 150 ms at 10 a second, unchanged at 20. Tests with
   the gaps from the user's log (104 to 144 ms not logged, 200 ms logged). Not yet seen in a race log.
+- 2026-11-16: Two problems with the place label in move mode (`fix/place-label-design`, found the same day): on the
+  design screen it gave the section's place on this screen, not on the size being designed for; now it gives the
+  place and size Save design writes (the same sums as `presets.out_of_frame`). And a preset, Undo, Redo or the
+  design screen moving many sections at once put a label on each; now sections TurboHUD moves itself show none
+  for the second it treats such moves as its own (`apply_places`, as Wayland reports them late). Tests, one
+  checking the label against Save design's sums; with a real window on Windows, where moves are reported a
+  moment later, too. Not yet tried by hand in move mode.
