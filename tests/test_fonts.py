@@ -91,7 +91,7 @@ class PainterTests(unittest.TestCase):
         (folder / 'broken.ttf').write_bytes(b'not a font')
         families = self.painter.load_font_files(fonts.font_files(folder))
         self.assertEqual(len(families), 1)  # the broken file is left out
-        (family, file), = families.items()
+        ((family, file),) = families.items()
         self.assertEqual(file, found.name)
         self.assertEqual(self.painter.load_font_files(fonts.font_files(folder)), families)  # once
         usual = self.painter.text_width('Playername 1234', 20)
@@ -131,7 +131,8 @@ class SettingsWindowTests(unittest.TestCase):
         window = self.window()
         window.set_fonts({'Alpha Sans': 'alpha.ttf', 'Beta Mono': 'beta.otf'}, 'Beta Mono')
         self.assertEqual(
-            self.listed(window), [('System font', ''), ('Alpha Sans', 'Alpha Sans'), ('Beta Mono', 'Beta Mono')]
+            self.listed(window),
+            [('System font', ''), ('Alpha Sans', 'Alpha Sans'), ('Beta Mono', 'Beta Mono')],
         )
         self.assertEqual(window.font_choice.currentData(), 'Beta Mono')
 
