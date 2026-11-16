@@ -155,6 +155,10 @@ class Native:
         if active and active not in self.addresses.values():
             self.previous = active
 
+    def activate(self, widget):
+        """Nothing yet: focusing the panel on Hyprland would move the mouse onto it."""
+        return 'left to the desktop'
+
     def give_focus_back(self):
         """Back to the window that had the focus, only where one of TurboHUD's own windows (the
         panel) has it now. Hyprland moves the mouse onto a window it focuses, so focusing it when

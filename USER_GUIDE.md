@@ -16,7 +16,8 @@ nothing to other players or servers, and gives no control over the car.
 - **Locked and move mode.** Normally the HUD is **locked**: only the text and drawings
   show, and clicks go straight through to the game. In **move mode** every section gets a
   blue tint and can be dragged and sized, and a panel with all the settings for the layout
-  opens (see section 4).
+  opens (see section 4). On Windows and the Mac, move mode brings TurboHUD in front, so the
+  mouse pointer shows over the game even mid-race; locking hands the game its focus back.
 - **When the race sections show.** While TurboHUD waits for TSU, nothing shows but its icon.
   Once TSU runs, the **Clock** shows, also in the menus and the lobby. The race sections
   appear when the cars stand on the grid, before the lights, stay after you finish until

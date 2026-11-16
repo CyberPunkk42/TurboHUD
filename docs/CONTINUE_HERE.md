@@ -33,6 +33,10 @@ New on 2026-11-16, to try first (build 2026.11.16.2 on Windows; from source on t
    Hyprland and note the FPS of each phase (and the compositor's load if it can be had). On Windows it was
    measured on 2026-11-16: a window per section stays there.
 
+Also new: the mouse pointer in move mode on Windows (`fix/move-mode-pointer-windows`, reported by players):
+in a race, Ctrl+Shift+L should show the pointer at once, without ESC, and locking should hand TSU the mouse
+back (the log: `move mode: panel in front`). On Hyprland, check whether the pointer shows in move mode mid-race.
+
 Carried over:
 9. The tester (backlog item 0): his log with 2026.11.16 is clean on TurboHUD's side, but the stall on the
    30 s beat is back (one read of 150 to 225 ms at :04 and :34). Asked of him: whether that session

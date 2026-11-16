@@ -2305,3 +2305,12 @@ its "Recent changes".
   "(missing)" and the system font is drawn. The guides and README say so. Tests for the folder, its files, the
   setting, a font file loaded and drawn with (a monospace font the system has, copied; skipped where none),
   and the choice in the settings window; the app started for 6 s with no error. Not yet tried by hand.
+  - 2026-11-16: No mouse pointer in move mode until TSU's menu was opened, reported by players
+    (`fix/move-mode-pointer-windows`): in a race TSU hides the pointer and holds it while it is the
+    foreground window, and on Windows move mode only noted that window, never took the focus, so the pointer
+    came back only once ESC opened TSU's menu. Now move mode brings its panel in front (`Native.activate`,
+    `SetForegroundWindow`; if Windows refuses, once more with TurboHUD's input joined to the game's), and
+    locking gives TSU its focus back as before; the log says `move mode: panel in front`. The Mac already made
+    TurboHUD the active app; on Linux nothing changes yet (focusing the panel on Hyprland would move the mouse
+    onto it). The User Guide says so. Tests for the panel in front, a refusal and the retry, the game given
+    back; on the Mac move mode switched on in a running TurboHUD with no error. Not yet tried on Windows.

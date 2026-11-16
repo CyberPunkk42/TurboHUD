@@ -50,6 +50,13 @@ user32.SetWindowPos.argtypes = [
     wintypes.UINT,
 ]
 user32.SetWindowPos.restype = wintypes.BOOL
+user32.SetForegroundWindow.restype = wintypes.BOOL
+user32.GetWindowThreadProcessId.argtypes = [wintypes.HWND, ctypes.POINTER(wintypes.DWORD)]
+user32.GetWindowThreadProcessId.restype = wintypes.DWORD
+user32.AttachThreadInput.argtypes = [wintypes.DWORD, wintypes.DWORD, wintypes.BOOL]
+user32.AttachThreadInput.restype = wintypes.BOOL
+kernel32 = ctypes.WinDLL('kernel32', use_last_error=True)
+kernel32.GetCurrentThreadId.restype = wintypes.DWORD
 
 
 def lowest(order, wanted):
@@ -116,6 +123,29 @@ class Native:
 
     def take_focus(self):
         self.previous = user32.GetForegroundWindow()
+
+    def activate(self, widget):
+        """Move mode: `widget` (the panel) in front with the focus, so TSU is no longer the
+        foreground window. While it is, a race keeps its own pointer hidden and held, so move mode
+        showed no pointer until TSU's menu (ESC) let go of it (reported by players, 2026-11-16).
+        Windows may refuse a foreground change to a program that did not get the last input (a
+        hotkey counts, mostly); then once more with TurboHUD's input joined to the game's."""
+        hwnd = int(widget.winId())
+        if user32.SetForegroundWindow(hwnd):
+            return 'in front'
+        front = user32.GetForegroundWindow()
+        theirs = user32.GetWindowThreadProcessId(front, None) if front else 0
+        ours = kernel32.GetCurrentThreadId()
+        if not theirs or theirs == ours:
+            return f'not in front (error {ctypes.get_last_error()})'
+        user32.AttachThreadInput(ours, theirs, True)
+        try:
+            done = user32.SetForegroundWindow(hwnd)
+        finally:
+            user32.AttachThreadInput(ours, theirs, False)
+        if done:
+            return "in front, joined to the game's input"
+        return f'not in front (error {ctypes.get_last_error()})'
 
     def give_focus_back(self):
         previous, self.previous = self.previous, None

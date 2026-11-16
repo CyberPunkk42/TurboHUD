@@ -115,6 +115,15 @@ class LinuxNativeTests(unittest.TestCase):
         native.take_focus()
         self.assertEqual(native.previous, '0xgame')
 
+    def test_move_mode_focuses_nothing_on_its_own(self):
+        # Hyprland would move the mouse onto a window it focuses.
+        hypr = FakeHypr()
+        native = self.native(hypr)
+        native.prepare_app()
+        native.take_focus()
+        self.assertEqual(native.activate(FakeWidget()), 'left to the desktop')
+        self.assertEqual(hypr.focused, [])
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -66,6 +66,63 @@ class WindowsStackingTests(unittest.TestCase):
 
 
 @unittest.skipUnless(sys.platform == 'win32' and importlib.util.find_spec('PySide6'), 'Windows with Qt')
+class WindowsMoveModeFocusTests(unittest.TestCase):
+    """Move mode brings its panel in front, so TSU no longer holds its pointer hidden (reported by
+    players on 2026-11-16: no pointer until TSU's menu was opened with ESC)."""
+
+    def native(self):
+        from turbohud.overlay import windows
+
+        return windows, windows.Native.__new__(windows.Native)
+
+    def panel(self, handle=9):
+        return mock.Mock(winId=mock.Mock(return_value=handle))
+
+    def test_the_panel_comes_in_front(self):
+        windows, native = self.native()
+        with (
+            mock.patch.object(windows.user32, 'SetForegroundWindow', return_value=1) as front,
+            mock.patch.object(windows.user32, 'AttachThreadInput') as attach,
+        ):
+            self.assertEqual(native.activate(self.panel()), 'in front')
+        front.assert_called_once_with(9)
+        attach.assert_not_called()
+
+    def test_refused_it_tries_again_joined_to_the_games_input(self):
+        windows, native = self.native()
+        with (
+            mock.patch.object(windows.user32, 'SetForegroundWindow', side_effect=[0, 1]) as front,
+            mock.patch.object(windows.user32, 'GetForegroundWindow', return_value=5),
+            mock.patch.object(windows.user32, 'GetWindowThreadProcessId', return_value=77),
+            mock.patch.object(windows.kernel32, 'GetCurrentThreadId', return_value=11),
+            mock.patch.object(windows.user32, 'AttachThreadInput') as attach,
+        ):
+            self.assertEqual(native.activate(self.panel()), "in front, joined to the game's input")
+        self.assertEqual(front.call_count, 2)
+        self.assertEqual(attach.call_args_list, [mock.call(11, 77, True), mock.call(11, 77, False)])
+
+    def test_refused_twice_it_says_so_and_detaches(self):
+        windows, native = self.native()
+        with (
+            mock.patch.object(windows.user32, 'SetForegroundWindow', return_value=0),
+            mock.patch.object(windows.user32, 'GetForegroundWindow', return_value=5),
+            mock.patch.object(windows.user32, 'GetWindowThreadProcessId', return_value=77),
+            mock.patch.object(windows.kernel32, 'GetCurrentThreadId', return_value=11),
+            mock.patch.object(windows.user32, 'AttachThreadInput') as attach,
+        ):
+            self.assertTrue(native.activate(self.panel()).startswith('not in front'))
+        self.assertEqual(attach.call_args_list[-1], mock.call(11, 77, False))
+
+    def test_the_game_comes_back_when_locked(self):
+        windows, native = self.native()
+        with mock.patch.object(windows.user32, 'GetForegroundWindow', return_value=5):
+            native.take_focus()
+        with mock.patch.object(windows.user32, 'SetForegroundWindow', return_value=1) as front:
+            native.give_focus_back()
+        front.assert_called_once_with(5)
+
+
+@unittest.skipUnless(sys.platform == 'win32' and importlib.util.find_spec('PySide6'), 'Windows with Qt')
 class WindowsRegistrationTests(unittest.TestCase):
     def register(self, taken):
         from turbohud.overlay import windows

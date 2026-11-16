@@ -114,6 +114,9 @@ class Native:
         self.previous = send(previous, 'retain') if previous else None
         send(self.app, 'activateIgnoringOtherApps:', True, restype=None, argtypes=[c_bool])
 
+    def activate(self, widget):
+        return 'the app is active (take_focus)'
+
     def give_focus_back(self):
         previous, self.previous = self.previous, None
         if previous:

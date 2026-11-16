@@ -68,7 +68,9 @@
 
 ## Next steps
 **Start with `docs/CONTINUE_HERE.md`**: what is left to test. Then `docs/IMPROVEMENT_BACKLOG.md`. In short:
-- New on 2026-11-16: one's own fonts (`feature/own-fonts`, not yet tried by hand), the radar at real size
+- New on 2026-11-16: the mouse pointer in move mode on Windows (`fix/move-mode-pointer-windows`, reported by
+  players): it should show at once in a race, without ESC; on Hyprland, whether it shows there. Also
+  one's own fonts (`feature/own-fonts`, not yet tried by hand), the radar at real size
   with a zoom (`fix/radar-true-size`), and the race leader banner
   (`feature/lead-change`), not yet seen in a race. The banner: a pass for the lead
   that holds and one undone within 5 s, the finish, online, and how it reads over TSU. The user may give a
@@ -109,6 +111,15 @@
    and one tint per group gets a small window behind each group there (item 3b).
 
 ## Recent changes
+  - 2026-11-16: No mouse pointer in move mode until TSU's menu was opened, reported by players
+    (`fix/move-mode-pointer-windows`): in a race TSU hides the pointer and holds it while it is the
+    foreground window, and on Windows move mode only noted that window, never took the focus, so the pointer
+    came back only once ESC opened TSU's menu. Now move mode brings its panel in front (`Native.activate`,
+    `SetForegroundWindow`; if Windows refuses, once more with TurboHUD's input joined to the game's), and
+    locking gives TSU its focus back as before; the log says `move mode: panel in front`. The Mac already made
+    TurboHUD the active app; on Linux nothing changes yet (focusing the panel on Hyprland would move the mouse
+    onto it). The User Guide says so. Tests for the panel in front, a refusal and the retry, the game given
+    back; on the Mac move mode switched on in a running TurboHUD with no error. Not yet tried on Windows.
   - 2026-11-16: One's own fonts (`feature/own-fonts`, asked for by the user): font files (.ttf, .otf) put in
     `customization/fonts` (beside `display_presets`, made with a read-me; `core/fonts.py`) are offered in the
     settings window's Look > **Font**, with **System font** and **Fonts folder...**. The choice is saved

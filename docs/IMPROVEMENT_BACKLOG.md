@@ -90,7 +90,9 @@ First run on the user's PC (2026-11-11): the reader started, Ctrl+Shift+L worked
 Adrenalin let go of it, and an online race was found once a hang in the search was fixed. The overlay
 shows over TSU's Fullscreen without Exclusive (2026-11-16, the window count probe, item 1c). Still to
 see: the HUD through a whole race, offline and hosting, and the overlay over Fullscreen Exclusive.
-Also: a spare shortcut when another app holds Ctrl+Shift+L. (The tests all pass on Windows since 2026-11-16.)
+Also: a spare shortcut when another app holds Ctrl+Shift+L.
+Move mode had no pointer in a race until TSU's menu was opened (reported by players, 2026-11-16): since
+`fix/move-mode-pointer-windows` move mode brings its panel in front there; to see in a race. (The tests all pass on Windows since 2026-11-16.)
 The race search reads with 4 threads on Windows since 2026-11-12 (about 6 s for all of TSU's data, from 19 s):
 listen for stutter in those seconds at the start of an online race.
 A Custom race is read since 2026-11-13 (its `TS.HostEventController` found by the search); a Single Player
