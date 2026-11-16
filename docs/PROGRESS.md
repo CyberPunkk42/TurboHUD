@@ -2287,3 +2287,12 @@ its "Recent changes".
 - 2026-11-16: The docs brought up to date for the race leader banner (`docs/lead-change-docs`, asked for by
   the user): `docs/STACK.md`'s module list and `docs/HOW_IT_WORKS.md`'s tables of sections and files name it,
   and `RESUME.md`'s "Next steps" says what to try.
+- 2026-11-16: The radar at the cars' real size, zoomed in when they are close (`fix/radar-true-size`, reported
+  by the user: two cars looked as if they touched when they were not that close). Cars were drawn 1.4 times as
+  large as they are (`RADAR_CAR_SCALE`), with their places at true scale, so cars side by side still about half a
+  unit apart, or nose to tail with about 1.6 between them, overlapped on the radar. Now at their real size, and
+  the radar comes in on the cars that count (`radar_zoom`): as far as the farthest needs with half as much room
+  again, never closer than 10 units (2.5 car lengths), in gently (a quarter of the way a read), out at once when
+  a car comes up from further back. The User Guide says so; `docs/HOW_IT_WORKS.md` notes that online positions
+  are carried on between updates. Tests for the size, cars with room between them, the zoom and its easing.
+  Not yet seen in a race.

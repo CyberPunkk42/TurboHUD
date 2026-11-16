@@ -1,4 +1,5 @@
 import dataclasses
+import itertools
 import sys
 import unittest
 from pathlib import Path
@@ -915,11 +916,53 @@ class WarningTimeTests(unittest.TestCase):
                 if shown:
                     self.assertEqual(view.within, 1.0)
 
-    def test_cars_are_drawn_larger_and_never_too_small(self):
+    def test_cars_are_drawn_at_their_real_size_and_never_too_small(self):
+        # Reported by the user on 2026-11-16: drawn 1.4 times as large, cars half a metre apart touched.
+        self.assertEqual(race.RADAR_CAR_SCALE, 1.0)
         width, length = race.radar_car_size(7.9, 316)
-        self.assertAlmostEqual(width, race.CAR_WIDTH * 7.9 * race.RADAR_CAR_SCALE)
-        self.assertAlmostEqual(length / width, race.CAR_LENGTH / race.CAR_WIDTH)
+        self.assertAlmostEqual(width, race.CAR_WIDTH * 7.9)
+        self.assertAlmostEqual(length, race.CAR_LENGTH * 7.9)
         self.assertEqual(race.radar_car_size(0.5, 316)[0], 316 * race.RADAR_CAR_LEAST)
+
+    def test_cars_side_by_side_with_room_do_not_touch_on_the_radar(self):
+        per_unit = 10.0
+        width, _length = race.radar_car_size(per_unit, 160)
+        apart = (race.CAR_WIDTH + 0.5) * per_unit  # half a unit between them
+        self.assertLess(width, apart)
+
+    def test_zoom_in_on_the_cars_that_count(self):
+        view = 24.0
+        self.assertEqual(race.radar_zoom((), view), view)
+        beside = race.Blip(0.5, 1.6, 0.0, 0.0)
+        self.assertEqual(race.radar_zoom((beside,), view), race.RADAR_ZOOM_LEAST)  # never closer
+        behind = race.Blip(-12.0, 0.0, 0.0, 0.2)
+        zoomed = race.radar_zoom((beside, behind), view)
+        self.assertAlmostEqual(zoomed, (12.0 + race.CAR_LENGTH / 2) * race.RADAR_ZOOM_ROOM)
+        self.assertLessEqual(race.radar_zoom((race.Blip(-20.0, 0.0, 0.0, 0.4),), view), view)
+        # A car that does not count (far to the side) or past the view (an arrow) keeps it out.
+        self.assertEqual(race.radar_zoom((race.Blip(-2.0, 9.0, 0.0, None),), view), view)
+        self.assertEqual(race.radar_zoom((race.Blip(-30.0, 0.0, 0.0, 0.5),), view), view)
+
+    def test_the_radar_zooms_in_gently_and_out_at_once(self):
+        def me(t):
+            return moving('Me', (0.0, 40.0 * t), (0.0, 40.0), local=True)
+
+        def beside(t):
+            return moving('Beside', (1.8, 40.0 * t), (0.0, 40.0))
+
+        def behind(t):
+            return moving('Behind', (0.0, 40.0 * t - 14.0), (0.0, 40.0))
+
+        radar = race.Radar()
+        far = (14.0 + race.CAR_LENGTH / 2) * race.RADAR_ZOOM_ROOM
+        self.assertAlmostEqual(radar.update([me(0.0), beside(0.0), behind(0.0)], 0.0).view, far)
+        # The car behind drops back out of reach: the radar comes in on the one beside, a step a read.
+        views = [radar.update([me(t), beside(t)], t).view for t in (i * 0.05 for i in range(1, 30))]
+        self.assertGreater(views[0], race.RADAR_ZOOM_LEAST + 3)
+        self.assertTrue(all(a > b for a, b in itertools.pairwise(views)))
+        self.assertAlmostEqual(views[-1], race.RADAR_ZOOM_LEAST, places=1)
+        t = 30 * 0.05
+        self.assertAlmostEqual(radar.update([me(t), beside(t), behind(t)], t).view, far)  # out at once
 
 
 class RadarSteadyTests(unittest.TestCase):
