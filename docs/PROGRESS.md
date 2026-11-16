@@ -2242,3 +2242,9 @@ its "Recent changes".
 - 2026-11-16: The memory test for Linux skipped on Windows (`fix/memory-test-windows`): it asked for the page size,
   which Windows' Python does not have; TurboHUD itself reads its memory there another way. All tests pass on
   Windows again (1344).
+- 2026-11-16: The log's "slow frame" lines at 10 reads a second (`fix/slow-frame-log`, found on the user's PC): a
+  frame was logged as slow from 100 ms after the last, made for 20 reads a second (frames 50 ms apart); with
+  10 a second the default since 2026-11-15, one frame a read comes 100 to 115 ms after the last, so nearly every
+  race frame was logged, about 9 lines a second, and real stalls were lost among them. Now slow from 1.5 read
+  intervals and never under 100 ms (`hud.slow_frame_after`): 150 ms at 10 a second, unchanged at 20. Tests with
+  the gaps from the user's log (104 to 144 ms not logged, 200 ms logged). Not yet seen in a race log.

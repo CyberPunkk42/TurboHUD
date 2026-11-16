@@ -114,6 +114,25 @@ class SlowFrameTests(unittest.TestCase):
         self.assertEqual(len(self.lines), 1)
         self.assertTrue(self.lines[0].startswith('slow frame: 300 ms'))
 
+    def test_at_10_reads_a_second_a_frame_a_read_is_not_slow(self):
+        # One frame a read, 100 to 115 ms apart at 10 a second: each was logged with 100 ms (2026-11-16).
+        self.frames.slow_after = hud.slow_frame_after(10)
+        self.frames.frame(0.001, 0.005)
+        for gap in (0.104, 0.109, 0.114, 0.131, 0.144):
+            self.clock.now += gap
+            self.frames.frame(0.001, 0.005)
+        self.assertEqual(self.lines, [])
+        self.clock.now += 0.2
+        self.frames.frame(0.001, 0.005)  # two reads' time: TurboHUD was held
+        self.assertEqual(len(self.lines), 1)
+        self.assertTrue(self.lines[0].startswith('slow frame: 200 ms'))
+
+    def test_the_threshold_follows_the_reads_but_never_drops_below_a_stall(self):
+        self.assertAlmostEqual(hud.slow_frame_after(10), 0.15)
+        self.assertAlmostEqual(hud.slow_frame_after(5), 0.3)
+        self.assertEqual(hud.slow_frame_after(20), stalls.STALL)  # as before for 20 a second
+        self.assertEqual(hud.slow_frame_after(30), stalls.STALL)
+
     def test_the_summary_names_the_costliest_sections(self):
         for _ in range(4):
             self.parts['laptimes'] = self.parts.get('laptimes', 0.0) + 0.004

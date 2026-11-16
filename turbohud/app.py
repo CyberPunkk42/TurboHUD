@@ -464,6 +464,7 @@ def run(args, folder):
         panel_place,
         screen_of,
         session_rows,
+        slow_frame_after,
         speed_section,
         text_box,
     )
@@ -2072,6 +2073,7 @@ def run(args, folder):
     def apply_reads():
         reads = settings.reads_per_second
         pacer.most = 2 / reads
+        frames.slow_after = slow_frame_after(reads)  # a slow frame by the rhythm the reads set
         if live is not None:
             live.read_interval = 1 / reads
             log.info('race reads: at most %d a second', reads)
