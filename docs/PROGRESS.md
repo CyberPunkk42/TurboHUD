@@ -2262,3 +2262,7 @@ its "Recent changes".
   shows from the start; a car whose position is not known comes after. The standings, Nearby cars and the track
   map all take it. Tests for the grid with and without the start counted as passed, a car through the first
   checkpoint, no position, no lines. Not yet seen at a race's start.
+- 2026-11-16: `docs/CONTINUE_HERE.md` brought up to date (`docs/continue-here-2026-11-16`, asked for by the user):
+  what is left to test after the day's work on Windows first (the standings at the start, the slow-frame lines,
+  one tint for each group on Windows, the place label, the memory line, the window count probe on Hyprland),
+  then what was there, with the tester's latest state and the Windows layout list added.
