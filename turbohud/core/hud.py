@@ -1618,6 +1618,16 @@ def screen_of(place, screens):
     return main_screen(screens)
 
 
+def place_text(place, screens):
+    """What a section shows in move mode while it is moved, resized or nudged (asked for by the user
+    on 2026-11-16): where its top-left corner is, counted from the top-left of the screen it is on
+    (screen_of), and its size, as 'X 1580  Y 1110  506×270'."""
+    x, y, width, height = (round(v) for v in place)
+    screen = screen_of((x, y, width, height), screens)
+    left, top = (screen[0], screen[1]) if screen else (0, 0)
+    return f'X {x - left}  Y {y - top}  {width}×{height}'
+
+
 def centred(place, screen, horizontal=False, vertical=False):
     """`place` (x, y, width, height) centred on `screen` across (horizontal), down
     (vertical) or both; its size stays."""

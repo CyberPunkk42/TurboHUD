@@ -978,6 +978,12 @@ class CentreTests(unittest.TestCase):
         screen = hud.screen_of(flag, self.SCREENS)
         self.assertEqual(hud.centred(flag, screen, horizontal=True), (2320, -1300, 480, 24))
 
+    def test_the_place_label_counts_from_the_screen_the_section_is_on(self):
+        # Move mode shows where a section is while it moves (asked for by the user on 2026-11-16).
+        self.assertEqual(hud.place_text((1580, 1110, 506, 270), self.SCREENS), 'X 1580  Y 1110  506×270')
+        self.assertEqual(hud.place_text((1500, -1300, 480, 24), self.SCREENS), 'X 220  Y 140  480×24')
+        self.assertEqual(hud.place_text((10.4, 20.6, 100, 50), []), 'X 10  Y 21  100×50')  # no screens
+
     def test_only_the_drawings_have_centre_buttons(self):
         self.assertEqual(
             {s.name for s in hud.RACE_SECTIONS if s.drawing}, {'blueflag', 'deltabar', 'radar', 'trackmap'}

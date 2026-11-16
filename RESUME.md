@@ -100,6 +100,13 @@
    race on each and note the FPS per phase; it decides how one tint per group is made (item 3b).
 
 ## Recent changes
+  - 2026-11-16: Where a section is, while it moves (`feature/move-coordinates`, asked for by the user): in move
+    mode a small label at a section's top left shows its place and size, `X 1580  Y 1110  506×270`, X and Y in
+    pixels from the top-left of the screen it is on (`hud.place_text`), while it is dragged, sized or nudged and
+    when clicked, gone 2 s after the last move and never while locked. On Windows and the Mac it follows each
+    move; on Wayland the app shows what Hyprland says at its look 5 times a second. Entering move mode alone
+    shows none. The User Guide and Quick Start say so. Tests for the text, the label, lock and Wayland; seen with
+    a real window on Windows. Not yet tried by hand on the Mac or Hyprland.
   - 2026-11-16: The last 3 tests that failed on Windows pass (`fix/windows-test-failures`; backlog item 1): all
     three were Linux-only code with Linux assumptions. `system_env` splits LD_LIBRARY_PATH with ':' (was
     os.pathsep, ';' on Windows), the probe's `run_game` passes on SIGHUP only where there is one, and the Steam

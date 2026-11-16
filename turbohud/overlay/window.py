@@ -16,7 +16,7 @@ import time
 from dataclasses import replace
 from typing import ClassVar
 
-from PySide6.QtCore import QPointF, QRect, QRectF, Qt, Signal
+from PySide6.QtCore import QPointF, QRect, QRectF, Qt, QTimer, Signal
 from PySide6.QtGui import QColor, QFontInfo, QImage, QPainter, QPainterPath, QPen, QPolygonF
 from PySide6.QtWidgets import (
     QCheckBox,
@@ -56,6 +56,7 @@ from turbohud.core.hud import (
     panel_categories,
     pedal_bars,
     pedal_space,
+    place_text,
     resize_edges,
     resized,
     sector_bars,
@@ -93,6 +94,11 @@ from turbohud.hud.painter import (
 from turbohud.overlay.layouts_window import LayoutsWindow
 
 TINT = (23, 56, 97, 153)  # move mode's background: red, green, blue, opacity (0-255)
+# Move mode's place label (SectionWindow.show_place): shown this long after the last move, this
+# size, on this background.
+PLACE_LABEL_MS = 2000
+PLACE_LABEL_PX = 12
+PLACE_LABEL_BACK = (12, 16, 24, 240)  # nearly solid: the section's large sample text is under it
 BORDER = (120, 170, 230)
 LABEL_COLOR = (200, 220, 245)
 MIN_WIDTH = 40
@@ -260,6 +266,15 @@ class SectionWindow(QWidget):
         self.resizable = True  # at its edges in move mode: a text section by its text size (_resize_text)
         self.own_font = None  # a text section's own text size; None: the global one (the app sets it)
         self.selected = False  # clicked last in move mode: the arrow keys nudge it
+        # Move mode: where it is and its size while moved, resized or nudged, and a moment after
+        # (place_text; asked for by the user on 2026-11-16). '' when not shown.
+        self.place_label = ''
+        self.screens = None  # the screens (x, y, width, height) its place is counted on; the app sets them
+        self._place_seen = None  # its place when Qt last said it moved (_moved)
+        self._place_timer = QTimer(self)
+        self._place_timer.setSingleShot(True)
+        self._place_timer.setInterval(PLACE_LABEL_MS)
+        self._place_timer.timeout.connect(self.hide_place)
         # While locked, a HudCanvas may draw this section with every other in one window per
         # screen, and this window stays hidden: 17 windows above the game cost it frames.
         self.canvas = None
@@ -291,6 +306,43 @@ class SectionWindow(QWidget):
         # On Wayland only the desktop knows where the window is; ask it where possible.
         native = getattr(self.native, 'placement', None)
         return (native and native(self)) or (self.x(), self.y(), self.width(), self.height())
+
+    def show_place(self, place=None):
+        """Move mode: show where it is (`place`, else where Qt has it) and its size for a moment."""
+        if self.locked or not self.wanted or self.screens is None:
+            return
+        text = place_text(place or self.geometry().getRect(), self.screens)
+        if text != self.place_label:
+            self.place_label = text
+            self.update()
+        self._place_timer.start()  # gone PLACE_LABEL_MS after the last move
+
+    def hide_place(self):
+        if self.place_label:
+            self.place_label = ''
+            self.update()
+
+    def _follows_live(self):
+        """Whether Qt knows where it is while it moves (not on Wayland, where the app asks the desktop)."""
+        return getattr(self.native, 'placement', None) is None
+
+    def _moved(self):
+        """Its place changed for Qt: shown in move mode. Only a real change: a window made again
+        as move mode begins reports its place once more without moving."""
+        place = self.geometry().getRect()
+        if place == self._place_seen:
+            return
+        self._place_seen = place
+        if not self.locked and self._follows_live():
+            self.show_place(place)
+
+    def moveEvent(self, event):
+        super().moveEvent(event)
+        self._moved()
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self._moved()
 
     def show_on_top(self):
         if self.on_canvas:
@@ -329,6 +381,8 @@ class SectionWindow(QWidget):
         if locked == self.locked:
             return
         self.locked = locked
+        if locked:
+            self.place_label = ''  # move mode's place is not shown over the race
         if not self.wanted:
             return  # hidden: stays click-through and empty in both modes
         in_place = _set_input(self, self.native, locked)
@@ -374,6 +428,7 @@ class SectionWindow(QWidget):
             return
         self.clicked.emit(self.section.name)
         self.activateWindow()  # the keyboard to TurboHUD: the arrow keys nudge it
+        self.show_place(self.placement())  # where it is, before it moves
         edges = self._edges_at(event)
         if not edges:
             self.windowHandle().startSystemMove()
@@ -453,8 +508,27 @@ class SectionWindow(QWidget):
             painter.setPen(QPen(QColor(LIFT_COLOR), 2))
             painter.setBrush(Qt.NoBrush)
             painter.drawRoundedRect(QRectF(self.rect()).adjusted(1, 1, -1, -1), 8, 8)
+        if not self.locked and self.wanted and self.place_label:
+            self._paint_place(painter)
         painter.end()
         SectionWindow.drawing_time += time.perf_counter() - began
+
+    def _paint_place(self, painter):
+        """Move mode: the place label (show_place) in a small dark box at the top left, over the
+        section's sample text, readable over any game."""
+        painter.save()
+        font = painter.font()
+        font.setPixelSize(PLACE_LABEL_PX)
+        font.setBold(True)
+        painter.setFont(font)
+        metrics = painter.fontMetrics()
+        box = QRectF(4, 4, metrics.horizontalAdvance(self.place_label) + 12, metrics.height() + 6)
+        painter.setPen(Qt.NoPen)
+        painter.setBrush(QColor(*PLACE_LABEL_BACK))
+        painter.drawRoundedRect(box, 4, 4)
+        painter.setPen(QColor(LIFT_COLOR))
+        painter.drawText(box, Qt.AlignCenter, self.place_label)
+        painter.restore()
 
     def drew(self, seconds):
         """Count `seconds` of drawing for this section (the log's costliest sections)."""
