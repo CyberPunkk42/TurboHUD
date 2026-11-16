@@ -100,6 +100,10 @@
    race on each and note the FPS per phase; it decides how one tint per group is made (item 3b).
 
 ## Recent changes
+  - 2026-11-16: The tester's log with build 2026.11.16 in backlog item 0 (`docs/tester-log-2026-11-16`): TurboHUD ran
+    smoothly (frames steady, drawing 8 to 21%, no error), and the new presets, options and layout 8 worked; the stall
+    on the 30 s beat is back (150 to 225 ms reads at :04 and :34); he reads 20 a second by his own setting. Asked:
+    stutter times, and 10 reads a second. The log stays local.
   - 2026-11-16: The full test run on Windows stopped with an access violation (`fix/dialog-tests-fonts-windows`):
     `tests/test_dialogs.py`, the first Qt tests in a run, started Qt without the Windows fonts folder that the
     other Qt tests give it, so the font tests after them crashed. It now sets it too; the app was not affected.

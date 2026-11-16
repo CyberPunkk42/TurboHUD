@@ -58,6 +58,22 @@ Asked of him: whether this session stuttered, at what clock times, while driving
 Monitor's Memory Pressure, Swap Used and TSU's (wine) and TurboHUD's memory in a race; if it stutters, the same
 race with TurboHUD closed. With the disk free, swap no longer runs short; the next suspect is memory (18 GB, about
 3 GB left) and TSU's growth.
+His log with 2026.11.16 (received 2026-11-16, about 11 minutes from 00:54 by his clock: two online races, with
+move mode, presets and the new options tried): no error or warning. TurboHUD ran smoothly: frames 53 to 54 ms
+apart (about 19 a second), collections of at most 2 ms, drawing 8 to 21% of the time locked (the standings 2 to
+3 ms a frame, then Nearby cars and the track map). The new parts worked: layout 8, the race recognised for the
+presets by mode ("no preset chosen for it"), presets saved, loaded and named, the short Nearby cars switch, the
+standings columns. Left to look at:
+- The stall on the 30 s beat is back: one read of 150 to 225 ms (1 trip, nearly all of it in TSU's memory through
+  Wine) at :04 and :34 past the minute, eight times (00:55:34 to 01:01:34); none in his log with 2026.11.14. Other
+  reads 5 to 11 ms (median), 36 to 57 reads of the game, 71 to 100 pages.
+- He reads the race 20 times a second: his own saved setting (the default is 10 since 2026-11-15). Ten halves the
+  reader's work and is the first thing to try if TSU stutters.
+- TSU's race data within 342 to 345 MiB, 428 MiB near the end (01:05:42): far from the 3,090 MiB of his bad
+  evenings.
+- Move mode had slow frames of 106 to 215 ms (a window per section there), as expected.
+Asked of him: whether this session stuttered, at what clock times (on :04 and :34 would point at the 30 s read),
+and the same races with Race reads a second at 10.
 
 ## 1. Windows: the overlay over Fullscreen, and whole races (live data built)
 Over TSU on Windows, in windowed, Fullscreen and Fullscreen Exclusive: the built app
