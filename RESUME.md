@@ -102,6 +102,13 @@
    and one tint per group gets a small window behind each group there (item 3b).
 
 ## Recent changes
+  - 2026-11-16: The standings in the wrong order at a race's start, reported by the user (`fix/standings-at-start`):
+    the order goes by checkpoints passed, then by who passed the last first, and at the start every car is level,
+    so Python's sort kept TSU's own list order until the first checkpoint. Cars level are now ordered by how near
+    they are to the next checkpoint line (their position and the lines TurboHUD already reads), so the grid's order
+    shows from the start; a car whose position is not known comes after. The standings, Nearby cars and the track
+    map all take it. Tests for the grid with and without the start counted as passed, a car through the first
+    checkpoint, no position, no lines. Not yet seen at a race's start.
   - 2026-11-16: Two problems with the place label in move mode (`fix/place-label-design`, found the same day): on the
     design screen it gave the section's place on this screen, not on the size being designed for; now it gives the
     place and size Save design writes (the same sums as `presets.out_of_frame`). And a preset, Undo, Redo or the

@@ -68,6 +68,49 @@ class RankingTests(unittest.TestCase):
         )
 
 
+class StartOrderTests(unittest.TestCase):
+    """At a race's start every car has passed the same lines at the same moment: the order then was
+    TSU's own list order until the first checkpoint (reported by the user on 2026-11-16). Now the
+    car nearer the next line is ahead: the grid's order."""
+
+    # The start line across x = 0 and the first checkpoint across x = 100; the grid behind the start.
+    GATES = (((0, -20), (0, 20)), ((100, -20), (100, 20)))
+
+    def car(self, name, x, checkpoints=((0,),), z=0):
+        return dataclasses.replace(player(name, list(checkpoints)), position=(x, z))
+
+    def test_on_the_grid_the_car_further_forward_leads(self):
+        third, first, second = self.car('Third', -30), self.car('First', -10), self.car('Second', -20, z=6)
+        order = race.ranked([third, first, second], gates=self.GATES)
+        self.assertEqual([p.name for p in order], ['First', 'Second', 'Third'])
+
+    def test_also_before_the_start_counts_as_a_line_passed(self):
+        cars = [self.car('Third', -30, ()), self.car('First', -10, ()), self.car('Second', -20, ())]
+        self.assertEqual([p.name for p in race.ranked(cars, gates=self.GATES)], ['First', 'Second', 'Third'])
+
+    def test_a_car_through_the_first_checkpoint_leads_whatever_the_distances(self):
+        ahead = self.car('Ahead', 105, [(0, 30_000)])
+        level = [self.car('Back', -30), self.car('Front', 90)]
+        self.assertEqual(
+            [p.name for p in race.ranked([*level, ahead], gates=self.GATES)], ['Ahead', 'Front', 'Back']
+        )
+
+    def test_a_car_without_a_position_comes_after_those_with_one(self):
+        unknown = player('Unknown', [(0,)])
+        cars = [unknown, self.car('Back', -30), self.car('Front', -10)]
+        self.assertEqual([p.name for p in race.ranked(cars, gates=self.GATES)], ['Front', 'Back', 'Unknown'])
+
+    def test_without_the_lines_as_before(self):
+        cars = [self.car('B', -30), self.car('A', -10)]
+        self.assertEqual([p.name for p in race.ranked(cars)], ['B', 'A'])  # TSU's order
+
+    def test_the_standings_show_the_grid_order_at_once(self):
+        standings = race.Standings()
+        cars = [self.car('Third', -30), self.car('First', -10), self.car('Second', -20)]
+        order = standings.order(cars, 0.0, gates=self.GATES)
+        self.assertEqual([p.name for p in order], ['First', 'Second', 'Third'])
+
+
 class PassedTests(unittest.TestCase):
     def test_every_checkpoint_in_one_row_worked_out_once(self):
         p = player('P', [lap(0), lap(40_000, count=2)])

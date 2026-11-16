@@ -2255,3 +2255,10 @@ its "Recent changes".
   for the second it treats such moves as its own (`apply_places`, as Wayland reports them late). Tests, one
   checking the label against Save design's sums; with a real window on Windows, where moves are reported a
   moment later, too. Not yet tried by hand in move mode.
+- 2026-11-16: The standings in the wrong order at a race's start, reported by the user (`fix/standings-at-start`):
+  the order goes by checkpoints passed, then by who passed the last first, and at the start every car is level,
+  so Python's sort kept TSU's own list order until the first checkpoint. Cars level are now ordered by how near
+  they are to the next checkpoint line (their position and the lines TurboHUD already reads), so the grid's order
+  shows from the start; a car whose position is not known comes after. The standings, Nearby cars and the track
+  map all take it. Tests for the grid with and without the start counted as passed, a car through the first
+  checkpoint, no position, no lines. Not yet seen at a race's start.
