@@ -102,6 +102,9 @@
    and one tint per group gets a small window behind each group there (item 3b).
 
 ## Recent changes
+  - 2026-11-16: The standings at a race's start confirmed by the user (`docs/standings-confirmed`): in the right
+    order from the start (`fix/standings-at-start`). The point is gone from `docs/CONTINUE_HERE.md`, its list
+    renumbered.
   - 2026-11-16: `docs/CONTINUE_HERE.md` brought up to date (`docs/continue-here-2026-11-16`, asked for by the user):
     what is left to test after the day's work on Windows first (the standings at the start, the slow-frame lines,
     one tint for each group on Windows, the place label, the memory line, the window count probe on Hyprland),
