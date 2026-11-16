@@ -2216,3 +2216,10 @@ its "Recent changes".
     the working set on Windows, the resident size on Linux. One system call of about 8 microseconds every 30 s.
     Measured on the user's Mac in move mode with every section's preview: 243 MB (peak 245), flat over 20 s. Tests;
     not yet run on Windows or Linux.
+- 2026-11-16: The window count probe on Windows (`docs/window-count-windows`; backlog items 1, 1c and 3b): run
+  by the user over TSU in Fullscreen (without Exclusive) on a 5120x1440 screen, with 19 boxes. Every phase
+  showed over the game, so the overlay works over Fullscreen on Windows; 120 FPS in each (TSU's cap there).
+  Measured too: one window per screen costs DWM about three times the GPU of a window per section (3.9%
+  against 1.3%), no less CPU. Decided with the user: Windows keeps a window per section (players' PCs may be
+  weaker), and one tint per group there will be a small window behind each group, off by default at first.
+  Results in `experiments/README.md`; Linux still to measure.

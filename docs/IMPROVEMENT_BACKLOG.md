@@ -87,7 +87,8 @@ same reader and questions as on the Mac, so no probe or launch option; Python in
 where the reader is missing. To try on a Windows PC: a race offline, hosting and as an online
 client, and the log's `reading TSU through the Rust reader` and `race reads` lines.
 First run on the user's PC (2026-11-11): the reader started, Ctrl+Shift+L worked once AMD
-Adrenalin let go of it, and an online race was found once a hang in the search was fixed. Still to
+Adrenalin let go of it, and an online race was found once a hang in the search was fixed. The overlay
+shows over TSU's Fullscreen without Exclusive (2026-11-16, the window count probe, item 1c). Still to
 see: the HUD through a whole race, offline and hosting, and the overlay over Fullscreen Exclusive.
 Also: a spare shortcut when another app holds Ctrl+Shift+L. (The tests all pass on Windows since 2026-11-16.)
 The race search reads with 4 threads on Windows since 2026-11-12 (about 6 s for all of TSU's data, from 19 s):
@@ -104,13 +105,17 @@ second mode for windowed TSU. Next: the Qt overlay probe in the bottle (plan ste
 against the native app with TSU windowed. Item 1's live data in-process, needed for the real app,
 is built (2026-11-11).
 
-## 1c. One window on Windows and Linux: measure first (probe ready, 2026-11-15)
+## 1c. One window on Linux: measure first (Windows measured, 2026-11-16)
 Locked, the Mac draws every section in one window per screen; Windows and Linux keep a window per section.
-Whether one window helps there is not measured. `experiments/window_count_probe.py` runs on all three since
-2026-11-15 (`feature/window-probe-everywhere`): 17 windows, one window round the boxes, one window per screen,
-each 45 s, between two rests; `experiments/README.md` says how. Next: the user runs it with TSU in a race on
-Windows and on Hyprland, with Steam's FPS counter, and notes the FPS of each phase. If one window wins, turn
-on HudCanvas there (`one_window` in the Native), which also makes one tint per group simple (item 3b).
+`experiments/window_count_probe.py` runs on all three since 2026-11-15 (`feature/window-probe-everywhere`):
+17 windows, one window round the boxes, one window per screen, each 45 s, between two rests;
+`experiments/README.md` says how.
+Windows, measured on 2026-11-16 (`experiments/README.md`): 120 FPS in every phase (TSU's cap on the user's
+PC), but one window costs DWM about three times the GPU of a window per section (3.9% against 1.3%) and no
+less CPU. So Windows keeps a window per section (decided with the user: players' PCs may be weaker), and
+one tint per group there gets a small window behind each group (item 3b).
+Next: the same on Hyprland with TSU in a race, the FPS and if it can be had the compositor's cost. If one
+window wins there, turn on HudCanvas on Linux (`one_window` in the Native).
 
 ## 2. macOS: live data in CrossOver
 Answered 2026-11-04 (`experiments/README.md`, "Memory inside the CrossOver bottle"):
@@ -182,8 +187,12 @@ presets with their shortcuts, groups, the Centre buttons, Centre text and Undo. 
 ## 3b. One tint per group on Windows and Linux (asked for on 2026-11-15)
 Done on 2026-11-15: groups A to G, Nearby cars' short list (own row kept, on by default), its bigger shipped
 text, and one tint for each group on the Mac (`feature/group-tint-mac`, a switch on by default). Left: Windows
-and Linux, where a window per section cannot draw in the gaps. Waits on item 1c: with one window there too, the
-Mac's drawing serves as it is; else the touching sides square and the windows stretched over half the gap.
+and Linux, where a window per section cannot draw in the gaps.
+Windows (decided 2026-11-16 after item 1c): a window per section stays, so each group with tinted sections
+gets one small see-through window behind them, the box round them as on the Mac, shown only while locked and
+drawn again only when the box changes; the switch shows on Windows too, off by default there until the user
+has seen it over TSU (asked for by the user, so it can be turned off without a new build).
+Linux waits on item 1c there: with one window, the Mac's drawing serves as it is; else as on Windows.
 
 ## 4. Builds and release
 The Mac app for a tester (2026-11-06): build with `sh tools/get_mac_python.sh`, then

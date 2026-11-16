@@ -427,15 +427,16 @@ too, to tell whether one window would help there (and make a tint across a group
    the user's Mac with the Metal HUD"); on Windows and Linux Steam's own (Steam > Settings > In Game >
    In-game FPS counter), or MangoHud on Linux. Start TSU as you play it (Fullscreen or windowed) and
    start a race, best offline with AI so the race does not end during the run.
-2. From the repository:
+2. From the repository folder (`cd` into it first):
    - macOS, Linux: `.buildtools/venv/bin/python -B experiments/window_count_probe.py`
-   - Windows: `.buildtools\venv\Scripts\python.exe -B experiments\window_count_probe.py`
+   - Windows (PowerShell): `.\.buildtools\venv\Scripts\python.exe -B experiments\window_count_probe.py`
 
    (`.buildtools/venv` is the environment the start script `run_turbohud.sh` / `run_turbohud.cmd`
    sets up on its first run.)
 3. It runs by itself for about 3 minutes and quits: nothing (30 s), 17 small windows (45 s), one
    large window with all 17 boxes (45 s), one window per screen (45 s), nothing again (30 s). The
-   boxes show the phase's name; the terminal prints each phase's start. Note the FPS in each (the
+   windows are see-through, so the three middle phases look alike: the same boxes in the same
+   places, only the name in them changes. The boxes show the phase's name; the terminal prints each phase's start. Note the FPS in each (the
    lowest and highest it shows). `--rest` and `--each` change the times; Ctrl+C quits early.
 
 The boxes have the places and sizes of TurboHUD's sections, read (only read) from its settings file
@@ -444,7 +445,25 @@ stay on top as TurboHUD's do: on Hyprland each is floated and pinned through req
 own windows only (each has its own title, `TurboHUD probe 1` and on); on other Wayland desktops it
 runs through XWayland, as TurboHUD does. Checked 2026-11-15 on the Mac (all five phases, quits by
 itself; the last phase was cut short before, as closing the windows quit the program). Not yet run
-on Windows or Linux, nor measured over TSU there.
+on Linux.
+
+Windows (2026-11-16, the user's PC, TSU in Fullscreen without Exclusive, a 5120x1440 screen, 19 boxes,
+one window 5116x1440): every phase showed over TSU's Fullscreen (screenshots in each phase: the boxes over
+the race, the probe's windows visible and topmost), and Steam's counter read 120 FPS in each, TSU's cap on
+that PC, with one dip to 80 as the one large window appeared. With the FPS capped, the cost was measured as
+well, twice, per phase (Windows' performance counters, the first 3 s after each switch left out):
+
+| Phase | DWM's GPU | DWM's CPU (of one core) | the probe's CPU |
+| --- | --- | --- | --- |
+| nothing | 0.1% | 1 to 5% | - |
+| 19 windows | 1.3% | 8 to 13% | 5% |
+| one window | 3.9% | 7 to 8% | 7% |
+| one per screen | 3.9 to 4.0% | 8 to 9% | 5% |
+
+So on Windows one window costs the compositor about three times the GPU of a window per section (it
+blends the whole large window over the game), and no less CPU: the opposite of the Mac. Small on that PC,
+but the ratio holds on weaker GPUs, so Windows keeps a window per section (decided with the user on
+2026-11-16), and one tint per group there is a small window of its own behind each group.
 
 ## Every car of a race, for yellow flags (`tsu_race_recorder.py`, macOS and Windows)
 

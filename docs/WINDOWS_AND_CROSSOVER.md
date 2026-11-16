@@ -1,6 +1,6 @@
 # Windows, and TurboHUD inside CrossOver
 
-State: 2026-11-15 (first written 2026-11-09). Two connected questions: what TurboHUD still needs
+State: 2026-11-16 (first written 2026-11-09). Two connected questions: what TurboHUD still needs
 on Windows, and whether TurboHUD on the Mac could run as a Windows app inside TSU's CrossOver
 bottle instead of as a native Mac app beside it. Windows live data has been built and used since
 2026-11-11; the trial inside the bottle (backlog item 1b) is still only the analysis and plan below.
@@ -9,7 +9,7 @@ bottle instead of as a native Mac app beside it. Windows live data has been buil
 
 | Part | State |
 | --- | --- |
-| Overlay windows (Qt: on top, see-through, click-through) | built, run on the user's PC with an online race (2026-11-11); not yet checked over Fullscreen and Fullscreen Exclusive |
+| Overlay windows (Qt: on top, see-through, click-through) | built, run on the user's PC with an online race (2026-11-11); shown over TSU's Fullscreen (without Exclusive) on 2026-11-16 (the window count probe); Fullscreen Exclusive not yet checked. A window per section stays: one window per screen costs DWM about three times the GPU there (`experiments/README.md`, window count probe) |
 | Shortcuts (`turbohud/overlay/windows.py`: `RegisterHotKey`, focus hand-back) | built; Ctrl+Shift+L worked on the user's PC once AMD Adrenalin let go of it, Ctrl+Shift+F12 as the spare |
 | Reading TSU (`turbohud/tsu/winmemory.py`: `find_process`, `WindowsProcess`, page cache, paced search, `connect`) | built; the Python fallback where the Rust reader is missing, and the Python reader in the bottle (`TURBOHUD_PY_READER=1`) |
 | Live race in the app | built 2026-11-11, run on the user's PC since then (an online race found once a hang in the search was fixed; the search reads with 4 threads since 2026-11-12, about 6 s for all of TSU's data): `start_live_race` starts the Rust reader (`reader/`) beside TSU (`LocalReader` in `turbohud/tsu/bottle.py`; the pipe's answers taken by a thread, as Windows cannot select on a pipe), else, where it is missing, reads in Python from TurboHUD itself (`winmemory.connect`). The Windows build ships the Rust reader |
@@ -22,10 +22,10 @@ Windows lets a program read another of the same user (`OpenProcess` with `PROCES
 `ReadProcessMemory`), so no probe and no launch option are needed.
 
 To do on Windows (backlog item 1):
-1. Over TSU, windowed, Fullscreen and Fullscreen Exclusive: the built app, the Qt probe
-   (`experiments/run_qt_overlay_probe.cmd`) and the original probe; results in
-   `experiments/README.md`. Expected: windowed and Fullscreen work; Exclusive may not, and an
-   overlay that injects into the game is out of scope.
+1. Over TSU in Fullscreen Exclusive (Fullscreen without it works, 2026-11-16), and windowed: the
+   built app, the Qt probe (`experiments/run_qt_overlay_probe.cmd`) and the original probe; results
+   in `experiments/README.md`. Exclusive may not work, and an overlay that injects into the game is
+   out of scope.
 2. The HUD through a whole race offline and hosting (an online race as a client and a Custom
    race have been read), and listening for stutter during the search at the start of an
    online race.
