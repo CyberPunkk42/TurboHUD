@@ -564,6 +564,7 @@ class SectionTests(unittest.TestCase):
                 'laptimes',
                 'yellowflag',
                 'shortcut',
+                'leader',
                 'blueflag',
                 'deltabar',
                 'radar',

@@ -282,6 +282,15 @@ An orange box: **SHORTCUT** with the seconds left while TSU slows you for taking
 shortcut (on tracks whose maker defined shortcuts), and **JUMP START** while TSU holds you
 for a false start (throttle on the red lights) and 1.5 s more.
 
+**Race leader**
+A banner shaded from grey to black, as on F1's TV graphics: **New Race Leader - name** when
+another driver takes the lead and keeps it for 5 seconds (so a lead that changes hands and
+back, or a moment's shuffle in the order, shows nothing), and **Race Winner - name** with a
+checkered flag at its right end as soon as the winner crosses the line. Each fades in, stays and fades out, 6
+seconds in all. Not at the start (the leader off the grid is no change), nor in hotlapping or
+the arena modes; spectating, it shows too. Between banners nothing of it is drawn. Untick it
+in the panel if you do not want it; ticked again, it starts from the leader at that moment.
+
 ### Other
 
 **Clock**

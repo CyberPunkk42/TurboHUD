@@ -34,7 +34,7 @@ from dataclasses import dataclass
 
 from turbohud.core.class_registry import CLASS_TAGS, class_colors, class_tag, paler, shown_code
 from turbohud.core.flags import flag_code, flag_text
-from turbohud.core.hud import NEARBY_SHORT_ROWS, Row, Sectors, blend, clock, local_time_rows
+from turbohud.core.hud import BANNER_TEXT, NEARBY_SHORT_ROWS, Row, Sectors, blend, clock, local_time_rows
 from turbohud.core.il2cpp import ARRAY_DATA, ARRAY_LENGTH, LIST_ITEMS, SIMPLE_TYPES, NotFound, ReadError
 from turbohud.core.settings import LAP_COLUMNS
 from turbohud.core.trackmap import OFF_TRACK_LAYERS, off_the_track
@@ -2432,6 +2432,7 @@ def race_sections(
     retirements=None,
     radar_cockpit_only=False,
     nearby_short=False,
+    lead_changes=None,
 ):
     """{section name: rows} for a live-reader snapshot (see core.hud.RACE_SECTIONS); a
     section with nothing to show has no rows. Nothing before the grid: in the menus, the
@@ -2445,14 +2446,24 @@ def race_sections(
     the cars ringed on the track map; `nearby_short`: Nearby cars' short list; `class_tags`: the clan tags that name a class, for the
     lap times of a multi-class race (none: no classes); `shortcuts` (a ShortcutPenalties)
     gives the shortcut section and CUT in the lap times; `retirements` (a Retirements) DNF in
-    the lists."""
+    the lists; `lead_changes` (a core.leader.LeadChanges) the race leader banner, under 'leader'
+    and its Banner under 'banner'."""
     if not on_grid(snapshot, now):
         return {}
     state = snapshot.state
     retired = retirements.update(state) if retirements is not None and state.players else frozenset()
     if state.spectating:
         return _watching_sections(
-            snapshot, now, standings, track_map, class_tags, clan_tags, columns, retired, nearby_short
+            snapshot,
+            now,
+            standings,
+            track_map,
+            class_tags,
+            clan_tags,
+            columns,
+            retired,
+            nearby_short,
+            lead_changes,
         )
     if state.finished or state.laps_to_finish and state.laps_completed >= state.laps_to_finish:
         # Finished: the lap sections say so, and the rest stays (the player list above
@@ -2516,6 +2527,7 @@ def race_sections(
         rows = shortcut_rows(state, cuts or {}, jumped)
         if rows:
             sections['shortcut'] = rows
+        sections.update(leader_banner(state, order, clock_now(snapshot, now), lead_changes))
         opacity = blue_flag_opacity(
             blue_flag(state.players, clock_now(snapshot, now), blue_within), blue_within
         )
@@ -2563,6 +2575,7 @@ def _watching_sections(
     columns=LAP_COLUMNS,
     retired=frozenset(),
     nearby_short=False,
+    lead_changes=None,
 ):
     """What a spectator sees: the race, with the leader's lap, the player list with the
     gaps to the leader, the lap times and the map; nothing about a car of their own."""
@@ -2588,11 +2601,37 @@ def _watching_sections(
             wet=is_wet(state.track),
             retired=retired,
         )
+        sections.update(leader_banner(state, order, clock_now(snapshot, now), lead_changes))
         if track_map is not None and state.on_a_track:
             shown = track_map.update(state, order)
             if shown is not None:
                 sections['trackmap'] = shown
     return sections
+
+
+def leader_banner(state, order, clock, lead_changes):
+    """{'leader': [its row], 'banner': Banner} while the race leader banner shows, else {}:
+    only in a race on a track (no leader in hotlapping, nor in an arena event). `clock`: the race
+    clock in its units (clock_now)."""
+    if lead_changes is None or state.hotlapping or not state.on_a_track:
+        return {}
+
+    def finish_at(player):
+        finish = player.finish_time
+        return None if finish is None else finish / UNITS_PER_SECOND
+
+    if order is None:
+        order = ranked(state.players, False, state.gates)
+    banner = lead_changes.update(order, clock / UNITS_PER_SECOND, finish_at)
+    if banner is None:
+        return {}
+    name = banner.name or '?'
+    if len(name) > MAX_NAME_SHOWN:
+        name = name[: MAX_NAME_SHOWN - 1] + '…'
+    return {
+        'leader': [Row(f'{banner.title}  -  {name}', 'title', BANNER_TEXT, centred=True)],
+        'banner': banner,
+    }
 
 
 def leader_lap(state):

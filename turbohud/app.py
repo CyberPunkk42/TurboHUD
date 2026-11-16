@@ -520,6 +520,7 @@ def run(args, folder):
     pad = None
     track_map = None  # the live race's TrackMap, for Relearn
     if live is not None:
+        from turbohud.core.leader import LeadChanges
         from turbohud.core.race import (
             RACING,
             DeltaBar,
@@ -558,6 +559,7 @@ def run(args, folder):
         race_starts = RaceStarts()
         event_modes = EventModes()
         retirements = Retirements()
+        lead_changes = LeadChanges()
 
         def contents():
             speed = windows.get('speed')
@@ -572,6 +574,12 @@ def run(args, folder):
             track_map.others = settings.map_others
             radar.within = settings.radar_seconds
             radar.cone = settings.radar_cone
+            # The race leader banner follows the leader only while it is ticked; ticked again, it
+            # starts afresh, so a lead change from while it was off is not told late.
+            leader = windows.get('leader')
+            following = leader is not None and leader.wanted
+            if not following:
+                lead_changes.reset()
             current = race_sections(
                 snapshot,
                 time.monotonic(),
@@ -590,6 +598,7 @@ def run(args, folder):
                 retirements,
                 settings.radar_cockpit_only,
                 settings.nearby_short,
+                lead_changes if following else None,
             )
             if not settings.yellow_flags:
                 yellow_flags.reset()  # turned on again, it starts afresh
@@ -689,7 +698,8 @@ def run(args, folder):
         # Sections added in a later version: below the ones the player already placed.
         defaults.update(below(new, saved_places, first, screens))
     for section in layout:
-        if section.bar:  # the blue flag, the radar and the track map: their own spots
+        if section.bar or section.banner:
+            # The blue flag, the radar and the track map: their own spots; the race leader banner too.
             defaults[section.name] = drawing_place(section, first[section.name], screen or (0, 0, 1920, 1080))
 
     def with_columns(window):
@@ -2118,6 +2128,8 @@ def run(args, folder):
                 blue = None  # shown as the yellow box's frame instead
             elif name == 'yellowflag' and not together:
                 blue = None  # no frame
+            elif name == 'leader':
+                blue = None  # the banner draws no blue frame
             if window.show_content(
                 current.get(name, []),
                 current.get('pedals'),
@@ -2126,6 +2138,7 @@ def run(args, folder):
                 current.get('trackmap'),
                 current.get('levels', {}).get(name),
                 current.get('deltaview'),
+                current.get('banner') if name == 'leader' else None,
             ):
                 window.update()  # only what changed: drawing every section each frame stutters
         if group_tints is not None and locked:

@@ -17,7 +17,7 @@ from dataclasses import replace
 from typing import ClassVar
 
 from PySide6.QtCore import QPointF, QRect, QRectF, Qt, QTimer, Signal
-from PySide6.QtGui import QColor, QFontInfo, QImage, QPainter, QPainterPath, QPen, QPolygonF
+from PySide6.QtGui import QColor, QFontInfo, QImage, QLinearGradient, QPainter, QPainterPath, QPen, QPolygonF
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -34,6 +34,7 @@ from PySide6.QtWidgets import (
 )
 
 from turbohud.core.hud import (
+    BANNER_SHADE,
     FONT_SIZES,
     MARGIN,
     SPACINGS,
@@ -44,6 +45,7 @@ from turbohud.core.hud import (
     content_shift,
     content_size,
     drawn_scale,
+    end_room,
     fitting_scale,
     font_for_height,
     font_scale,
@@ -106,6 +108,8 @@ MIN_HEIGHT = 10  # a text section's box: any shorter and there is nothing left t
 BLUE_FLAG = (0, 0, 128)  # navy
 BLUE_FLAG_EDGE = (0, 0, 64)  # its outline, a darker blue
 BLUE_FLAG_EDGE_WIDTH = 2
+CHECKER_ROWS = 4  # the race winner's checkered flag: squares down each end of the banner
+CHECKER_LIGHT, CHECKER_DARK = '#f2f2f2', '#111111'
 BLUE_FRAME_EDGE = 3  # the blue frame's top and bottom on the yellow box, in pixels at scale 1
 BACKDROP = (0, 0, 0, 40)  # the light tint behind a section's text (option), RGBA
 BLUE_SAMPLE = 0.6  # the bar's opacity in move mode, to place it
@@ -257,6 +261,7 @@ class SectionWindow(QWidget):
         self.group = ''  # sections of the same group move together (move mode)
         self.text_centred = False  # its text in the middle of its box (an option)
         self.delta_view = None  # the delta bar's content (a DeltaBarView)
+        self.banner = None  # the race leader banner's core.leader.Banner while it shows
         self.radar_cone = True  # the radar's sample in move mode shows slipstream cones (an option)
         self.sector_bars = True  # a section with sector bars shows them (an option)
         # A text section's text size in pixels (core.hud.font_scale): the app sets it, and its box
@@ -377,17 +382,43 @@ class SectionWindow(QWidget):
             super().update(*args)
 
     def show_content(
-        self, rows, pedals=None, opacity=None, radar=None, trackmap=None, level=None, delta_view=None
+        self,
+        rows,
+        pedals=None,
+        opacity=None,
+        radar=None,
+        trackmap=None,
+        level=None,
+        delta_view=None,
+        banner=None,
     ):
         """Take the latest content; True if it differs from what is shown, so the
         section needs drawing again. A hidden section keeps the content but needs no
         drawing: showing it draws what it has. Locking, showing, the theme and the tint
         ask for a redraw themselves."""
-        content = (rows, pedals, opacity, radar, trackmap, level, delta_view)
-        shown = (self.rows, self.pedals, self.opacity, self.radar, self.trackmap, self.level, self.delta_view)
+        content = (rows, pedals, opacity, radar, trackmap, level, delta_view, banner)
+        shown = (
+            self.rows,
+            self.pedals,
+            self.opacity,
+            self.radar,
+            self.trackmap,
+            self.level,
+            self.delta_view,
+            self.banner,
+        )
         if content == shown:
             return False
-        self.rows, self.pedals, self.opacity, self.radar, self.trackmap, self.level, self.delta_view = content
+        (
+            self.rows,
+            self.pedals,
+            self.opacity,
+            self.radar,
+            self.trackmap,
+            self.level,
+            self.delta_view,
+            self.banner,
+        ) = content
         return self.wanted
 
     def set_locked(self, locked):
@@ -587,6 +618,12 @@ class SectionWindow(QWidget):
             painter.setBrush(QColor(*TINT))
             painter.drawRoundedRect(QRectF(self.rect()).adjusted(1, 1, -1, -1), 8, 8)
             rows = rows or list(self.section.samples[0])  # something to place, also before a race
+        painter.save()  # the race leader banner fades as a whole: restored at the end
+        winner = False
+        if self.section.banner and self.locked and self.banner is not None:
+            painter.setOpacity(min(max(self.banner.opacity, 0.0), 1.0))
+            winner = self.banner.winner
+        inset = end_room(self.section, self.height())  # after the text: the winner's checkered flag
         bars = pedal_space(self.theme.scale) if self.section.pedals else 0
         if self.font is not None:
             # Its text size, whatever the box (text_box fits it); only a live text wider than the box
@@ -594,7 +631,7 @@ class SectionWindow(QWidget):
             scale = fitting_scale(
                 rows,
                 font_scale(self.font),
-                self.width(),
+                self.width() - 2 * inset,
                 text_width,
                 self.section.spacing,
                 self.section.pedals,
@@ -612,9 +649,14 @@ class SectionWindow(QWidget):
         left = 0
         down = content_shift(self.section, self.height(), scale, text_ink)
         if self.section.background and rows:  # its own colour, also in move mode, to see it
-            self._paint_backdrop(painter, self.section.background)
-            if self.opacity is not None:  # the blue flag too (turbohud.core.flagstack): a blue frame
-                self._paint_blue_frame(painter, scale)
+            if self.section.banner:
+                self._paint_shade(painter)
+            else:
+                self._paint_backdrop(painter, self.section.background)
+            if winner:
+                self._paint_checkers(painter, inset)
+            if self.opacity is not None and not self.section.banner:
+                self._paint_blue_frame(painter, scale)  # the blue flag too (turbohud.core.flagstack)
         elif self.locked and self.backdrop and rows and own_tint:
             self._paint_backdrop(painter)
         if self.section.pedals and rows:  # no bars without a speed (menu, no game)
@@ -652,7 +694,7 @@ class SectionWindow(QWidget):
             theme,
             scale,
             left,
-            self.width() - left,
+            self.width() - left - inset,
             centre,
             reserve,
             snug=self.section.snug,
@@ -681,6 +723,7 @@ class SectionWindow(QWidget):
                     draw_level(painter, level_bar(self.width() - 2 * inner, content_height, scale, *level))
                 painter.translate(-inner, 0)
         painter.translate(0, -down)
+        painter.restore()
 
     def _paint_backdrop(self, painter, color=None):
         """The light tint behind a section's text, filling the section's whole box: one that
@@ -692,6 +735,39 @@ class SectionWindow(QWidget):
         painter.setPen(Qt.NoPen)
         painter.setBrush(QColor(color) if color else QColor(*BACKDROP))
         painter.drawRoundedRect(QRectF(self.rect()), 6, 6)
+
+    def _paint_shade(self, painter):
+        """The race leader banner's box, shaded from grey at the left to black at the right
+        (BANNER_SHADE), where the name goes."""
+        shade = QLinearGradient(0, 0, self.width(), 0)
+        shade.setColorAt(0.0, QColor(BANNER_SHADE[0]))
+        shade.setColorAt(1.0, QColor(BANNER_SHADE[1]))
+        painter.setPen(Qt.NoPen)
+        painter.setBrush(shade)
+        painter.drawRoundedRect(QRectF(self.rect()), 6, 6)
+
+    def _paint_checkers(self, painter, width):
+        """The race winner's checkered flag at the right end of the banner's box, `width` pixels
+        wide: CHECKER_ROWS squares down, inside the box's rounded corners."""
+        height = self.height()
+        if width <= 0 or height <= 0:
+            return
+        size = height / CHECKER_ROWS
+        painter.save()
+        box = QPainterPath()
+        box.addRoundedRect(QRectF(self.rect()), 6, 6)
+        painter.setClipPath(box)
+        painter.setPen(Qt.NoPen)
+        left = self.width() - width
+        painter.setBrush(QColor(CHECKER_LIGHT))
+        painter.drawRect(QRectF(left, 0, width, height))
+        painter.setBrush(QColor(CHECKER_DARK))
+        for column in range(math.ceil(width / size)):
+            for row in range(CHECKER_ROWS):
+                if (row + column) % 2:
+                    x = left + column * size
+                    painter.drawRect(QRectF(x, row * size, min(size, left + width - x), size))
+        painter.restore()
 
     def _paint_blue_frame(self, painter, scale):
         """The blue flag as a frame round this section's box, at the flag's fade: wide at the
