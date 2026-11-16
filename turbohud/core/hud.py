@@ -1370,6 +1370,17 @@ class GroupMover:
 
 FRAMES_EVERY = 30.0  # seconds between the log's lines about how the overlay draws
 RACE_FRAME_MOST = 0.1  # seconds without a read before a race frame is drawn anyway
+# A race frame is as far behind the last as one read interval (one frame a read), so one is logged
+# as slow only past this many intervals, and never below stalls.STALL (slow_frame_after).
+SLOW_FRAME_INTERVALS = 1.5
+
+
+def slow_frame_after(reads_per_second):
+    """Seconds after the last at which a frame with a new read is logged as slow. A fixed 0.1 s was
+    made for 20 reads a second (frames 50 ms apart); at the default of 10 since 2026-11-15 frames come
+    100 to 115 ms apart, and nearly each was logged (found on 2026-11-16, about 9 lines a second in a
+    race). 1.5 intervals: 150 ms at 10 a second, still 100 ms at 20."""
+    return max(STALL, SLOW_FRAME_INTERVALS / reads_per_second)
 
 
 class FramePacer:
@@ -1399,14 +1410,15 @@ class FrameTimes:
     the seconds it spent on the content, on drawing since the last one, and whether it
     has a new read.
 
-    For a tester's stutter (2026-11-13) also: a frame with a new read at least stalls.STALL
-    after the last is logged at once (one without waited for the reader, which logs its slow
+    For a tester's stutter (2026-11-13) also: a frame with a new read at least `slow_after`
+    (slow_frame_after, by the reads a second) after the last is logged at once (one without waited for the reader, which logs its slow
     reads; at a race's end they came every 100 to 150 ms and filled the log), with its time and how much of the wait was garbage collection (`gc_during`,
     on `clock`); `parts()` gives and clears each section's drawing seconds, logged with the
     summary as milliseconds a frame; `on_flush` is called with each summary (the collections')."""
 
     def __init__(self, clock, log_line, gc_during=None, wall=time.time, parts=None, on_flush=None):
         self._clock = clock
+        self.slow_after = STALL  # a frame this far after the last is slow (slow_frame_after)
         self._log_line = log_line
         self._gc_during = gc_during
         self._wall = wall
@@ -1424,7 +1436,7 @@ class FrameTimes:
         if self._last is not None:
             gap = now - self._last
             self._gaps.append(gap)
-            if gap >= STALL and fresh:
+            if gap >= self.slow_after and fresh:
                 self._slow(gap, now, worked, drawn)
         else:
             self._since = now
