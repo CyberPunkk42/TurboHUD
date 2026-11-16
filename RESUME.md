@@ -67,6 +67,9 @@
 
 ## Next steps
 **Start with `docs/CONTINUE_HERE.md`**: what is left to test. Then `docs/IMPROVEMENT_BACKLOG.md`. In short:
+- New on 2026-11-16: the race leader banner (`feature/lead-change`), not yet seen in a race: a pass for the lead
+  that holds and one undone within 5 s, the finish, online, and how it reads over TSU. The user may give a
+  checkered flag picture for the winner's banner (drawn squares until then).
 - First (where the session of 2026-11-10 stopped): the one-window HUD works on the Mac but showed no gain
   in FPS; compare it with a window each in the same race (`docs/CONTINUE_HERE.md`, "Next session"). Build
   2026.11.10 went to the tester with new instructions (the same comparison, and the Rust reader). Race reads merge pages further apart since 2026-11-10 (31
@@ -103,6 +106,9 @@
    and one tint per group gets a small window behind each group there (item 3b).
 
 ## Recent changes
+  - 2026-11-16: The docs brought up to date for the race leader banner (`docs/lead-change-docs`, asked for by
+    the user): `docs/STACK.md`'s module list and `docs/HOW_IT_WORKS.md`'s tables of sections and files name it,
+    and `RESUME.md`'s "Next steps" says what to try.
   - 2026-11-16: The race leader banner (`feature/lead-change`, asked for by the user): a new section,
     **Race leader** (under Race in the panel, ticked like the others), as on F1's TV graphics. "New Race Leader -
     name" once a new driver has kept the lead for 5 s (`core/leader.py`, `LEAD_HOLD`; no change counts until the
