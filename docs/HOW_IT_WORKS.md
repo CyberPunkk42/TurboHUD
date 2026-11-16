@@ -37,7 +37,7 @@ off. On Linux and Windows each section keeps its own window for now.
 | Yellow flag | a car off the track, slow, stopped, spun, the wrong way or put back in your sector or the next, by sector and driver; CAR STOPPED AHEAD or WRONG WAY AHEAD for one up to 5 s ahead on the road |
 | Penalties | SHORTCUT with the seconds TSU slows you for a shortcut; JUMP START for a false start |
 | Race leader | a banner shaded grey to black for 6 s: "New Race Leader - name" once a new driver has led for 5 s, "Race Winner - name" with a checkered flag as the winner finishes; from the standings' order, with no read of its own |
-| Radar | your car and the cars around you, when one is within 0.5 s behind, beside or ahead: red beside, yellow closing in, grey not counting, a class colour for another class, arrows for cars past its edge; the slipstream behind cars ahead and the car you draft outlined; by default only in cockpit cameras |
+| Radar | your car and the cars around you, when one is within 0.5 s behind, beside or ahead: red beside, yellow closing in, grey not counting, a class colour for another class, arrows for cars past its edge; the slipstream behind cars ahead and the car you draft outlined; cars at their real size, zoomed in when they are close; by default only in cockpit cameras |
 | Track map | the track from above, with you, the race leader (gold), the next car ahead (red), the next car behind (green), backmarkers between you and the car ahead (small, bluish), and as an option the other cars (faint grey) |
 | Clock | your computer's clock, once TSU runs |
 | Time since start | how long TurboHUD has run; only on a system TurboHUD cannot read TSU on, instead of the race sections |
@@ -338,8 +338,10 @@ gives no control over the car.
   place meets each new checkpoint line, so it settles onto the road within about a lap
   even where the lines are long and off to one side (checked live: about 2 units from
   the real place, against about 7 from the lines' middles).
-- The car size on the radar (4.0 x 1.4 units) was measured with one car model (Tatuus
-  FA01); other models may differ a little.
+- The car size on the radar (4.0 x 1.4 units, drawn at that size since 2026-11-16) was measured
+  with one car model (Tatuus FA01); other models may differ a little. Online, the other cars'
+  positions come about 10 times a second and are carried on between, so a car may sit a little
+  ahead of or behind where it is.
 - A game update can rename classes or fields. TurboHUD then shows "waiting" instead of
   wrong numbers, and the names need updating.
 

@@ -4306,14 +4306,22 @@ CAR_WIDTH = 1.4
 RADAR_FROM = 0.5  # seconds behind or ahead: the radar appears, faint
 RADAR_FULL = 0.1  # seconds behind or alongside: fully visible
 RADAR_FAINT = 0.2  # its opacity at RADAR_FROM
-RADAR_CAR_SCALE = 1.4  # cars are drawn this much larger than their real size on the radar
-RADAR_CAR_LEAST = 0.03  # and at least this wide, as a share of the radar
+# Cars are drawn at their real size (1.4 times until 2026-11-16: two cars still half a metre apart
+# looked as if they touched, reported by the user); zoomed in when cars are close (radar_zoom) to
+# be seen as well.
+RADAR_CAR_SCALE = 1.0
+RADAR_CAR_LEAST = 0.03  # and at least this wide, as a share of the radar (zoomed out only)
 RADAR_SIDE = 8.0  # sideways reach: a car farther to the side (another part of the track) does not count
 RADAR_VIEW = 20.0  # the radar shows at least this far behind; more at speed (radar_view)
 # ... but never more than this (6 car lengths), so cars stay large enough to see (players found
 # them too small, zoomed out for a long warning time; the user, 2026-11-11). A car that counts beyond it
 # shows as an arrow at the radar's edge.
 RADAR_VIEW_MAX = 24.0
+# Zoomed in on the cars that count (asked for by the user on 2026-11-16, with the real car size): as
+# far as the farthest of them needs, with this much room round them, but never closer than RADAR_ZOOM_LEAST.
+RADAR_ZOOM_ROOM = 1.5
+RADAR_ZOOM_LEAST = 10.0  # game units behind and ahead: 2.5 car lengths
+RADAR_ZOOM_EASE = 0.25  # share of the way in it goes per read; out at once, so no car leaves the edge
 RADAR_MIN_SPEED = 3.0  # slower (standing on the grid): no radar, the direction is unknown
 HEADING_SPAN = 0.3  # seconds of movement a car's direction and speed are taken from (no game values)
 MAX_CARRY = 0.25  # seconds a car's position is carried on along its velocity since its last update
@@ -4357,6 +4365,17 @@ def radar_view(speed, within=RADAR_FROM):
     """How far behind (and ahead) the radar shows at `speed`: as far as a car counts
     (radar_reach), but at most RADAR_VIEW_MAX; a car beyond is an arrow at the edge."""
     return min(radar_reach(speed, within), RADAR_VIEW_MAX)
+
+
+def radar_zoom(blips, view):
+    """How far behind and ahead the radar shows: in on the cars that count (a time gap) and are
+    within `view` (radar_view), so the room between them is seen; `view` with none. The radar is
+    square, so the side counts as much as ahead."""
+    near = [b for b in blips if b.seconds is not None and abs(b.ahead) <= view]
+    if not near:
+        return view
+    need = max(max(abs(b.ahead) + CAR_LENGTH / 2, abs(b.side) + CAR_WIDTH / 2) for b in near)
+    return min(view, max(RADAR_ZOOM_LEAST, need * RADAR_ZOOM_ROOM))
 
 
 def radar_edge_blips(view):
@@ -4553,6 +4572,7 @@ class Radar:
         self.read_at = None
         self.opacity = 0.0
         self.counted_at = None  # read time a car last counted
+        self.view = None  # how far it shows now (radar_zoom, eased); None: not shown
 
     def _record(self, players, read_at):
         names = set()
@@ -4607,7 +4627,7 @@ class Radar:
         me = next((p for p in players if p.local), None)
         mine = None if me is None or me.in_pit or me.finished else self._motion(me, read_at)
         if mine is None or mine[2] < RADAR_MIN_SPEED:
-            self.opacity, self.counted_at = 0.0, None
+            self.opacity, self.counted_at, self.view = 0.0, None, None
             return None
         position, direction, speed = mine
         classes = classes or {}
@@ -4636,10 +4656,17 @@ class Radar:
                 self.opacity = max(RADAR_FAINT, self.opacity + (RADAR_FAINT - self.opacity) * RADAR_EASE)
             else:
                 self.opacity, self.counted_at = 0.0, None
+            target = radar_zoom(blips, radar_view(speed, self.within))
+            if self.view is None or target >= self.view:
+                self.view = target  # out at once: a car coming up stays on the radar
+            else:
+                self.view += (target - self.view) * RADAR_ZOOM_EASE
         if self.opacity <= 0:
+            self.view = None
             return None
+        view = self.view if self.view is not None else radar_view(speed, self.within)
         cone = (draft.reach, draft.angle) if draft is not None and draft.reach is not None else None
-        return RadarView(self.opacity, blips, radar_view(speed, self.within), cone, self.within)
+        return RadarView(self.opacity, blips, view, cone, self.within)
 
 
 def race_rows(snapshot, now):
