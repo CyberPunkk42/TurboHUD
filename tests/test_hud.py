@@ -984,6 +984,18 @@ class CentreTests(unittest.TestCase):
         self.assertEqual(hud.place_text((1500, -1300, 480, 24), self.SCREENS), 'X 220  Y 140  480×24')
         self.assertEqual(hud.place_text((10.4, 20.6, 100, 50), []), 'X 10  Y 21  100×50')  # no screens
 
+    def test_on_the_design_screen_the_place_label_is_on_the_designed_size(self):
+        # The design screen shows another size in a frame, to scale: the label tells where the section
+        # goes on that size, as Save design writes it, not on this screen (found on 2026-11-16).
+        from turbohud.core import presets
+        from turbohud.core.settings import SectionPlace
+
+        frame, scale = (1000, 200, 960, 540), 0.5  # 1920x1080 shown at 50%
+        box = (1100, 300, 200, 51)
+        self.assertEqual(hud.place_text(box, self.SCREENS, (frame, scale)), 'X 200  Y 200  400×102')
+        saved = presets.out_of_frame({'fuel': SectionPlace(*box)}, frame, scale, (1920, 1080))['fuel']
+        self.assertEqual((saved.x, saved.y, saved.width, saved.height), (200, 200, 400, 102))
+
     def test_only_the_drawings_have_centre_buttons(self):
         self.assertEqual(
             {s.name for s in hud.RACE_SECTIONS if s.drawing}, {'blueflag', 'deltabar', 'radar', 'trackmap'}

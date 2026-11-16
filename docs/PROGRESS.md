@@ -2242,3 +2242,10 @@ its "Recent changes".
 - 2026-11-16: The memory test for Linux skipped on Windows (`fix/memory-test-windows`): it asked for the page size,
   which Windows' Python does not have; TurboHUD itself reads its memory there another way. All tests pass on
   Windows again (1344).
+- 2026-11-16: Two problems with the place label in move mode (`fix/place-label-design`, found the same day): on the
+  design screen it gave the section's place on this screen, not on the size being designed for; now it gives the
+  place and size Save design writes (the same sums as `presets.out_of_frame`). And a preset, Undo, Redo or the
+  design screen moving many sections at once put a label on each; now sections TurboHUD moves itself show none
+  for the second it treats such moves as its own (`apply_places`, as Wayland reports them late). Tests, one
+  checking the label against Save design's sums; with a real window on Windows, where moves are reported a
+  moment later, too. Not yet tried by hand in move mode.

@@ -1588,6 +1588,7 @@ def run(args, folder):
         for name, place in places.items():
             window = windows[name]
             box = (place.x, place.y, place.width, place.height)
+            window.quiet_place(until)  # moved by TurboHUD, not dragged: no place label
             move_window(window, box, settle=True)
             mover.known[name] = box
             mover.pending[name] = (box, until)
@@ -1728,6 +1729,8 @@ def run(args, folder):
         move_window(design_frame_window, frame, settle=True)
         design_frame_window.show()
         native.raise_window(design_frame_window)
+        for window in windows.values():
+            window.design = (frame, scale)  # its place label on the size being designed for
         load_layout(layout_presets.into_frame(laid, frame, scale), f'designing for {width}x{height}')
         for window in windows.values():
             window.show_on_top()  # above the frame
@@ -1768,6 +1771,8 @@ def run(args, folder):
         design = None
         if design_frame_window is not None:
             design_frame_window.hide()
+        for window in windows.values():
+            window.design = None  # its place label on this screen again
         sections, _kept, font_size = own
         settings = replace(settings, font_size=font_size)
         load_layout(sections, 'own layout back after designing')

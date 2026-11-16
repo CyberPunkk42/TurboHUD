@@ -1618,10 +1618,19 @@ def screen_of(place, screens):
     return main_screen(screens)
 
 
-def place_text(place, screens):
+def place_text(place, screens, design=None):
     """What a section shows in move mode while it is moved, resized or nudged (asked for by the user
     on 2026-11-16): where its top-left corner is, counted from the top-left of the screen it is on
-    (screen_of), and its size, as 'X 1580  Y 1110  506×270'."""
+    (screen_of), and its size, as 'X 1580  Y 1110  506×270'. On the design screen (`design`: the
+    frame (x, y, width, height) and the scale it is shown at) its place and size on the screen size
+    being designed for, as Save design writes them (presets.out_of_frame): not on this screen."""
+    if design is not None:
+        frame, scale = design
+        x, y, width, height = place
+        return (
+            f'X {round((x - frame[0]) / scale)}  Y {round((y - frame[1]) / scale)}  '
+            f'{max(round(width / scale), 1)}×{max(round(height / scale), 1)}'
+        )
     x, y, width, height = (round(v) for v in place)
     screen = screen_of((x, y, width, height), screens)
     left, top = (screen[0], screen[1]) if screen else (0, 0)
