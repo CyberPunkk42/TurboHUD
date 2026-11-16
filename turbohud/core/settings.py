@@ -114,6 +114,13 @@ def _class_tags(value):
     return tags
 
 
+def group_tint_default(platform=None):
+    """One tint for each group before the player chose: on (the Mac, since 2026-11-15), but off on
+    Windows, where it is a window of its own behind each group, until the user has seen it over TSU
+    (asked for by the user on 2026-11-16, so no player gets it untried)."""
+    return (sys.platform if platform is None else platform) != 'win32'
+
+
 @dataclass(frozen=True)
 class Settings:
     placement: tuple = DEFAULT_PLACEMENT  # the whole HUD before it had sections; new sections start here
@@ -121,9 +128,10 @@ class Settings:
     sections: dict = field(default_factory=dict)  # section name -> SectionPlace
     speed_unit: str = 'kmh'  # 'kmh' or 'mph'
     backdrop: bool = False  # every section with a tint has it on (see SectionPlace.tint)
-    # One tint behind each group's tinted sections, the room between them too, while locked; where the
-    # sections are drawn in one window (the Mac). Asked for by the user on 2026-11-15, on by default.
-    group_tint: bool = True
+    # One tint behind each group's tinted sections, the room between them too, while locked: on the Mac's
+    # one window (asked for by the user on 2026-11-15) and, since 2026-11-16, a window behind each group on
+    # Windows. Its default by system: group_tint_default.
+    group_tint: bool = field(default_factory=group_tint_default)
     grid: bool = (
         True  # move mode's grid on the main screen (a switch since 2026-11-16, asked for by the user)
     )
@@ -355,7 +363,7 @@ def load_settings(path):
         sections=_sections(data.get('sections'), data.get('backdrop') is True),
         speed_unit=data.get('speed_unit') if data.get('speed_unit') in SPEED_UNITS else 'kmh',
         backdrop=data.get('backdrop') is True,
-        group_tint=data.get('group_tint') is not False,
+        group_tint=data['group_tint'] if isinstance(data.get('group_tint'), bool) else group_tint_default(),
         grid=data.get('grid') is not False,
         map_others=data.get('map_others') is True,
         nearby_short=data.get('nearby_short') is not False,

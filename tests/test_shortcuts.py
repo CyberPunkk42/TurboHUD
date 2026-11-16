@@ -37,6 +37,35 @@ class NoteTests(unittest.TestCase):
 
 
 @unittest.skipUnless(sys.platform == 'win32' and importlib.util.find_spec('PySide6'), 'Windows with Qt')
+class WindowsStackingTests(unittest.TestCase):
+    """A group's tint window goes just below the lowest shown section (2026-11-16)."""
+
+    def test_the_lowest_of_the_wanted_windows(self):
+        from turbohud.overlay import windows
+
+        self.assertEqual(windows.lowest([9, 3, 7, 5, 1], {3, 5}), 5)
+        self.assertIsNone(windows.lowest([9, 3], {4}))
+
+    def test_placed_below_without_taking_the_focus(self):
+        from turbohud.overlay import windows
+
+        def window(handle):
+            return mock.Mock(winId=mock.Mock(return_value=handle))
+
+        native = windows.Native.__new__(windows.Native)
+        with (
+            mock.patch.object(windows, 'window_order', return_value=[1, 2, 3, 4]),
+            mock.patch.object(windows.user32, 'SetWindowPos', return_value=1) as set_pos,
+        ):
+            self.assertEqual(native.place_below(window(9), [window(2), window(3)]), 'below its sections')
+            self.assertEqual(native.place_below(window(9), [window(8)]), 'nothing to go below')
+        hwnd, after, *_place, flags = set_pos.call_args.args
+        self.assertEqual((hwnd, after), (9, 3))
+        self.assertTrue(flags & windows.SWP_NOACTIVATE)
+        self.assertEqual(set_pos.call_count, 1)
+
+
+@unittest.skipUnless(sys.platform == 'win32' and importlib.util.find_spec('PySide6'), 'Windows with Qt')
 class WindowsRegistrationTests(unittest.TestCase):
     def register(self, taken):
         from turbohud.overlay import windows

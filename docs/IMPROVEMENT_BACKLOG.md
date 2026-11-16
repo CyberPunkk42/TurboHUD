@@ -166,8 +166,14 @@ presets with their shortcuts, groups, the Centre buttons, Centre text and Undo. 
 ## 3b. One tint per group on Windows and Linux (asked for on 2026-11-15)
 Done on 2026-11-15: groups A to G, Nearby cars' short list (own row kept, on by default), its bigger shipped
 text, and one tint for each group on the Mac (`feature/group-tint-mac`, a switch on by default). Left: Windows
-and Linux, where a window per section cannot draw in the gaps. Waits on item 1c: with one window there too, the
-Mac's drawing serves as it is; else the touching sides square and the windows stretched over half the gap.
+and Linux, where a window per section cannot draw in the gaps.
+Windows, built 2026-11-16 (`feature/group-tint-windows`): a window per section stays (item 1c), and each group
+with tinted sections gets a small see-through window behind them (`GroupTints`), the box round them as on the
+Mac, below every shown section (`Native.place_below`), only while locked, moved only when the box changes.
+The switch shows on Windows too, off by default there until the user has seen it over TSU: then make it on by
+default (`group_tint_default`). To try: tick it, lock, and look at a group over TSU in a race.
+Linux waits on item 1c there: with one window, the Mac's drawing serves as it is; else as on Windows
+(a Native with `group_tint_windows` and `place_below`).
 
 ## 4. Builds and release
 The Mac app for a tester (2026-11-06): build with `sh tools/get_mac_python.sh`, then

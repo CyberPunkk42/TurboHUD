@@ -1602,6 +1602,124 @@ class GroupTintTests(unittest.TestCase):
         self.assertEqual(self.alpha(150, 300), 0)  # and back: nothing left where it reached
 
 
+class GroupTintWindowTests(unittest.TestCase):
+    """One tint for each group where every section has its own window: a window behind each group
+    (Windows, asked for by the user on 2026-11-16)."""
+
+    @classmethod
+    def setUpClass(cls):
+        os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
+        if sys.platform == 'win32':  # offscreen finds no fonts there without this
+            os.environ.setdefault(
+                'QT_QPA_FONTDIR', os.path.join(os.environ.get('WINDIR', r'C:\Windows'), 'Fonts')
+            )
+        from PySide6.QtWidgets import QApplication
+
+        cls.app = QApplication.instance() or QApplication([])
+
+    def setUp(self):
+        from turbohud.core.hud import RACE_SECTIONS, Row
+        from turbohud.core.settings import Theme
+        from turbohud.overlay.window import GroupTints, SectionWindow
+
+        class Native:
+            group_tint_windows = True
+
+            def __init__(self):
+                self.placed = []  # (tint window, the windows it went below)
+
+            def raise_window(self, window):
+                return 'test'
+
+            def place_below(self, window, above):
+                self.placed.append((window, list(above)))
+                return 'test'
+
+        self.native = Native()
+        self.windows = []
+        for name, place in (
+            ('fuel', (100, 100, 200, 40)),
+            ('tires', (100, 200, 200, 40)),
+            ('health', (500, 100, 200, 40)),
+        ):
+            window = SectionWindow(self.native, Theme(), next(s for s in RACE_SECTIONS if s.name == name))
+            self.addCleanup(window.close)
+            window.setGeometry(*place)
+            window.backdrop = True
+            window.group = 'A' if name != 'health' else ''
+            window.show_on_top()
+            window.show_content([Row('Fuel 50.0%', 'medium')])
+            self.windows.append(window)
+        self.tints = GroupTints(self.native, self.windows)
+        self.addCleanup(self.tints.close)
+
+    def shown(self):
+        return {
+            group: tint.geometry().getRect() for group, tint in self.tints.tints.items() if tint.isVisible()
+        }
+
+    def test_a_group_gets_one_tint_window_round_its_sections_and_they_none_of_their_own(self):
+        from PySide6.QtCore import Qt
+
+        self.tints.set_on(True)
+        self.assertEqual(self.shown(), {'A': (100, 100, 200, 140)})  # the room between them too
+        self.assertEqual([w.under_group_tint for w in self.windows], [True, True, False])
+        tint = self.tints.tints['A']
+        self.assertTrue(tint.windowFlags() & Qt.WindowTransparentForInput)  # clicks go through
+        self.assertGreater(tint.grab().toImage().pixelColor(100, 70).alpha(), 0)  # between the two
+        own = self.windows[0].grab().toImage().pixelColor(195, 3)  # the section's corner, beside its text
+        self.assertEqual(own.alpha(), 0)  # no tint of its own over the group's
+        self.assertGreater(
+            self.windows[2].grab().toImage().pixelColor(195, 3).alpha(), 0
+        )  # no group: its own
+
+    def test_the_tint_goes_below_every_shown_section(self):
+        self.tints.set_on(True)
+        tint, above = self.native.placed[-1]
+        self.assertIs(tint, self.tints.tints['A'])
+        self.assertEqual(above, self.windows)
+
+    def test_off_no_tint_window_and_each_section_its_own_tint(self):
+        self.tints.set_on(True)
+        self.tints.set_on(False)
+        self.assertEqual(self.shown(), {})
+        self.assertFalse(any(w.under_group_tint for w in self.windows))
+
+    def test_in_move_mode_no_group_tint(self):
+        self.tints.set_on(True)
+        for window in self.windows:
+            window.locked = False
+        self.tints.refresh()
+        self.assertEqual(self.shown(), {})
+        for window in self.windows:
+            window.locked = True
+        self.tints.refresh()
+        self.assertEqual(self.shown(), {'A': (100, 100, 200, 140)})  # back once locked
+
+    def test_it_follows_a_moved_or_emptied_section_and_is_left_alone_otherwise(self):
+        from turbohud.core.hud import Row
+
+        self.tints.set_on(True)
+        placed = len(self.native.placed)
+        self.windows[0].show_content([Row('Fuel 49.9%', 'medium')])  # new text only
+        self.tints.refresh()
+        self.assertEqual(len(self.native.placed), placed)  # not moved or stacked again
+        self.windows[1].setGeometry(100, 300, 200, 40)
+        self.tints.refresh()
+        self.assertEqual(self.shown(), {'A': (100, 100, 200, 240)})
+        self.assertEqual(len(self.native.placed), placed + 1)
+        self.windows[1].show_content([])  # emptied: the group is the one section left
+        self.tints.refresh()
+        self.assertEqual(self.shown(), {'A': (100, 100, 200, 40)})
+        self.assertFalse(self.windows[1].under_group_tint)
+
+    def test_a_section_with_its_tint_off_is_left_out(self):
+        self.windows[1].backdrop = False
+        self.tints.set_on(True)
+        self.assertEqual(self.shown(), {'A': (100, 100, 200, 40)})
+        self.assertFalse(self.windows[1].under_group_tint)
+
+
 class CanvasTests(unittest.TestCase):
     """Locked, every section drawn in one window per screen (asked for on 2026-11-09: on a
     Mac 17 windows cost 35 FPS where one window with the same boxes cost 5)."""
