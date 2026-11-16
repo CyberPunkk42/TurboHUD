@@ -34,7 +34,7 @@ it goes.
 1. Press **Ctrl+Shift+L** (or **Move mode** in the icon's menu). A grid helps line things up,
    and outside a race every section shows a made-up race at Laguna Seca, so you see it filled.
 2. Drag a section, or click it and nudge it with the arrow keys (Shift: 10 px). A corner sizes
-   its text, an edge adds room.
+   its text, an edge adds room. While it moves, a label shows its X and Y on its screen and its size.
 3. The panel shows or hides each section, sets its text size and line spacing, and has **Undo**
    and **Redo**. Its **Layouts…** window keeps five named layouts (**Save** / **Load** presets 1
    to 5), can load one by itself as a recording, hotlapping, race or special event begins, and has

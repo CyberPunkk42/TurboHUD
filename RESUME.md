@@ -102,6 +102,13 @@
    and one tint per group gets a small window behind each group there (item 3b).
 
 ## Recent changes
+  - 2026-11-16: Where a section is, while it moves (`feature/move-coordinates`, asked for by the user): in move
+    mode a small label at a section's top left shows its place and size, `X 1580  Y 1110  506×270`, X and Y in
+    pixels from the top-left of the screen it is on (`hud.place_text`), while it is dragged, sized or nudged and
+    when clicked, gone 2 s after the last move and never while locked. On Windows and the Mac it follows each
+    move; on Wayland the app shows what Hyprland says at its look 5 times a second. Entering move mode alone
+    shows none. The User Guide and Quick Start say so. Tests for the text, the label, lock and Wayland; seen with
+    a real window on Windows. Not yet tried by hand on the Mac or Hyprland.
   - 2026-11-16: One tint for each group on Windows (`feature/group-tint-windows`, asked for by the user; backlog
     item 3b): Windows keeps a window per section, so each group with tinted sections gets one small see-through,
     click-through window behind them while locked, the box round them and the room between them as on the Mac,

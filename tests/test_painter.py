@@ -1720,6 +1720,77 @@ class GroupTintWindowTests(unittest.TestCase):
         self.assertFalse(self.windows[1].under_group_tint)
 
 
+class PlaceLabelTests(unittest.TestCase):
+    """Move mode: a section shows where it is and its size while it moves (asked for by the user on
+    2026-11-16)."""
+
+    @classmethod
+    def setUpClass(cls):
+        os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
+        if sys.platform == 'win32':  # offscreen finds no fonts there without this
+            os.environ.setdefault(
+                'QT_QPA_FONTDIR', os.path.join(os.environ.get('WINDIR', r'C:\Windows'), 'Fonts')
+            )
+        from PySide6.QtWidgets import QApplication
+
+        cls.app = QApplication.instance() or QApplication([])
+
+    def window(self, **native):
+        from turbohud.core.hud import RACE_SECTIONS
+        from turbohud.core.settings import Theme
+        from turbohud.overlay.window import SectionWindow
+
+        class Native:
+            def raise_window(self, window):
+                return 'test'
+
+        for name, value in native.items():
+            setattr(Native, name, value)
+        window = SectionWindow(Native(), Theme(), next(s for s in RACE_SECTIONS if s.name == 'fuel'))
+        self.addCleanup(window.close)
+        window.screens = [(0, 0, 1920, 1080), (1920, 0, 1920, 1080)]
+        window.setGeometry(100, 100, 300, 60)
+        window.show_on_top()
+        return window
+
+    def test_moved_in_move_mode_it_shows_where_it_is_on_its_screen(self):
+        window = self.window()
+        window.set_locked(False)
+        self.assertEqual(window.place_label, '')  # move mode alone: nothing moved
+        window.move(2000, 300)
+        self.assertEqual(window.place_label, 'X 80  Y 300  300×60')  # on the second screen
+        window.resize(320, 60)
+        self.assertEqual(window.place_label, 'X 80  Y 300  320×60')
+
+    def test_it_is_drawn_and_goes_after_a_moment(self):
+        window = self.window()
+        window.set_locked(False)
+        window.move(150, 100)
+        image = window.grab().toImage()
+        mark = image.pixelColor(8, 8)
+        self.assertGreater(mark.alpha(), 150)  # the label's dark box at the top left
+        self.assertTrue(window._place_timer.isActive())
+        window.hide_place()  # as the timer does
+        self.assertEqual(window.place_label, '')
+
+    def test_never_while_locked(self):
+        window = self.window()
+        window.move(200, 100)
+        self.assertEqual(window.place_label, '')
+        window.set_locked(False)
+        window.move(250, 100)
+        window.set_locked(True)
+        self.assertEqual(window.place_label, '')  # gone as it locks
+
+    def test_on_wayland_the_app_shows_what_the_desktop_says(self):
+        window = self.window(placement=lambda self, widget: (500, 400, 300, 60))
+        window.set_locked(False)
+        window.move(300, 100)
+        self.assertEqual(window.place_label, '')  # Qt does not know where it is there
+        window.show_place((500, 400, 300, 60))
+        self.assertEqual(window.place_label, 'X 500  Y 400  300×60')
+
+
 class CanvasTests(unittest.TestCase):
     """Locked, every section drawn in one window per screen (asked for on 2026-11-09: on a
     Mac 17 windows cost 35 FPS where one window with the same boxes cost 5)."""

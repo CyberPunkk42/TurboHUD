@@ -319,6 +319,10 @@ from its name while they show, and no name ever runs into the next column.
   side edge** to give it more room. A box is never narrower than its text needs at its size:
   a side dragged further in springs back. The standings are always exactly as wide as their
   columns. Rest the pointer on a section to see its name and what it shows.
+- **Where it is**: while you move, size or nudge a section, and when you click it, a small
+  label at its top left shows its place and size, for example **X 1580  Y 1110  506×270**:
+  X and Y count in pixels from the top-left corner of the screen it is on, then its width ×
+  height. It goes 2 seconds after the last move, and never shows while locked.
 
 **The panel's columns**, one row per section, under the headings Timing, Car, Race, Other:
 - **Show**: tick to show the section. **All** and **None** show or hide every section at once.

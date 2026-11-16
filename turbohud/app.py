@@ -729,6 +729,7 @@ def run(args, folder):
         window.backdrop = saved.tint if saved else default_tint(window.section, settings.backdrop)
         window.radar_cone = settings.radar_cone
         window.sector_bars = settings.sector_bars
+        window.screens = screens  # move mode shows its place counted on the screen it is on
         window.show_on_top()
         window.set_wanted(saved.visible if saved else True)
         window.group = saved.group if saved else ''
@@ -835,6 +836,7 @@ def run(args, folder):
         else:
             mover.known.clear()  # compare from where the sections are now
             mover.pending.clear()
+            seen_places.clear()  # a place label only for what moves from now on
             native.take_focus()
             history.resume(layout_state())
             show_history(history.current)
@@ -1187,6 +1189,19 @@ def run(args, folder):
         mover.known.clear()  # start comparing afresh
         save()
         log.info('section %s in group %s', name, group or '(none)')
+
+    # Move mode on Wayland: Qt does not know where the sections are, so their place labels follow
+    # what the desktop says at each look (on Windows and the Mac each window shows its own as it moves).
+    seen_places = {}
+
+    def show_moved_places(sections):
+        if getattr(native, 'placement', None) is None:
+            return
+        for name, place in sections.items():
+            box = (place.x, place.y, place.width, place.height)
+            if seen_places.get(name, box) != box:
+                windows[name].show_place(box)
+            seen_places[name] = box
 
     def placements():
         batch = getattr(native, 'placements', None)
@@ -2121,6 +2136,7 @@ def run(args, folder):
             if any(w.group for w in windows.values()):
                 follow_groups(last_seen)
             state = layout_state()
+            show_moved_places(state[0])
             keep_text_boxes({n: (p.x, p.y, p.width, p.height) for n, p in state[0].items()}, last_seen)
             history.look(state, last_seen)
             show_history(state)

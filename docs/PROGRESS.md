@@ -2232,3 +2232,10 @@ its "Recent changes".
   it over TSU (on by default on the Mac as before); the User Guide says so. Tests offscreen for the box, the
   switch, move mode, moved and emptied sections and the default per system; with real windows on the user's
   PC the tint sat right below the sections, on top and click-through. Not yet seen over TSU in a race.
+- 2026-11-16: Where a section is, while it moves (`feature/move-coordinates`, asked for by the user): in move
+  mode a small label at a section's top left shows its place and size, `X 1580  Y 1110  506×270`, X and Y in
+  pixels from the top-left of the screen it is on (`hud.place_text`), while it is dragged, sized or nudged and
+  when clicked, gone 2 s after the last move and never while locked. On Windows and the Mac it follows each
+  move; on Wayland the app shows what Hyprland says at its look 5 times a second. Entering move mode alone
+  shows none. The User Guide and Quick Start say so. Tests for the text, the label, lock and Wayland; seen with
+  a real window on Windows. Not yet tried by hand on the Mac or Hyprland.

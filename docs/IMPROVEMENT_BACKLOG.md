@@ -183,6 +183,10 @@ presets with their shortcuts, groups, the Centre buttons, Centre text and Undo. 
   (keyboard focus on Hyprland), Ctrl+Shift+4 and 5 on each system, and each mode in TSU: a recording, a
   hotlapping event, a race, and an arena event (Sumo, Battle, King of the Hill, Tag), whose mode is read a
   moment after the race (the log says `event type:` and `a ... began`).
+- Since 2026-11-16 (`feature/move-coordinates`, asked for by the user): a section shows its X, Y on its screen
+  and its size at its top left while moved, sized or nudged in move mode, and when clicked. Seen on Windows with
+  real windows; to try by hand on the Mac and on Hyprland (there it follows what the desktop says, 5 times a
+  second, as Qt does not know where a window is on Wayland).
 
 ## 3b. One tint per group on Windows and Linux (asked for on 2026-11-15)
 Done on 2026-11-15: groups A to G, Nearby cars' short list (own row kept, on by default), its bigger shipped
