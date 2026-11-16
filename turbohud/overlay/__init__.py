@@ -4,6 +4,8 @@ Each system module has a `Native` class with the same methods:
 - prepare_app(): before the first window shows
 - raise_window(widget): keep the window above the game; returns a line for the log
 - take_focus() / give_focus_back(): around move mode, so the game gets its focus back
+- activate(widget): move mode's panel in front, so the game shows no pointer of its own; returns a
+  line for the log
 - register_hotkeys(on_hotkey) -> bool, unregister_hotkeys()
 """
 
