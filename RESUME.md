@@ -100,6 +100,13 @@
    race on each and note the FPS per phase; it decides how one tint per group is made (item 3b).
 
 ## Recent changes
+  - 2026-11-16: TurboHUD's own memory in the log (`feature/log-own-memory`, asked for by the user, as long as it costs
+    nothing; the tester's Mac had 2.9 GB of 18 GB left with TSU and the whole HUD): "memory: TurboHUD N MB (most so
+    far N MB)" once at the start and with each 30 s summary of reads and frames in a race (`turbohud/core/memory.py`).
+    What Activity Monitor shows on the Mac (the physical footprint; the same as macOS's `footprint` tool, checked),
+    the working set on Windows, the resident size on Linux. One system call of about 8 microseconds every 30 s.
+    Measured on the user's Mac in move mode with every section's preview: 243 MB (peak 245), flat over 20 s. Tests;
+    not yet run on Windows or Linux.
   - 2026-11-16: The full test run on Windows stopped with an access violation (`fix/dialog-tests-fonts-windows`):
     `tests/test_dialogs.py`, the first Qt tests in a run, started Qt without the Windows fonts folder that the
     other Qt tests give it, so the font tests after them crashed. It now sets it too; the app was not affected.
