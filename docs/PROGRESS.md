@@ -2284,3 +2284,6 @@ its "Recent changes".
   a lead lost again, a third car, the grid, the winner (at once, late, ending lead changes), a new race, the
   row, the modes, the box, its place and its drawing (shade, flag, fade, no blue frame); the app started for 6 s
   with no error. Not yet seen in a race.
+- 2026-11-16: The docs brought up to date for the race leader banner (`docs/lead-change-docs`, asked for by
+  the user): `docs/STACK.md`'s module list and `docs/HOW_IT_WORKS.md`'s tables of sections and files name it,
+  and `RESUME.md`'s "Next steps" says what to try.

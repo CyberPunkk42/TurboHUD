@@ -123,6 +123,7 @@ turbohud/
     trackmap.py         the track map: the learnt track and which cars show
     flags.py            TSU's flags as country codes
     flagstack.py        the blue and yellow flags combined where both are in one spot
+    leader.py           the race leader banner: when a new leader or the winner shows, and its fade
     class_registry.py   the car classes a clan tag can name, and their colours
     stalls.py           short freezes of the whole HUD and slow garbage collections, for the log
     system_env.py       the environment for system programs TurboHUD starts (TSU, hyprctl)

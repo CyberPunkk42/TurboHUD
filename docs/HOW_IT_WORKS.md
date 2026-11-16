@@ -36,6 +36,7 @@ off. On Linux and Windows each section keeps its own window for now.
 | Blue flag | a navy bar that fades in when a car about to lap you is within 2 s |
 | Yellow flag | a car off the track, slow, stopped, spun, the wrong way or put back in your sector or the next, by sector and driver; CAR STOPPED AHEAD or WRONG WAY AHEAD for one up to 5 s ahead on the road |
 | Penalties | SHORTCUT with the seconds TSU slows you for a shortcut; JUMP START for a false start |
+| Race leader | a banner shaded grey to black for 6 s: "New Race Leader - name" once a new driver has led for 5 s, "Race Winner - name" with a checkered flag as the winner finishes; from the standings' order, with no read of its own |
 | Radar | your car and the cars around you, when one is within 0.5 s behind, beside or ahead: red beside, yellow closing in, grey not counting, a class colour for another class, arrows for cars past its edge; the slipstream behind cars ahead and the car you draft outlined; by default only in cockpit cameras |
 | Track map | the track from above, with you, the race leader (gold), the next car ahead (red), the next car behind (green), backmarkers between you and the car ahead (small, bluish), and as an option the other cars (faint grey) |
 | Clock | your computer's clock, once TSU runs |
@@ -359,6 +360,7 @@ gives no control over the car.
 | `turbohud/core/race.py` | reads the race and works out what each section shows |
 | `turbohud/core/preview.py` | move mode's preview: one moment of a made-up race at Laguna Seca (`assets/preview`), run through `race.py` like a real one |
 | `turbohud/core/trackmap.py` | the track map: the track's shape and which cars show |
+| `turbohud/core/leader.py` | the race leader banner: a new leader held for 5 s, the winner, and the fade |
 | `turbohud/core/hud.py` | the sections, their sizes, places and layout |
 | `turbohud/core/presets.py` | layout files per screen size, and fitting them to another |
 | `turbohud/overlay/` | the windows; Hyprland, Windows and macOS specifics |
