@@ -102,6 +102,9 @@
    and one tint per group gets a small window behind each group there (item 3b).
 
 ## Recent changes
+  - 2026-11-16: The memory test for Linux skipped on Windows (`fix/memory-test-windows`): it asked for the page size,
+    which Windows' Python does not have; TurboHUD itself reads its memory there another way. All tests pass on
+    Windows again (1344).
   - 2026-11-16: Where a section is, while it moves (`feature/move-coordinates`, asked for by the user): in move
     mode a small label at a section's top left shows its place and size, `X 1580  Y 1110  506×270`, X and Y in
     pixels from the top-left of the screen it is on (`hud.place_text`), while it is dragged, sized or nudged and

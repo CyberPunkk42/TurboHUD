@@ -1,5 +1,6 @@
 """TurboHUD's own memory in the log every 30 s (asked for by the user on 2026-11-16)."""
 
+import os
 import sys
 import tempfile
 import timeit
@@ -39,12 +40,11 @@ class OwnMemoryTests(unittest.TestCase):
     def test_an_unknown_system_says_nothing(self):
         self.assertIsNone(memory.own_memory('sunos5'))
 
+    @unittest.skipUnless(hasattr(os, 'sysconf'), "Linux and the Mac: Windows has no page size there")
     def test_linux_reads_its_resident_pages(self):
         with tempfile.TemporaryDirectory() as folder:
             path = Path(folder) / 'statm'
             path.write_text('50000 12800 900 1 0 3000 0\n', encoding='ascii')
-            import os
-
             self.assertEqual(memory._linux(str(path)), 12800 * os.sysconf('SC_PAGE_SIZE'))
 
 

@@ -2239,3 +2239,6 @@ its "Recent changes".
   move; on Wayland the app shows what Hyprland says at its look 5 times a second. Entering move mode alone
   shows none. The User Guide and Quick Start say so. Tests for the text, the label, lock and Wayland; seen with
   a real window on Windows. Not yet tried by hand on the Mac or Hyprland.
+- 2026-11-16: The memory test for Linux skipped on Windows (`fix/memory-test-windows`): it asked for the page size,
+  which Windows' Python does not have; TurboHUD itself reads its memory there another way. All tests pass on
+  Windows again (1344).
