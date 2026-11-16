@@ -102,6 +102,10 @@
    and one tint per group gets a small window behind each group there (item 3b).
 
 ## Recent changes
+  - 2026-11-16: `docs/CONTINUE_HERE.md` brought up to date (`docs/continue-here-2026-11-16`, asked for by the user):
+    what is left to test after the day's work on Windows first (the standings at the start, the slow-frame lines,
+    one tint for each group on Windows, the place label, the memory line, the window count probe on Hyprland),
+    then what was there, with the tester's latest state and the Windows layout list added.
   - 2026-11-16: The standings in the wrong order at a race's start, reported by the user (`fix/standings-at-start`):
     the order goes by checkpoints passed, then by who passed the last first, and at the start every car is level,
     so Python's sort kept TSU's own list order until the first checkpoint. Cars level are now ordered by how near
