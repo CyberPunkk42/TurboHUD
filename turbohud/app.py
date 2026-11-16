@@ -483,6 +483,7 @@ def run(args, folder):
     from turbohud.overlay.window import (
         DesignFrame,
         GridWindow,
+        GroupTints,
         HudCanvases,
         MovePanel,
         SectionWindow,
@@ -661,6 +662,11 @@ def run(args, folder):
         canvas.set_group_tint(settings.group_tint)
         canvas.set_shown(True)
         log.info('locked: the sections in one window per screen (%d)', len(screens))
+    # Where each section keeps its own window and the system can stack windows (Windows): one tint for
+    # each group is a small window of its own behind each group. Set going once the sections are placed.
+    group_tints = None
+    if canvas is None and getattr(native, 'group_tint_windows', False):
+        group_tints = GroupTints(native, list(windows.values()))
     first = {name: window.base for name, window in windows.items()}
     screen = main_screen(screens)
     own_folder = layout_presets.custom_folder(settings_dir())
@@ -728,6 +734,8 @@ def run(args, folder):
         window.group = saved.group if saved else ''
         window.text_centred = saved.text_centred if saved else False
         log.info('section %s at %s%s', name, place, '' if window.wanted else ' (hidden)')
+    if group_tints is not None:
+        group_tints.set_on(settings.group_tint)  # shown once grouped sections have text (tick)
     shortcuts = False
     panel = None  # made once the shortcuts are known
     locked = True
@@ -810,6 +818,8 @@ def run(args, folder):
             window.set_locked(value)
         if canvas is not None:
             canvas.set_shown(value)  # locked: the canvas; move mode: the sections' own windows
+        if group_tints is not None:
+            group_tints.refresh()  # gone in move mode, back below the sections once locked
         if not value:
             show_grid(True)
         move_action.setChecked(not value)
@@ -854,13 +864,16 @@ def run(args, folder):
         log.info('tint behind all sections %s', 'on' if backdrop else 'off')
 
     def set_group_tint(on):
-        """One tint for each group on or off (the HUD canvas: the Mac)."""
+        """One tint for each group on or off (the Mac's HUD canvas; a window behind each group on
+        Windows)."""
         nonlocal settings
         settings = replace(settings, group_tint=on)
         group_tint_action.setChecked(on)
         show_option('group_tint', on)
         if canvas is not None:
             canvas.set_group_tint(on)
+        if group_tints is not None:
+            group_tints.set_on(on)
         save()
         log.info('one tint for each group %s', 'on' if on else 'off')
 
@@ -902,7 +915,7 @@ def run(args, folder):
                 'The faint grid on the main screen in move mode, to line the sections up',
             ),
         ]
-        if canvas is not None:  # where the sections are drawn in one window (the Mac)
+        if canvas is not None or group_tints is not None:  # the Mac's one window, or Windows
             listed.append(
                 (
                     'group_tint',
@@ -1842,7 +1855,7 @@ def run(args, folder):
     group_tint_action = QAction('One tint for each group', menu, checkable=True)
     group_tint_action.setChecked(settings.group_tint)
     group_tint_action.triggered.connect(lambda checked: set_group_tint(checked))
-    if canvas is not None:
+    if canvas is not None or group_tints is not None:
         options_menu.addAction(group_tint_action)
     grid_action = QAction('Move mode grid', menu, checkable=True)
     grid_action.setChecked(settings.grid)
@@ -2093,6 +2106,8 @@ def run(args, folder):
                 current.get('deltaview'),
             ):
                 window.update()  # only what changed: drawing every section each frame stutters
+        if group_tints is not None and locked:
+            group_tints.refresh()  # a section emptied, filled or moved (a preset): its group's tint follows
         if racing:
             frames.frame(time.perf_counter() - began, SectionWindow.drawing_time - drawn_before, fresh)
         else:

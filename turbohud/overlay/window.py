@@ -263,6 +263,9 @@ class SectionWindow(QWidget):
         # While locked, a HudCanvas may draw this section with every other in one window per
         # screen, and this window stays hidden: 17 windows above the game cost it frames.
         self.canvas = None
+        # Its group's one tint is behind it (GroupTints, a window of its own on Windows): no tint
+        # of its own then.
+        self.under_group_tint = False
         # The track map's square, road and start line, drawn once into an image and kept while
         # the track, the size, the tint and the road's colour stay: (what it was drawn for, image).
         self._road_layer = None
@@ -444,7 +447,7 @@ class SectionWindow(QWidget):
     def paintEvent(self, _event):
         began = time.perf_counter()
         painter = QPainter(self)
-        self.draw(painter)
+        self.draw(painter, not self.under_group_tint)
         self.drew(time.perf_counter() - began)
         if not self.locked and self.wanted and self.resizable:
             self._paint_corner(painter)
@@ -1062,6 +1065,83 @@ class HudCanvases:
                 canvas.show_on_top()
             else:
                 canvas.hide()
+
+
+class GroupTintWindow(QWidget):
+    """One group's tint while locked, behind its sections with their tint on and the room between
+    them: see-through and click-through, a window of its own below them. Where a window per
+    section cannot draw in the gaps between them (Windows); the Mac draws it on its HUD canvas."""
+
+    on_canvas = False
+
+    def __init__(self, native, group):
+        super().__init__(None, window_flags())
+        self.native = native
+        self.setWindowTitle(f'TurboHUD - Group Tint {group}')
+        self.setAttribute(Qt.WA_TranslucentBackground)
+        self.setAttribute(Qt.WA_ShowWithoutActivating)
+        self.setWindowFlag(Qt.WindowTransparentForInput, True)
+
+    def paintEvent(self, _event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.Antialiasing)
+        painter.setPen(Qt.NoPen)
+        painter.setBrush(QColor(*BACKDROP))
+        painter.drawRoundedRect(QRectF(self.rect()), 6, 6)  # as a section's own (_paint_backdrop)
+        painter.end()
+
+
+class GroupTints:
+    """One tint for each group where every section has its own window (Windows; asked for by the
+    user on 2026-11-16, after one window per screen there cost the compositor three times the GPU):
+    a small GroupTintWindow behind each group's tinted sections, the box round them as on the Mac
+    (core.hud.group_tint_boxes), and those sections without a tint of their own. Shown only while
+    locked; a tint window is moved and placed below its sections again only when its box changes,
+    so a section's new text costs it nothing."""
+
+    def __init__(self, native, windows):
+        self.native = native
+        self.windows = windows  # every SectionWindow
+        self.on = False
+        self.tints = {}  # group -> its GroupTintWindow, made the first time it is needed
+        self.boxes = {}  # group -> (x, y, width, height) its tint is shown at now
+
+    def set_on(self, on):
+        self.on = on
+        self.refresh()
+
+    def refresh(self):
+        """Bring the tints in line with the sections: where they are, which have their tint on and
+        text to show, and whether locked. Cheap when nothing changed (each frame while locked)."""
+        tinted = [w for w in self.windows if w.tints_itself()] if self.on else []
+        boxes = group_tint_boxes([(w.group, tuple(w.placement())) for w in tinted])
+        for window in self.windows:
+            under = window in tinted and window.group in boxes
+            if under != window.under_group_tint:
+                window.under_group_tint = under
+                window.update()
+        if boxes == self.boxes:
+            return
+        for group, tint in self.tints.items():
+            if group not in boxes:
+                tint.hide()
+        for group, box in boxes.items():
+            tint = self.tints.get(group)
+            if tint is None:
+                tint = self.tints[group] = GroupTintWindow(self.native, group)
+            elif self.boxes.get(group) == box and tint.isVisible():
+                continue
+            tint.setGeometry(*box)
+            tint.show()
+            # Below every shown section, as on the Mac's canvas: a section of another group over its box
+            # is not shaded by it.
+            shown = [w for w in self.windows if w.isVisible()]
+            log.info('group %s tint at %s: %s', group, box, self.native.place_below(tint, shown))
+        self.boxes = boxes
+
+    def close(self):
+        for tint in self.tints.values():
+            tint.close()
 
 
 class DesignFrame(QWidget):

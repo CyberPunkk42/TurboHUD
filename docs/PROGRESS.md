@@ -2223,3 +2223,12 @@ its "Recent changes".
   against 1.3%), no less CPU. Decided with the user: Windows keeps a window per section (players' PCs may be
   weaker), and one tint per group there will be a small window behind each group, off by default at first.
   Results in `experiments/README.md`; Linux still to measure.
+- 2026-11-16: One tint for each group on Windows (`feature/group-tint-windows`, asked for by the user; backlog
+  item 3b): Windows keeps a window per section, so each group with tinted sections gets one small see-through,
+  click-through window behind them while locked, the box round them and the room between them as on the Mac,
+  and those sections no tint of their own. It goes just below every shown section (`Native.place_below`,
+  without taking the focus) and is moved only when its box changes. "One tint for each group" now shows in
+  the settings window's Look and the tray's Options on Windows, off by default there until the user has seen
+  it over TSU (on by default on the Mac as before); the User Guide says so. Tests offscreen for the box, the
+  switch, move mode, moved and emptied sections and the default per system; with real windows on the user's
+  PC the tint sat right below the sections, on top and click-through. Not yet seen over TSU in a race.

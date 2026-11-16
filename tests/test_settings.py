@@ -3,6 +3,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
@@ -306,9 +307,24 @@ class PresetTests(unittest.TestCase):
     def test_one_tint_for_each_group_is_on_unless_turned_off(self):
         path = self.path()
         path.write_text('{}')
-        self.assertTrue(s.load_settings(path).group_tint)
+        with mock.patch.object(s.sys, 'platform', 'darwin'):
+            self.assertTrue(s.load_settings(path).group_tint)
+            self.assertTrue(s.Settings().group_tint)
         s.save_settings(path, s.Settings(group_tint=False))
         self.assertFalse(s.load_settings(path).group_tint)
+
+    def test_on_windows_one_tint_for_each_group_is_off_until_turned_on(self):
+        # A window behind each group there, off until the user has seen it over TSU (2026-11-16).
+        path = self.path()
+        path.write_text('{}')
+        with mock.patch.object(s.sys, 'platform', 'win32'):
+            self.assertFalse(s.load_settings(path).group_tint)
+            self.assertFalse(s.Settings().group_tint)
+            self.assertFalse(s.load_settings(path.with_name('missing.json')).group_tint)
+            s.save_settings(path, s.Settings(group_tint=True))
+            self.assertTrue(s.load_settings(path).group_tint)  # the player's choice is kept
+        self.assertFalse(s.group_tint_default('win32'))
+        self.assertTrue(s.group_tint_default('linux'))
 
     def test_the_move_mode_grid_is_on_unless_turned_off(self):
         # A switch since 2026-11-16 (asked for by the user).
