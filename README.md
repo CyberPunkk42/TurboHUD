@@ -165,7 +165,8 @@ The full guide to every section, menu item, button and option is
   recording, hotlapping, race or special event begins, and loads, shares or designs layouts per
   screen size.
   **Lock** or Ctrl+Shift+L again ends it, and so does a race beginning.
-- **Settings…** sets the colours, the size of all sections, the standings' columns, the
+- **Settings…** sets the colours, the font (your own `.ttf` or `.otf` files in
+  `customization/fonts`), the size of all sections, the standings' columns, the
   warning times, the race reads a second and the on/off options (also under **Options** in
   the icon's menu).
 - **Ctrl+Shift+Q** quits; on Windows **Ctrl+Shift+F12** is a spare for Ctrl+Shift+L.

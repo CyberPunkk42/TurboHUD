@@ -13,6 +13,7 @@ from PySide6.QtGui import QColor, QPainter, QPen
 from PySide6.QtWidgets import (
     QButtonGroup,
     QCheckBox,
+    QComboBox,
     QDoubleSpinBox,
     QGridLayout,
     QHBoxLayout,
@@ -52,6 +53,7 @@ CAMERA_CHOICES = (
     (False, 'Every camera', 'Also in the views from behind and outside the car (third person)'),
 )
 COLUMNS_PER_ROW = 4  # the standings' column switches in a row
+SYSTEM_FONT = 'System font'  # the font choice for the system's own font
 HEADING = '#9fb8d8'  # the headings, as in the move-mode panel
 SIZE_STEP = 1.1  # Bigger: 10 % larger; Smaller: the same back
 SWATCH = 22  # pixels
@@ -116,6 +118,8 @@ class SettingsWindow(QWidget):
     reads_changed = Signal(int)
     option_changed = Signal(str, bool)  # an option's key (see `options`), on or off
     about_requested = Signal()  # About...: the app's name and version
+    font_chosen = Signal(str)  # a font family from customization/fonts, '' for the system's
+    fonts_folder_requested = Signal()  # Fonts folder...: open customization/fonts
     closed = Signal()
 
     focusable = True  # it takes clicks on its buttons
@@ -174,6 +178,23 @@ class SettingsWindow(QWidget):
         size.addWidget(bigger)
         size.addStretch()
         left.addLayout(size)
+        # The player's own fonts (asked for by the user on 2026-11-16): those in customization/fonts.
+        font = QHBoxLayout()
+        font.addWidget(QLabel('Font:'))
+        self.font_choice = QComboBox()
+        self.font_choice.setToolTip(
+            'The font of every section: one of yours from the fonts folder, or the system font'
+        )
+        self.font_choice.setSizeAdjustPolicy(QComboBox.AdjustToContents)
+        self.font_choice.currentIndexChanged.connect(self._font_picked)
+        font.addWidget(self.font_choice)
+        folder = QPushButton('Fonts folder...')
+        folder.setToolTip('Open the folder to put font files (.ttf, .otf) in; they show here the next time')
+        folder.clicked.connect(self.fonts_folder_requested)
+        font.addWidget(folder)
+        font.addStretch()
+        left.addLayout(font)
+        self.set_fonts({}, '')
         self._boxes(left, listed, GROUPS['look'])
 
         standings = [key for key in GROUPS['standings'] if key in listed]
@@ -245,6 +266,25 @@ class SettingsWindow(QWidget):
         outer.addLayout(row)
         self.show_chosen()
         self.adjustSize()
+
+    def set_fonts(self, families, chosen):
+        """Offer `families` ({family: file name}) and the system font, `chosen` ('' for the system's)
+        picked; a chosen family no longer there is listed as missing."""
+        self.font_choice.blockSignals(True)
+        self.font_choice.clear()
+        self.font_choice.addItem(SYSTEM_FONT, '')
+        for family, file in families.items():
+            self.font_choice.addItem(family, family)
+            self.font_choice.setItemData(self.font_choice.count() - 1, file, Qt.ToolTipRole)
+        if chosen and chosen not in families:
+            self.font_choice.addItem(f'{chosen} (missing)', chosen)
+        self.font_choice.setCurrentIndex(max(self.font_choice.findData(chosen), 0))
+        self.font_choice.blockSignals(False)
+
+    def _font_picked(self, index):
+        family = self.font_choice.itemData(index)
+        if family is not None:
+            self.font_chosen.emit(family)
 
     @staticmethod
     def _heading(text):

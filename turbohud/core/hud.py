@@ -1079,6 +1079,11 @@ def _box_heights(section, ink):
     )
 
 
+def forget_measures():
+    """Forget the box heights measured per text size: another font measures differently."""
+    _box_heights.cache_clear()
+
+
 def fitting_scale(rows, scale, width, measure, spacing=1.0, pedals=False):
     """`scale`, or smaller where `rows` would be wider than `width` at it: a live text wider
     than the box its text size made (a title longer than the section's sample) is drawn to

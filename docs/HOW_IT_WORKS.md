@@ -365,6 +365,7 @@ gives no control over the car.
 | `turbohud/core/leader.py` | the race leader banner: a new leader held for 5 s, the winner, and the fade |
 | `turbohud/core/hud.py` | the sections, their sizes, places and layout |
 | `turbohud/core/presets.py` | layout files per screen size, and fitting them to another |
+| `turbohud/core/fonts.py` | the player's own fonts: `customization/fonts` and its files (`turbohud/hud/painter.py` draws with the one chosen) |
 | `turbohud/overlay/` | the windows; Hyprland, Windows and macOS specifics |
 | `turbohud/app.py` | starts everything: settings, windows, tray menu, shortcuts |
 | `turbohud/control.py` | the command socket for `run_turbohud.sh --toggle` and the rest |

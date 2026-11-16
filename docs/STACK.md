@@ -117,6 +117,7 @@ turbohud/
     settings.py         settings and theme, where they live on each system
     hud.py              the sections, their sizes, places, nudges and the grid's screen
     presets.py          layout files per screen size, and fitting one to another size
+    fonts.py            the player's own fonts: the customization/fonts folder and its files
     il2cpp.py           finds the game's classes and fields by name
     race.py             reads the race and works out what each section shows
     preview.py          move mode's preview: a made-up race at Laguna Seca, through race.py
