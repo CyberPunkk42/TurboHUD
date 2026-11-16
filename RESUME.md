@@ -46,7 +46,8 @@
     A plain Mac window at the screen-saver level, outside the bottle, needing no
     permission. So TurboHUD's Mac overlay must be native, while reading the game's files
     and the HUD logic can be shared.
-  - Windows: not tested yet.
+  - Windows: yes over TSU's Fullscreen without Exclusive (2026-11-16, the window count probe);
+    Fullscreen Exclusive not yet tried.
   - Qt, the chosen stack (`experiments/qt_overlay_probe.py`): works over TSU on the Mac
     in Fullscreen, with and without Exclusive: crisp text, click-through, shortcuts,
     move mode, no stutter.
@@ -83,7 +84,7 @@
   try a Single Player event, and a Custom race on the Mac and on Linux (a second search pass there).
 - Replays after a race (`fix/replays-after-a-race`, 2026-11-13): try in TSU a recording watched after a race in the
   same session, opened from the list and watched again; on the Mac, whether the recordings get an access time.
-1. Windows: the overlay over TSU (windowed, Fullscreen, Fullscreen Exclusive). The live data through
+1. Windows: the overlay over TSU in windowed and Fullscreen Exclusive (over Fullscreen it shows, 2026-11-16). The live data through
    the Rust reader runs there since 2026-11-11 (first race found once the search hang was fixed; the
    search measured and threaded on 2026-11-12).
    Also a trial of all of TurboHUD inside the CrossOver bottle (backlog item 1b,
@@ -96,10 +97,18 @@
 4. Builds and release: Linux players try the `.tar.gz` (2026-11-14) on their distros, an AppImage; before the repository
    goes public, the privacy check, a licence and a README for players.
 5. Linux: try TurboHUD on KDE or GNOME (it runs through XWayland there now).
-6. One window on Windows and Linux (backlog item 1c): run `experiments/window_count_probe.py` with TSU in a
-   race on each and note the FPS per phase; it decides how one tint per group is made (item 3b).
+6. One window on Linux (backlog item 1c): run `experiments/window_count_probe.py` with TSU in a race on
+   Hyprland and note the FPS per phase. Windows was measured on 2026-11-16: it keeps a window per section,
+   and one tint per group gets a small window behind each group there (item 3b).
 
 ## Recent changes
+  - 2026-11-16: The window count probe on Windows (`docs/window-count-windows`; backlog items 1, 1c and 3b): run
+    by the user over TSU in Fullscreen (without Exclusive) on a 5120x1440 screen, with 19 boxes. Every phase
+    showed over the game, so the overlay works over Fullscreen on Windows; 120 FPS in each (TSU's cap there).
+    Measured too: one window per screen costs DWM about three times the GPU of a window per section (3.9%
+    against 1.3%), no less CPU. Decided with the user: Windows keeps a window per section (players' PCs may be
+    weaker), and one tint per group there will be a small window behind each group, off by default at first.
+    Results in `experiments/README.md`; Linux still to measure.
   - 2026-11-16: The last 3 tests that failed on Windows pass (`fix/windows-test-failures`; backlog item 1): all
     three were Linux-only code with Linux assumptions. `system_env` splits LD_LIBRARY_PATH with ':' (was
     os.pathsep, ';' on Windows), the probe's `run_game` passes on SIGHUP only where there is one, and the Steam

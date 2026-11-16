@@ -14,8 +14,8 @@ pushed to the GitHub remote. Delete a point when it is settled, and this file wh
    Player event, and a Custom race on the Mac and on Linux (a second search pass there).
 3. Replays after a race (2026-11-13): a recording watched after a race in the same TSU session,
    opened from the list and watched again; on the Mac, whether the recordings get an access time.
-4. Windows (backlog item 1): the overlay over TSU in Fullscreen and Fullscreen Exclusive, and a whole
-   race offline and hosting.
+4. Windows (backlog item 1): the overlay over TSU in Fullscreen Exclusive (over Fullscreen it shows,
+   2026-11-16), and a whole race offline and hosting.
 5. The Mac's one-window HUD gave no gain that showed on 2026-11-10 ("One-window HUD and reads on the
    user's Mac" below), though it looks and works as before. To tell whether it helps at all: in one
    race, with the Metal HUD, a minute each of TurboHUD closed, every section shown, the same with

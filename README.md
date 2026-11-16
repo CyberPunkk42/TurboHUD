@@ -13,7 +13,7 @@ and as a spectator) and in TSU's replays. On macOS, with TSU in CrossOver,
 the same HUD needs no setup (see [Live race data on macOS](#live-race-data-on-macos)). On
 Windows it reads the race with a small read-only reader started beside TSU (Windows lets a
 program read another of the same user), also with no setup: it has read online and Custom races
-there; the overlay over TSU's Fullscreen modes on Windows is still to be tried.
+there, and its overlay shows over TSU's Fullscreen; Fullscreen Exclusive is still to be tried.
 
 New here? [QUICK_START.md](QUICK_START.md) is a one-page guide: install, first start, placing
 the HUD, all keyboard shortcuts, and what to do when AMD Software takes Ctrl+Shift+L. Every

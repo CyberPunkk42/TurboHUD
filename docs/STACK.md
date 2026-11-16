@@ -12,8 +12,9 @@ From the two overlay probes (`experiments/README.md`) and the user's priorities:
   no packages, no command line for the player.
 - **The overlay window is different on each system.**
   - Windows: an always-on-top, click-through window. Tested on the Mac inside CrossOver,
-    and on the user's Windows PC with an online race (2026-11-11); over Fullscreen and
-    Fullscreen Exclusive it is still to be checked (backlog item 1).
+    and on the user's Windows PC with an online race (2026-11-11) and over TSU's Fullscreen
+    (2026-11-16); over Fullscreen Exclusive it is still to be checked (backlog item 1). A window
+    per section, as one window per screen costs the compositor more GPU there (backlog item 1c).
   - Mac: a native macOS window outside CrossOver, at a window level above 26 (TSU's in
     Fullscreen). A window from inside the bottle never shows over TSU's Fullscreen.
 - **The same behaviour everywhere:** move mode (tinted, draggable, resizable) and locked
