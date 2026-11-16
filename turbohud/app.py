@@ -428,8 +428,8 @@ def listen_for_commands(app, on_command):
 
 def run(args, folder):
     import PySide6
-    from PySide6.QtCore import QEvent, QObject, Qt, QTimer, Signal
-    from PySide6.QtGui import QAction, QGuiApplication, QIcon
+    from PySide6.QtCore import QEvent, QObject, Qt, QTimer, QUrl, Signal
+    from PySide6.QtGui import QAction, QDesktopServices, QFontDatabase, QGuiApplication, QIcon
     from PySide6.QtWidgets import (
         QAbstractItemView,
         QAbstractSpinBox,
@@ -443,6 +443,7 @@ def run(args, folder):
 
     from turbohud.core import presets as layout_presets
     from turbohud.core.flagstack import combined
+    from turbohud.core.fonts import font_files, fonts_folder, ready_fonts_folder
     from turbohud.core.hud import (
         CLOCK_SECTIONS,
         FONT_SIZES,
@@ -469,7 +470,7 @@ def run(args, folder):
         text_box,
     )
     from turbohud.core.hud import players_section as nearby_section
-    from turbohud.hud.painter import text_ink, text_width, use_game_flags
+    from turbohud.hud.painter import load_font_files, set_family, text_ink, text_width, use_game_flags
     from turbohud.overlay import (
         HOTKEY_LOCK,
         HOTKEY_LOCK_BACKUP,
@@ -660,6 +661,23 @@ def run(args, folder):
     screens = [screen.geometry().getRect() for screen in QGuiApplication.screens()]
     # Where TurboHUD's own windows (the panel, the settings) go: not under the menu bar or Dock.
     usable = [screen.availableGeometry().getRect() for screen in QGuiApplication.screens()]
+    # The player's own fonts (customization/fonts, asked for by the user on 2026-11-16): given to Qt
+    # and the chosen one set before any text is measured.
+    fonts_dir = ready_fonts_folder(fonts_folder(layout_presets.custom_folder(settings_dir())))
+
+    def own_fonts():
+        """{family: file name} of the font files in customization/fonts (read again each time)."""
+        return load_font_files(font_files(fonts_dir)) if fonts_dir is not None else {}
+
+    def font_there(family):
+        return not family or family in own_fonts() or family in QFontDatabase.families()
+
+    if settings.font_family:
+        if font_there(settings.font_family):
+            set_family(settings.font_family)
+            log.info('font: %s', settings.font_family)
+        else:
+            log.info('font %s not found: the system font', settings.font_family)
     settings = upgrade_layout(settings, path, text_ink, text_width)
     windows = {section.name: SectionWindow(native, settings.theme, section) for section in layout}
     canvas = None
@@ -1383,7 +1401,10 @@ def run(args, folder):
             )
             settings_window.resize_requested.connect(resize_all)
             settings_window.about_requested.connect(lambda: show_about(settings_window))
+            settings_window.font_chosen.connect(set_font_family)
+            settings_window.fonts_folder_requested.connect(open_fonts_folder)
         if not settings_window.isVisible():
+            settings_window.set_fonts(own_fonts(), settings.font_family)  # files added since show now
             # Beside the panel where it is (it may have been dragged), and wholly on its screen.
             anchor = panel.geometry().getRect()
             size = (settings_window.width(), settings_window.height())
@@ -1439,6 +1460,26 @@ def run(args, folder):
             places[name] = section_place(window, box)
         settings = replace(settings, sections=places)
         write_settings()
+
+    def set_font_family(family):
+        """The HUD's font from the settings window ('' for the system's): every text section is
+        fitted to it and drawn again."""
+        nonlocal settings
+        settings = replace(settings, font_family=family)
+        if set_family(family if font_there(family) else ''):
+            resize_sections({name: fitted(window) for name, window in text_windows().items()})
+            for window in windows.values():
+                window.update()
+        else:
+            write_settings()
+        log.info('font: %s', family or 'the system font')
+
+    def open_fonts_folder():
+        if fonts_dir is None:
+            log.warning('customization/fonts could not be made')
+            return
+        QDesktopServices.openUrl(QUrl.fromLocalFile(str(fonts_dir)))
+        log.info('opened %s', fonts_dir)
 
     def fitted(window, keep_width=False):
         """A text section's box at its text size, where it is now."""

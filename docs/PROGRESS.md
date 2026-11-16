@@ -2296,3 +2296,12 @@ its "Recent changes".
   a car comes up from further back. The User Guide says so; `docs/HOW_IT_WORKS.md` notes that online positions
   are carried on between updates. Tests for the size, cars with room between them, the zoom and its easing.
   Not yet seen in a race.
+- 2026-11-16: One's own fonts (`feature/own-fonts`, asked for by the user): font files (.ttf, .otf) put in
+  `customization/fonts` (beside `display_presets`, made with a read-me; `core/fonts.py`) are offered in the
+  settings window's Look > **Font**, with **System font** and **Fonts folder...**. The choice is saved
+  (`font_family`) and set before anything is measured at a start; chosen, `painter.set_family` forgets every
+  text measured or drawn (sizes, paths, glyph and text images, the box heights) and every text section is
+  fitted to the new font. Letters a font lacks come from the system's; a chosen font whose file is gone shows
+  "(missing)" and the system font is drawn. The guides and README say so. Tests for the folder, its files, the
+  setting, a font file loaded and drawn with (a monospace font the system has, copied; skipped where none),
+  and the choice in the settings window; the app started for 6 s with no error. Not yet tried by hand.

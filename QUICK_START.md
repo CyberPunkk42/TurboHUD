@@ -45,7 +45,8 @@ it goes.
 
 ## 4. Settings
 
-Icon menu, **Settings...**: colours, all sections bigger or smaller, km/h or mph, a tint behind
+Icon menu, **Settings...**: colours, all sections bigger or smaller, the **Font** (your own
+`.ttf` or `.otf` files in `customization/fonts`; **Fonts folder...** opens it), km/h or mph, a tint behind
 the sections, which standings columns show, the radar (cockpit cameras or every camera, its
 slipstream cones, how soon it shows), the yellow and blue flags, how often the race is read,
 and the on/off options also under **Options** in the icon's menu. **Car classes...** lists the

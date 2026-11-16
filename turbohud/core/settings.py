@@ -159,6 +159,8 @@ class Settings:
     # 2026-11-15 (asked for by the user): smooth enough, and half the work for the game.
     reads_per_second: int = 10
     font_size: int = DEFAULT_FONT  # the global text size in pixels, for text sections without their own
+    # The HUD's font: a family from customization/fonts (core.fonts), '' for the system's.
+    font_family: str = ''
     # The digest of the layout file from customization/display_presets last taken at a start: a file is
     # taken once each time it is new or has changed (turbohud.core.presets.custom_for).
     applied_preset: str = ''
@@ -388,6 +390,7 @@ def load_settings(path):
             else Settings.reads_per_second
         ),
         font_size=_font(data.get('font_size')) or DEFAULT_FONT,
+        font_family=data.get('font_family') if isinstance(data.get('font_family'), str) else '',
         applied_preset=data.get('applied_preset') if isinstance(data.get('applied_preset'), str) else '',
     )
 
@@ -425,6 +428,7 @@ def save_settings(path, settings):
         'radar_seconds': settings.radar_seconds,
         'reads_per_second': settings.reads_per_second,
         'font_size': settings.font_size,
+        'font_family': settings.font_family,
         'applied_preset': settings.applied_preset,
         'sections': _section_data(settings.sections),
         'presets': {str(number): _section_data(kept) for number, kept in settings.presets.items()},

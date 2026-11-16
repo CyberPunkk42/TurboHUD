@@ -27,6 +27,7 @@ from turbohud.core.hud import (
     blend,
     first_column,
     fitted_name,
+    forget_measures,
     lead_right,
     middle_right,
     overall_right,
@@ -51,11 +52,65 @@ DELTA_BAR_TEXT = 0.6  # the delta's text height, as a share of the bar's
 LINUX_FAMILIES = ['Noto Sans', 'DejaVu Sans', 'Liberation Sans', 'Cantarell', 'Ubuntu', 'Arial']
 
 
+# The player's own font (asked for by the user on 2026-11-16): a family from the font files in
+# customization/fonts (load_font_files), or '' for the system's. set_family changes it.
+_family = ''
+_loaded = {}  # font file path -> the families it holds, once given to Qt
+
+
+def load_font_files(paths):
+    """Give Qt the font files at `paths` (each once): {family: file name} of those it could read,
+    sorted by name. A file Qt cannot read is left out (and logged by the caller)."""
+    families = {}
+    for path in sorted(str(p) for p in paths):
+        if path not in _loaded:
+            loaded = QFontDatabase.addApplicationFont(path)
+            _loaded[path] = tuple(QFontDatabase.applicationFontFamilies(loaded)) if loaded >= 0 else ()
+        for family in _loaded[path]:
+            families.setdefault(family, path.replace('\\', '/').rsplit('/', 1)[-1])
+    return dict(sorted(families.items(), key=lambda item: item[0].lower()))
+
+
+def font_family():
+    """The font family the HUD draws with: '' for the system's."""
+    return _family
+
+
+def set_family(family):
+    """Draw the HUD with `family` ('' for the system's font); True if it changed. Every text
+    measured or drawn before is forgotten, so the boxes can be fitted again."""
+    global _family, _images_size, _pieces_size
+    if family == _family:
+        return False
+    _family = family
+    for cached in (
+        hud_font,
+        _metrics,
+        text_advance,
+        text_path,
+        outline_path,
+        cap_height,
+        text_ink,
+        text_width,
+    ):
+        cached.cache_clear()
+    _images.clear()
+    _images_size = 0
+    _pieces.clear()
+    _pieces_size = 0
+    _glyph_shapes.clear()
+    forget_measures()
+    return True
+
+
 @lru_cache(maxsize=32)
 def hud_font(size):
     font = QFont()
-    if sys.platform.startswith('linux'):
-        font.setFamilies(LINUX_FAMILIES)
+    fallback = LINUX_FAMILIES if sys.platform.startswith('linux') else []
+    if _family:
+        font.setFamilies([_family, *fallback])  # letters the player's font lacks: the usual ones
+    elif fallback:
+        font.setFamilies(fallback)
     font.setPixelSize(size)
     font.setBold(True)
     # Digits all as wide, where the font can: a running number then does not push what

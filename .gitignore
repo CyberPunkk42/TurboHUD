@@ -15,7 +15,7 @@ build/
 # The built apps, their checksums and any unpacked copy of one
 releases/
 turbohud/_build.py
-# One's own layouts (customization/display_presets), made by the app when run from source
+# One's own layouts and fonts (customization/display_presets and fonts), made by the app when run from source
 customization/
 
 # Development tools environment (Ruff formatter, Rust, llvm-mingw); never shipped

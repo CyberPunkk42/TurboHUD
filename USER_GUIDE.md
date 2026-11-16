@@ -433,6 +433,13 @@ The window has two columns, under headings. The on/off options are the same as u
   parts (your own row, headings) and of the thin outline that keeps text readable over
   the game. **Reset colours** puts the defaults back.
 - **All sections:** **Smaller** and **Bigger** make every section 10% smaller or bigger.
+- **Font:** the font of every section: **System font** (the usual one), or a font of your
+  own. Put font files (`.ttf` or `.otf`) in the **`customization/fonts`** folder, beside
+  `customization/display_presets` (section 5); **Fonts folder...** opens it. Fonts added while
+  the settings window is open show the next time it opens. Every section's box is fitted to
+  the new font at once. TurboHUD draws its text bold, so a font with a bold style looks best;
+  letters a font lacks come from the system font. A chosen font whose file is gone shows as
+  "(missing)", and the system font is drawn until it comes back.
 - **Light tint behind all sections**, **One tint for each group** (Mac and Windows; see section 2),
   **Move mode grid** and **Speed in mph**.
 
@@ -515,7 +522,9 @@ TurboHUD writes only its own files, in its settings folder:
 There you find `settings.json` (your layout, presets, colours and options), `tracks/` (the
 learnt track maps), `flags/` (TSU's flag pictures, read from your copy of the game and made
 small), and the logs: `turbohud.log`, plus `bottle_reader.log` on the Mac and
-`memory_probe.log` on Linux. It writes nothing into the game's folders.
+`memory_probe.log` on Linux. Beside TurboHUD (or in that folder, as section 5 says) it makes
+`customization/`, with your layouts in `display_presets` and your fonts in `fonts`. It writes
+nothing into the game's folders.
 
 When reporting a problem, say what you did and what you saw, and send `turbohud.log` right
 after it happened: it is replaced at the next start. The logs can hold player names and

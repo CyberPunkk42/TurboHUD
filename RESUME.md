@@ -31,7 +31,8 @@
   in pixels and line spacing per section, a corner sizes the text and an edge adds room, arrow-key
   nudges, Redo, a grid on the main screen, shipped layouts per screen size (`assets/presets`), Load
   screen default, Export, Import and the design screen, one's own layouts in
-  `customization/display_presets`, and the panel scrolling on a short screen.
+  `customization/display_presets`, and the panel scrolling on a short screen. Since 2026-11-16 one's own
+  fonts in `customization/fonts`, chosen in the settings window (Look > Font).
 - Builds: `tools/build_app.py` (PyInstaller) makes a Windows ZIP and a Mac disk image (each with the
   Rust reader; the Mac one 32.5 MB, no Windows Python since 2026-11-11) and a Linux `.tar.gz`, run locally on each system.
   The Linux one is built in Ubuntu 22.04 with `sh tools/build_linux.sh <version>` (starts on glibc 2.35 and newer), and
@@ -67,7 +68,8 @@
 
 ## Next steps
 **Start with `docs/CONTINUE_HERE.md`**: what is left to test. Then `docs/IMPROVEMENT_BACKLOG.md`. In short:
-- New on 2026-11-16: the radar at real size with a zoom (`fix/radar-true-size`), and the race leader banner
+- New on 2026-11-16: one's own fonts (`feature/own-fonts`, not yet tried by hand), the radar at real size
+  with a zoom (`fix/radar-true-size`), and the race leader banner
   (`feature/lead-change`), not yet seen in a race. The banner: a pass for the lead
   that holds and one undone within 5 s, the finish, online, and how it reads over TSU. The user may give a
   checkered flag picture for the winner's banner (drawn squares until then).
@@ -107,6 +109,15 @@
    and one tint per group gets a small window behind each group there (item 3b).
 
 ## Recent changes
+  - 2026-11-16: One's own fonts (`feature/own-fonts`, asked for by the user): font files (.ttf, .otf) put in
+    `customization/fonts` (beside `display_presets`, made with a read-me; `core/fonts.py`) are offered in the
+    settings window's Look > **Font**, with **System font** and **Fonts folder...**. The choice is saved
+    (`font_family`) and set before anything is measured at a start; chosen, `painter.set_family` forgets every
+    text measured or drawn (sizes, paths, glyph and text images, the box heights) and every text section is
+    fitted to the new font. Letters a font lacks come from the system's; a chosen font whose file is gone shows
+    "(missing)" and the system font is drawn. The guides and README say so. Tests for the folder, its files, the
+    setting, a font file loaded and drawn with (a monospace font the system has, copied; skipped where none),
+    and the choice in the settings window; the app started for 6 s with no error. Not yet tried by hand.
   - 2026-11-16: The radar at the cars' real size, zoomed in when they are close (`fix/radar-true-size`, reported
     by the user: two cars looked as if they touched when they were not that close). Cars were drawn 1.4 times as
     large as they are (`RADAR_CAR_SCALE`), with their places at true scale, so cars side by side still about half a
