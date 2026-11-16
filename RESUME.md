@@ -100,6 +100,13 @@
    race on each and note the FPS per phase; it decides how one tint per group is made (item 3b).
 
 ## Recent changes
+  - 2026-11-16: TurboHUD's own memory in the log (`feature/log-own-memory`, asked for by the user, as long as it costs
+    nothing; the tester's Mac had 2.9 GB of 18 GB left with TSU and the whole HUD): "memory: TurboHUD N MB (most so
+    far N MB)" once at the start and with each 30 s summary of reads and frames in a race (`turbohud/core/memory.py`).
+    What Activity Monitor shows on the Mac (the physical footprint; the same as macOS's `footprint` tool, checked),
+    the working set on Windows, the resident size on Linux. One system call of about 8 microseconds every 30 s.
+    Measured on the user's Mac in move mode with every section's preview: 243 MB (peak 245), flat over 20 s. Tests;
+    not yet run on Windows or Linux.
   - 2026-11-16: The tester's log with build 2026.11.16 in backlog item 0 (`docs/tester-log-2026-11-16`): TurboHUD ran
     smoothly (frames steady, drawing 8 to 21%, no error), and the new presets, options and layout 8 worked; the stall
     on the 30 s beat is back (150 to 225 ms reads at :04 and :34); he reads 20 a second by his own setting. Asked:

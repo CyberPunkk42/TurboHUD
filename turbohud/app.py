@@ -2022,12 +2022,21 @@ def run(args, folder):
     # The tester's stutter (2026-11-13): slow frames and reads with their time and the garbage
     # collections in them, and which sections cost the drawing (turbohud.core.stalls).
     stalls.watch.install()
+    from turbohud.core import memory
+
+    def flush_summaries():
+        """With the 30 s summary of reads and frames: the collections, and TurboHUD's own memory
+        (a tester's Mac had 2.9 GB left, 2026-11-16; one system call, about 8 microseconds)."""
+        stalls.watch.flush()
+        memory.watch.flush()
+
+    memory.watch.flush()  # once at the start, so a log without a race has it too
     frames = FrameTimes(
         time.monotonic,
         log.info,
         gc_during=stalls.watch.during,
         parts=SectionWindow.take_drawing_by,
-        on_flush=stalls.watch.flush,
+        on_flush=flush_summaries,
     )
     pacer = FramePacer()
     drawn_before = 0.0
