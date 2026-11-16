@@ -185,6 +185,18 @@
       "font": 20,
       "spacing": 1.0
     },
+    "leader": {
+      "x": 839,
+      "y": 268,
+      "width": 615,
+      "height": 36,
+      "visible": true,
+      "group": "",
+      "text_centred": false,
+      "tint": false,
+      "font": 20,
+      "spacing": 1.0
+    },
     "blueflag": {
       "x": 802,
       "y": 94,

@@ -5,6 +5,10 @@ is merged into `main` and pushed to the GitHub remote. Delete a point when it is
 
 ## Next session
 New on 2026-11-16, to try first (build 2026.11.16.2 on Windows; from source on the Mac and Linux):
+0. The race leader banner (`feature/lead-change`): in a race with passes for the lead, "New Race Leader -
+   name" about 5 s after a pass that holds (none for a pass undone within 5 s, none at the start), and
+   "Race Winner - name" with the checkered flag the moment the winner crosses the line, each fading over
+   6 s. Online too (late positions). Its place over TSU, and whether the grey to black reads well.
 1. The log's "slow frame" lines (`fix/slow-frame-log`): at 10 reads a second only real hitches (150 ms and
    more), no longer about 9 a second in a race. Look at `turbohud.log` after a race.
 2. One tint for each group on Windows (`feature/group-tint-windows`, backlog item 3b): off by default there.

@@ -2269,3 +2269,18 @@ its "Recent changes".
 - 2026-11-16: The standings at a race's start confirmed by the user (`docs/standings-confirmed`): in the right
   order from the start (`fix/standings-at-start`). The point is gone from `docs/CONTINUE_HERE.md`, its list
   renumbered.
+- 2026-11-16: The race leader banner (`feature/lead-change`, asked for by the user): a new section,
+  **Race leader** (under Race in the panel, ticked like the others), as on F1's TV graphics. "New Race Leader -
+  name" once a new driver has kept the lead for 5 s (`core/leader.py`, `LEAD_HOLD`; no change counts until the
+  leader has passed a checkpoint, so the grid's order settling is none), and "Race Winner - name" as soon as TSU
+  has the winner finished (not when the finish is more than 6 s old), after which no lead change shows. Each
+  shows 6 s in all, fading in and out over 1 s, on a box shaded grey to black (`BANNER_SHADE`); the winner's has a
+  checkered flag drawn at its right end (the user may give a picture for it later). Not in hotlapping nor the
+  arena modes; spectating too. It works on the order the standings already make (no extra read of the game),
+  and runs only while ticked (ticked again, it starts from the leader then). Between banners it draws nothing,
+  but keeps its window, as every section: showing a window again would on Hyprland mean placing it afresh and
+  handing the focus back, mid-race. Placed top centre below the blue flag (`BANNER_DOWN`), also in the shipped
+  layouts; in move mode's preview with the preview's leader. The guides and README say so. Tests for the hold,
+  a lead lost again, a third car, the grid, the winner (at once, late, ending lead changes), a new race, the
+  row, the modes, the box, its place and its drawing (shade, flag, fade, no blue frame); the app started for 6 s
+  with no error. Not yet seen in a race.

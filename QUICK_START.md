@@ -79,6 +79,8 @@ Hover over a section's name in the move-mode panel for a short explanation.
 - **Blue flag**: a faster car about to lap you.
 - **Yellow flag**: an incident in your sector or the next, who and what.
 - **Penalties**: SHORTCUT with the seconds left, or JUMP START.
+- **Race leader**: a banner for 6 s, "New Race Leader - name" once a new leader has kept the
+  lead for 5 s, and "Race Winner - name" with a checkered flag as the winner finishes.
 
 **Other**
 - **Clock**: your computer's clock. **Time since start** shows instead of the race sections

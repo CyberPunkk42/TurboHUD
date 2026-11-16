@@ -440,6 +440,15 @@ class Section:
     snug: bool = False
     spacing: float = 1.0  # the room between its rows, as a share of the usual (a section's own option)
     tip: str = ''  # what it shows, in a line: the tooltip on its name in the panel and on its box
+    # The race leader banner: shaded from grey to black, the whole box fading in and out (its
+    # Banner's opacity), and the race's winner has a checkered flag at its right end.
+    banner: bool = False
+    end: float = 0.0  # room at the right end of the box, after its text, as a share of its height
+
+
+BANNER_BACK = '#15151e'  # the race leader banner's box (BANNER_SHADE draws it shaded)
+BANNER_SHADE = ('#5c5c5c', '#0a0a0a')  # grey at its left edge to black at its right
+BANNER_TEXT = '#ffffff'
 
 
 LAP_TIME_ROWS = 20  # how many drivers the lap times section is made for
@@ -460,8 +469,9 @@ def default_tint(section, backdrop=False):
 
 def text_can_centre(section):
     """Whether a section's text can go in the middle of its box: not the speed, which is
-    always between its pedal bars, nor a drawing, nor a list with columns."""
-    if section.bar or section.pedals:
+    always between its pedal bars, nor a drawing, nor a list with columns, nor the race leader
+    banner, always in the middle."""
+    if section.bar or section.pedals or section.banner:  # the banner is always in the middle
         return False
     rows = [row for sample in section.samples for row in sample]
     return not any(row.right or row.middle or row.flag for row in rows)
@@ -612,6 +622,15 @@ RACE_SECTIONS = (
         tip='Shortcut and jump-start penalties, with the seconds left',
     ),
     Section(
+        'leader',
+        'Race leader',
+        ((Row('New Race Leader  -  Playername1234567', 'title', BANNER_TEXT, centred=True),),),
+        background=BANNER_BACK,
+        banner=True,
+        end=1.5,
+        tip='A new race leader, once they have led for 5 s, and the race winner as they finish',
+    ),
+    Section(
         'blueflag',
         'Blue flag',
         (),
@@ -649,7 +668,7 @@ RACE_SECTIONS = (
 PANEL_CATEGORIES = (
     ('Timing', ('lap', 'current', 'delta', 'deltabar', 'times', 'laptimes')),
     ('Car', ('fuel', 'fuelfinish', 'tires', 'health', 'draft', 'speed')),
-    ('Race', ('players', 'trackmap', 'radar', 'blueflag', 'yellowflag', 'shortcut')),
+    ('Race', ('players', 'trackmap', 'radar', 'blueflag', 'yellowflag', 'shortcut', 'leader')),
     ('Other', ('localtime', 'clock')),
 )
 
@@ -730,7 +749,14 @@ def base_size(section, scale, measure):
     sizes = [content_size(rows, scale, measure, section.spacing) for rows in section.samples]
     extra = pedal_space(scale) if section.pedals else 0
     below = level_space(scale) if section.level else 0
-    return sizes[0][0] + extra, max(h for _w, h in sizes) + below
+    height = max(h for _w, h in sizes) + below
+    return sizes[0][0] + extra + end_room(section, height), height
+
+
+def end_room(section, height):
+    """The room at the right end of a section's box after its text (Section.end), in pixels, for
+    a box `height` pixels tall: where the race winner's checkered flag goes."""
+    return round(section.end * height)
 
 
 LEVEL_HEIGHT = 8  # the level bar's height below the text, at scale 1
@@ -1262,14 +1288,20 @@ RADAR_DOWN = 0.6  # the radar starts centred, this far down the screen (below th
 DELTA_BAR_DOWN = 0.07  # how far below the blue flag the delta bar goes first, of the screen
 
 
+BANNER_DOWN = 0.12  # the race leader banner's first place: this share of the screen below the top centre
+
+
 def drawing_place(section, size, screen, margin=LAYOUT_MARGIN):
-    """Where a drawing section goes first: the blue flag at the top centre, the radar
+    """Where a drawing section goes first (and the race leader banner): the blue flag at the top centre, the radar
     in the middle a little below the centre, where the eyes are while driving, and the
     track map at the right edge, half way down (the other sections start at the left)."""
     if section.drawing == 'map':
         width, height = size
         x, y, screen_width, screen_height = screen
         return (x + screen_width - margin - width, y + (screen_height - height) // 2, width, height)
+    if section.banner:  # the race leader banner: under the blue flag, clear of the lap title
+        x, y, width, height = top_centre(size, screen)
+        return (x, y + round(screen[3] * BANNER_DOWN), width, height)
     if section.drawing == 'delta':  # below where the blue flag goes
         x, y, width, height = top_centre(size, screen)
         return (x, y + round(screen[3] * DELTA_BAR_DOWN), width, height)
