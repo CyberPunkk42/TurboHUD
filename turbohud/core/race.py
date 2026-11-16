@@ -2482,9 +2482,9 @@ def race_sections(
         sections['draft'] = sections['draft'] + draft_rows(state)
     if state.players:
         order = (
-            standings.order(state.players, now, state.hotlapping)
+            standings.order(state.players, now, state.hotlapping, state.gates)
             if standings is not None
-            else ranked(state.players, state.hotlapping)
+            else ranked(state.players, state.hotlapping, state.gates)
         )
         sections['players'] = players_rows(
             state.players,
@@ -2543,7 +2543,7 @@ def race_sections(
         if track_map is not None and state.on_a_track:  # no map, nor a track learnt, in an arena
             shown = track_map.update(
                 state,
-                order if order is not None else ranked(state.players, state.hotlapping),
+                order if order is not None else ranked(state.players, state.hotlapping, state.gates),
                 yellow=frozenset(incident.name for incident in incidents),
                 yellow_sectors=yellow_sector_spans(incidents, state),
             )
@@ -2570,9 +2570,9 @@ def _watching_sections(
     sections = {'lap': [lap_title_row(state, 'Spectating  -  ')]}
     if state.players:
         order = (
-            standings.order(state.players, now, state.hotlapping)
+            standings.order(state.players, now, state.hotlapping, state.gates)
             if standings is not None
-            else ranked(state.players, state.hotlapping)
+            else ranked(state.players, state.hotlapping, state.gates)
         )
         sections['players'] = players_rows(
             state.players, order, state.clock, state.gates, watching=True, retired=retired, short=nearby_short
@@ -3002,22 +3002,32 @@ DRAFTER_NAME_SHOWN = 10
 LAP_NAME_SHOWN = MAX_NAME_SHOWN
 
 
-def ranked(players, hotlapping=False):
+def ranked(players, hotlapping=False, gates=()):
     """Players in race order: by how far they got (checkpoints passed, a finish
     counting as the next lap's start line), and as far by who got there first. So a
     lapped car that finishes right after the winner (once the winner is in, everyone
     finishes at their next crossing) stays behind the cars on the lead lap, finished or
-    not, rather than coming second. In a hotlapping event (qualifying, LapState.hotlapping):
-    by best lap, those without a lap after them in race order."""
+    not, rather than coming second. Cars that passed the same lines at the same moment, as
+    every car at a race's start, by who is nearer the next line (`gates`, the checkpoint
+    lines, and each car's position): the grid's order, where TSU's own list order showed
+    until the first checkpoint (reported by the user on 2026-11-16). In a hotlapping event
+    (qualifying, LapState.hotlapping): by best lap, those without a lap after them in race
+    order."""
+    lines = len(gates)
+
+    def to_next_line(player):
+        if not lines or player.position is None:
+            return math.inf  # not known: after those that are, in TSU's order
+        return _segment_distance(gates[len(player.passed) % lines], player.position)
 
     def key(player):
         finish = player.finish_time
         if finish is not None:
             # Up to the finish line only: the laps done, and the finish itself.
             reached = sum(len(lap) for lap in player.checkpoints[: player.laps_completed]) + 1
-            return (-reached, finish)
+            return (-reached, finish, 0.0)
         passed = player.passed
-        return (-len(passed), passed[-1] if passed else 0)
+        return (-len(passed), passed[-1] if passed else 0, to_next_line(player))
 
     order = sorted(players, key=key)
     if hotlapping:
@@ -3136,10 +3146,10 @@ class Standings:
         self.pending = None  # a different order, and since when it has lasted
         self.since = 0.0
 
-    def order(self, players, now, hotlapping=False):
+    def order(self, players, now, hotlapping=False, gates=()):
         """The players in the order to show at monotonic time `now` (by best lap in a
-        hotlapping event: ranked)."""
-        current = ranked(players, hotlapping)
+        hotlapping event; `gates`, the checkpoint lines, for cars level: ranked)."""
+        current = ranked(players, hotlapping, gates)
         names = tuple(p.name for p in current)
         if self.shown is None or sorted(names) != sorted(self.shown) or len(set(names)) != len(names):
             self.shown, self.pending = names, None

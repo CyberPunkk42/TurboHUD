@@ -111,7 +111,8 @@ green, or dark yellow when slower than your best). After you set such a lap, the
 map's road shows purple or green for 6 seconds.
 
 **Standings**
-Every driver in race order (in qualifying, which TSU runs as hotlapping, by best lap). The
+Every driver in race order (in qualifying, which TSU runs as hotlapping, by best lap); at the
+start, before anyone reaches the first checkpoint, in grid order, by who is furthest ahead. The
 place and the name always show; every other column can be turned off under **Settings…**:
 - the place, the country flag, the name (up to 18 letters, as in Nearby cars; a longer one
   ends in "…") and, in a race without classes, the clan tag (`FTR` for `[FTR]`)
