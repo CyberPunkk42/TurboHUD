@@ -443,7 +443,7 @@ def run(args, folder):
 
     from turbohud.core import presets as layout_presets
     from turbohud.core.flagstack import combined
-    from turbohud.core.fonts import font_files, fonts_folder, ready_fonts_folder
+    from turbohud.core.fonts import add_font_file, font_files, font_filter, fonts_folder, ready_fonts_folder
     from turbohud.core.hud import (
         CLOCK_SECTIONS,
         FONT_SIZES,
@@ -1403,6 +1403,7 @@ def run(args, folder):
             settings_window.about_requested.connect(lambda: show_about(settings_window))
             settings_window.font_chosen.connect(set_font_family)
             settings_window.fonts_folder_requested.connect(open_fonts_folder)
+            settings_window.add_font_requested.connect(add_font)
         if not settings_window.isVisible():
             settings_window.set_fonts(own_fonts(), settings.font_family)  # files added since show now
             # Beside the panel where it is (it may have been dragged), and wholly on its screen.
@@ -1475,11 +1476,39 @@ def run(args, folder):
         log.info('font: %s', family or 'the system font')
 
     def open_fonts_folder():
+        """The fonts folder in the system's file manager. Its window opens beneath TurboHUD's, which
+        stay on top of everything (reported by the user on 2026-11-17), so the settings window closes
+        and move mode ends first: locked, the sections let clicks through and the folder shows."""
         if fonts_dir is None:
             log.warning('customization/fonts could not be made')
             return
+        if settings_window is not None:
+            settings_window.close_window()
+        set_locked(True)
         QDesktopServices.openUrl(QUrl.fromLocalFile(str(fonts_dir)))
         log.info('opened %s', fonts_dir)
+
+    def add_font():
+        """Add font...: a font file chosen in a file window above TurboHUD's, copied into the fonts
+        folder, and the HUD drawn with it at once."""
+        if fonts_dir is None:
+            log.warning('customization/fonts could not be made')
+            return
+        downloads = Path.home() / 'Downloads'
+        start = downloads if downloads.is_dir() else Path.home()
+        chosen = open_path(settings_window, native, 'Add a font', start, font_filter())
+        if not chosen:
+            return
+        copied = add_font_file(chosen, fonts_dir)
+        families = own_fonts()
+        family = next((f for f, file in families.items() if copied and file == copied.name), None)
+        if family is None:
+            warn(settings_window, native, f'{Path(chosen).name} could not be used as a font.')
+            log.warning('font file not added: %s', Path(chosen).name)
+            return
+        log.info('font added: %s (%s)', family, copied.name)
+        settings_window.set_fonts(families, family)
+        set_font_family(family)
 
     def fitted(window, keep_width=False):
         """A text section's box at its text size, where it is now."""

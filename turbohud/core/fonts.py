@@ -2,6 +2,7 @@
 customization/fonts, beside customization/display_presets, which the settings window offers
 for the whole HUD. Only the folder and its files here; Qt reads them in turbohud.hud.painter."""
 
+import shutil
 from pathlib import Path
 
 FONTS_FOLDER = 'fonts'
@@ -11,7 +12,8 @@ README_TEXT = """TurboHUD fonts
 
 Put font files (.ttf or .otf) here to draw the HUD with them. Then open TurboHUD's settings
 (the icon's menu > Settings...) and choose the font under Look > Font. Fonts added while the
-settings window is open show the next time it opens.
+settings window is open show the next time it opens. "Add font..." in the settings copies a
+font file here and chooses it at once. Delete a file here to remove its font.
 
 TurboHUD draws its text bold, so a font with a bold style looks best; it makes one where the
 font has none. Letters a font lacks come from the system's font. "System font" goes back to
@@ -45,3 +47,32 @@ def font_files(folder):
         )
     except OSError:
         return []
+
+
+def font_filter():
+    """The file window's filter for font files."""
+    return 'Fonts (' + ' '.join(f'*{suffix}' for suffix in FONT_FILES) + ')'
+
+
+def add_font_file(source, folder):
+    """Copy the font file `source` into `folder` (Add font..., 2026-11-17): the copy's path, the
+    file already there where it is the same one, or None where `source` is no font file or the copy
+    failed. A different file of the same name is kept as "name (2).ttf" and so on, never replaced."""
+    source, folder = Path(source), Path(folder)
+    if source.suffix.lower() not in FONT_FILES or not source.is_file():
+        return None
+    try:
+        if source.resolve().parent == folder.resolve():
+            return source
+        target = folder / source.name
+        number = 2
+        while target.exists():
+            if target.read_bytes() == source.read_bytes():
+                return target
+            target = folder / f'{source.stem} ({number}){source.suffix}'
+            number += 1
+        folder.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(source, target)
+    except OSError:
+        return None
+    return target

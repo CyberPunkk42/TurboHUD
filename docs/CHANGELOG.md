@@ -4,6 +4,17 @@ Every finished change, newest first: what changed, why, how it was checked and w
 Each branch adds its dated entry at the top. Where things stand now: `RESUME.md`; what is open:
 `docs/BACKLOG.md`.
 
+- 2026-11-17: Add font..., and the fonts folder no longer hidden (`feature/add-font`, reported by the user):
+  in move mode, Settings > Fonts folder... opened the system's file manager beneath TurboHUD's windows, which
+  stay on top of everything, so it could hardly be seen. Now **Add font...** beside it opens a file window
+  above TurboHUD's (the one Export and Import use, `dialogs.open_path`), copies the chosen .ttf or .otf into
+  `customization/fonts` (`fonts.add_font_file`: the same file is not copied twice, another of the same name is
+  kept as "name (2)", never replaced; the player's own file stays) and draws the HUD with it at once; a file Qt
+  cannot read gets a warning. **Fonts folder...** stays, to add by hand or delete, but first closes the settings
+  window and ends move mode, so the folder shows. The guides and the folder's read-me say so. Tests for the
+  copy (new, the same again, a name taken, a file already there, no font file) and the button; TurboHUD started
+  with move mode and the settings window opened, no error. Not yet tried by hand: the file window over the
+  sections on each system, and the folder showing after Fonts folder....
 - 2026-11-17: The documents tidied (`docs/tidy-documents`, asked for by the user: too many, and growing):
   each thing written once. `RESUME.md` is now about a page (state and what to try next), without its copy
   of the history; `docs/PROGRESS.md` became this changelog, newest first, the only history;

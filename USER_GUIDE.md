@@ -435,9 +435,12 @@ The window has two columns, under headings. The on/off options are the same as u
   the game. **Reset colours** puts the defaults back.
 - **All sections:** **Smaller** and **Bigger** make every section 10% smaller or bigger.
 - **Font:** the font of every section: **System font** (the usual one), or a font of your
-  own. Put font files (`.ttf` or `.otf`) in the **`customization/fonts`** folder, beside
-  `customization/display_presets` (section 5); **Fonts folder...** opens it. Fonts added while
-  the settings window is open show the next time it opens. Every section's box is fitted to
+  own. **Add font...** opens a file window: choose a font file (`.ttf` or `.otf`) and it is copied
+  into the **`customization/fonts`** folder (beside `customization/display_presets`, section 5)
+  and used at once; your own file stays where it was. **Fonts folder...** opens that folder, to
+  add files by hand or delete one to remove its font. As the folder's window would open beneath
+  TurboHUD's, the settings window closes and move mode ends first. Fonts put in the folder by
+  hand show the next time the settings window opens. Every section's box is fitted to
   the new font at once. TurboHUD draws its text bold, so a font with a bold style looks best;
   letters a font lacks come from the system font. A chosen font whose file is gone shows as
   "(missing)", and the system font is drawn until it comes back.

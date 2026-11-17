@@ -53,6 +53,55 @@ class FolderTests(unittest.TestCase):
         self.assertEqual(fonts.font_files(self.folder / 'missing'), [])
 
 
+class AddFontTests(unittest.TestCase):
+    """Add font... copies a chosen file into the fonts folder (2026-11-17): the folder window
+    opened beneath TurboHUD's."""
+
+    def setUp(self):
+        self.root = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, self.root)
+        self.folder = self.root / 'fonts'
+        self.downloads = self.root / 'Downloads'
+        self.downloads.mkdir()
+
+    def font(self, name='Nice.ttf', data=b'font one'):
+        path = self.downloads / name
+        path.write_bytes(data)
+        return path
+
+    def test_copied_into_the_folder(self):
+        copied = fonts.add_font_file(self.font(), self.folder)
+        self.assertEqual(copied, self.folder / 'Nice.ttf')
+        self.assertEqual(copied.read_bytes(), b'font one')
+        self.assertTrue((self.downloads / 'Nice.ttf').exists())  # the player's file stays
+
+    def test_the_same_file_again_is_not_copied_twice(self):
+        fonts.add_font_file(self.font(), self.folder)
+        self.assertEqual(fonts.add_font_file(self.font(), self.folder), self.folder / 'Nice.ttf')
+        self.assertEqual([p.name for p in fonts.font_files(self.folder)], ['Nice.ttf'])
+
+    def test_another_file_of_the_same_name_is_kept_beside(self):
+        fonts.add_font_file(self.font(), self.folder)
+        copied = fonts.add_font_file(self.font(data=b'font two'), self.folder)
+        self.assertEqual(copied, self.folder / 'Nice (2).ttf')
+        self.assertEqual((self.folder / 'Nice.ttf').read_bytes(), b'font one')  # never replaced
+
+    def test_a_file_already_in_the_folder(self):
+        self.folder.mkdir()
+        inside = self.folder / 'Here.otf'
+        inside.write_bytes(b'x')
+        self.assertEqual(fonts.add_font_file(inside, self.folder), inside)
+        self.assertEqual([p.name for p in fonts.font_files(self.folder)], ['Here.otf'])
+
+    def test_no_font_file_is_refused(self):
+        self.assertIsNone(fonts.add_font_file(self.font('notes.txt'), self.folder))
+        self.assertIsNone(fonts.add_font_file(self.downloads / 'gone.ttf', self.folder))
+        self.assertFalse(self.folder.exists())
+
+    def test_the_file_window_shows_font_files(self):
+        self.assertEqual(fonts.font_filter(), 'Fonts (*.ttf *.otf *.ttc *.otc)')
+
+
 class SettingsTests(unittest.TestCase):
     def test_the_font_is_saved_and_read(self):
         folder = Path(tempfile.mkdtemp())
@@ -158,6 +207,16 @@ class SettingsWindowTests(unittest.TestCase):
         from PySide6.QtWidgets import QPushButton
 
         button = next(b for b in window.findChildren(QPushButton) if b.text() == 'Fonts folder...')
+        button.click()
+        self.assertEqual(asked, [True])
+
+    def test_the_add_font_button(self):
+        window = self.window()
+        asked = []
+        window.add_font_requested.connect(lambda: asked.append(True))
+        from PySide6.QtWidgets import QPushButton
+
+        button = next(b for b in window.findChildren(QPushButton) if b.text() == 'Add font...')
         button.click()
         self.assertEqual(asked, [True])
 
