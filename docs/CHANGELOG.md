@@ -4,6 +4,12 @@ Every finished change, newest first: what changed, why, how it was checked and w
 Each branch adds its dated entry at the top. Where things stand now: `RESUME.md`; what is open:
 `docs/BACKLOG.md`.
 
+- 2026-11-17: The race leader banner's text in the middle (`fix/banner-text-centred`, reported by the user): the
+  banner kept room at its right end for the winner's checkered flag (`Section.end`, 1.5 times its height) on every
+  banner, so "New Race Leader - name", which has no flag, was centred in what was left: about 37 px left of the
+  middle on a 828 px banner. The room is now kept only with the flag: a new leader's text sits in the middle of
+  the box (within 1% in a test, was about 9% off), the winner's in the middle of the room before the flag. Also in
+  move mode's preview. Tests for both, measured on the drawn letters. Not yet seen in a race.
 - 2026-11-17: Move mode's grid beneath the sections on the Mac and Windows (`fix/grid-beneath-sections`, reported
   by the user: every section lay behind the grid, the panel and the other windows in front). The grid opens after
   the sections already show, and raised to TurboHUD's level it lay in front of them; raising them again did not

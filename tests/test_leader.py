@@ -280,6 +280,33 @@ class BannerDrawingTest(unittest.TestCase):
         self.assertGreater(max(light), 200)  # white squares
         self.assertLess(min(light), 40)  # black ones
 
+    @staticmethod
+    def text_middle(image, right=None):
+        """The middle, across, of the banner's white letters (left of `right` if given)."""
+        right = image.width() if right is None else right
+        xs = [
+            x
+            for x in range(right)
+            for y in range(image.height() // 4, 3 * image.height() // 4)
+            if image.pixelColor(x, y).lightness() > 200
+        ]
+        return (min(xs) + max(xs)) / 2
+
+    def test_a_new_leaders_text_in_the_middle_of_the_box(self):
+        # It sat left of the middle by half the flag's room (reported by the user on 2026-11-17).
+        window = self.window()
+        image = self.show(window, False)
+        # Within 1% of the width: the letters' own drawing; before, it was about 9% off.
+        self.assertAlmostEqual(self.text_middle(image), image.width() / 2, delta=image.width() / 100)
+
+    def test_the_winners_text_in_the_middle_of_the_room_before_the_flag(self):
+        from turbohud.core import hud
+
+        window = self.window()
+        image = self.show(window, True)
+        room = image.width() - hud.end_room(window.section, image.height())
+        self.assertAlmostEqual(self.text_middle(image, room - 1), room / 2, delta=image.width() / 100)
+
     def test_a_new_leader_has_none(self):
         window = self.window()
         self.assertLess(max(self.flag_area(self.show(window, False))), 60)  # the black end only

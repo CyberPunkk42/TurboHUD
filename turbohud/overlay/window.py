@@ -623,7 +623,9 @@ class SectionWindow(QWidget):
         if self.section.banner and self.locked and self.banner is not None:
             painter.setOpacity(min(max(self.banner.opacity, 0.0), 1.0))
             winner = self.banner.winner
-        inset = end_room(self.section, self.height())  # after the text: the winner's checkered flag
+        # After the text: the winner's checkered flag. Only with the flag: kept for every banner, it
+        # put a new leader's text that far left of the middle (reported by the user on 2026-11-17).
+        inset = end_room(self.section, self.height()) if winner else 0
         bars = pedal_space(self.theme.scale) if self.section.pedals else 0
         if self.font is not None:
             # Its text size, whatever the box (text_box fits it); only a live text wider than the box
