@@ -4,6 +4,15 @@ Every finished change, newest first: what changed, why, how it was checked and w
 Each branch adds its dated entry at the top. Where things stand now: `RESUME.md`; what is open:
 `docs/BACKLOG.md`.
 
+- 2026-11-17: Move mode's grid beneath the sections on the Mac and Windows (`fix/grid-beneath-sections`, reported
+  by the user: every section lay behind the grid, the panel and the other windows in front). The grid opens after
+  the sections already show, and raised to TurboHUD's level it lay in front of them; raising them again did not
+  bring windows already shown forward (the same as the file windows, 2026-11-17). Now the grid goes beneath them:
+  on the Mac to the back of TurboHUD's level (`Native.place_below`, `orderWindow:relativeTo:`), on Windows just
+  below the lowest shown section (its `place_below`, as the group tints use). Seen in the real app on the Mac: in
+  move mode the grid is the backmost of TurboHUD's 22 windows by macOS's window order (log: `grid: beneath
+  TurboHUD's windows`), no error. A test for the Mac's call. Not yet seen on Windows; Hyprland, where it was
+  right, is unchanged.
 - 2026-11-17: Add font..., and the fonts folder no longer hidden (`feature/add-font`, reported by the user):
   in move mode, Settings > Fonts folder... opened the system's file manager beneath TurboHUD's windows, which
   stay on top of everything, so it could hardly be seen. Now **Add font...** beside it opens a file window

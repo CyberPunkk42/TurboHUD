@@ -69,8 +69,8 @@ Checked by hand on the Mac (2026-11-05 and later). Still to try:
 - Linux: `--preset`, moving and resizing through Hyprland (followers sized when a resize ends), Undo; the
   move-mode panel's 13 px text over TSU.
 - Windows: see item 1.
-- The Mac: the move-mode panel on a small laptop screen (it scrolls); the grid beneath the sections and
-  letting clicks through (also Windows); the Options submenu in the menu bar (and Windows' tray); the
+- The Mac: the move-mode panel on a small laptop screen (it scrolls); the grid letting clicks through
+  (beneath the sections since `fix/grid-beneath-sections`; on Windows still to see); the Options submenu in the menu bar (and Windows' tray); the
   save and open windows above TurboHUD.
 - Named presets and a preset per kind of event (2026-11-15): the Layouts window beside the panel, typing
   a name there (focus on Hyprland), Ctrl+Shift+4 and 5 on each system, and each kind in TSU (a recording,

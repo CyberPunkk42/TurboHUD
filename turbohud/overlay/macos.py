@@ -11,6 +11,7 @@ from ctypes import c_bool, c_char_p, c_int32, c_long, c_uint32, c_ulong, c_void_
 from turbohud.overlay import HOTKEY_LOCK, HOTKEY_PRESETS, HOTKEY_QUIT
 
 WINDOW_LEVEL = 1000  # NSScreenSaverWindowLevel
+NS_WINDOW_BELOW = -1  # NSWindowOrderingMode: with no window to go by, the back of the level
 NS_ACTIVATION_POLICY_ACCESSORY = 1
 NS_APPLICATION_ACTIVATE_IGNORING_OTHER_APPS = 1 << 1
 # NSWindowCollectionBehavior: on every Space, allowed next to a full-screen window, and
@@ -106,6 +107,17 @@ class Native:
         send(window, 'setCollectionBehavior:', COLLECTION_BEHAVIOR, restype=None, argtypes=[c_ulong])
         send(window, 'setHidesOnDeactivate:', False, restype=None, argtypes=[c_bool])
         return f'window level {WINDOW_LEVEL}, on every Space'
+
+    def place_below(self, widget, above):
+        """`widget`'s window at the back of TurboHUD's level, beneath its other windows there (`above`
+        among them): move mode's grid. Raised to the level after the sections already showed, the
+        grid lay in front of them, and raising them again did not bring them forward (reported by
+        the user on 2026-11-17)."""
+        if not above:
+            return 'nothing to go below'
+        window = send(c_void_p(int(widget.winId())), 'window')
+        send(window, 'orderWindow:relativeTo:', NS_WINDOW_BELOW, 0, restype=None, argtypes=[c_long, c_long])
+        return "beneath TurboHUD's windows"
 
     def take_focus(self):
         # Become the active app, so the game (which hides the pointer) is not.
