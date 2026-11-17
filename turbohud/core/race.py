@@ -280,7 +280,16 @@ def _passed(times, k):
     return times[k] != NO_CHECKPOINT and times[k] >= times[0]
 
 
-MAX_TIRE_WEAR = 5_760_000  # TS.TireWearSettings.MaxTireWear (a constant): worn out
+# TS.TireWearSettings (constants from the game's metadata, 2026-11-17): a tire wears at least
+# StandardTireWearPerSecond driving at full speed on a plain road (16 a tick), and is worn out when its
+# wear reaches its compound's endurance (compound1Endurance to compound3Endurance, in such seconds,
+# MinTireEndurance to MaxTireEndurance) times that: TS.TireCompoundProperties.maxTireWear. TSU's own
+# Tires percentage counts against that (a player's 95 % where 5,760,000 gave 97 %, 2026-11-17).
+STANDARD_TIRE_WEAR_PER_SECOND = 800
+MIN_TIRE_ENDURANCE, MAX_TIRE_ENDURANCE = 30, 7200
+ENDURANCE_FIELDS = ('compound1Endurance', 'compound2Endurance', 'compound3Endurance')
+# TS.TireWearSettings.MaxTireWear: the most endurance's wear, used where the compound's is not read.
+MAX_TIRE_WEAR = MAX_TIRE_ENDURANCE * STANDARD_TIRE_WEAR_PER_SECOND  # 5,760,000
 # TS.VehicleState.tireCompoundAndChangeTicks holds the car's tire compound in its lowest bits
 # (TS.TireWearSettings.BitsForTireCompound = 2, from the game's metadata, 2026-11-12) and the
 # tire change's ticks above them: a change of 600 ticks (12 s) counted to 2400 with compound 0.
@@ -328,7 +337,7 @@ class CarState:
     fuel_used: int  # TS.VehicleState.fuelConsumption: 150 a second at full throttle
     fuel_tank: int  # a full tank in the same units (the event's fuel settings)
     tires_on: bool
-    tire_wear: int  # TS.VehicleState.tireWear, worn out at MAX_TIRE_WEAR
+    tire_wear: int  # TS.VehicleState.tireWear, worn out at tire_max
     speed: float  # forward speed, game units (metres) a second
     fuel_per_lap: float | None = None  # average of the last laps, same units
     wear_per_lap: float | None = None
@@ -342,6 +351,7 @@ class CarState:
     draft_downforce_loss: float = 0.0  # 0 to 1: downforce lost to the slipstream now
     draft_last_lap: float | None = None  # 0 to 1: share of the last lap spent in a slipstream
     tire_change: float = 0.0  # 0 to 1: how far a tire change in the pits has come
+    tire_max: int = MAX_TIRE_WEAR  # the wear at which this compound is worn out (tire_limits)
     # The engine sound's gear (1 the lowest) and pitch, which rises with the revs: TSU's cars have no
     # gearbox of their own, the sound has one (TS.EngineAudio). None where not read.
     gear: int | None = None
@@ -388,7 +398,7 @@ class CarState:
     def tires_left(self):
         if not self.tires_on:
             return None
-        return min(max(1 - self.tire_wear_shown / MAX_TIRE_WEAR, 0.0), 1.0)
+        return min(max(1 - self.tire_wear_shown / self.tire_max, 0.0), 1.0)
 
     @property
     def fuel_laps(self):
@@ -401,7 +411,7 @@ class CarState:
     def tire_laps(self):
         if self.tires_left is None or not self.wear_per_lap:
             return None
-        return (MAX_TIRE_WEAR - self.tire_wear_shown) / self.wear_per_lap
+        return max(self.tire_max - self.tire_wear_shown, 0) / self.wear_per_lap
 
     @property
     def kmh(self):
@@ -413,6 +423,18 @@ class CarState:
         if self.throttle is None or self.brake is None:
             return False
         return self.throttle == 0 and self.brake == 0 and self.kmh >= LIFT_MIN_KMH
+
+
+def tire_limits(endurances):
+    """The wear at which each compound is worn out, from the event's endurances in seconds
+    (TS.TireWearSettings.compound1Endurance on): MAX_TIRE_WEAR for one that is None or out of
+    the game's range."""
+    return tuple(
+        e * STANDARD_TIRE_WEAR_PER_SECOND
+        if e is not None and MIN_TIRE_ENDURANCE <= e <= MAX_TIRE_ENDURANCE
+        else MAX_TIRE_WEAR
+        for e in endurances
+    )
 
 
 def per_lap(history, laps=PER_LAP_LAPS):
@@ -604,6 +626,7 @@ class LapReader:
         self._tags = {}  # profile object -> (its clan tag, when read): see _kept_text
         self._shortcut_for, self._shortcut_length = None, 0.0  # see _shortcut_seconds
         self._compounds_for, self._compounds = None, None  # see _read_compounds
+        self._tire_limits = tire_limits((None,) * MAX_COMPOUNDS)  # see _read_compounds
         self._track_for, self._track = None, ''  # see _track_name
         self._hotlapping_for, self._hotlapping = None, False  # see _hotlapping_event
         self._camera_logged = 'unread'  # the camera view last logged (cockpit_camera)
@@ -1468,6 +1491,7 @@ class LapReader:
             vehicle = self._ref('player', player, 'm_vehicle')
             state = self._ref('vehicle', vehicle, 'm_state')
             updater = self._ref('vehicle', vehicle, 'm_stateUpdater')
+            self._read_compounds(updater)
             fuel_used = memory.i32(state + self._offset('vstate', state, 'fuelConsumption'))
             tire_wear = memory.i32(state + self._offset('vstate', state, 'tireWear'))
             fuel_on = bool(memory.u8(updater + self._offset('updater', updater, 'm_fuelEnabled')))
@@ -1486,6 +1510,7 @@ class LapReader:
             self._wear_history.setdefault(lap, tire_wear)
             self._fuel_marks.setdefault(lap, {}).setdefault(checkpoint, fuel_used)
             trend = fuel_trend(self._fuel_marks, self._fuel_history, lap, checkpoint, fuel_used)
+        compound, tire_change = self._compound_and_change(state)
         fuel_starts = [self._fuel_history[i] for i in sorted(self._fuel_history)]
         wear_starts = [self._wear_history[i] for i in sorted(self._wear_history)]
         return CarState(
@@ -1505,7 +1530,8 @@ class LapReader:
             slowed_from=slowed_from,
             draft=draft,
             draft_downforce_loss=downforce_loss,
-            tire_change=self._tire_change(state),
+            tire_change=tire_change,
+            tire_max=self._tire_limits[compound if compound is not None else 0],
             **(self._gear(vehicle) if self.read_gear else {}),
             reversing=self.read_gear and self._reversing(state),
         )
@@ -1535,14 +1561,16 @@ class LapReader:
             return {}
         return {'gear': gear + 1, 'revs': pitch}
 
-    def _tire_change(self, state):
-        """How far a tire change has come, 0 to 1: the ticks of tireCompoundAndChangeTicks
-        (above the compound's bits) against TIRE_CHANGE_END."""
+    def _compound_and_change(self, state):
+        """(the car's tire compound's index or None, how far a tire change has come 0 to 1),
+        both from tireCompoundAndChangeTicks: the compound in its lowest bits, the change's
+        ticks above them, against TIRE_CHANGE_END."""
         try:
-            ticks = self._number('vstate', state, 'tireCompoundAndChangeTicks') >> COMPOUND_BITS
+            value = self._number('vstate', state, 'tireCompoundAndChangeTicks')
         except (NotFound, ReadError):
-            return 0.0
-        return ticks / TIRE_CHANGE_END if 0 < ticks <= TIRE_CHANGE_END else 0.0
+            return None, 0.0
+        ticks = value >> COMPOUND_BITS
+        return value & COMPOUND_MASK, ticks / TIRE_CHANGE_END if 0 < ticks <= TIRE_CHANGE_END else 0.0
 
     def _drafting(self, updater):
         """(draft 0 to 1, downforce lost 0 to 1) of the local car, or (None, 0.0) without
@@ -1806,18 +1834,33 @@ class LapReader:
 
     def _read_compounds(self, updater):
         """The event's number of tire compounds (TS.EventSettings.tireWear.tireCompoundCount,
-        1 to 3, found in the game's metadata on 2026-11-12), from a car's updater: read once an
-        event, kept in self._compounds."""
+        1 to 3, found in the game's metadata on 2026-11-12) and the wear at which each is worn
+        out (tire_limits, from its endurance), from a car's updater: read once an event, kept in
+        self._compounds and self._tire_limits."""
         try:
             settings = self._ref('updater', updater, 'm_eventSettings')
             if settings == self._compounds_for:
                 return
             self._compounds_for, self._compounds = settings, None
+            self._tire_limits = tire_limits((None,) * MAX_COMPOUNDS)
             tires = self._ref('event settings', settings, 'tireWear')
             count = self._number('tire settings', tires, 'tireCompoundCount')
         except (NotFound, ReadError):
             return
         self._compounds = count if 0 < count <= MAX_COMPOUNDS else None
+        endurances = []
+        for name in ENDURANCE_FIELDS:
+            try:
+                endurances.append(self._number('tire settings', tires, name))
+            except (NotFound, ReadError):
+                endurances.append(None)
+        self._tire_limits = tire_limits(endurances)
+        log.info(
+            'tires: %s compounds, endurance %s s, worn out at %s',
+            count,
+            ', '.join('?' if e is None else str(e) for e in endurances[: self._compounds or MAX_COMPOUNDS]),
+            ', '.join(f'{w:,}' for w in self._tire_limits[: self._compounds or MAX_COMPOUNDS]),
+        )
 
     def _slow_state(self, vehicle, updater):
         """(in the pit area, wrecked, tire compound, respawns, jump start, wheel grips, wheel
