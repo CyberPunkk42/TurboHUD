@@ -111,6 +111,9 @@
    and one tint per group gets a small window behind each group there (item 3b).
 
 ## Recent changes
+  - 2026-11-17: A font per section noted as an idea (`docs/idea-font-per-section`, asked for by the user): a new
+    "Nice to have" list at the end of `docs/IMPROVEMENT_BACKLOG.md`, for ideas talked over and left for later,
+    with how a font per section would work and what it would cost. Not planned; the HUD keeps one font.
   - 2026-11-16: No mouse pointer in move mode until TSU's menu was opened, reported by players
     (`fix/move-mode-pointer-windows`): in a race TSU hides the pointer and holds it while it is the
     foreground window, and on Windows move mode only noted that window, never took the focus, so the pointer

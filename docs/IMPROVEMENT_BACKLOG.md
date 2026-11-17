@@ -260,6 +260,19 @@ runs did stop the search (seen on Windows 2026-11-13, a replay after a race); fi
 (a recording's access time, else a search for replays now and then). To see: on the Mac, whether CrossOver's files
 get an access time when TSU opens a recording (if not, the slower searches find it).
 
+## Nice to have (ideas, not planned)
+Ideas talked over and left for later; none is being worked on. Take one up only when the user asks.
+- **A font per section** (talked over on 2026-11-17; the user keeps one font for the whole HUD for now).
+  As a section's own text size: in the move-mode panel, a font per section beside its size, **Global** by
+  default (the settings window's Look > Font), saved with the layout, so presets, Export and Import keep it.
+  Work: the painter keeps its texts by text and size (`hud_font`, `text_path`, `text_advance`, the text images
+  and glyphs in `turbohud/hud/painter.py`), with one family for all (`set_family`); the family would join those
+  keys, and each section pass its own. Cost: none per frame (kept texts draw the same in any font), a short one
+  the first time a text shows in a font, and memory: each font in use keeps its own texts within the same limits
+  (64 MB of text images, 512 to 4,096 entries per kind), so with a font on every section the lap times and the
+  player list could push each other out and draw texts again more often. Measure the log's `HUD frames` drawing
+  share in a race with two or three fonts; raise the limits a little if needed.
+
 ## Design notes for the real overlay
 - Move mode is a short, deliberate step: while the overlay takes the mouse, the game gets
   no mouse input under it. Since 2026-11-13 (asked for by the user) a click on the game no

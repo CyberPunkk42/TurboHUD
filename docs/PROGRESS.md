@@ -2314,3 +2314,6 @@ its "Recent changes".
     TurboHUD the active app; on Linux nothing changes yet (focusing the panel on Hyprland would move the mouse
     onto it). The User Guide says so. Tests for the panel in front, a refusal and the retry, the game given
     back; on the Mac move mode switched on in a running TurboHUD with no error. Not yet tried on Windows.
+  - 2026-11-17: A font per section noted as an idea (`docs/idea-font-per-section`, asked for by the user): a new
+    "Nice to have" list at the end of `docs/IMPROVEMENT_BACKLOG.md`, for ideas talked over and left for later,
+    with how a font per section would work and what it would cost. Not planned; the HUD keeps one font.
