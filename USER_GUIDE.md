@@ -375,7 +375,7 @@ mode ends):
   Hotlapping, Practice or Recordings (up to 24 letters). **Enter** (or clicking elsewhere) keeps
   the name. **Save** keeps the layout as it is now in that preset (replacing what was there),
   **Load** puts the sections back as it has them (also Ctrl+Shift+1 to 5, at any time, also
-  during a race), **Delete** deletes it. A violet line below the presets confirms each for a few
+  during a race), **Delete** deletes it. An electric blue line below the presets confirms each for a few
   seconds, such as "✓ Preset 2 named Race" or "✓ Preset 2 Race saved". A preset holds where
   each section sits, its size, whether it shows and its group; colours and options stay as
   they are.

@@ -34,9 +34,9 @@ WORD_BUTTON = 54  # as the panel's word buttons (window.PANEL_WORD_BUTTON)
 NAME_WIDTH = 150  # the name boxes: about PRESET_NAME_MOST letters
 OFF = 0  # a mode's choice when no preset loads for it
 # The line below the presets that says what was just done (asked for by the user on 2026-11-17):
-# shown this long, in this neon violet (the user's choice), bright enough on the window's dark blue.
+# shown this long, in this neon electric blue (the user's choice), bright on the window's dark blue.
 STATUS_SHOWN_MS = 3000
-STATUS_COLOUR = '#c77dff'
+STATUS_COLOUR = '#1fd5ff'
 # What each mode covers, for its tooltip.
 MODE_TIPS = {
     'recording': 'A recording (replay) TSU plays',
