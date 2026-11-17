@@ -3,7 +3,9 @@
 TurboHUD is an overlay for Turbo Sliders Unlimited (TSU): small see-through boxes on
 top of the game that show race information the game does not show itself, or not as
 clearly. This document explains what it shows, where the data comes from, and what it
-does (and does not do) to the game, to your RAM and to your system.
+does (and does not do) to the game, to your RAM and to your system; then, for developers, why it
+is built with Python and Qt, how it is built and shipped, the rules for the overlay and where
+everything is in the code.
 
 State: 2026-11-15. Live race data works on Linux (the native TSU build), on macOS (TSU in
 CrossOver; see "On macOS" below) and on Windows (see "On Windows" below). The rest of this
@@ -140,6 +142,14 @@ then `ReadProcessMemory`), so there is no probe and no launch option. TurboHUD s
 Rust reader as on the Mac (`turbohud-reader.exe`, in the download), as an ordinary program
 beside TSU, and asks it over a pipe; where it is missing, TurboHUD reads in Python itself
 (`turbohud/tsu/winmemory.py`). A search reads with 4 threads: about 6 s for all of TSU's data.
+
+Also on Windows: shortcuts through `RegisterHotKey` (`turbohud/overlay/windows.py`); AMD Software
+takes Ctrl+Shift+L on some PCs, so Ctrl+Shift+F12 is the spare. Move mode brings its panel to the
+front, so TSU lets go of the pointer it hides in a race, and locking gives TSU the focus back. Each
+section keeps its own window (one window per screen cost the compositor about three times the GPU,
+2026-11-16), and one tint per group is a small window behind each group. One TurboHUD runs at a time
+(`turbohud.lock`); Windows has no command socket, so a second start only says so. The gamepad's
+triggers are not read (XInput would be the way).
 
 ## How it finds the race in the game's memory
 
@@ -345,27 +355,142 @@ gives no control over the car.
 - A game update can rename classes or fields. TurboHUD then shows "waiting" instead of
   wrong numbers, and the names need updating.
 
-## Where to look in the code
+## Rules for the overlay
 
-| File | What it does |
-|---|---|
-| `turbohud/tsu/probe.py` | the probe: starts TSU, serves read-only questions |
-| `turbohud/tsu/client.py` | talks to the probe, reads the race in a background thread |
-| `turbohud/tsu/bottle.py` | macOS: finds TSU's bottle and starts the reader there; Windows: starts it beside TSU; asks it over the pipe |
-| `reader/` | the read-only reader in Rust (a Windows program) |
-| `turbohud/tsu/bottle_reader.py` | the same reader in Python, the fallback (`TURBOHUD_PY_READER=1`) |
-| `turbohud/tsu/winmemory.py` | reading TSU as a Windows program: regions, page cache, paced search |
-| `turbohud/tsu/gamelog.py` | reads TSU's log to know whether an event runs |
-| `turbohud/tsu/gameflags.py` | TSU's own flag images, from the player's copy of the game |
-| `turbohud/tsu/controller.py` | reads the gamepad's triggers |
-| `turbohud/core/il2cpp.py` | finds classes and fields by name in an IL2CPP game |
-| `turbohud/core/race.py` | reads the race and works out what each section shows |
-| `turbohud/core/preview.py` | move mode's preview: one moment of a made-up race at Laguna Seca (`assets/preview`), run through `race.py` like a real one |
-| `turbohud/core/trackmap.py` | the track map: the track's shape and which cars show |
-| `turbohud/core/leader.py` | the race leader banner: a new leader held for 5 s, the winner, and the fade |
-| `turbohud/core/hud.py` | the sections, their sizes, places and layout |
-| `turbohud/core/presets.py` | layout files per screen size, and fitting them to another |
-| `turbohud/core/fonts.py` | the player's own fonts: `customization/fonts` and its files (`turbohud/hud/painter.py` draws with the one chosen) |
-| `turbohud/overlay/` | the windows; Hyprland, Windows and macOS specifics |
-| `turbohud/app.py` | starts everything: settings, windows, tray menu, shortcuts |
-| `turbohud/control.py` | the command socket for `run_turbohud.sh --toggle` and the rest |
+- Move mode is a short, deliberate step: while the overlay takes the mouse, the game gets
+  no mouse input under it. Since 2026-11-13 (asked for by the user) a click on the game no
+  longer ends it; it ends by its shortcut, the panel's Lock, or a race beginning.
+- Set the pointer explicitly in move mode; TSU hides the system pointer at times.
+- Locked: hide the background completely and show only the content, with a shadow for
+  readability.
+- Keyboard shortcuts must work on Mac keyboards (no Alt). On the Mac, Carbon's system-wide
+  hotkeys work while TSU has focus and need no permission.
+- On the Mac, put the overlay at a window level above 26 (TSU's in Fullscreen) and allow
+  it on every Space; the probe uses the screen-saver level (1000).
+
+## Why Python and Qt (decided 2026-10-23)
+
+The stack had to draw a good-looking HUD the player can style (colours, fonts, size, layout), install
+on Windows, macOS and Linux with nothing else to install first, and stay light while racing. The
+overlay window differs per system (a native Mac window above TSU's Fullscreen, outside CrossOver;
+always-on-top and click-through on Windows; Hyprland asked at runtime on Linux), while everything
+else is shared. Chosen: **B, Python with Qt (PySide6)**, shipped as a bundled app for each system.
+
+| | A. Python, standard library + ctypes | B. Python + Qt (PySide6) | C. Web UI (Electron or Tauri) | D. Native per system (C# + Swift) |
+| --- | --- | --- | --- | --- |
+| Overlay on Windows | Proven by the probe (inside CrossOver) | Qt flags for on-top, click-through and a transparent background | Built in | Native |
+| Overlay over Mac Fullscreen | Proven by the probe | A few lines of ctypes on top of Qt (level above 3) | Built in (Electron's `screen-saver` level) | Native |
+| Overlay on Linux | A third platform file (X11 through ctypes); untested | Qt on X11 and XWayland | Electron on X11 and XWayland; Tauri depends on WebKitGTK, whose transparency is less reliable | A third native app, or C# with Avalonia for Windows and Linux |
+| Drawing the HUD | Each system's own drawing calls, written three times | Qt painting, smooth and the same everywhere | HTML and canvas, easiest | Native, written per system |
+| Global shortcuts | ctypes per system | ctypes per system (Qt has none) | Built in | Native |
+| Shared code | One codebase | One codebase | One codebase (JavaScript/TypeScript) | Two or three languages |
+| Install for players | Python needed on Mac and Linux | Bundled app, nothing to install | Bundled app, nothing to install | Bundled app per system |
+| Size | Small | About 60-150 MB per bundle | 100-200 MB (Electron) | Small |
+| Main risk | Much hand-written drawing and window code | Bundle size; Qt on the Mac needs native help | A browser engine running beside the game | Every feature built two or three times |
+
+- **Best looks for the effort.** Qt draws smooth text, shadows, lines, shapes and images
+  with transparency on all three systems, from one implementation. Themes the player can
+  change (colours, fonts, size, opacity, which widgets show where) are ordinary settings.
+  Qt Quick (QML) is there if the HUD later wants animations.
+- **One language and one codebase,** the same as LiveryStudio: Python, unittest, Ruff.
+- **Small native part.** Only what Qt lacks stays per system: the Mac window level above
+  Fullscreen (from the Mac probe) and the global shortcuts (from both probes, plus X11 on
+  Linux).
+- **Lighter than C** while the game runs: no browser engine.
+- **Far less work than D,** which would build every feature two or three times.
+
+Costs accepted:
+- Each download is larger, roughly 60-150 MB instead of a few MB.
+- Releases need a build on each system (see below), instead of a plain source ZIP.
+- TurboHUD no longer uses only the standard library. LiveryStudio keeps its own rule.
+
+## How it is built and shipped
+
+Each release is a ready-to-run app with Python and Qt inside, built by PyInstaller:
+- **Windows:** a ZIP with `TurboHUD.exe`. Unpack and run.
+- **macOS:** `TurboHUD.app` in a ZIP or disk image. Drag to Applications.
+- **Linux:** a `.tar.gz` for now (an AppImage is planned, backlog item 4), built in an
+  Ubuntu 22.04 container (`tools/build_linux.sh`) so it starts on glibc 2.35 and newer.
+  Unpack and run. The bundled app is also the memory probe: Steam's launch option is
+  `"…/TurboHUD" --probe %command%` (`TurboHUD --launch-option` prints it).
+
+PyInstaller builds only for the system it runs on, so each release is built locally
+with `tools/build_app.py` on each system, from `main`. The Windows and Mac builds carry
+the Rust reader (`tools/get_rust.sh` builds it first). A GitHub Actions workflow
+(`.github/workflows/build.yml`) runs only for a release tag, a pull request or by hand,
+none of which is used.
+
+Without paid code signing, each system warns once on first start:
+- Windows SmartScreen: **More info**, then **Run anyway**.
+- macOS: the app is blocked first; allow it under **System Settings > Privacy &
+  Security > Open Anyway**. An Apple Developer account (paid yearly) removes this.
+- Linux: no warning.
+
+## The code
+
+```
+launch_turbohud.py      start file; the bundles run the same code
+QUICK_START.md, USER_GUIDE.md  the players' guides, in every download (Quick Start.txt, User Guide.txt)
+run_turbohud.sh/.cmd    start from the source, setting up PySide6 in .buildtools/venv;
+                        also --toggle, --move, --lock, --settings, --quit (Linux, macOS)
+requirements.txt        PySide6, pinned; requirements-build.txt adds PyInstaller
+turbohud/
+  app.py                start-up: settings, log, section windows, tray menu, shortcuts,
+                        commands, the live race
+  control.py            the command socket (run_turbohud.sh --toggle and the rest)
+  core/                 shared, no Qt
+    settings.py         settings and theme, where they live on each system
+    hud.py              the sections, their sizes, places, nudges and the grid's screen
+    presets.py          layout files per screen size, and fitting one to another size
+    fonts.py            the player's own fonts: the customization/fonts folder and its files
+    il2cpp.py           finds the game's classes and fields by name
+    race.py             reads the race and works out what each section shows
+    preview.py          move mode's preview: a made-up race at Laguna Seca, through race.py
+    trackmap.py         the track map: the learnt track and which cars show
+    flags.py            TSU's flags as country codes
+    flagstack.py        the blue and yellow flags combined where both are in one spot
+    leader.py           the race leader banner: when a new leader or the winner shows, and its fade
+    class_registry.py   the car classes a clan tag can name, and their colours
+    stalls.py           short freezes of the whole HUD and slow garbage collections, for the log
+    system_env.py       the environment for system programs TurboHUD starts (TSU, hyprctl)
+  tsu/                  the game
+    probe.py            Linux: the memory probe (started with TSU by the launch option)
+    client.py           the race in a background thread; Linux: talks to the probe
+    gamelog.py          TSU's log: whether an event runs
+    gameflags.py        TSU's own flag images, read from the player's copy of the game
+    controller.py       Linux: the gamepad's triggers
+    winmemory.py        Windows and CrossOver: reading TSU as a Windows program
+    bottle.py           macOS: finds TSU's bottle and starts the reader there; Windows:
+                        starts the reader beside TSU (LocalReader); asks it over a pipe
+    bottle_reader.py    the reader in Python (with a Windows Python in the bottle):
+                        the fallback, TURBOHUD_PY_READER=1
+  hud/painter.py        Qt drawing of text, bars and flags
+  overlay/
+    window.py           the section windows (drawings: blue flag, delta bar, radar, track
+                        map), the one-window canvas (Mac), the grid and the move-mode panel
+    settings_window.py  colours, size, options, warning times, reads a second
+    class_sheet.py      the list of car classes, opened from the settings
+    windows.py          Win32: RegisterHotKey, focus hand-back
+    macos.py            Cocoa: window level above Fullscreen, all Spaces; Carbon hotkeys
+    linux.py            Linux: Hyprland or XWayland; shortcuts on Hyprland only
+    hyprland.py         asks Hyprland to float, place and pin TurboHUD's own windows, binds its keys
+assets/                 the icon, and presets/ (the shipped layouts per screen size)
+experiments/            the probes that settled the design; tsu_memory_probe.py is what
+                        the Steam launch option runs from the source
+reader/                 the reader in Rust (a Windows program, no dependencies): in the
+                        bottle on macOS, beside TSU on Windows; answers as bottle_reader.py does
+tools/build_app.py      PyInstaller build, archive and smoke test for this system
+tools/build_linux.sh    the Linux build in an Ubuntu 22.04 container
+tools/get_rust.sh       Rust and llvm-mingw into .buildtools (pinned), then builds the Rust reader
+tools/get_mac_python.sh a pinned Python for the Mac build, for older macOS versions too
+tools/get_windows_python.sh  a pinned Windows Python, by hand, for the Python reader
+tools/privacy_check.py  the pre-push hook that keeps personal data out of commits
+tests/                  unit tests on any system
+```
+
+A tray icon (the menu bar on the Mac) offers Move mode, Options (the on/off options),
+Relearn this track's map, Settings…, About and Quit;
+on Linux, which has no shortcuts, the commands above can be bound to a key in the
+desktop's own settings. First build sizes: Windows 40 MB ZIP, Mac 28 MB ZIP (75 MB
+unpacked), Linux 74 MB `.tar.gz` (with Qt's X11 libraries packed in).
+
