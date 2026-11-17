@@ -4,6 +4,14 @@ Every finished change, newest first: what changed, why, how it was checked and w
 Each branch adds its dated entry at the top. Where things stand now: `RESUME.md`; what is open:
 `docs/BACKLOG.md`.
 
+- 2026-11-17: Preset names kept with Enter, and a line that confirms (`feature/preset-name-saved`, asked for by
+  the user): in the layouts window, Enter in a preset's name box now lets go of the keyboard, so its cursor goes
+  (the name was kept already, the cursor stayed). Below the presets a green line says for 3 s what was just done:
+  "✓ Preset 3 named Qualifying", "...: name removed", "✓ Preset 2 Race saved", "... loaded", "... deleted"
+  (`LayoutsWindow.show_status`, `STATUS_SHOWN_MS`; the line keeps its height while empty, so the window keeps its
+  size). The User Guide says so. Tests for Enter (a real key press: the box loses the focus, the name is told
+  once), the line and its timer, and the panel passing it on. Not yet tried by hand; the 6 s start of TurboHUD
+  was not run, as TurboHUD was open.
 - 2026-11-17: Add font..., and the fonts folder no longer hidden (`feature/add-font`, reported by the user):
   in move mode, Settings > Fonts folder... opened the system's file manager beneath TurboHUD's windows, which
   stay on top of everything, so it could hardly be seen. Now **Add font...** beside it opens a file window

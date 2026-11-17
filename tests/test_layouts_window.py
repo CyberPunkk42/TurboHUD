@@ -64,6 +64,54 @@ class LayoutsWindowTests(unittest.TestCase):
         self.assertEqual(got[-1], (4, ''))
         self.assertNotIn('Hot laps', window.preset_saves[4].toolTip())
 
+    def test_enter_lets_go_of_the_keyboard(self):
+        """After Enter the name box has no cursor (asked for by the user on 2026-11-17)."""
+        from PySide6.QtCore import Qt
+        from PySide6.QtTest import QTest
+
+        window = self.window()
+        window.show()
+        box = window.name_boxes[2]
+        box.setFocus()
+        self.app.processEvents()
+        if not box.hasFocus():
+            self.skipTest('no keyboard focus here')
+        got = []
+        window.preset_renamed.connect(lambda *change: got.append(change))
+        QTest.keyClicks(box, 'Race')
+        QTest.keyClick(box, Qt.Key_Return)
+        self.assertFalse(box.hasFocus())
+        self.assertEqual(got, [(2, 'Race')])
+
+    def test_a_line_says_what_was_done_then_goes(self):
+        from turbohud.overlay import layouts_window
+
+        window = self.window()
+        self.assertEqual(window.status.text(), '')
+        box = window.name_boxes[3]
+        box.setText('Qualifying')
+        box.editingFinished.emit()
+        self.assertEqual(window.status.text(), '\u2713 Preset 3 named Qualifying')
+        self.assertEqual(window.status_timer.interval(), layouts_window.STATUS_SHOWN_MS)
+        self.assertTrue(window.status_timer.isActive())
+        box.setText('')
+        box.editingFinished.emit()
+        self.assertEqual(window.status.text(), '\u2713 Preset 3: name removed')
+        window.show_status('Preset 1 saved')
+        self.assertEqual(window.status.text(), '\u2713 Preset 1 saved')
+        window.status_timer.timeout.emit()
+        self.assertEqual(window.status.text(), '')
+        self.assertGreater(window.status.minimumHeight(), 0)  # keeps its line while empty
+
+    def test_the_panel_passes_a_status_on(self):
+        from turbohud.core.hud import RACE_SECTIONS
+        from turbohud.overlay.window import MovePanel
+
+        panel = MovePanel(FakeNative(), RACE_SECTIONS, True)
+        self.addCleanup(panel.close)
+        panel.show_preset_status('Preset 2 Race saved')
+        self.assertEqual(panel.layouts.status.text(), '\u2713 Preset 2 Race saved')
+
     def test_names_set_elsewhere_say_nothing_back(self):
         window = self.window()
         got = []

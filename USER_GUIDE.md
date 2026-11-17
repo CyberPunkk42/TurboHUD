@@ -372,11 +372,13 @@ not end it. Your layout is saved as you change it.
 **The layouts window** (**Layouts…** in the panel; it closes with **Close**, and when move
 mode ends):
 - **Presets** (1 to 5): each has a **Name** box: call it what it is for, such as Race,
-  Hotlapping, Practice or Recordings (up to 24 letters). **Save** keeps the layout as it is
-  now in that preset (replacing what was there), **Load** puts the sections back as it has
-  them (also Ctrl+Shift+1 to 5, at any time, also during a race), **Delete** deletes it. A
-  preset holds where each section sits, its size, whether it shows and its group; colours
-  and options stay as they are.
+  Hotlapping, Practice or Recordings (up to 24 letters). **Enter** (or clicking elsewhere) keeps
+  the name. **Save** keeps the layout as it is now in that preset (replacing what was there),
+  **Load** puts the sections back as it has them (also Ctrl+Shift+1 to 5, at any time, also
+  during a race), **Delete** deletes it. A green line below the presets confirms each for a few
+  seconds, such as "✓ Preset 2 named Race" or "✓ Preset 2 Race saved". A preset holds where
+  each section sits, its size, whether it shows and its group; colours and options stay as
+  they are.
 - **Load by itself**: "As an event begins, the preset chosen for its mode". For each kind of
   event, pick a preset (**1** to **5**) or **Off** (all are Off at first):
   - **Recording**: a recording (replay) TSU plays.

@@ -38,6 +38,7 @@ from turbohud.core.settings import (
     SectionPlace,
     fit_on_screens,
     load_settings,
+    preset_label,
     preset_places,
     save_settings,
     settings_dir,
@@ -1594,6 +1595,11 @@ def run(args, folder):
 
     refits = {}  # section name -> the size keep_text_boxes last put back
 
+    def preset_status(text):
+        """What was just done to a preset, below the presets in the layouts window (2026-11-17)."""
+        if panel is not None:
+            panel.show_preset_status(text)
+
     @undoable
     def save_preset(number):
         """Keep the layout as it is now in a preset, and in the settings as well."""
@@ -1603,6 +1609,7 @@ def run(args, folder):
         settings = replace(settings, presets=presets)
         write_settings()
         panel.set_presets_saved(settings.presets)
+        preset_status(f'Preset {preset_label(number, settings.preset_names)} saved')
         log.info('preset %d saved', number)
 
     @undoable
@@ -1612,6 +1619,7 @@ def run(args, folder):
         settings = replace(settings, presets=presets)
         write_settings()
         panel.set_presets_saved(presets)
+        preset_status(f'Preset {preset_label(number, settings.preset_names)} deleted')
         log.info('preset %d deleted', number)
 
     def rename_preset(number, name):
@@ -1660,6 +1668,7 @@ def run(args, folder):
         apply_places(places)
         settings = replace(settings, sections={**settings.sections, **places})
         write_settings()
+        preset_status(f'Preset {preset_label(number, settings.preset_names)} loaded')
         log.info('preset %d loaded', number)
 
     def apply_places(places):

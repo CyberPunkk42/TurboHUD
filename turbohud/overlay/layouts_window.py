@@ -10,7 +10,7 @@ which a tiling desktop could place anywhere); only Design for keeps its list of 
 
 import logging
 
-from PySide6.QtCore import QRectF, Qt, Signal
+from PySide6.QtCore import QRectF, Qt, QTimer, Signal
 from PySide6.QtGui import QColor, QPainter, QPen
 from PySide6.QtWidgets import (
     QButtonGroup,
@@ -33,6 +33,10 @@ log = logging.getLogger(__name__)
 WORD_BUTTON = 54  # as the panel's word buttons (window.PANEL_WORD_BUTTON)
 NAME_WIDTH = 150  # the name boxes: about PRESET_NAME_MOST letters
 OFF = 0  # a mode's choice when no preset loads for it
+# The line below the presets that says what was just done (asked for by the user on 2026-11-17):
+# shown this long, in this green.
+STATUS_SHOWN_MS = 3000
+STATUS_COLOUR = '#7ee08a'
 # What each mode covers, for its tooltip.
 MODE_TIPS = {
     'recording': 'A recording (replay) TSU plays',
@@ -89,6 +93,8 @@ class LayoutsWindow(QWidget):
             name.setFixedWidth(NAME_WIDTH)
             name.setToolTip(f'A name for preset {number}, such as Race or Recordings')
             name.editingFinished.connect(lambda n=number: self._renamed(n))
+            # Enter ends the typing: the box lets go of the keyboard, so its cursor goes (2026-11-17).
+            name.returnPressed.connect(name.clearFocus)
             grid.addWidget(name, line, 1)
             self.name_boxes[number] = name
             for column, (text, store, signal) in enumerate(
@@ -107,6 +113,15 @@ class LayoutsWindow(QWidget):
             self.preset_deletes[number].setAccessibleName(f'Delete preset {number}')
         grid.setColumnStretch(5, 1)
         outer.addLayout(grid)
+        # What was just done to a preset ("Preset 2 saved"), for a few seconds; the line keeps its
+        # height while empty, so the window does not change size.
+        self.status = QLabel('')
+        self.status.setStyleSheet(f'color: {STATUS_COLOUR};')
+        self.status.setMinimumHeight(self.status.fontMetrics().height())
+        outer.addWidget(self.status)
+        self.status_timer = QTimer(self)
+        self.status_timer.setSingleShot(True)
+        self.status_timer.timeout.connect(lambda: self.status.setText(''))
 
         outer.addWidget(self._heading('Load by itself'))
         outer.addWidget(QLabel('As an event begins, the preset chosen for its mode:'))
@@ -216,6 +231,12 @@ class LayoutsWindow(QWidget):
             self.names[number] = name
         self._show_presets()
         self.preset_renamed.emit(number, name)
+        self.show_status(f'Preset {number} named {name}' if name else f'Preset {number}: name removed')
+
+    def show_status(self, text):
+        """`text` below the presets, with a tick, for STATUS_SHOWN_MS."""
+        self.status.setText(f'\u2713 {text}')
+        self.status_timer.start(STATUS_SHOWN_MS)
 
     def _show_presets(self):
         """Load and Delete only for a saved preset; the tooltips with each preset's name."""
