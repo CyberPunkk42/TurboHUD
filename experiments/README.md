@@ -158,7 +158,7 @@ Other findings:
 
 ## Qt overlay probe (`qt_overlay_probe.py`)
 
-Question: can a Qt (PySide6) window, TurboHUD's chosen stack (`docs/STACK.md`), do what
+Question: can a Qt (PySide6) window, TurboHUD's chosen stack (`docs/HOW_IT_WORKS.md`), do what
 the two native probes do, with HUD graphics drawn by Qt?
 
 The probe shows a test HUD: outlined text, a lap-style clock, a bar that empties once a
@@ -423,8 +423,8 @@ boxes, or one window the size of the screen? On the user's Mac (2026-11-09, Meta
 On Windows and Linux each section still has a window of its own: since 2026-11-15 the probe runs there
 too, to tell whether one window would help there (and make a tint across a group of sections easy).
 
-1. Quit TurboHUD. Turn on an FPS counter: on the Mac the Metal HUD (`docs/CONTINUE_HERE.md`, "FPS on
-   the user's Mac with the Metal HUD"); on Windows and Linux Steam's own (Steam > Settings > In Game >
+1. Quit TurboHUD. Turn on an FPS counter: on the Mac the Metal HUD ("FPS on the
+   user's Mac with the Metal HUD" below); on Windows and Linux Steam's own (Steam > Settings > In Game >
    In-game FPS counter), or MangoHud on Linux. Start TSU as you play it (Fullscreen or windowed) and
    start a race, best offline with AI so the race does not end during the run.
 2. From the repository folder (`cd` into it first):
@@ -529,3 +529,225 @@ for the local car when in the air, it seems). The local car (one respawn, some r
 neither, so whether those come through online for others is not known yet. `hitPoints` stayed 500 for
 both (no damage in the event?). So a yellow flag can go by each car's wheel surfaces (all four off
 the tarmac), speed (slow, stopped, backwards) and sliding (spun), online too.
+
+## Measurements in races (macOS, the tester's stutter)
+Numbers taken in real races, kept for the next time the HUD lags or TSU stutters. The changes they
+led to are in `docs/CHANGELOG.md`; what is still open is backlog item 0 and 2 (`docs/BACKLOG.md`).
+
+### The tester's Mac
+The tester's Mac: MacBook Pro 14" (M3 Pro), built-in screen 3024x1964 at 120 Hz, no second screen,
+Fullscreen, D3DMetal, FPS read with the in-game / CrossOver HUD.
+
+#### FPS (2026-11-08, build 2026.11.08.2)
+| # | TurboHUD | Old build (11-07) | 2026.11.08.2 |
+| --- | --- | --- | --- |
+| 1 | closed | 110 | 115 |
+| 2 | every section unticked, 20 reads | 78 | 107 |
+| 3 | every section unticked, 5 reads | - | ~100 (90-115) |
+| 4 | lap and delta, 5 reads | - | ~90 (85-107) |
+| 5 | lap and delta, 20 reads | 62 | ~95 (82-110) |
+| 6 | all sections, 20 reads | 58 | ~63, steady near 60 |
+
+- Unticked windows leaving the screen gave back most of the loss with nothing shown (78 to 107).
+- The reads are not the cost: 5 a second was no better than 20. TurboHUD with nothing shown costs about 8
+  FPS (the reader next to the game in the Wine server, or run-to-run noise).
+- Windows above the game are: the more sections, the more frames miss the screen's 8.3 ms refresh, until
+  nearly all do and the game holds near 60 (120 / 2) with all sections. Likely macOS compositing the game
+  with the windows in step with the refresh, instead of showing it directly. Not known yet: whether the
+  number of windows or their area matters more.
+- In #5 a big stutter, then about 25 FPS less for 10 s; one read that run took 177 ms. Cause not known.
+- The tester's log (19:54 to 20:01, measurements 5 and 6): 20 to 21 trips a read all along (the user's race
+  with AI: about 88), so few or no other cars. With lap and delta a read took 17 to 19 ms (0.80 to 0.95 ms a
+  trip); with all sections, the game near 60, 8 ms (0.40 ms a trip). The game leaves the Wine server more
+  room when it waits for the refresh: the busy game slows the reads, not the reads the game. Once or twice
+  in 30 s a read took 150 to 210 ms; whether those are the stutters felt (a game hitch also holds a read up)
+  is not known, and #6 had such reads but no stutter. The reader's log was empty, as on the user's Mac.
+- Still to get from the tester (nice to have): measurement 7 (closed again at the end), and whether
+  `pgrep -fl bottle_reader` printed nothing.
+
+#### CPU per section on the user's Mac (2026-11-09)
+Recorded with `top` every 2 s during a race against AI, matched with the log's tick changes; one
+section shown at a time (the screen at "more space": 2056 x 1329 for Qt). Averages, 100 = one core:
+
+| Shown | WindowServer | TurboHUD |
+| --- | --- | --- |
+| TurboHUD closed (perhaps not racing yet) | 41 | - |
+| nothing | 42 | 7 |
+| local time (changes once a minute) | 48 | 9 |
+| running lap (20 times a second) | 48 | 10 |
+| track map | 49 | 23 |
+| any other single section | 48 to 49 | 9 to 17 |
+
+Each window adds about the same to WindowServer, whatever it shows and however often it changes: a
+window's being there costs, not its redraws. So drawing some sections less often would not help; all
+sections in one window might. CPU is not FPS: the Metal HUD below is to confirm it in frames. TSU's
+own CPU was 243 before TurboHUD started and about 360 after, but the user was probably not racing yet.
+
+#### FPS on the user's Mac with the Metal HUD (2026-11-09)
+Apple's Metal Performance HUD (`MTL_HUD_ENABLED=1`, which D3DMetal honours) shows FPS inside the game's
+own picture, adding no window above it; nothing in the bottle or the system changes. How to start it:
+quit TurboHUD, TSU and Steam in the bottle (`pgrep -fl 'steam.exe|TSU.exe|bottle_reader'` must print
+nothing, or the running Steam takes the start without the variable), then, leaving that Terminal open:
+`MTL_HUD_ENABLED=1 ~/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine --bottle Steam "C:\\Program Files (x86)\\Steam\\steam.exe"`,
+and start TSU from that Steam. If no HUD shows, the user may add `"MTL_HUD_ENABLED" = "1"` under
+`[EnvironmentVariables]` in the bottle's `cxbottle.conf` themselves, and remove it after.
+
+In a race against AI on the 120 Hz built-in screen:
+
+| TurboHUD | FPS |
+| --- | --- |
+| closed | 120 (the screen's most) |
+| running, only the local time shown | 120 |
+| running, every section shown | 80 to 110, unsteady |
+
+One window costs nothing that shows here; all 17 cost 10 to 40 FPS. With the CPU recording above, the
+number of windows is what costs, not what they show. TSU has room to spare on this Mac, so the cost shows
+only with many windows; on the tester's it shows sooner. Not measured: every section hidden, and closed
+again at the end (TSU froze then, see below).
+
+The probe (`experiments/window_count_probe.py`, 2026-11-09, the user's layout, one large window
+nearly the whole screen): nothing 120 FPS, 17 windows 85, one window 115, nothing again 120. So the
+number of windows costs, not their area.
+
+Built the same day (backlog item 2): locked, on the Mac, every section is drawn in one window per screen
+(`HudCanvas` in `turbohud/overlay/window.py`); move mode keeps a window per section. Not yet seen over
+TSU. To check: the Metal HUD with every section shown (expected near 115 to 120, from 80 to 110); move
+mode as before (drag, resize, groups, Undo); while locked, a preset shortcut and "bigger"/"smaller" in
+the settings moving the sections with nothing left behind; the tint and the theme; the map and the
+radar. If anything is wrong, `TURBOHUD_ONE_WINDOW=0 sh run_turbohud.sh` goes back to a window each.
+
+#### One-window HUD and reads on the user's Mac (2026-11-10)
+A race against AI with the Metal HUD, read by eye by the user; `main` with the one-window HUD:
+
+| TurboHUD | FPS |
+| --- | --- |
+| closed | 85 to 120 |
+| every section unticked | 100 and more, all the time |
+| one section shown, each in turn | about 80, from below 70 to 120 |
+| every section shown | about 85 (70 to 100) |
+
+- Closed was 120 all the time on 2026-11-09 and 85 to 120 now, so this race was heavier for TSU and the
+  numbers do not compare with that day's. Within this race: showing anything costs about 15 to 20 FPS, one
+  section as much as all, and nothing shown costs little or nothing. On 2026-11-09 one section cost
+  nothing. Not known: whether the canvas was on (the log's `canvas:` line was not copied), and whether a
+  canvas the size of the screen costs when one small part of it changes 20 times a second (the probe's one
+  large window lost 5 FPS). The comparison in `RESUME.md`, "To try", is to tell.
+- A second race the same evening, the canvas on by the log: only the local time shown gave about 85 FPS
+  (70 to 120), as much as every section. The local time changes once a minute, so the canvas costs by
+  being there, not by what is drawn in it; with a window each, on 2026-11-09, the local time alone cost
+  nothing (in a race with more room to spare). Closed was not noted in this race.
+- It looked as before, and move mode, the preset shortcuts and "bigger"/"smaller" worked.
+- The track map's kept road: TurboHUD's CPU with only the map shown was 8.2 to 8.8% of a core (about 23%
+  before).
+- The log (20:13 to 20:17): 1 trip a read, as meant, but a median read of 26.5 to 29.3 ms, 25 to 28 ms of
+  it on the game's memory in 84 to 88 reads of it, so about 0.3 ms each: the number of reads of the game is
+  the whole cost, and the reader spends about half of its time in them (a read every 54 ms). One to three
+  reads in 30 s took over 50 ms (95 to 141 ms). So merging pages further apart ("Offered next") is the
+  next step for the reads. HUD frames: content 2% and drawing 16 to 19% of the time.
+- TSU quit normally, with TurboHUD quit first and Steam started from Terminal with the Metal HUD.
+- No online race could be driven, so the search from the last race is not seen yet.
+
+#### Other points
+- Custom races are read since 2026-11-13 (`TS.HostEventController`, found by the search); a Single
+  Player event is still to see.
+- TSU freezing when it is quit. Seen twice, each time with TurboHUD quit first:
+
+  | When | TurboHUD | Steam started | TSU |
+  | --- | --- | --- | --- |
+  | tester, 2026-11-06 | quit first | normally | froze on a black screen (Steam's Stop) |
+  | user, 2026-11-08, twice | quit first, and TSU first | normally | quit normally |
+  | tester, 2026-11-08 | quit first | normally | quit cleanly, no reader left |
+  | user, 2026-11-09, 01:10 | quit first (reader ended at once) | from Terminal, Metal HUD | froze, between the race and quitting |
+  | user, 2026-11-10 | quit first | from Terminal, Metal HUD | quit normally |
+  | user, 2026-11-10, 22:11, Rust reader | quit first | normally | quit normally |
+
+  When frozen: TSU at about 1% CPU (about 300% while running), steam.exe at about 100%, no reader left.
+  The reader opens TSU only to read memory and ask for its layout (`PROCESS_VM_READ`,
+  `PROCESS_QUERY_LIMITED_INFORMATION`), pausing, attaching to or changing nothing; it ends within a
+  second. So no way in the code for it to freeze TSU is known. To tell: the user notes, at each quit of
+  TSU, whether it froze and whether TurboHUD ran; and one session with TurboHUD never started.
+- The tester's Mac had two CrossOver copies; TurboHUD takes the one in `~/Applications` first, whichever
+  TSU runs from (not fixed, did not stop the reader there).
+
+### The tester's stutter, his logs (2026-11-12 to 2026-11-16)
+Reported 2026-11-12, after the day's features (class colours, tire column, the player list around the player).
+His log (four online races): reads of 4 ms, frames 53 ms apart, content 2 to 4% and drawing 20 to 24% of the
+time (16 to 19% on 2026-11-10), about the same with the lap times hidden; no CrossOver graphics warning.
+Done (`fix/lap-list-frame-cost`): the lap times and the player list measure less, the Mac's one window draws
+again only the sections that changed, and running times and gaps come from kept glyph images (0.06 ms a new text,
+from about 0.9 ms at 2x; a few edge pixels differ a little). In build 2026.11.12.6 for the tester. Left:
+his log's drawing share (was 20 to 24%), and ask whether the stutter is while
+driving or between races (the search from the last race reads for 8 to 11 s).
+His log with 2026.11.12.6 (evening of 2026-11-12, stutter mostly while racing): drawing 11 to 19%, frames steady
+at 10 a second; but each race read grew from 23 to about 82 reads of TSU's memory (3 to 13 ms), ten a second
+through Wine, and one read about every 30 s took 100 to 230 ms. Done (`fix/lighter-race-reads`): other cars'
+slow state once a second, with a page plan per kind of read; in build 2026.11.12.7 for him (and 2026.11.13). Left: measure the reads before and after in a race;
+what the slow read every 30 s is; TSU's log not found in his bottle ("not known"), so between races it searches
+every 10 s for 10 s (Spanish Windows in the bottle?); the search every 10 s after a race could rely on quick looks.
+Stutter again with 2026.11.13.3 (2026-11-13): reads cheap, but about once a minute a read and a frame stop
+together for 0.15 to 0.35 s (already in the .6 log); drawing 19 to 21% locked. Build 2026.11.13.4 logs each such
+freeze with its time and the garbage collection in it, slow collections, and the costliest sections to draw. Next:
+his log and stutter times from it; if the freezes are collections, `gc.freeze()` after start (and fewer kept objects);
+if the reader's side, CrossOver; whether the stutter stays with TurboHUD closed.
+His log with 2026.11.13.4: not garbage collection; one read stalls 140 to 190 ms on an exact 30 s beat from the
+reader's start (mostly in reading TSU's memory through Wine), none for 10 minutes in the second race. Next: his
+stutter times against :07 and :37; the same track with TurboHUD closed; if only with TurboHUD, fewer reads a second;
+why the fuel section costs the most to draw (1.5 to 1.9 ms a frame).
+With 2026.11.13.5 (2026-11-13): an evening of huge stutters (two online races, 15 minutes) whose log has no slow
+read (slowest 26 ms), no slow frame and collections of 0 to 10 ms, so TSU stuttered while TurboHUD ran smoothly;
+5 reads a second stuttered the same as 20. Later the same night, one online race with the user (22 minutes, the
+user's log as clean, reads 4 ms): at most one stutter, the same build and settings. His race reads cost about twice
+the user's (33 to 54 reads of the game, 7 to 8 ms, against 25 to 28 and 4 ms), and on the bad evening his race data
+spread at times over 3,090 MiB (the user's: 375 to 435). His Mac: M3 Pro, 18 GB of memory, about 3 GB left with TSU,
+CrossOver and TurboHUD running, and only 2 to 3 GB of disk free: macOS then has no room for swap when memory runs
+out, which fits stutters on some evenings and not others. Asked of him: free at least 20 to 30 GB, restart, race
+again. On hold until he reports. If the huge stutters come back with that free: TurboHUD closed (does it stay?),
+Activity Monitor's Memory Pressure, Swap Used and the largest processes (TurboHUD's own memory, not yet measured
+in a race), and the clock times with the log; if only with TurboHUD, its windows over the game (the old FPS cost),
+not the reads.
+His log with 2026.11.14 (received 2026-11-15, one online race of about 11 minutes, after he freed his disk to
+about 244 GB): TurboHUD ran clean. Drawing 9 to 16% of the time (10% once the track map was learnt; was 19 to 24%),
+frames steady 53 to 54 ms apart, collections of at most 6 ms, and no stall on the 30 s beat (slowest read 18 to
+64 ms, 3 over 50 ms). Left to look at:
+- TSU's race data spread from 350 to 417 MiB to 3,086 to 3,110 MiB at one moment (20:51:55 in his log) and stayed
+  there, as on his evening of huge stutters (the user's: 375 to 435). TSU's own memory likely grows during his
+  sessions. The slowest frames went from 60 to 75 ms to 90 to 95 ms just after. Ask whether his stutter began then.
+- One frame 103 ms late (20:57:26 in his log) with 6.3 ms of TurboHUD's own work and no collection: the system did
+  not run TurboHUD for about 0.1 s, a hitch of the whole Mac (memory pressure or swap), not TurboHUD's.
+- His race reads cost about twice those with 2026.11.13.5: 57 to 69 reads of the game and about 15 ms a read (were
+  33 to 54 and 7 to 8 ms), from just after the track map was learnt (107 to 128 pages). At 20 a second the reader
+  reads TSU's memory about 30% of the time: the first thing to cut if the stutter comes only with TurboHUD (fewer
+  reads a second, fewer pages).
+- Searches are long: 13 to 16 s each while on a server with no race (were 8 to 10 s), 10 to 60 s apart, and 38.5 s
+  for the search from the last race after it ended. The suspect if his stutter is in the lobby or between races.
+Asked of him: whether this session stuttered, at what clock times, while driving or between races; Activity
+Monitor's Memory Pressure, Swap Used and TSU's (wine) and TurboHUD's memory in a race; if it stutters, the same
+race with TurboHUD closed. With the disk free, swap no longer runs short; the next suspect is memory (18 GB, about
+3 GB left) and TSU's growth.
+His log with 2026.11.16 (received 2026-11-16, about 11 minutes from 00:54 by his clock: two online races, with
+move mode, presets and the new options tried): no error or warning. TurboHUD ran smoothly: frames 53 to 54 ms
+apart (about 19 a second), collections of at most 2 ms, drawing 8 to 21% of the time locked (the standings 2 to
+3 ms a frame, then Nearby cars and the track map). The new parts worked: layout 8, the race recognised for the
+presets by mode ("no preset chosen for it"), presets saved, loaded and named, the short Nearby cars switch, the
+standings columns. Left to look at:
+- The stall on the 30 s beat is back: one read of 150 to 225 ms (1 trip, nearly all of it in TSU's memory through
+  Wine) at :04 and :34 past the minute, eight times (00:55:34 to 01:01:34); none in his log with 2026.11.14. Other
+  reads 5 to 11 ms (median), 36 to 57 reads of the game, 71 to 100 pages.
+- He reads the race 20 times a second: his own saved setting (the default is 10 since 2026-11-15). Ten halves the
+  reader's work and is the first thing to try if TSU stutters.
+- TSU's race data within 342 to 345 MiB, 428 MiB near the end (01:05:42): far from the 3,090 MiB of his bad
+  evenings.
+- Move mode had slow frames of 106 to 215 ms (a window per section there), as expected.
+Asked of him: whether this session stuttered, at what clock times (on :04 and :34 would point at the 30 s read),
+and the same races with Race reads a second at 10.
+
+### How the slow reads were found (2026-11-04)
+Worth keeping for the next time the HUD lags. What fooled the first attempts: offscreen drawing
+is far cheaper than real Mac windows, so benchmarks without real windows looked fine.
+- Compare with a second connection: `Bottle().connect()` from a script reads the same race
+  without the overlay. 28 ms there against 1030 ms in the app showed the app was the cause.
+- Profile the real app in a real race: quit TurboHUD, run
+  `.buildtools/venv/bin/python -B -m cProfile -o app.prof launch_turbohud.py`, race, then
+  `run_turbohud.sh --quit` and read `app.prof`. It showed 122 of 207 s in `QPainter.fillPath`.
+- The log's `race reads` line gives trips a read, ms a trip and how much of that is on the
+  game's memory; `HUD frames` gives the overlay's side.

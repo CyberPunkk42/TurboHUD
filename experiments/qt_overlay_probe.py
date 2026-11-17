@@ -1,6 +1,6 @@
 """Qt overlay experiment: can a Qt (PySide6) window do what the two native probes do?
 
-TurboHUD's stack is Python with Qt (docs/STACK.md). This probe checks the overlay window
+TurboHUD's stack is Python with Qt (docs/HOW_IT_WORKS.md). This probe checks the overlay window
 on that stack: a transparent, click-through, always-on-top window with HUD graphics drawn
 by Qt (outlined text, a bar and a small animated map), a move mode, and the shortcuts.
 On the Mac it raises Qt's window to a level above TSU's Fullscreen through ctypes, as

@@ -2,7 +2,7 @@
 
 TurboHUD is a new tool for Turbo Sliders Unlimited (TSU): a HUD overlay on top of the
 running game (fuel estimate, minimap, lap times). Stack: Python with Qt (PySide6),
-shipped as a bundled app for Windows, macOS and Linux (`docs/STACK.md`). The app is in
+shipped as a bundled app for Windows, macOS and Linux (`docs/HOW_IT_WORKS.md`). The app is in
 `turbohud/` (start: `launch_turbohud.py`, or `run_turbohud.sh` / `run_turbohud.cmd`);
 builds come from `tools/build_app.py` (`.github/workflows/build.yml` runs only for a
 release tag, a pull request or by hand, none of which is used). Findings and
@@ -12,12 +12,26 @@ with Tk, standard library only). Reuse its findings about TSU's files where they
 but never import from or write into that folder.
 
 ## Start here
-1. Read `RESUME.md` (once it exists): current state, next steps and recent changes.
+1. Read `RESUME.md`: the current state, what to try next and working notes.
 2. Read `docs/SUGGESTIONS.md` if it is there: what the game exposes, suggested features,
    open decisions. It is private and gitignored: never commit it, quote it in commits or
    PRs, or move its contents into tracked files. The repository will be made public
    later for the TSU community.
-3. Read `docs/IMPROVEMENT_BACKLOG.md` (once it exists): open items ordered by value.
+3. Read `docs/BACKLOG.md`: open items ordered by value, and ideas for later.
+4. As needed: `docs/HOW_IT_WORKS.md` (how it works, the stack, the code layout),
+   `docs/CHANGELOG.md` (every change, newest first), `experiments/README.md` (probe results and
+   race measurements).
+
+## The documents
+Each thing is written once, in one place; link to it instead of copying it.
+- For players (ship in every download): `README.md`, `QUICK_START.md`, `USER_GUIDE.md`.
+- `RESUME.md`: short (about a page): the current state and what to try next. No history.
+- `docs/BACKLOG.md`: open work only, a few lines per item; a finished item leaves it, and ideas
+  not planned go under "Nice to have".
+- `docs/CHANGELOG.md`: the only history.
+- `docs/HOW_IT_WORKS.md`: how TurboHUD works, why it is built as it is, and where the code is.
+- `experiments/README.md`: what the probes and measurements found.
+Make no new document without asking the user.
 
 ## Where things are
 - This folder is a Git repository (branch `main`) next to `../LiveryStudio`. Since
@@ -93,10 +107,9 @@ The user approves every change by merging it locally. There are no pull requests
 
 ## Working rules
 - When something is finished, in the same branch and pull request as the work:
-  - update the backlog
-  - keep `RESUME.md`'s "Current state" and "Next steps" true
-  - add a dated entry at the top of its "Recent changes", and append the same entry
-    to `docs/PROGRESS.md`
+  - update the backlog (remove what is done, shorten what is left)
+  - keep `RESUME.md`'s "Current state" and "To try next" true and short
+  - add one dated entry at the top of `docs/CHANGELOG.md`, and nowhere else
 - The players' guides, `QUICK_START.md` (one page) and `USER_GUIDE.md` (every section, menu
   item, button and option), ship in every download (`GUIDES` in `tools/build_app.py`). Any
   change a player can see or use (a section, option, menu item, button, shortcut, command,
