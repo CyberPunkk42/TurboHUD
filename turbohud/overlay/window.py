@@ -14,6 +14,7 @@ import math
 import sys
 import time
 from dataclasses import replace
+from pathlib import Path
 from typing import ClassVar
 
 from PySide6.QtCore import QPointF, QRect, QRectF, Qt, QTimer, Signal
@@ -38,6 +39,10 @@ from turbohud.core.hud import (
     FONT_SIZES,
     MARGIN,
     SPACINGS,
+    WINNER_BLACK_FROM,
+    WINNER_FLAG_FROM,
+    WINNER_PICTURE,
+    WINNER_SIZE,
     Sectors,
     base_size,
     beside,
@@ -67,6 +72,7 @@ from turbohud.core.hud import (
     text_can_centre,
     tight_height,
 )
+from turbohud.core.leader import NEW_LEADER, WINNER
 from turbohud.core.race import (
     RADAR_FULL,
     Blip,
@@ -236,6 +242,51 @@ RESIZE_CURSORS = {
 }
 
 
+# The user's picture for the race winner's banner (hud.WINNER_PICTURE), next to the code as move mode's preview
+# race is, also in the built app.
+WINNER_PATH = Path(__file__).resolve().parents[2] / 'assets' / 'resources' / WINNER_PICTURE
+
+
+@functools.cache
+def winner_picture(path=WINNER_PATH):
+    """The winner's banner picture, or None where it cannot be read."""
+    image = QImage(str(path))
+    return None if image.isNull() else image
+
+
+@functools.lru_cache(maxsize=4)
+def winner_banner(width, height, flag_width, ratio=1.0):
+    """The race winner's banner `width` x `height` (logical pixels, at `ratio` device pixels each), made
+    once per size: the picture's black stretched to all but `flag_width` at the right end, where its flag
+    part keeps its shape; inside rounded corners as the other banners. None without the picture."""
+    picture = winner_picture()
+    if picture is None or width <= 0 or height <= 0:
+        return None
+    made = QImage(round(width * ratio), round(height * ratio), QImage.Format_ARGB32_Premultiplied)
+    made.setDevicePixelRatio(ratio)
+    made.fill(Qt.transparent)
+    painter = QPainter(made)
+    painter.setRenderHint(QPainter.Antialiasing)
+    painter.setRenderHint(QPainter.SmoothPixmapTransform)
+    box = QPainterPath()
+    box.addRoundedRect(QRectF(0, 0, width, height), 6, 6)
+    painter.setClipPath(box)
+    full_width, full_height = WINNER_SIZE
+    split = width - flag_width
+    painter.drawImage(
+        QRectF(0, 0, split, height),
+        picture,
+        QRectF(WINNER_BLACK_FROM, 0, WINNER_FLAG_FROM - WINNER_BLACK_FROM, full_height),
+    )
+    painter.drawImage(
+        QRectF(split, 0, flag_width, height),
+        picture,
+        QRectF(WINNER_FLAG_FROM, 0, full_width - WINNER_FLAG_FROM, full_height),
+    )
+    painter.end()
+    return made
+
+
 class SectionWindow(QWidget):
     drawing_time = 0.0  # seconds all sections have spent drawing, for the log
     drawing_by: ClassVar[
@@ -262,6 +313,7 @@ class SectionWindow(QWidget):
         self.text_centred = False  # its text in the middle of its box (an option)
         self.delta_view = None  # the delta bar's content (a DeltaBarView)
         self.banner = None  # the race leader banner's core.leader.Banner while it shows
+        self.preview_winner = False  # move mode shows the race winner's banner (the panel's 🏁)
         self.radar_cone = True  # the radar's sample in move mode shows slipstream cones (an option)
         self.sector_bars = True  # a section with sector bars shows them (an option)
         # A text section's text size in pixels (core.hud.font_scale): the app sets it, and its box
@@ -623,6 +675,10 @@ class SectionWindow(QWidget):
         if self.section.banner and self.locked and self.banner is not None:
             painter.setOpacity(min(max(self.banner.opacity, 0.0), 1.0))
             winner = self.banner.winner
+        elif self.section.banner and not self.locked and self.preview_winner:
+            # Move mode, with the panel's 🏁 on: the winner's banner, to see and place it (2026-11-17).
+            winner = True
+            rows = [replace(row, text=row.text.replace(NEW_LEADER, WINNER, 1)) for row in rows]
         # After the text: the winner's checkered flag. Only with the flag: kept for every banner, it
         # put a new leader's text that far left of the middle (reported by the user on 2026-11-17).
         inset = end_room(self.section, self.height()) if winner else 0
@@ -651,12 +707,14 @@ class SectionWindow(QWidget):
         left = 0
         down = content_shift(self.section, self.height(), scale, text_ink)
         if self.section.background and rows:  # its own colour, also in move mode, to see it
-            if self.section.banner:
+            if self.section.banner and winner and self._paint_winner(painter, inset):
+                pass  # the user's picture: black, the checkered flag at the right end
+            elif self.section.banner:
                 self._paint_shade(painter)
+                if winner:
+                    self._paint_checkers(painter, inset)  # where the picture is missing
             else:
                 self._paint_backdrop(painter, self.section.background)
-            if winner:
-                self._paint_checkers(painter, inset)
             if self.opacity is not None and not self.section.banner:
                 self._paint_blue_frame(painter, scale)  # the blue flag too (turbohud.core.flagstack)
         elif self.locked and self.backdrop and rows and own_tint:
@@ -747,6 +805,16 @@ class SectionWindow(QWidget):
         painter.setPen(Qt.NoPen)
         painter.setBrush(shade)
         painter.drawRoundedRect(QRectF(self.rect()), 6, 6)
+
+    def _paint_winner(self, painter, flag_width):
+        """The race winner's banner from the user's picture (WINNER_PICTURE), the flag part
+        `flag_width` wide at the right end; False where the picture cannot be read."""
+        ratio = self.devicePixelRatioF()
+        made = winner_banner(self.width(), self.height(), round(flag_width), ratio)
+        if made is None:
+            return False
+        painter.drawImage(QRectF(self.rect()), made)
+        return True
 
     def _paint_checkers(self, painter, width):
         """The race winner's checkered flag at the right end of the banner's box, `width` pixels
@@ -1412,6 +1480,7 @@ class MovePanel(QWidget):
     relearn_requested = Signal()  # forget the current track's map and learn it again
     tint_changed = Signal(str, bool)  # section name, a tint behind its text
     text_centred_changed = Signal(str, bool)  # section name, its text in the middle of its box
+    winner_preview_changed = Signal(bool)  # the race leader banner's 🏁: the winner's banner in move mode
     font_size_changed = Signal(str, int)  # section name, its own text size in pixels; 0: the global one
     global_font_changed = Signal(int)  # the global text size in pixels
     all_global_requested = Signal()  # every text section follows the global text size
@@ -1445,6 +1514,7 @@ class MovePanel(QWidget):
         self.boxes = {}
         self.groups = {}
         self.centres = {}
+        self.winner_preview = None  # the race leader banner's 🏁 switch, once its row is made
         self.tints = {}
         self.font_sizes = {}
         self.spacings = {}
@@ -1598,6 +1668,16 @@ class MovePanel(QWidget):
             )
             grid.addWidget(centre, row, 4, Qt.AlignHCenter)
             self.centres[section.name] = centre
+        elif section.banner:
+            # Its text is always in the middle, so this column has the switch between a new leader's
+            # banner and the winner's, to see both in move mode (asked for by the user on 2026-11-17).
+            winner = QPushButton('🏁')
+            winner.setCheckable(True)
+            winner.setFixedWidth(PANEL_SMALL_BUTTON)
+            winner.setToolTip("Show the race winner's banner here instead of a new leader's")
+            winner.toggled.connect(self.winner_preview_changed)
+            grid.addWidget(winner, row, 4, Qt.AlignHCenter)
+            self.winner_preview = winner
         else:
             grid.addWidget(self._empty(), row, 4, Qt.AlignHCenter)
         if has_tint(section):

@@ -414,3 +414,5 @@ class PreviewAssetTests(unittest.TestCase):
         args = build_app.pyinstaller_args('linux')
         self.assertIn(f'{build_app.PREVIEW}:assets/preview', args)
         self.assertTrue((build_app.PREVIEW / 'laguna_seca.json').is_file())
+        self.assertIn(f'{build_app.WINNER_PICTURE}:assets/resources', args)  # the winner's banner
+        self.assertTrue(build_app.WINNER_PICTURE.is_file())

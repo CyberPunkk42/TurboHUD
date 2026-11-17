@@ -4,6 +4,18 @@ Every finished change, newest first: what changed, why, how it was checked and w
 Each branch adds its dated entry at the top. Where things stand now: `RESUME.md`; what is open:
 `docs/BACKLOG.md`.
 
+- 2026-11-17: The race winner's banner from the user's picture, and a switch to see it in move mode
+  (`feature/winner-banner-picture`, asked for by the user): `assets/resources/banner_winner.png` (2128 x 252, black
+  with a waving checkered flag at the right) replaces the drawn squares: its black is stretched to the banner's
+  width and its flag part (from x 1500) keeps its shape at the banner's height at the right end (`winner_banner`,
+  made once per size; the room kept for the flag, `Section.end`, is now that part's shape, 2.5 times the height,
+  was 1.5). Where the picture cannot be read, the drawn squares as before. In the panel's Race leader row, where
+  the Mid text box never was (the banner's text is always in the middle), a **🏁** button switches move mode's
+  banner between a new leader's and the winner's. The build ships the picture (`tools/build_app.py`); the user's
+  other picture there (`checkered_flag.png`) is not to be published and is gitignored. Also a fade test reading a
+  rounded corner's pixel (254 at 2x) now reads clear of it. The guides say so. Tests for the picture (black, the
+  flag's white), the squares without it, the switch in move mode and in the panel, and the build; both banners
+  drawn at 780 x 36 and looked at; TurboHUD started with move mode, no error. Not yet seen over TSU.
 - 2026-11-17: The race leader banner's text in the middle (`fix/banner-text-centred`, reported by the user): the
   banner kept room at its right end for the winner's checkered flag (`Section.end`, 1.5 times its height) on every
   banner, so "New Race Leader - name", which has no flag, was centred in what was left: about 37 px left of the
