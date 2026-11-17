@@ -1802,6 +1802,10 @@ class MovePanel(QWidget):
     def set_presets_saved(self, numbers):
         self.layouts.set_presets_saved(numbers)
 
+    def show_preset_status(self, text):
+        """What was just done to a preset, below the presets in the layouts window."""
+        self.layouts.show_status(text)
+
     def open_layouts(self):
         """The layouts window beside the panel, wholly on its screen; shown again where it was
         hidden behind something."""

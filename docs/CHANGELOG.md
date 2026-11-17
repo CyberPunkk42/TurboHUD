@@ -13,6 +13,14 @@ Each branch adds its dated entry at the top. Where things stand now: `RESUME.md`
   move mode the grid is the backmost of TurboHUD's 22 windows by macOS's window order (log: `grid: beneath
   TurboHUD's windows`), no error. A test for the Mac's call. Not yet seen on Windows; Hyprland, where it was
   right, is unchanged.
+- 2026-11-17: Preset names kept with Enter, and a line that confirms (`feature/preset-name-saved`, asked for by
+  the user): in the layouts window, Enter in a preset's name box now lets go of the keyboard, so its cursor goes
+  (the name was kept already, the cursor stayed). Below the presets a neon electric blue line (the user's choice) says for 3 s what was just done:
+  "✓ Preset 3 named Qualifying", "...: name removed", "✓ Preset 2 Race saved", "... loaded", "... deleted"
+  (`LayoutsWindow.show_status`, `STATUS_SHOWN_MS`; the line keeps its height while empty, so the window keeps its
+  size). The User Guide says so. Tests for Enter (a real key press: the box loses the focus, the name is told
+  once), the line and its timer, and the panel passing it on. Not yet tried by hand; the 6 s start of TurboHUD
+  was not run, as TurboHUD was open.
 - 2026-11-17: Add font...'s file window in front on the Mac (`fix/font-windows-in-front`, reported by the user:
   it opened behind TurboHUD). The file window was put on TurboHUD's level only once shown, and macOS then kept
   it behind the windows already on that level: by the order macOS draws (CoreGraphics' window list, in a
