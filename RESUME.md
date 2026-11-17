@@ -28,8 +28,9 @@ Kept short: the state now and what to do next. Every change, with how it was che
 1. **Move mode's pointer on Windows** (`fix/move-mode-pointer-windows`, reported by players): in a race,
    Ctrl+Shift+L should show the pointer at once, without ESC, and locking hand TSU the mouse back (the
    log: `move mode: panel in front`). On Hyprland: does the pointer show in move mode mid-race?
-2. **One's own fonts**: a .ttf or .otf in `customization/fonts` (Settings > Fonts folder...), the settings
-   opened again, picked under Font: every section takes it and its box fits; System font goes back.
+2. **One's own fonts**: Settings > **Add font...** in move mode: the file window shows above the sections,
+   the chosen .ttf or .otf is used at once and every box fits; System font goes back. **Fonts folder...**
+   closes the settings, ends move mode and the folder shows.
 3. **The radar** at the cars' real size, zoomed in when they are close: is the zoom steady, are the cars
    large enough?
 4. **The race leader banner**: "New Race Leader" about 5 s after a pass that holds (none for one undone,

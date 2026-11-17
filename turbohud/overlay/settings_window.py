@@ -120,6 +120,7 @@ class SettingsWindow(QWidget):
     about_requested = Signal()  # About...: the app's name and version
     font_chosen = Signal(str)  # a font family from customization/fonts, '' for the system's
     fonts_folder_requested = Signal()  # Fonts folder...: open customization/fonts
+    add_font_requested = Signal()  # Add font...: pick a font file, copied into customization/fonts
     closed = Signal()
 
     focusable = True  # it takes clicks on its buttons
@@ -188,8 +189,18 @@ class SettingsWindow(QWidget):
         self.font_choice.setSizeAdjustPolicy(QComboBox.AdjustToContents)
         self.font_choice.currentIndexChanged.connect(self._font_picked)
         font.addWidget(self.font_choice)
+        # Add font... opens a file window above TurboHUD's; the folder opens in the system's file
+        # manager, beneath TurboHUD's windows, so that one first closes this window and leaves move
+        # mode (reported by the user on 2026-11-17).
+        add = QPushButton('Add font...')
+        add.setToolTip('Choose a font file (.ttf, .otf): it is copied into the fonts folder and used at once')
+        add.clicked.connect(self.add_font_requested)
+        font.addWidget(add)
         folder = QPushButton('Fonts folder...')
-        folder.setToolTip('Open the folder to put font files (.ttf, .otf) in; they show here the next time')
+        folder.setToolTip(
+            'Open the fonts folder, to add or delete font files; this window closes and move mode ends,'
+            ' so the folder can be seen'
+        )
         folder.clicked.connect(self.fonts_folder_requested)
         font.addWidget(folder)
         font.addStretch()
