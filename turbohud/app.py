@@ -836,6 +836,12 @@ def run(args, folder):
         for window in windows.values():
             if window.wanted:
                 window.show_on_top()  # above the grid
+        # Sections already showing are not brought forward by that on the Mac and Windows, so the
+        # grid lay over them (reported by the user on 2026-11-17): it goes beneath them instead.
+        below = getattr(native, 'place_below', None)
+        shown = [window for window in windows.values() if window.wanted and window.isVisible()]
+        if below is not None and shown:
+            log.info('grid: %s', below(grid_window, shown))
 
     def set_locked(value):
         nonlocal locked
