@@ -4,6 +4,19 @@ Every finished change, newest first: what changed, why, how it was checked and w
 Each branch adds its dated entry at the top. Where things stand now: `RESUME.md`; what is open:
 `docs/BACKLOG.md`.
 
+- 2026-11-17: Tire wear against the compound's endurance (`fix/tire-wear-per-compound`, reported by a tester on
+  Windows with a picture: TSU's Tires 95 % where TurboHUD said 97 % and ~66.2 laps, hotlapping on Road America).
+  TurboHUD counted every tire as worn out at `TireWearSettings.MaxTireWear` (5,760,000), which the game's
+  metadata shows is only the wear at the most endurance allowed: a tire wears at least
+  `StandardTireWearPerSecond` (800, 16 a tick) and is worn out at its compound's endurance (`compound1Endurance`
+  to `compound3Endurance`, seconds, 30 to 7200; defaults 600, 900, 1500) times that. The reader now reads the
+  three endurances with the compound count, once an event, and uses the car's compound
+  (`tireCompoundAndChangeTicks`) for `CarState.tire_max`: the percent and the laps left (never fewer than none)
+  count against it; 5,760,000 where it is not read or out of range. The log says `tires: N compounds, endurance
+  ... s, worn out at ...` once an event. Constants decoded by hand from `global-metadata.dat`'s default values.
+  Tests (the limits, the reader per compound, in a tire change, without settings, the log line); all tests pass
+  but one dialog test that fails on `main` too while TurboHUD runs. Not yet seen in a race: that TSU's and
+  TurboHUD's percent now agree, on each compound.
 - 2026-11-17: The race winner's banner from the user's picture, and a switch to see it in move mode
   (`feature/winner-banner-picture`, asked for by the user): `assets/resources/banner_winner.png` (2128 x 252, black
   with a waving checkered flag at the right) replaces the drawn squares: its black is stretched to the banner's

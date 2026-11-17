@@ -315,7 +315,8 @@ their neighbours 0 and 118 (they are close to them); that does no harm.
 With fuel and tire wear on, `TS.VehicleState.fuelConsumption` and `.tireWear` count what
 is used up, from 0. Per lap (about 1:22) they grew by about 10,100 and 151,000; the
 player saw about 6 % fuel and 2.5 % tires per lap. Constants from the metadata's default
-values: `TireWearSettings.MaxTireWear` = 5,760,000 (so 2.6 % a lap),
+values: `TireWearSettings.MaxTireWear` = 5,760,000 (so 2.6 % a lap; on 2026-11-17 found to be only the most
+endurance, 7200 s x `StandardTireWearPerSecond` 800: a tire is worn out at its compound's endurance x 800),
 `FuelSettings.MaxFuelConsumptionPerSecond` = 150 (3 a tick at full throttle); the tank is
 the event's `FuelSettings.maxFuelConsumptionInEvent` (reached through
 `CarStateUpdater.m_fuelSettings`), not yet read live. `CarStateUpdater.m_forwardSpeed`

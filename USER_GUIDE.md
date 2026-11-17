@@ -163,6 +163,7 @@ the end of the race: red means you have to pit for fuel.
 
 **Tire wear**
 Tire life left in percent and the laps it lasts, with a bar. Only in events with tire wear.
+The percent is TSU's own: it counts against how long the compound on your car lasts in this event.
 
 **Car health**
 Your car's health as the game counts it, with a bar. Yellow with "less downforce" when the

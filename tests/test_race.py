@@ -32,7 +32,7 @@ class FakeGame:
         self.instance_type = self.alloc_heap(16)
         self.put(self.instance_type + il.TYPE_ATTRS, struct.pack('<H', 0))
         self.typed = {}
-        for code in (0x02, 0x05, 0x08, 0x0C, 0x11, 0x12):  # bool, byte, int, float, enum, class
+        for code in (0x02, 0x05, 0x07, 0x08, 0x0C, 0x11, 0x12):  # bool, byte, ushort, int, float, enum, class
             record = self.alloc_heap(16)
             self.put(record + il.TYPE_ATTRS, struct.pack('<HB', 0, code))
             self.typed[code] = record
@@ -137,6 +137,7 @@ def build(
     gate_types=None,
     surfaces=None,
     compounds=None,
+    endurances=None,
     track=None,
     replay=None,
     recording_opened=None,
@@ -490,10 +491,19 @@ def build(
         g.q(updater + 0x90, 0)  # no event settings unless the compounds are given
         if compounds is not None:  # the event's number of tire compounds
             event_settings = g.alloc_obj(g.klass('TS', 'EventSettings', [('tireWear', 0x10, False)]))
+            # Each compound's endurance in seconds (a ushort, as in TSU), when given.
+            endurance_fields = [
+                (name, 0x12 + 2 * i, False, 0x07)
+                for i, name in enumerate(race.ENDURANCE_FIELDS[: len(endurances or ())])
+            ]
             tire_settings = g.alloc_obj(
-                g.klass('TS', 'TireWearSettings', [('tireCompoundCount', 0x10, False, 0x05)])
+                g.klass(
+                    'TS', 'TireWearSettings', [('tireCompoundCount', 0x10, False, 0x05), *endurance_fields]
+                )
             )
             g.put(tire_settings + 0x10, bytes([compounds]))
+            for i, endurance in enumerate(endurances or ()):
+                g.put(tire_settings + 0x12 + 2 * i, struct.pack('<H', endurance))
             g.q(event_settings + 0x10, tire_settings)
             g.q(updater + 0x90, event_settings)
         if surfaces is not None:  # (grip, layer) under each of the four wheels; None: in the air
@@ -1063,6 +1073,24 @@ class CarTests(unittest.TestCase):
         self.assertAlmostEqual(self.car(tire_change=1.0).tires_left, 1.0)
         self.assertAlmostEqual(self.car(tire_change=0.5, wear_per_lap=144_000).tire_laps, 38.0)
         self.assertEqual(self.car(tire_change=0.5).tire_wear, 576_000)
+
+    def test_tires_wear_out_at_their_compounds_endurance(self):
+        # A player's report (2026-11-17): TSU showed 95 % where 5,760,000 gave 97 %.
+        car = self.car(tire_wear=172_800, tire_max=3_456_000, wear_per_lap=144_000)
+        self.assertAlmostEqual(car.tires_left, 0.95)
+        self.assertAlmostEqual(car.tire_laps, 22.8)
+        self.assertAlmostEqual(self.car(tire_wear=172_800).tires_left, 0.97)  # the most endurance
+        worn = self.car(tire_wear=500_000, tire_max=480_000, wear_per_lap=144_000)
+        self.assertEqual(
+            (worn.tires_left, worn.tire_laps), (0.0, 0.0)
+        )  # past it: no laps, not fewer than none
+
+    def test_tire_limits_from_endurances(self):
+        self.assertEqual(race.tire_limits((600, 900, 1500)), (480_000, 720_000, 1_200_000))  # TSU's defaults
+        self.assertEqual(race.tire_limits((7200,)), (race.MAX_TIRE_WEAR,))
+        self.assertEqual(race.MAX_TIRE_WEAR, 5_760_000)  # TS.TireWearSettings.MaxTireWear
+        # Not read, or out of the game's range (30 to 7200 s): the most.
+        self.assertEqual(race.tire_limits((None, 29, 7201)), (race.MAX_TIRE_WEAR,) * 3)
 
     def test_off_in_the_event(self):
         car = self.car(fuel_on=False, tires_on=False)
@@ -1889,6 +1917,32 @@ class CarTests(unittest.TestCase):
         self.assertEqual(change(601), 0.25)
         self.assertEqual(change(2401), 1.0)
         self.assertEqual(change(2404), 0.0)  # past the end: not a measure of progress
+
+    def test_reader_wears_the_tires_out_at_the_cars_compounds_endurance(self):
+        def tire_max(ticks, compounds=None, endurances=None):
+            reader = build(
+                [10_000],
+                laps_completed=0,
+                clock=20_000,
+                limit=0,
+                name='A',
+                car=(1.0, 2.0),
+                tire_ticks=ticks,
+                compounds=compounds,
+                endurances=endurances,
+            )
+            return reader.read().car.tire_max
+
+        self.assertEqual(tire_max(0, 3, (600, 4320, 1500)), 480_000)
+        self.assertEqual(tire_max(1, 3, (600, 4320, 1500)), 3_456_000)
+        self.assertEqual(tire_max(4 * 300 + 2, 3, (600, 4320, 1500)), 1_200_000)  # in a tire change
+        self.assertEqual(tire_max(0), race.MAX_TIRE_WEAR)  # no event settings: the most
+        self.assertEqual(tire_max(0, 1), race.MAX_TIRE_WEAR)  # no endurance in the settings
+        with self.assertLogs('turbohud', 'INFO') as said:
+            tire_max(0, 2, (600, 900, 1500))
+        self.assertIn(
+            'tires: 2 compounds, endurance 600, 900 s, worn out at 480,000, 720,000', '\n'.join(said.output)
+        )
 
     def test_reader_reads_each_cars_tire_compound_and_the_events_count(self):
         def read(ticks, compounds=None):
