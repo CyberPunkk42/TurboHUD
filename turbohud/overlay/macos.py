@@ -127,7 +127,13 @@ class Native:
         send(self.app, 'activateIgnoringOtherApps:', True, restype=None, argtypes=[c_bool])
 
     def activate(self, widget):
-        return 'the app is active (take_focus)'
+        """`widget` in front of TurboHUD's other windows, with the keyboard. Raised to TurboHUD's level
+        after it showed, a window went behind those already there: a file window opened behind the
+        settings window and the sections (Add font..., reported by the user on 2026-11-17)."""
+        window = send(c_void_p(int(widget.winId())), 'window')
+        send(window, 'makeKeyAndOrderFront:', None, restype=None, argtypes=[c_void_p])
+        send(window, 'orderFrontRegardless', restype=None)
+        return 'in front'
 
     def give_focus_back(self):
         previous, self.previous = self.previous, None
