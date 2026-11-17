@@ -21,8 +21,17 @@ def on_top(dialog, native):
         dialog.setOption(QFileDialog.DontUseNativeDialog, True)  # the system's own cannot be raised
     dialog.setWindowFlag(Qt.WindowStaysOnTopHint, True)
     dialog.focusable = True
-    QTimer.singleShot(0, lambda: native.raise_window(dialog))  # once exec() has shown it
+    QTimer.singleShot(0, lambda: _raise(dialog, native))  # once exec() has shown it
     return dialog
+
+
+def _raise(dialog, native):
+    """On TurboHUD's level, then in front of its windows there: raised alone, it went behind them
+    (the settings window, 2026-11-17)."""
+    native.raise_window(dialog)
+    activate = getattr(native, 'activate', None)
+    if activate is not None:
+        activate(dialog)
 
 
 def save_path(parent, native, title, suggested, filter_):

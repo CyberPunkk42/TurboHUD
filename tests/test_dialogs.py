@@ -21,6 +21,10 @@ class Native:
         self.raised.append(widget)
         return 'test'
 
+    def activate(self, widget):
+        self.raised.append(('in front', widget))
+        return 'test'
+
 
 @unittest.skipUnless(importlib.util.find_spec('PySide6'), 'needs Qt')
 class DialogTests(unittest.TestCase):
@@ -50,7 +54,9 @@ class DialogTests(unittest.TestCase):
         self.assertTrue(dialog.focusable)  # a name is typed in it
         self.assertEqual(native.raised, [])
         self.app.processEvents()  # as exec() runs: raised once shown
-        self.assertEqual(native.raised, [dialog])
+        # then in front of TurboHUD's windows on that level: raised alone, it went behind the
+        # settings window (Add font..., 2026-11-17)
+        self.assertEqual(native.raised, [dialog, ('in front', dialog)])
 
     def test_elsewhere_the_systems_own_as_before(self):
         from PySide6.QtWidgets import QFileDialog, QMessageBox
@@ -92,7 +98,7 @@ class DialogTests(unittest.TestCase):
             warn(None, native, 'That file is not a TurboHUD layout.')
         self.app.processEvents()
         self.assertEqual(shown, ['That file is not a TurboHUD layout.'])
-        self.assertEqual(len(native.raised), 1)
+        self.assertEqual(native.raised[1:], [('in front', native.raised[0])])  # raised, then in front
 
     def test_the_mac_asks_for_it(self):
         if sys.platform != 'darwin':

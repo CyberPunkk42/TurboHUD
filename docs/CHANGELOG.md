@@ -4,6 +4,16 @@ Every finished change, newest first: what changed, why, how it was checked and w
 Each branch adds its dated entry at the top. Where things stand now: `RESUME.md`; what is open:
 `docs/BACKLOG.md`.
 
+- 2026-11-17: Add font...'s file window in front on the Mac (`fix/font-windows-in-front`, reported by the user:
+  it opened behind TurboHUD). The file window was put on TurboHUD's level only once shown, and macOS then kept
+  it behind the windows already on that level: by the order macOS draws (CoreGraphics' window list, in a
+  script), the settings window lay in front of it. Now it is also brought in front (`Native.activate` on the
+  Mac: `makeKeyAndOrderFront:` and `orderFrontRegardless`; `dialogs._raise`), which puts it first in that list;
+  Export, Import, Save design and the warnings take the same path. Move mode's panel is brought in front the
+  same way (log: `move mode: panel in front`). Fonts folder... was looked at too: the Finder came in front of
+  other apps, and with move mode ended the sections are see-through and let clicks through; macOS draws no
+  other app's window above TurboHUD's, so only a part lying under a section stays covered. Tests for the order
+  of the calls; TurboHUD started with move mode and the settings, no error. Not yet tried by hand.
 - 2026-11-17: Add font..., and the fonts folder no longer hidden (`feature/add-font`, reported by the user):
   in move mode, Settings > Fonts folder... opened the system's file manager beneath TurboHUD's windows, which
   stay on top of everything, so it could hardly be seen. Now **Add font...** beside it opens a file window
