@@ -34,7 +34,8 @@ Kept short: the state now and what to do next. Every change, with how it was che
 3. **The radar** at the cars' real size, zoomed in when they are close: is the zoom steady, are the cars
    large enough?
 4. **The race leader banner**: "New Race Leader" about 5 s after a pass that holds (none for one undone,
-   none at the start), "Race Winner" as the winner crosses the line; online too; how it reads over TSU.
+   none at the start), "Race Winner" with your flag picture as the winner crosses the line; online too;
+   how it reads over TSU. In move mode, the panel's 🏁 switches between the two; the text is in the middle.
 5. **The log's slow-frame lines**: at 10 reads a second only real hitches (150 ms and more).
 6. **One tint per group on Windows**: tick it in Settings > Look, lock, look at a group over TSU; if
    right, on by default there.

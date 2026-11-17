@@ -40,6 +40,8 @@ VERSION_FILE = ROOT / 'turbohud' / '_build.py'  # gitignored; written for the bu
 NAME = 'TurboHUD'
 PRESETS = ROOT / 'assets' / 'presets'  # the shipped layouts (turbohud.core.presets)
 PREVIEW = ROOT / 'assets' / 'preview'  # move mode's preview race at Laguna Seca (turbohud.core.preview)
+# The race winner's banner picture (the user's, 2026-11-17); only this file of assets/resources ships.
+WINNER_PICTURE = ROOT / 'assets' / 'resources' / 'banner_winner.png'
 ICON = ROOT / 'assets' / 'tsu_turbo_hud.png'  # PyInstaller turns it into .ico / .icns with Pillow
 BUNDLE_ID = 'local.turbohud.TurboHUD'  # holds nothing personal: it goes out with the app
 MAC_READ_ME = ROOT / 'tools' / 'mac_read_me.txt'
@@ -126,6 +128,7 @@ def pyinstaller_args(system=sys.platform):
         '--add-data', f'{ICON}:assets',  # for the tray and window icon at runtime
         '--add-data', f'{PRESETS}:assets/presets',  # the shipped layouts, one per screen size
         '--add-data', f'{PREVIEW}:assets/preview',  # move mode's preview race
+        '--add-data', f'{WINNER_PICTURE}:assets/resources',  # the race winner's banner
     ]  # fmt: skip
     if system == 'win32':
         if RUST_READER.exists():

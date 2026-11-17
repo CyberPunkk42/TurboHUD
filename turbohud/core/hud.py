@@ -446,6 +446,16 @@ class Section:
     end: float = 0.0  # room at the right end of the box, after its text, as a share of its height
 
 
+# The race winner's banner picture, given by the user on 2026-11-17 (assets/resources): 2128 x 252, transparent
+# up to x 12, then black, the waving checkered flag from about x 1533. The part from WINNER_FLAG_FROM is drawn at
+# the banner's height in its own shape, the black before it stretched to the rest of the box.
+WINNER_PICTURE = 'banner_winner.png'
+WINNER_SIZE = (2128, 252)
+WINNER_BLACK_FROM = 12
+WINNER_FLAG_FROM = 1500
+WINNER_FLAG_SHARE = (WINNER_SIZE[0] - WINNER_FLAG_FROM) / WINNER_SIZE[
+    1
+]  # the flag part's width over its height
 BANNER_BACK = '#15151e'  # the race leader banner's box (BANNER_SHADE draws it shaded)
 BANNER_SHADE = ('#5c5c5c', '#0a0a0a')  # grey at its left edge to black at its right
 BANNER_TEXT = '#ffffff'
@@ -627,7 +637,7 @@ RACE_SECTIONS = (
         ((Row('New Race Leader  -  Playername1234567', 'title', BANNER_TEXT, centred=True),),),
         background=BANNER_BACK,
         banner=True,
-        end=1.5,
+        end=WINNER_FLAG_SHARE,  # the winner's flag (the picture's flag part)
         tip='A new race leader, once they have led for 5 s, and the race winner as they finish',
     ),
     Section(

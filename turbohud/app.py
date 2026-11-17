@@ -1601,6 +1601,14 @@ def run(args, folder):
 
     refits = {}  # section name -> the size keep_text_boxes last put back
 
+    def show_winner_preview(on):
+        """Move mode's race leader banner as the winner's (the panel's 🏁) or a new leader's."""
+        banner = windows.get('leader')
+        if banner is not None:
+            banner.preview_winner = on
+            banner.update()
+        log.info("move mode: the %s banner", 'winner' if on else 'new leader')
+
     def preset_status(text):
         """What was just done to a preset, below the presets in the layouts window (2026-11-17)."""
         if panel is not None:
@@ -2124,6 +2132,7 @@ def run(args, folder):
     panel.relearn_requested.connect(relearn_track)
     menu.aboutToShow.connect(relearn_available)
     panel.text_centred_changed.connect(set_text_centred)
+    panel.winner_preview_changed.connect(show_winner_preview)
     panel.tint_changed.connect(set_tint)
     panel.settings_requested.connect(open_settings)
     for name, window in windows.items():

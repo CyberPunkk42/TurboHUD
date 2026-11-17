@@ -32,3 +32,6 @@ user_logs/
 
 # Private notes: stay on this computer, never on GitHub (the repo will be public later)
 docs/SUGGESTIONS.md
+
+# The user's pictures in assets/resources that are not to be published (only banner_winner.png ships)
+assets/resources/checkered_flag.png

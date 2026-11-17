@@ -307,6 +307,66 @@ class BannerDrawingTest(unittest.TestCase):
         room = image.width() - hud.end_room(window.section, image.height())
         self.assertAlmostEqual(self.text_middle(image, room - 1), room / 2, delta=image.width() / 100)
 
+    def test_the_winners_banner_is_the_users_picture(self):
+        """Black, with the picture's waving flag at the right end (given by the user on 2026-11-17)."""
+        from turbohud.overlay import window as window_module
+
+        self.assertIsNotNone(window_module.winner_picture())  # assets/resources/banner_winner.png
+        window = self.window()
+        image = self.show(window, True)
+        black = image.pixelColor(image.width() // 8, 3)  # above the text, at the left
+        self.assertLess(black.lightness(), 15)  # the picture's black, not the grey of the shade
+        flag = [
+            image.pixelColor(x, image.height() // 2).lightness()
+            for x in range(image.width() * 9 // 10, image.width())
+        ]
+        self.assertGreater(max(flag), 180)  # the flag's white squares
+
+    def test_without_the_picture_the_drawn_squares(self):
+        from unittest import mock
+
+        from turbohud.overlay import window as window_module
+
+        window_module.winner_banner.cache_clear()
+        self.addCleanup(window_module.winner_banner.cache_clear)
+        with mock.patch.object(window_module, 'winner_picture', return_value=None):
+            window = self.window()
+            light = self.flag_area(self.show(window, True))
+        self.assertGreater(max(light), 200)
+        self.assertLess(min(light), 40)
+
+    def test_move_mode_shows_the_winners_banner_with_its_switch(self):
+        from turbohud.core.hud import BANNER_TEXT, Row
+
+        window = self.window()
+        window.set_locked(False)
+        window.show_content(
+            [Row('New Race Leader  -  Someone', 'title', BANNER_TEXT, centred=True)], None, None
+        )
+        leader = window.grab().toImage()
+        window.preview_winner = True
+        winner = window.grab().toImage()
+        self.assertLess(max(self.flag_area(leader)), 120)  # a new leader's: no flag
+        self.assertGreater(max(self.flag_area(winner)), 180)  # the winner's: the flag
+
+    def test_the_panel_has_the_switch_on_the_banners_row(self):
+        from turbohud.core.hud import RACE_SECTIONS
+        from turbohud.overlay.window import MovePanel
+
+        class Native:
+            def raise_window(self, window):
+                return 'test'
+
+        panel = MovePanel(Native(), RACE_SECTIONS, True)
+        self.addCleanup(panel.close)
+        self.addCleanup(panel.layouts.close)
+        got = []
+        panel.winner_preview_changed.connect(got.append)
+        self.assertEqual(panel.winner_preview.text(), '\U0001f3c1')
+        panel.winner_preview.click()
+        panel.winner_preview.click()
+        self.assertEqual(got, [True, False])
+
     def test_a_new_leader_has_none(self):
         window = self.window()
         self.assertLess(max(self.flag_area(self.show(window, False))), 60)  # the black end only
@@ -320,8 +380,9 @@ class BannerDrawingTest(unittest.TestCase):
 
     def test_the_whole_box_fades(self):
         window = self.window()
-        full = self.show(window, False, 1.0).pixelColor(4, 3).alpha()
-        half = self.show(window, False, 0.5).pixelColor(4, 3).alpha()
+        # Clear of the rounded corner: at (4, 3) a 2x screen gave 254 there.
+        full = self.show(window, False, 1.0).pixelColor(window.width() // 4, 3).alpha()
+        half = self.show(window, False, 0.5).pixelColor(window.width() // 4, 3).alpha()
         self.assertEqual(full, 255)
         self.assertLess(half, 160)
 
