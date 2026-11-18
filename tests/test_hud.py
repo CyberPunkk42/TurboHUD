@@ -436,8 +436,9 @@ class FirstLaunchTests(unittest.TestCase):
 
     def test_one_column_at_the_left_centred_in_1080_without_overlap(self):
         places = hud.first_launch(hud.RACE_SECTIONS, self.SIZES)
-        boxes = [places[s.name] for s in hud.RACE_SECTIONS if not s.bar]
+        boxes = [places[s.name] for s in hud.RACE_SECTIONS if not s.bar and not s.banner]
         self.assertNotIn('blueflag', places)  # a bar: top centre instead
+        self.assertNotIn('battle', places)  # a banner: below the race leader banner instead
         self.assertTrue(all(x == 40 for x, *_ in boxes))
         for (_, y1, _, h1), (_, y2, _, _) in itertools.pairwise(boxes):
             self.assertGreaterEqual(y2, y1 + h1)  # below, not overlapping
@@ -565,6 +566,7 @@ class SectionTests(unittest.TestCase):
                 'yellowflag',
                 'shortcut',
                 'leader',
+                'battle',
                 'blueflag',
                 'deltabar',
                 'radar',

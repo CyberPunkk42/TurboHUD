@@ -32,9 +32,19 @@ import time
 import typing
 from dataclasses import dataclass
 
+from turbohud.core.battle import GROUP, OVERTAKE
 from turbohud.core.class_registry import CLASS_TAGS, class_colors, class_tag, paler, shown_code
 from turbohud.core.flags import flag_code, flag_text
-from turbohud.core.hud import BANNER_TEXT, NEARBY_SHORT_ROWS, Row, Sectors, blend, clock, local_time_rows
+from turbohud.core.hud import (
+    BANNER_TEXT,
+    NEARBY_SHORT_ROWS,
+    OVERTAKE_COLOUR,
+    Row,
+    Sectors,
+    blend,
+    clock,
+    local_time_rows,
+)
 from turbohud.core.il2cpp import ARRAY_DATA, ARRAY_LENGTH, LIST_ITEMS, SIMPLE_TYPES, NotFound, ReadError
 from turbohud.core.settings import LAP_COLUMNS
 from turbohud.core.trackmap import OFF_TRACK_LAYERS, off_the_track
@@ -2476,6 +2486,7 @@ def race_sections(
     radar_cockpit_only=False,
     nearby_short=False,
     lead_changes=None,
+    battles=None,
 ):
     """{section name: rows} for a live-reader snapshot (see core.hud.RACE_SECTIONS); a
     section with nothing to show has no rows. Nothing before the grid: in the menus, the
@@ -2490,7 +2501,8 @@ def race_sections(
     lap times of a multi-class race (none: no classes); `shortcuts` (a ShortcutPenalties)
     gives the shortcut section and CUT in the lap times; `retirements` (a Retirements) DNF in
     the lists; `lead_changes` (a core.leader.LeadChanges) the race leader banner, under 'leader'
-    and its Banner under 'banner'."""
+    and its Banner under 'banner'; `battles` (a core.battle.Battles) the battle warning while
+    watching (a replay, or spectating), under 'battle' and its Battle under 'battlebanner'."""
     if not on_grid(snapshot, now):
         return {}
     state = snapshot.state
@@ -2507,6 +2519,7 @@ def race_sections(
             retired,
             nearby_short,
             lead_changes,
+            battles,
         )
     if state.finished or state.laps_to_finish and state.laps_completed >= state.laps_to_finish:
         # Finished: the lap sections say so, and the rest stays (the player list above
@@ -2571,6 +2584,8 @@ def race_sections(
         if rows:
             sections['shortcut'] = rows
         sections.update(leader_banner(state, order, clock_now(snapshot, now), lead_changes))
+        if state.replay:
+            sections.update(battle_banner(state, order, clock_now(snapshot, now), battles, retired))
         opacity = blue_flag_opacity(
             blue_flag(state.players, clock_now(snapshot, now), blue_within), blue_within
         )
@@ -2619,6 +2634,7 @@ def _watching_sections(
     retired=frozenset(),
     nearby_short=False,
     lead_changes=None,
+    battles=None,
 ):
     """What a spectator sees: the race, with the leader's lap, the player list with the
     gaps to the leader, the lap times and the map; nothing about a car of their own."""
@@ -2645,6 +2661,7 @@ def _watching_sections(
             retired=retired,
         )
         sections.update(leader_banner(state, order, clock_now(snapshot, now), lead_changes))
+        sections.update(battle_banner(state, order, clock_now(snapshot, now), battles, retired))
         if track_map is not None and state.on_a_track:
             shown = track_map.update(state, order)
             if shown is not None:
@@ -2675,6 +2692,54 @@ def leader_banner(state, order, clock, lead_changes):
         'leader': [Row(f'{banner.title}  -  {name}', 'title', BANNER_TEXT, centred=True)],
         'banner': banner,
     }
+
+
+def battle_banner(state, order, clock, battles, retired=frozenset()):
+    """{'battle': its three rows, 'battlebanner': Battle} while the battle warning shows, else {}:
+    only in a race on a track (none in hotlapping, nor in an arena event). The caller asks only
+    while watching. `clock`: the race clock in its units (clock_now)."""
+    if battles is None or state.hotlapping or not state.on_a_track:
+        return {}
+    if order is None:
+        order = ranked(state.players, False, state.gates)
+
+    def gap_of(ahead, behind):
+        found = gap(behind, ahead, clock, state.gates)
+        if found is None or found[0] != 'time' or found[1] < 0:
+            return None
+        return found[1] / UNITS_PER_SECOND
+
+    battle = battles.update(order, clock / UNITS_PER_SECOND, gap_of, retired)
+    if battle is None:
+        return {}
+    if battle.group:
+        # The group's first driver in the middle row, the ones behind it below, up to GROUP_LISTED.
+        behind = [shown_name(name) for name in battle.group[1 : 1 + GROUP_LISTED]]
+        more = len(battle.group) - 1 - len(behind)
+        if more > 0:
+            behind.append(f'+{more}')
+        middle = GROUP.format(name=shown_name(battle.ahead))
+        names = '  ·  '.join(behind)
+    else:
+        middle = OVERTAKE
+        names = f'{shown_name(battle.ahead)}  vs  {shown_name(battle.behind)}'
+    return {
+        'battle': [
+            Row(battle.title, 'title', BANNER_TEXT, centred=True),
+            Row(middle, 'title', OVERTAKE_COLOUR, centred=True),
+            Row(names, 'title', BANNER_TEXT, centred=True),
+        ],
+        'battlebanner': battle,
+    }
+
+
+GROUP_LISTED = 3  # drivers named behind a group's first; more as "+2" (a longer row is drawn smaller to fit)
+
+
+def shown_name(name):
+    """A driver's name as a banner shows it: cut with … past MAX_NAME_SHOWN letters."""
+    name = name or '?'
+    return name[: MAX_NAME_SHOWN - 1] + '…' if len(name) > MAX_NAME_SHOWN else name
 
 
 def leader_lap(state):

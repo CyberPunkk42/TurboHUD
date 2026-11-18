@@ -16,8 +16,9 @@ import math
 from dataclasses import replace
 
 from turbohud.core import race
+from turbohud.core.battle import OVERTAKE
 from turbohud.core.flags import FLAGS
-from turbohud.core.hud import BANNER_TEXT, Row
+from turbohud.core.hud import BANNER_TEXT, OVERTAKE_COLOUR, Row
 from turbohud.core.trackmap import TrackMap, outline_from_path
 
 TRACK_NAME = 'WT Raceway Laguna Seca v1.0'
@@ -420,6 +421,12 @@ def preview_sections(
         sections['shortcut'] = race.shortcut_rows(state, {NAMES[LOCAL]: 2.4})
     if not sections.get('leader'):
         sections['leader'] = [Row(f'New Race Leader  -  {NAMES[0]}', 'title', BANNER_TEXT, centred=True)]
+    if not sections.get('battle'):
+        sections['battle'] = [
+            Row('Battle for P2', 'title', BANNER_TEXT, centred=True),
+            Row(OVERTAKE, 'title', OVERTAKE_COLOUR, centred=True),
+            Row(f'{NAMES[1]}  vs  {NAMES[2]}', 'title', BANNER_TEXT, centred=True),
+        ]
     sections.setdefault('blue', 1.0)
     sections['radar'] = preview_radar(classes, radar_cone)
     return sections

@@ -197,6 +197,18 @@
       "font": 17,
       "spacing": 1.0
     },
+    "battle": {
+      "x": 717,
+      "y": 232,
+      "width": 486,
+      "height": 92,
+      "visible": true,
+      "group": "",
+      "text_centred": false,
+      "tint": false,
+      "font": 17,
+      "spacing": 1.0
+    },
     "blueflag": {
       "x": 671,
       "y": 64,

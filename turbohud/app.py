@@ -78,6 +78,8 @@ log = logging.getLogger('turbohud')
 
 
 NARROWER = ('laptimes', 'players')  # the boxes layout 7 makes narrower
+# The banners that fade in and out (overlay.window): section name -> the key of what it shows (race_sections).
+BANNERS = {'leader': 'banner', 'battle': 'battlebanner'}
 
 
 def upgrade_layout(settings, path, ink, measure=None):
@@ -522,6 +524,7 @@ def run(args, folder):
     pad = None
     track_map = None  # the live race's TrackMap, for Relearn
     if live is not None:
+        from turbohud.core.battle import Battles
         from turbohud.core.leader import LeadChanges
         from turbohud.core.race import (
             RACING,
@@ -562,6 +565,7 @@ def run(args, folder):
         event_modes = EventModes()
         retirements = Retirements()
         lead_changes = LeadChanges()
+        battles = Battles()
 
         def contents():
             speed = windows.get('speed')
@@ -582,6 +586,10 @@ def run(args, folder):
             following = leader is not None and leader.wanted
             if not following:
                 lead_changes.reset()
+            battle = windows.get('battle')
+            watching_battles = battle is not None and battle.wanted
+            if not watching_battles:
+                battles.reset()
             current = race_sections(
                 snapshot,
                 time.monotonic(),
@@ -601,6 +609,7 @@ def run(args, folder):
                 settings.radar_cockpit_only,
                 settings.nearby_short,
                 lead_changes if following else None,
+                battles if watching_battles else None,
             )
             if not settings.yellow_flags:
                 yellow_flags.reset()  # turned on again, it starts afresh
@@ -2222,8 +2231,8 @@ def run(args, folder):
                 blue = None  # shown as the yellow box's frame instead
             elif name == 'yellowflag' and not together:
                 blue = None  # no frame
-            elif name == 'leader':
-                blue = None  # the banner draws no blue frame
+            elif name in BANNERS:
+                blue = None  # the banners draw no blue frame
             if window.show_content(
                 current.get(name, []),
                 current.get('pedals'),
@@ -2232,7 +2241,7 @@ def run(args, folder):
                 current.get('trackmap'),
                 current.get('levels', {}).get(name),
                 current.get('deltaview'),
-                current.get('banner') if name == 'leader' else None,
+                current.get(BANNERS[name]) if name in BANNERS else None,
             ):
                 window.update()  # only what changed: drawing every section each frame stutters
         if group_tints is not None and locked:

@@ -1697,7 +1697,7 @@ class MovePanel(QWidget):
             )
             grid.addWidget(centre, row, 4, Qt.AlignHCenter)
             self.centres[section.name] = centre
-        elif section.banner:
+        elif section.banner and section.end:
             # Its text is always in the middle, so this column has the switch between a new leader's
             # banner and the winner's, to see both in move mode (asked for by the user on 2026-11-17).
             winner = QPushButton('🏁')
