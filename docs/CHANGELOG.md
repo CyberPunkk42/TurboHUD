@@ -4,6 +4,14 @@ Every finished change, newest first: what changed, why, how it was checked and w
 Each branch adds its dated entry at the top. Where things stand now: `RESUME.md`; what is open:
 `docs/BACKLOG.md`.
 
+- 2026-11-18: The race leader banner fades as one picture (`fix/banner-fade-as-one`, reported by the user: its
+  colour looked broken as it faded in and out). Each part was faded on its own (the box, the flags, the letters),
+  so the game showed through the box and the box through the letters: at half, the letters were at 75 % against
+  the box's 50 %. The banner is now drawn whole at full strength and laid on at its opacity (`_paint_faded`), on
+  its own window and on the one-window canvas. A test that at half no pixel is above half (it was 191 of 255),
+  for a new leader's and the winner's; both drawn at full and half over green and looked at; TurboHUD started,
+  no error. Also confirmed by the user: move mode's pointer (Windows and Hyprland), one's own fonts and the
+  radar's zoom and size. Not yet seen over TSU.
 - 2026-11-17: Tire wear against the compound's endurance (`fix/tire-wear-per-compound`, reported by a tester on
   Windows with a picture: TSU's Tires 95 % where TurboHUD said 97 % and ~66.2 laps, hotlapping on Road America).
   TurboHUD counted every tire as worn out at `TireWearSettings.MaxTireWear` (5,760,000), which the game's

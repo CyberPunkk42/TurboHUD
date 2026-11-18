@@ -3,7 +3,7 @@
 Kept short: the state now and what to do next. Every change, with how it was checked, is in
 `docs/CHANGELOG.md`; open work in `docs/BACKLOG.md`; how it works in `docs/HOW_IT_WORKS.md`.
 
-## Current state (2026-11-17)
+## Current state (2026-11-18)
 - **The app** (`turbohud/`, Python with Qt): a see-through, click-through HUD over TSU with a locked
   mode and a move mode (Ctrl+Shift+L, or Ctrl+Shift+F12; quit Ctrl+Shift+Q), a tray icon, and a
   settings window. Start from the source with `run_turbohud.sh` / `run_turbohud.cmd`.
@@ -28,26 +28,19 @@ Kept short: the state now and what to do next. Every change, with how it was che
 1. **Tire wear as TSU counts it** (`fix/tire-wear-per-compound`): in an event with tire wear, TurboHUD's Tires
    percent should match TSU's own (it was 97 against 95); the log says `tires: ... worn out at ...` once an
    event. Try a softer and a harder compound if the event has more.
-2. **Move mode's pointer on Windows** (`fix/move-mode-pointer-windows`, reported by players): in a race,
-   Ctrl+Shift+L should show the pointer at once, without ESC, and locking hand TSU the mouse back (the
-   log: `move mode: panel in front`). On Hyprland: does the pointer show in move mode mid-race?
-3. **One's own fonts**: Settings > **Add font...** in move mode: the file window shows above the sections,
-   the chosen .ttf or .otf is used at once and every box fits; System font goes back. **Fonts folder...**
-   closes the settings, ends move mode and the folder shows.
-4. **The radar** at the cars' real size, zoomed in when they are close: is the zoom steady, are the cars
-   large enough?
-5. **The race leader banner**: "New Race Leader" about 5 s after a pass that holds (none for one undone,
-   none at the start), "Race Winner" with your flag picture as the winner crosses the line; online too;
+2. **The race leader banner** (`fix/banner-fade-as-one`): it now fades in and out as one picture, its colours
+   as when it is full (they looked off while fading, reported on 2026-11-18). Also: "New Race Leader"
+   about 5 s after a pass that holds (none for one undone, none at the start), "Race Winner" with your flag picture as the winner crosses the line; online too;
    how it reads over TSU. In move mode, the panel's 🏁 switches between the two; the text is in the middle.
-6. **The log's slow-frame lines**: at 10 reads a second only real hitches (150 ms and more).
-7. **One tint per group on Windows**: tick it in Settings > Look, lock, look at a group over TSU; if
+3. **The log's slow-frame lines**: at 10 reads a second only real hitches (150 ms and more).
+4. **One tint per group on Windows**: tick it in Settings > Look, lock, look at a group over TSU; if
    right, on by default there.
-8. **The place label in move mode** (`X  Y  width×height`): on the Mac and Hyprland; the designed
+5. **The place label in move mode** (`X  Y  width×height`): on the Mac and Hyprland; the designed
    size's numbers on the design screen; none after a preset, Undo or Redo.
-9. **TurboHUD's own memory** in the log: on Linux, and in a long race on each system (does it grow?).
-10. **One window on Linux** (backlog item 1c): the window count probe over TSU on Hyprland.
-11. **The tester** (backlog item 0): his stutter times and a try at 10 reads a second.
-12. **Not yet seen**: a Single Player event and Custom races on the Mac and Linux; a replay after a race
+6. **TurboHUD's own memory** in the log: on Linux, and in a long race on each system (does it grow?).
+7. **One window on Linux** (backlog item 1c): the window count probe over TSU on Hyprland.
+8. **The tester** (backlog item 0): his stutter times and a try at 10 reads a second.
+9. **Not yet seen**: a Single Player event and Custom races on the Mac and Linux; a replay after a race
     in the same session; the delta bar turning red on a slow loss; the HUD coming at once when TSU's log
     newly says an event runs; yellow flags (thresholds `YELLOW_*` in `turbohud/core/race.py`); a broken
     track map mending after a clean lap; a purple sector turning green; a special event, King of the Hill

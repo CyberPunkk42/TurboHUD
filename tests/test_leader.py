@@ -386,6 +386,18 @@ class BannerDrawingTest(unittest.TestCase):
         self.assertEqual(full, 255)
         self.assertLess(half, 160)
 
+    def test_it_fades_as_one_picture(self):
+        # Faded piece by piece, the letters lay on the see-through box and showed stronger than it,
+        # off colour over the game (reported by the user on 2026-11-18): no pixel above the half.
+        window = self.window()
+        for winner in (False, True):
+            image = self.show(window, winner, 0.5)
+            alphas = {
+                image.pixelColor(x, y).alpha() for x in range(image.width()) for y in range(image.height())
+            }
+            self.assertLessEqual(max(alphas), 130)
+            self.assertGreater(max(alphas), 110)
+
     def test_no_blue_frame_on_it(self):
         window = self.window()
         plain = self.show(window, False).pixelColor(3, window.height() // 2)

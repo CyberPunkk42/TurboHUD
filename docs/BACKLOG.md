@@ -23,7 +23,6 @@ where AMD Software has Ctrl+Shift+L), Custom races, one tint per group (off by d
   Exclusive may not work; an overlay that injects into the game is out of scope.
 - A whole race offline and hosting; a Single Player event; stutter during the search at an online
   race's start (4 threads, about 6 s).
-- Move mode's pointer in a race (`fix/move-mode-pointer-windows`): it should show without ESC.
 - The layout list there: presets, groups, Undo, the design screen, the Layouts window, Ctrl+Shift+1 to 5.
 - One tint per group over TSU; if right, on by default there (`group_tint_default`).
 

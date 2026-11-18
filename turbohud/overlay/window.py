@@ -645,11 +645,15 @@ class SectionWindow(QWidget):
             return False
         return self.wanted and self.locked and self.backdrop and bool(self.rows)
 
-    def draw(self, painter, own_tint=True):
+    def draw(self, painter, own_tint=True, faded=True):
         """Draw the section into `painter`, its top-left corner at (0, 0) and as large as
         this window: on the window itself, or on a HudCanvas that holds every section.
-        `own_tint` False: no tint of its own, as its group's one tint is behind it."""
+        `own_tint` False: no tint of its own, as its group's one tint is behind it.
+        `faded` False: the race leader banner at full strength (_paint_faded fades it)."""
         if not self.wanted:
+            return
+        if faded and self._fading():
+            self._paint_faded(painter, own_tint)
             return
         painter.setRenderHint(QPainter.Antialiasing)
         if self.section.drawing == 'radar':
@@ -673,7 +677,6 @@ class SectionWindow(QWidget):
         painter.save()  # the race leader banner fades as a whole: restored at the end
         winner = False
         if self.section.banner and self.locked and self.banner is not None:
-            painter.setOpacity(min(max(self.banner.opacity, 0.0), 1.0))
             winner = self.banner.winner
         elif self.section.banner and not self.locked and self.preview_winner:
             # Move mode, with the panel's 🏁 on: the winner's banner, to see and place it (2026-11-17).
@@ -783,6 +786,32 @@ class SectionWindow(QWidget):
                     draw_level(painter, level_bar(self.width() - 2 * inner, content_height, scale, *level))
                 painter.translate(-inner, 0)
         painter.translate(0, -down)
+        painter.restore()
+
+    def _fading(self):
+        """Whether the race leader banner shows part faded in or out now."""
+        return self.section.banner and self.locked and self.banner is not None and self.banner.opacity < 1.0
+
+    def _paint_faded(self, painter, own_tint):
+        """The race leader banner as it fades: drawn whole at full strength, then laid on at its
+        opacity as one picture. Faded piece by piece, the game showed through its box and the
+        box through its letters and flags, which looked off colour (reported by the user on
+        2026-11-18)."""
+        opacity = min(max(self.banner.opacity, 0.0), 1.0)
+        if opacity <= 0.0 or self.width() <= 0 or self.height() <= 0:
+            return
+        ratio = self.devicePixelRatioF()
+        whole = QImage(
+            round(self.width() * ratio), round(self.height() * ratio), QImage.Format_ARGB32_Premultiplied
+        )
+        whole.setDevicePixelRatio(ratio)
+        whole.fill(Qt.transparent)
+        inner = QPainter(whole)
+        self.draw(inner, own_tint, faded=False)
+        inner.end()
+        painter.save()
+        painter.setOpacity(painter.opacity() * opacity)
+        painter.drawImage(QRectF(0, 0, self.width(), self.height()), whole)
         painter.restore()
 
     def _paint_backdrop(self, painter, color=None):
