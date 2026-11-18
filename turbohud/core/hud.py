@@ -459,6 +459,7 @@ WINNER_FLAG_SHARE = (WINNER_SIZE[0] - WINNER_FLAG_FROM) / WINNER_SIZE[
 BANNER_BACK = '#15151e'  # the race leader banner's box (BANNER_SHADE draws it shaded)
 BANNER_SHADE = ('#5c5c5c', '#0a0a0a')  # grey at its left edge to black at its right
 BANNER_TEXT = '#ffffff'
+OVERTAKE_COLOUR = '#ffc61a'  # the battle warning's "Possible Overtake": gold, as the leader on the map
 
 
 LAP_TIME_ROWS = 20  # how many drivers the lap times section is made for
@@ -641,6 +642,20 @@ RACE_SECTIONS = (
         tip='A new race leader, once they have led for 5 s, and the race winner as they finish',
     ),
     Section(
+        'battle',
+        'Battle',
+        (
+            (
+                Row('Battle for P20', 'title', BANNER_TEXT, centred=True),
+                Row('Possible Overtake', 'title', OVERTAKE_COLOUR, centred=True),
+                Row('Playername1234567  vs  Playername1234567', 'title', BANNER_TEXT, centred=True),
+            ),
+        ),
+        background=BANNER_BACK,
+        banner=True,
+        tip='While watching a replay or spectating: two cars close together, the one behind closing in',
+    ),
+    Section(
         'blueflag',
         'Blue flag',
         (),
@@ -678,7 +693,7 @@ RACE_SECTIONS = (
 PANEL_CATEGORIES = (
     ('Timing', ('lap', 'current', 'delta', 'deltabar', 'times', 'laptimes')),
     ('Car', ('fuel', 'fuelfinish', 'tires', 'health', 'draft', 'speed')),
-    ('Race', ('players', 'trackmap', 'radar', 'blueflag', 'yellowflag', 'shortcut', 'leader')),
+    ('Race', ('players', 'trackmap', 'radar', 'blueflag', 'yellowflag', 'shortcut', 'leader', 'battle')),
     ('Other', ('localtime', 'clock')),
 )
 
@@ -1262,9 +1277,9 @@ def first_launch(sections, sizes, origin=(0, 0), reference=REFERENCE_SCREEN, mar
     """{name: (x, y, width, height)} for a first launch: the sections one below the other
     at the left of a `reference`-sized screen whose top-left corner is `origin`,
     vertically centred, so the middle stays free. What does not fit in the height starts
-    another column to the right; nothing overlaps. Bars (the blue flag) are not in the
-    column: see top_centre."""
-    sections = [section for section in sections if not section.bar]
+    another column to the right; nothing overlaps. Bars (the blue flag) and the banners (race
+    leader, battle) are not in the column: see drawing_place."""
+    sections = [section for section in sections if not section.bar and not section.banner]
     room = reference[1] - 2 * margin
     columns, column, height = [], [], 0
     for section in sections:
@@ -1304,6 +1319,7 @@ DELTA_BAR_DOWN = 0.07  # how far below the blue flag the delta bar goes first, o
 
 
 BANNER_DOWN = 0.12  # the race leader banner's first place: this share of the screen below the top centre
+BATTLE_DOWN = 0.17  # the battle warning's: below the race leader banner
 
 
 def drawing_place(section, size, screen, margin=LAYOUT_MARGIN):
@@ -1314,9 +1330,12 @@ def drawing_place(section, size, screen, margin=LAYOUT_MARGIN):
         width, height = size
         x, y, screen_width, screen_height = screen
         return (x + screen_width - margin - width, y + (screen_height - height) // 2, width, height)
-    if section.banner:  # the race leader banner: under the blue flag, clear of the lap title
+    if (
+        section.banner
+    ):  # the race leader banner: under the blue flag, clear of the lap title; the battle below it
         x, y, width, height = top_centre(size, screen)
-        return (x, y + round(screen[3] * BANNER_DOWN), width, height)
+        down = BATTLE_DOWN if section.name == 'battle' else BANNER_DOWN
+        return (x, y + round(screen[3] * down), width, height)
     if section.drawing == 'delta':  # below where the blue flag goes
         x, y, width, height = top_centre(size, screen)
         return (x, y + round(screen[3] * DELTA_BAR_DOWN), width, height)

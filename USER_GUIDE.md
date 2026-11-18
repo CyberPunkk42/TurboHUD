@@ -298,6 +298,16 @@ seconds in all. Not at the start (the leader off the grid is no change), nor in 
 the arena modes; spectating, it shows too. Between banners nothing of it is drawn. Untick it
 in the panel if you do not want it; ticked again, it starts from the leader at that moment.
 
+**Battle**
+The first part of a Race Director mode: only while you watch, in a replay or spectating, never
+while you drive. On the same grey-to-black banner, in three rows: **Battle for P3**, **Possible
+Overtake** in gold, and the two drivers, **name vs name**, the car ahead first. It shows when a car
+is within 1 second of the car ahead and has gained at least 0.1 s on it over the last 3 seconds, or
+sits within 0.4 s of it, and stays so for 2 seconds (a gap that flickers for a moment shows nothing).
+One battle at a time, the one for the highest place; each fades in, stays and fades out, 6 seconds
+in all, and the same two cars not again for a minute. Not between cars in the pits, finished or
+out of the race, nor in hotlapping or the arena modes. It starts below the Race leader banner.
+
 ### Other
 
 **Clock**
@@ -350,8 +360,8 @@ from its name while they show, and no name ever runs into the next column.
   resizes the others by the same amount.
 - **Centre**: **↔** centres the section across the screen it is on, **↕** down it.
 - **Mid text**: puts the text in the middle of its box instead of at the left. The Race leader
-  banner's text is always in the middle; its row has **🏁** there instead, which shows the winner's
-  banner in move mode (pressed again, a new leader's).
+  and Battle banners' text is always in the middle; the Race leader row has **🏁** there instead,
+  which shows the winner's banner in move mode (pressed again, a new leader's).
 - **Tint**: a light tint behind this section's text while locked; for the track map, its
   dark square.
 - **Size px**: this section's text size in pixels, or **global** to follow the global size.

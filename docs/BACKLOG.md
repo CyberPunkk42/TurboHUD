@@ -114,11 +114,10 @@ opens a recording, and teaching the Rust reader several values a search pass (a 
 
 ## 8. Race Director mode (agreed 2026-11-16, next once the user says go)
 Only while watching (a recording, or spectating live), never while driving; inside TurboHUD, kept light.
-Order: (1) a battle warning from the standings' gaps, in 3 rows: "Battle for P<n>", "Possible Overtake",
-"<Driver 1> vs <Driver 2>" (close and closing, held a moment against flicker; the race leader banner's
-style, `turbohud/core/leader.py`); (2) a banner naming the driver watched in a recording (`_followed` in
-`race.py`); (3) which car the live spectator camera follows (research). A "Watching" kind of event for
-the presets, so these show only then.
+(1) The battle warning is built (`feature/battle-warning`, `turbohud/core/battle.py`): to see in a replay
+and spectating, and tune its numbers (`BATTLE_*`). Next: (2) a banner naming the driver watched in a
+recording (`_followed` in `race.py`); (3) which car the live spectator camera follows (research). A
+"Watching" kind of event for the presets (a replay is 'recording' already; spectating counts as a race).
 
 ## Nice to have (ideas, not planned)
 Ideas talked over and left for later; none is being worked on. Take one up only when the user asks.

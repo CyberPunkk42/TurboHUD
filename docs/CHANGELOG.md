@@ -4,6 +4,24 @@ Every finished change, newest first: what changed, why, how it was checked and w
 Each branch adds its dated entry at the top. Where things stand now: `RESUME.md`; what is open:
 `docs/BACKLOG.md`.
 
+- 2026-11-18: The battle warning, the Race Director mode's first part (`feature/battle-warning`, backlog item 8,
+  asked for by the user on 2026-11-16): a new section, **Battle** (under Race in the panel), only while watching
+  (a replay, or spectating), never while driving. On the race leader banner's grey-to-black box, three rows of
+  its size: "Battle for P<n>", "Possible Overtake" in gold and "<car ahead>  vs  <car behind>" (names cut as in
+  the lists). A pair of neighbours in the standings' order is a battle when the one behind is within 1 s and has
+  gained 0.1 s over the last 3 s, or sits within 0.4 s, and it must stay one for 2 s; one battle shows at a time
+  (the highest place), 6 s with the same fade, and the same two cars not again for a minute. None for a car in
+  the pits, finished, out of the race or before its first checkpoint, nor in hotlapping or the arena modes.
+  `turbohud/core/battle.py` works on the standings' order and the live gaps (`race.gap`), with no read of its
+  own, on the race clock (a paused replay holds it; a clock going back starts afresh); it runs only while the
+  section is ticked. Placed below the Race leader banner (`BATTLE_DOWN`; in the six shipped layouts, sized for
+  its text, clear of every other section); the banners are no longer in the first start's column, as
+  `drawing_place` places them anyway. The panel's 🏁 stays on the Race leader row only. In move mode's preview
+  too. The guides, README and `docs/HOW_IT_WORKS.md` say so. Tests (closing, steady, falling back, right
+  behind, a moment close, the highest place, the fade, the minute, one after another, pits, finished, out, the
+  grid, unknown gaps, a clock going back and standing; spectating and in a replay, never while driving; its
+  place in every shipped layout; drawn, faded as one, gold middle row); looked at against the race leader
+  banner; TurboHUD started for 6 s, no error. Not yet seen in a replay or spectating.
 - 2026-11-18: The race leader banner fades as one picture (`fix/banner-fade-as-one`, reported by the user: its
   colour looked broken as it faded in and out). Each part was faded on its own (the box, the flags, the letters),
   so the game showed through the box and the box through the letters: at half, the letters were at 75 % against

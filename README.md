@@ -7,8 +7,8 @@ Fullscreen mode too.
 Early version. On Linux, with TSU started through TurboHUD's memory probe (see
 [Live lap times on Linux](#live-lap-times-on-linux)), the HUD shows the live race: lap
 times and the delta to your best lap, fuel, tires, health, the draft, speed with pedal
-bars, the nearby cars with gaps, yellow and blue flags, a radar, a track map and a banner
-for a new race leader and the winner (see
+bars, the nearby cars with gaps, yellow and blue flags, a radar, a track map, a banner
+for a new race leader and the winner, and, while watching, a battle warning (see
 [Use](#use)). It works offline, in hotlaps, in a Custom race, online (as a guest, as a host
 and as a spectator) and in TSU's replays. On macOS, with TSU in CrossOver,
 the same HUD needs no setup (see [Live race data on macOS](#live-race-data-on-macos)). On
