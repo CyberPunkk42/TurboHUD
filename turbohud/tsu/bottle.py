@@ -173,6 +173,8 @@ class Pipe:
         self.game_reads = 0  # reads of the game's memory it asked for, for the log
         self._page_reads = 0  # questions for many pages, for a log line now and then
         self._received = b''  # what has come but was not asked for yet
+        # Whether the reader finds several values in one search (find_pointers_any): None until asked.
+        self.many_values = None
 
     def _pump(self):
         """Hand on what the reader writes, chunk by chunk; b'' once it has ended."""
@@ -280,6 +282,34 @@ class Pipe:
     def find_pointers_from(self, value, address):
         """The same, beginning a little below `address`: where the last race was."""
         return self.search([r for r in self.maps() if searchable(r)], value, search_start(address))
+
+    def find_pointers_any(self, values, address=None):
+        """(address, value) of each of the 64-bit `values` found, in one pass through the game's
+        data (from about `address`, where given): an online race's, a hosted race's and a replay
+        player's class took a pass each, a search 12 to 15 s in CrossOver (2026-11-18). A reader
+        built before then knows one value a search: then a pass per value, in their order."""
+        values = tuple(values)
+        regions = [r for r in self.maps() if searchable(r)]
+        first = None if address is None else search_start(address)
+        if self.many_values is not False:
+            request = {'op': 'search', 'regions': [list(r[:2]) for r in regions], 'values': list(values)}
+            if first is not None:
+                request['first'] = first
+            try:
+                self.ask(request)
+            except ReadError as error:
+                self.many_values = False
+                log.info('the reader searches for one value at a time (%s): an older build of it', error)
+            else:
+                self.many_values = True
+                while True:
+                    answer = self.ask({'op': 'search_next'}, SEARCH_TIMEOUT)[0]
+                    if answer['hit'] is None:
+                        return
+                    yield answer['hit'], answer['value']
+        for value in values:
+            for hit in self.search(regions, value, first):
+                yield hit, value
 
     def find_pointers_near(self, value, address):
         """The same, only within winmemory.NEAR_SPAN of there: a quick look."""
@@ -452,6 +482,7 @@ class Bottle:
                 searcher=pipe.search,
                 find_pointers_from=pipe.find_pointers_from,
                 find_pointers_near=pipe.find_pointers_near,
+                find_pointers_any=pipe.find_pointers_any,
             )
             reader = LapReader(
                 Il2Cpp(memory, metadata, base),

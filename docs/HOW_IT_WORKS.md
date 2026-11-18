@@ -237,7 +237,10 @@ and the race is found the normal way, with no search.
 
 A Custom race (and, expected the same, a Single Player event) has no active server: its race
 is in a `TS.HostEventController` with the same fields as the client's, and the same search
-finds it (one pass with both classes on Windows, a second pass elsewhere).
+finds it. A search looks for an online race's, a hosted race's and a replay player's class in one pass
+through the game's memory (since 2026-11-18 also with the Rust reader, on the Mac and Windows; it took
+three passes there, 12 to 15 s in CrossOver). A reader built before then is asked one class a pass, as
+before (`Pipe.find_pointers_any`).
 
 ## Other inputs
 

@@ -111,17 +111,25 @@ class Service:
             # after its first good hit; nothing is read until the first search_next.
             regions = [(int(start), int(end)) for start, end in request['regions']]
             first = request.get('first')  # where to begin, coming round to it; None: at the lowest
+            # 'values': any of several in one pass, each hit with the value found (2026-11-18).
+            if 'values' in request:
+                value = tuple(int(v) for v in request['values'])
+                if not value:
+                    return {'ok': False, 'error': 'no values'}, b''
+            else:
+                value = (int(request['value']),)
             self._search = search(
                 self.process.read,
                 regions,
-                int(request['value']),
+                value,
                 share=self.share,
                 first=None if first is None else int(first),
             )
             return {'ok': True}, b''
         if op == 'search_next':
-            hit = next(self._search, None) if self._search is not None else None
-            return {'ok': True, 'hit': hit}, b''
+            found = next(self._search, None) if self._search is not None else None
+            hit, value = found if found is not None else (None, None)
+            return {'ok': True, 'hit': hit, 'value': value}, b''
         return {'ok': False, 'error': f'unknown op {op!r}'}, b''
 
     def serve(self, source, sink):
