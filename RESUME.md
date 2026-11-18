@@ -28,8 +28,9 @@ Kept short: the state now and what to do next. Every change, with how it was che
 ## To try next (most recent first)
 1. **The battle warning** (`feature/battle-warning`, the Race Director mode's first part): in a replay with
    close racing, and spectating online, "Battle for P<n> / Possible Overtake / name vs name" when a car
-   closes within 1 s of the one ahead or sits within 0.4 s; never while driving. Does it come at the right
-   moments, too often or too seldom? Where does it sit on your screen (below the Race leader banner)?
+   closes within 1 s of the one ahead or sits within 0.4 s, or "Group around name" for 3 cars or more each
+   within 1 s; none in the opening lap; never while driving. Right moments now, with lap 1 left out? Do
+   the groups read well, and is the names row large enough with long names? Placed well (confirmed).
 2. **Tire wear as TSU counts it** (`fix/tire-wear-per-compound`): in an event with tire wear, TurboHUD's Tires
    percent should match TSU's own (it was 97 against 95); the log says `tires: ... worn out at ...` once an
    event. Try a softer and a harder compound if the event has more.

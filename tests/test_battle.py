@@ -10,16 +10,18 @@ from turbohud.core.battle import Battles
 
 
 class Car:
-    """What Battles reads of a player: its name, the checkpoints passed, finished, in the pits."""
+    """What Battles reads of a player: its name, the checkpoints passed, finished, in the pits, the
+    laps done (past the opening lap by default)."""
 
-    def __init__(self, name, passed=2, finished=False, in_pit=False):
+    def __init__(self, name, passed=2, finished=False, in_pit=False, laps_completed=1):
         self.name = name
         self.passed = (0,) * passed
         self.finished = finished
         self.in_pit = in_pit
+        self.laps_completed = laps_completed
 
 
-A, B, C, D = (Car(name) for name in ('Alpha', 'Bravo', 'Charlie', 'Delta'))
+A, B, C, D, E, F = (Car(name) for name in ('Alpha', 'Bravo', 'Charlie', 'Delta', 'Echo', 'Foxtrot'))
 
 
 def gaps(**by_pair):
@@ -129,6 +131,44 @@ class BattlesTest(unittest.TestCase):
             seen = run(Battles(), order, lambda clock: gaps(AB=0.3), 10.0, out=out)
             self.assertIsNone(first_shown(seen)[0])
 
+    def test_none_in_the_opening_lap(self):
+        # Reported by the user on 2026-11-18: too many while the cars were still close from the start.
+        for order in ([Car('Alpha', laps_completed=0), B], [A, Car('Bravo', laps_completed=0)]):
+            seen = run(Battles(), order, lambda clock: gaps(AB=0.3), 10.0)
+            self.assertIsNone(first_shown(seen)[0])
+
+    def test_three_cars_each_within_a_second_are_a_group(self):
+        clock, shown = first_shown(run(Battles(), [A, B, C, D, E], lambda clock: gaps(BC=0.9, CD=0.8), 10.0))
+        self.assertEqual(clock, 2.0)
+        self.assertEqual(shown.place, 2)
+        self.assertEqual(shown.group, ('Bravo', 'Charlie', 'Delta'))
+        self.assertEqual((shown.ahead, shown.behind), ('Bravo', 'Charlie'))
+
+    def test_a_group_ends_where_a_gap_is_over_a_second(self):
+        seen = run(Battles(), [A, B, C, D], lambda clock: gaps(AB=0.9, BC=1.1, CD=0.9), 10.0)
+        self.assertIsNone(first_shown(seen)[0])  # two steady pairs, no group, nobody closing
+
+    def test_a_group_takes_the_place_of_the_pairs_in_it(self):
+        # B right behind A would be a pair; with C close behind them it is a group of three, shown once.
+        seen = run(Battles(), [A, B, C], lambda clock: gaps(AB=0.3, BC=0.6), 70.0)
+        shown = [s for _c, s in seen if s is not None]
+        self.assertTrue(all(s.group == ('Alpha', 'Bravo', 'Charlie') for s in shown))
+        self.assertEqual(starts(seen), [2.0, 62.0])
+
+    def test_a_pair_from_a_group_shown_waits_its_minute(self):
+        # A group of three, then C drops back: A and B, still right together, are not told again at once.
+        seen = run(Battles(), [A, B, C], lambda clock: gaps(AB=0.3, BC=0.6 if clock < 10 else 3.0), 40.0)
+        self.assertEqual(starts(seen), [2.0])
+
+    def test_a_long_group_has_every_driver(self):
+        _clock, shown = first_shown(
+            run(
+                Battles(), [A, B, C, D, E, F], lambda clock: gaps(AB=0.5, BC=0.5, CD=0.5, DE=0.5, EF=0.5), 5.0
+            )
+        )
+        self.assertEqual(shown.group, ('Alpha', 'Bravo', 'Charlie', 'Delta', 'Echo', 'Foxtrot'))
+        self.assertEqual(shown.place, 1)
+
     def test_an_unknown_gap_is_no_battle(self):
         seen = run(Battles(), [A, B], lambda clock: lambda ahead, behind: None, 10.0)
         self.assertIsNone(first_shown(seen)[0])
@@ -148,6 +188,8 @@ class BattlesTest(unittest.TestCase):
         self.assertEqual(set(held), {1.0})
 
     def test_the_numbers(self):
+        self.assertEqual(battle.GROUP_GAP, 1.0)
+        self.assertEqual(battle.GROUP_CARS, 3)
         self.assertEqual(battle.BATTLE_GAP, 1.0)
         self.assertEqual(battle.BATTLE_CLOSE, 0.4)
         self.assertEqual(battle.BATTLE_HOLD, 2.0)
@@ -191,6 +233,29 @@ class RaceBattleTest(unittest.TestCase):
         self.assertEqual((overtake.text, overtake.color), ('Possible Overtake', OVERTAKE_COLOUR))
         self.assertEqual(names.text, f'Speedy Driver  vs  {"A" * 17}…')  # cut as in the lists
         self.assertTrue(all(row.centred for row in shown['battle']))
+
+    def test_a_groups_rows(self):
+        from turbohud.core import race
+        from turbohud.core.battle import Battle
+
+        class Shown:
+            def __init__(self, battle):
+                self.battle = battle
+
+            def update(self, *args):
+                return self.battle
+
+        state = race.LapState(50_000, 0, 0, 5, [0], players=self.players(), spectating=True)
+        names = ('Alpha', 'Bravo', 'Charlie', 'Delta', 'Echo', 'Foxtrot')
+        rows = race.battle_banner(state, None, 50_000, Shown(Battle(4, 'Alpha', 'Bravo', 1.0, group=names)))
+        self.assertEqual(
+            [row.text for row in rows['battle']],
+            ['Battle for P4', 'Group around Alpha', 'Bravo  ·  Charlie  ·  Delta  ·  +2'],
+        )
+        three = race.battle_banner(
+            state, None, 50_000, Shown(Battle(1, 'Alpha', 'Bravo', 1.0, group=names[:3]))
+        )
+        self.assertEqual(three['battle'][2].text, 'Bravo  ·  Charlie')
 
     def test_in_a_replay_it_shows(self):
         self.assertIn('battle', self.watch(replay=True))

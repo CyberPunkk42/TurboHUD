@@ -32,7 +32,7 @@ import time
 import typing
 from dataclasses import dataclass
 
-from turbohud.core.battle import OVERTAKE
+from turbohud.core.battle import GROUP, OVERTAKE
 from turbohud.core.class_registry import CLASS_TAGS, class_colors, class_tag, paler, shown_code
 from turbohud.core.flags import flag_code, flag_text
 from turbohud.core.hud import (
@@ -2712,15 +2712,28 @@ def battle_banner(state, order, clock, battles, retired=frozenset()):
     battle = battles.update(order, clock / UNITS_PER_SECOND, gap_of, retired)
     if battle is None:
         return {}
-    ahead, behind = (shown_name(name) for name in (battle.ahead, battle.behind))
+    if battle.group:
+        # The group's first driver in the middle row, the ones behind it below, up to GROUP_LISTED.
+        behind = [shown_name(name) for name in battle.group[1 : 1 + GROUP_LISTED]]
+        more = len(battle.group) - 1 - len(behind)
+        if more > 0:
+            behind.append(f'+{more}')
+        middle = GROUP.format(name=shown_name(battle.ahead))
+        names = '  ·  '.join(behind)
+    else:
+        middle = OVERTAKE
+        names = f'{shown_name(battle.ahead)}  vs  {shown_name(battle.behind)}'
     return {
         'battle': [
             Row(battle.title, 'title', BANNER_TEXT, centred=True),
-            Row(OVERTAKE, 'title', OVERTAKE_COLOUR, centred=True),
-            Row(f'{ahead}  vs  {behind}', 'title', BANNER_TEXT, centred=True),
+            Row(middle, 'title', OVERTAKE_COLOUR, centred=True),
+            Row(names, 'title', BANNER_TEXT, centred=True),
         ],
         'battlebanner': battle,
     }
+
+
+GROUP_LISTED = 3  # drivers named behind a group's first; more as "+2" (a longer row is drawn smaller to fit)
 
 
 def shown_name(name):

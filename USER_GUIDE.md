@@ -304,9 +304,13 @@ while you drive. On the same grey-to-black banner, in three rows: **Battle for P
 Overtake** in gold, and the two drivers, **name vs name**, the car ahead first. It shows when a car
 is within 1 second of the car ahead and has gained at least 0.1 s on it over the last 3 seconds, or
 sits within 0.4 s of it, and stays so for 2 seconds (a gap that flickers for a moment shows nothing).
-One battle at a time, the one for the highest place; each fades in, stays and fades out, 6 seconds
-in all, and the same two cars not again for a minute. Not between cars in the pits, finished or
-out of the race, nor in hotlapping or the arena modes. It starts below the Race leader banner.
+Three cars or more in a row, each within 1 second of the car ahead, are a group instead: **Battle
+for P5**, **Group around name** (the group's first driver) and the drivers behind it (three names,
+then "+2" for more). One battle at a time, the one for the highest place; each fades in, stays and
+fades out, 6 seconds in all, and the same two cars (or a group with the same first driver) not again
+for a minute. Nothing in the opening lap, while the cars are still close from the start, nor for
+cars in the pits, finished or out of the race, nor in hotlapping or the arena modes. It starts
+below the Race leader banner.
 
 ### Other
 

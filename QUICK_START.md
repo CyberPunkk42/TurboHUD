@@ -84,7 +84,8 @@ Hover over a section's name in the move-mode panel for a short explanation.
   lead for 5 s, and "Race Winner - name" with a waving checkered flag as the winner finishes
   (the panel's **🏁** shows the winner's in move mode).
 - **Battle**: only while watching a replay or spectating, a banner "Battle for P3 / Possible
-  Overtake / name vs name" when a car closes in on the one ahead or sits right behind it.
+  Overtake / name vs name" when a car closes in on the one ahead or sits right behind it, or
+  "Group around name" for three cars or more within a second of each other; not in the opening lap.
 
 **Other**
 - **Clock**: your computer's clock. **Time since start** shows instead of the race sections
