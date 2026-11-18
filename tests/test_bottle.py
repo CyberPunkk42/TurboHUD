@@ -283,6 +283,20 @@ class ServiceTests(unittest.TestCase):
         self.assertEqual(service.handle({'op': 'search_next'})[0]['hit'], 0x10010)
         self.assertIsNone(service.handle({'op': 'search_next'})[0]['hit'])
 
+    def test_search_for_several_values_says_which_it_found(self):
+        one, two = 0x1122334455667788, 0x0102030405060708
+        data = bytearray(64 * 1024)
+        data[0x10:0x18] = struct.pack('<Q', two)
+        data[0x8000:0x8008] = struct.pack('<Q', one)
+        service = self.service(FakeProcess(data=bytes(data)))
+        service.handle({'op': 'search', 'regions': [[0x10000, 0x20000]], 'values': [one, two]})
+        found = [service.handle({'op': 'search_next'})[0] for _ in range(3)]
+        self.assertEqual(
+            [(f['hit'], f['value']) for f in found], [(0x10010, two), (0x18000, one), (None, None)]
+        )
+        header, _ = service.handle({'op': 'search', 'regions': [[0x10000, 0x20000]], 'values': []})
+        self.assertFalse(header['ok'])
+
     def serve(self, service, *requests):
         source = io.BytesIO(b''.join(br.pack(request) for request in requests))
         sink = io.BytesIO()
@@ -451,6 +465,47 @@ class PipeTests(ReaderCase):
             with self.assertLogs('turbohud.tsu.bottle', 'INFO') as logs:
                 pipe.read_pages([16, 19, 99])
         self.assertIn('race pages: 3 pages across 0.3 MiB, 2 read, in 2 reads of the game', logs.output[0])
+
+    def several(self):
+        """(process, one, two): `two` at 0x10010 and 0x18010, `one` at 0x14000."""
+        one, two = 0x1122334455667788, 0x0102030405060708
+        data = bytearray(64 * 1024)
+        data[0x10:0x18] = struct.pack('<Q', two)
+        data[0x4000:0x4008] = struct.pack('<Q', one)
+        data[0x8010:0x8018] = struct.pack('<Q', two)
+        return FakeProcess(data=bytes(data)), one, two
+
+    def test_several_values_in_one_pass(self):
+        process, one, two = self.several()
+        pipe = self.reader(process)
+        pipe.receive()
+        found = list(pipe.find_pointers_any((one, two)))
+        self.assertEqual(found, [(0x10010, two), (0x14000, one), (0x18010, two)])
+        self.assertTrue(pipe.many_values)
+
+    def test_an_older_reader_searches_a_value_at_a_time(self):
+        process, one, two = self.several()
+        pipe = self.reader(process)
+        pipe.receive()
+        handle = br.Service.handle
+
+        def old(service, request):  # a reader built before 2026-11-18: one 'value' only
+            if request.get('op') == 'search' and 'value' not in request:
+                return {'ok': False, 'error': "KeyError: 'value'"}, b''
+            header, payload = handle(service, request)
+            header.pop('value', None)
+            return header, payload
+
+        with (
+            mock.patch.object(br.Service, 'handle', old),
+            self.assertLogs('turbohud.tsu.bottle', 'INFO') as logs,
+        ):
+            found = list(pipe.find_pointers_any((one, two)))
+            again = list(pipe.find_pointers_any((one, two)))
+        self.assertEqual(found, [(0x14000, one), (0x10010, two), (0x18010, two)])  # each value's pass in turn
+        self.assertEqual(again, found)
+        self.assertFalse(pipe.many_values)
+        self.assertEqual(len([line for line in logs.output if 'one value at a time' in line]), 1)
 
     def test_search_asks_for_one_hit_at_a_time(self):
         value = 0x1122334455667788

@@ -197,23 +197,35 @@ impl<'a> Service<'a> {
                     let end = pair[1].as_int().and_then(|n| u64::try_from(n).ok()).ok_or("bad region end")?;
                     regions.push((start, end));
                 }
-                let value = number(request, "value")?;
-                let value = u64::try_from(value).map_err(|_| "value out of range")?;
+                // "values": any of several in one pass (2026-11-18); "value": one, as before.
+                let values = match request.get("values").and_then(Value::as_list) {
+                    Some(list) => list
+                        .iter()
+                        .map(|v| v.as_int().and_then(|n| u64::try_from(n).ok()).ok_or("a value out of range"))
+                        .collect::<Result<Vec<u64>, _>>()?,
+                    None => vec![u64::try_from(number(request, "value")?).map_err(|_| "value out of range")?],
+                };
+                if values.is_empty() {
+                    return Err("no values".into());
+                }
                 let first = match request.get("first") {
                     None | Some(Value::Null) => None,
                     Some(_) => Some(address(request, "first")?),
                 };
-                self.search = Some(Search::new(&regions, value, self.share, first).batched(self.batch));
+                self.search = Some(Search::new_any(&regions, &values, self.share, first).batched(self.batch));
                 Ok((Value::Object(vec![ok()]), Vec::new()))
             }
             "search_next" => {
                 let process = self.process;
-                let hit = match self.search.as_mut() {
-                    Some(search) => search.next_hit_many(&|pieces| process.read_many(pieces), &mut *self.sleep),
+                let found = match self.search.as_mut() {
+                    Some(search) => search.next_found_many(&|pieces| process.read_many(pieces), &mut *self.sleep),
                     None => None,
                 };
-                let hit = hit.map_or(Value::Null, |h| Value::Int(h as i128));
-                Ok((Value::Object(vec![ok(), ("hit".into(), hit)]), Vec::new()))
+                let (hit, value) = match found {
+                    Some((hit, value)) => (Value::Int(hit as i128), Value::Int(value as i128)),
+                    None => (Value::Null, Value::Null),
+                };
+                Ok((Value::Object(vec![ok(), ("hit".into(), hit), ("value".into(), value)]), Vec::new()))
             }
             _ => {
                 let name = request.get("op").map_or("None".to_string(), |v| match v {
@@ -417,6 +429,25 @@ mod tests {
         assert_eq!(ask(&mut service, next).0.get("hit"), Some(&Value::Int(0x18000)));
         assert_eq!(ask(&mut service, next).0.get("hit"), Some(&Value::Int(0x10010)));
         assert_eq!(ask(&mut service, next).0.get("hit"), Some(&Value::Null));
+    }
+
+    #[test]
+    fn a_search_for_several_values_says_which_it_found() {
+        let (one, two): (u64, u64) = (0x1122334455667788, 0x0102030405060708);
+        let mut data = vec![0u8; 64 * 1024];
+        data[0x10..0x18].copy_from_slice(&two.to_le_bytes());
+        data[0x8000..0x8008].copy_from_slice(&one.to_le_bytes());
+        let process = FakeProcess::new(0x10000, data);
+        let mut service = service(&process);
+        ask(&mut service, &format!(r#"{{"op": "search", "regions": [[65536, 131072]], "values": [{one}, {two}]}}"#));
+        let next = r#"{"op": "search_next"}"#;
+        let (header, _) = ask(&mut service, next);
+        assert_eq!((header.get("hit"), header.get("value")), (Some(&Value::Int(0x10010)), Some(&Value::Int(two as i128))));
+        let (header, _) = ask(&mut service, next);
+        assert_eq!((header.get("hit"), header.get("value")), (Some(&Value::Int(0x18000)), Some(&Value::Int(one as i128))));
+        assert_eq!(ask(&mut service, next).0.get("hit"), Some(&Value::Null));
+        let empty = json::parse(br#"{"op": "search", "regions": [[65536, 131072]], "values": []}"#).unwrap();
+        assert!(service.handle(&empty).is_err());
     }
 
     #[test]

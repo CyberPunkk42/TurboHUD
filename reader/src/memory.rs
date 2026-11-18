@@ -169,15 +169,17 @@ pub fn starting_at(regions: &[(u64, u64)], address: u64) -> Vec<(u64, u64)> {
     later
 }
 
-/// A search for the 64-bit `value` at 8-aligned addresses, read `CHUNK` bytes at a time,
+/// A search for the 64-bit `values` at 8-aligned addresses, read `CHUNK` bytes at a time,
 /// as `winmemory.search`: it reads on only as far as its hits are taken, and with `share`
 /// below 1 pauses after each piece so that reading takes about that share of the time.
+/// Several values in one pass through the game's memory (2026-11-18): an online race's, a
+/// hosted race's and a replay player's class took three passes, 12 to 15 s in CrossOver.
 pub struct Search {
     regions: Vec<(u64, u64)>,
     index: usize,
     address: Option<u64>,
-    hits: VecDeque<u64>,
-    value: u64,
+    hits: VecDeque<(u64, u64)>, // (address, the value found there)
+    values: Vec<u64>,
     share: f64,
     batch: usize, // pieces read in one step (1: one at a time)
 }
@@ -185,7 +187,14 @@ pub struct Search {
 pub const ALIGN: u64 = 8;
 
 impl Search {
+    /// A search for one value (the tests).
+    #[cfg(test)]
     pub fn new(regions: &[(u64, u64)], value: u64, share: f64, first: Option<u64>) -> Search {
+        Search::new_any(regions, &[value], share, first)
+    }
+
+    /// A search for any of `values`: each hit says which it found (next_found_many).
+    pub fn new_any(regions: &[(u64, u64)], values: &[u64], share: f64, first: Option<u64>) -> Search {
         let regions = match first {
             None => {
                 let mut sorted = regions.to_vec();
@@ -194,7 +203,7 @@ impl Search {
             }
             Some(address) => starting_at(regions, address),
         };
-        Search { regions, index: 0, address: None, hits: VecDeque::new(), value, share, batch: 1 }
+        Search { regions, index: 0, address: None, hits: VecDeque::new(), values: values.to_vec(), share, batch: 1 }
     }
 
     /// The same search, reading `batch` pieces in each step (with Process::read_many):
@@ -215,11 +224,21 @@ impl Search {
     }
 
     /// next_hit, with the pieces of a step read by `read_many` (Process::read_many).
+    #[cfg(test)]
     pub fn next_hit_many(
         &mut self,
         read_many: &dyn Fn(&[(u64, usize)]) -> Vec<io::Result<Vec<u8>>>,
         sleep: &mut dyn FnMut(Duration),
     ) -> Option<u64> {
+        self.next_found_many(read_many, sleep).map(|(address, _value)| address)
+    }
+
+    /// The next hit and the value found there, or None once all the regions are read.
+    pub fn next_found_many(
+        &mut self,
+        read_many: &dyn Fn(&[(u64, usize)]) -> Vec<io::Result<Vec<u8>>>,
+        sleep: &mut dyn FnMut(Duration),
+    ) -> Option<(u64, u64)> {
         loop {
             if let Some(hit) = self.hits.pop_front() {
                 return Some(hit);
@@ -267,8 +286,9 @@ impl Search {
             if offset as u64 >= CHUNK {
                 break;
             }
-            if u64::from_le_bytes(word.try_into().unwrap()) == self.value {
-                self.hits.push_back(address + offset as u64);
+            let word = u64::from_le_bytes(word.try_into().unwrap());
+            if self.values.contains(&word) {
+                self.hits.push_back((address + offset as u64, word));
             }
         }
     }
@@ -463,6 +483,23 @@ pub mod tests {
         assert_eq!(hits, vec![0x103008, 0x109000, 0x100010, 0x100800]);
         let memory = memory_with(&[0x2FF8]);
         assert_eq!(all_hits(&memory, &[(0x100000, 0x110000)], Some(0x103000)), vec![0x102FF8]);
+    }
+
+    #[test]
+    fn a_search_for_several_values_finds_each_in_one_pass_and_says_which() {
+        const OTHER: u64 = 0x0102030405060708;
+        let mut data = vec![0u8; 3 * CHUNK as usize];
+        data[0x10..0x18].copy_from_slice(&OTHER.to_le_bytes());
+        data[0x40..0x48].copy_from_slice(&VALUE.to_le_bytes());
+        data[2 * CHUNK as usize..2 * CHUNK as usize + 8].copy_from_slice(&OTHER.to_le_bytes());
+        let memory = FakeMemory::new(0x1000_0000, data);
+        let mut search = Search::new_any(&[(0x1000_0000, 0x1000_0000 + 3 * CHUNK)], &[VALUE, OTHER], 1.0, None);
+        let mut found = Vec::new();
+        while let Some(hit) = search.next_found_many(&|pieces| pieces.iter().map(|&(a, s)| memory.read(a, s)).collect(), &mut |_| {}) {
+            found.push(hit);
+        }
+        assert_eq!(found, vec![(0x1000_0010, OTHER), (0x1000_0040, VALUE), (0x1000_0000 + 2 * CHUNK, OTHER)]);
+        assert_eq!(memory.calls.borrow().len(), 3); // each piece read once
     }
 
     #[test]

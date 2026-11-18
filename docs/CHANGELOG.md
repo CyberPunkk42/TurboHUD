@@ -4,6 +4,18 @@ Every finished change, newest first: what changed, why, how it was checked and w
 Each branch adds its dated entry at the top. Where things stand now: `RESUME.md`; what is open:
 `docs/BACKLOG.md`.
 
+- 2026-11-18: A replay found sooner: one pass through the game's memory for every class searched
+  (`fix/replay-found-sooner`, reported by the user: the HUD took a while to come in a replay on the Mac). TSU's
+  log there gave no word of the replay, so TurboHUD searched every 10 s, and each search read all of the game's
+  memory three times through the Rust reader (an online race's class, a hosted race's, then a replay player's):
+  12 to 15 s each, so up to about 25 s from opening a replay to the HUD. Windows' Python reader already looked
+  for all three in one pass. The Rust reader's `search` now takes `values` (any of several in one pass, each hit
+  with the value found: `Search::new_any`, `next_found_many`), as does the Python reader in the bottle, and
+  `Pipe.find_pointers_any` asks for them, so the search is one pass on the Mac and with the Rust reader on
+  Windows too. A reader built before refuses `values`: then one pass per class as before, logged once (`the
+  reader searches for one value at a time`). Tests (Rust: a pass for several values, the service's answer, no
+  values; Python: the reader's answer, the pipe in one pass, an older reader); the reader rebuilt on the Mac;
+  TurboHUD started for 6 s, no error. Not yet measured with TSU: the search's time in a replay.
 - 2026-11-18: The race leader banner fades as one picture (`fix/banner-fade-as-one`, reported by the user: its
   colour looked broken as it faded in and out). Each part was faded on its own (the box, the flags, the letters),
   so the game showed through the box and the box through the letters: at half, the letters were at 75 % against
