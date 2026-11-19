@@ -567,6 +567,7 @@ class SectionTests(unittest.TestCase):
                 'shortcut',
                 'leader',
                 'battle',
+                'watched',
                 'blueflag',
                 'deltabar',
                 'radar',

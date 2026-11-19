@@ -20,6 +20,7 @@ from turbohud.core.battle import OVERTAKE
 from turbohud.core.flags import FLAGS
 from turbohud.core.hud import BANNER_TEXT, OVERTAKE_COLOUR, Row
 from turbohud.core.trackmap import TrackMap, outline_from_path
+from turbohud.core.watched import WATCHING
 
 TRACK_NAME = 'WT Raceway Laguna Seca v1.0'
 LAPS = 15
@@ -426,6 +427,11 @@ def preview_sections(
             Row('Battle for P2', 'title', BANNER_TEXT, centred=True),
             Row(OVERTAKE, 'title', OVERTAKE_COLOUR, centred=True),
             Row(f'{NAMES[1]}  vs  {NAMES[2]}', 'title', BANNER_TEXT, centred=True),
+        ]
+    if not sections.get('watched'):
+        sections['watched'] = [
+            Row(WATCHING, 'title', OVERTAKE_COLOUR, centred=True),
+            Row(f'P{LOCAL + 1}  {NAMES[LOCAL]}', 'title', BANNER_TEXT, centred=True),
         ]
     sections.setdefault('blue', 1.0)
     sections['radar'] = preview_radar(classes, radar_cone)

@@ -312,6 +312,17 @@ for a minute. Nothing in the opening lap, while the cars are still close from th
 cars in the pits, finished or out of the race, nor in hotlapping or the arena modes. It starts
 below the Race leader banner.
 
+**Watched driver**
+The Race Director mode's second part: only in a replay, never while you drive. Each time the
+replay's camera turns to another driver, the same grey-to-black banner names them in two rows:
+**Watching** in gold, and the driver with their place, **P3 name** (no place in the arena modes).
+The camera must stay on a driver for 1 second first, so flicking through the drivers names only
+the one you stop at. It fades in, stays and fades out, 6 seconds in all; a driver you turn to while
+it shows takes its place at once. The same driver is not named again until the camera has turned
+away from them; rewound, the replay names the driver again. Not yet while spectating an online
+race (which car TSU's spectator camera follows is not known yet). It starts in the middle of the
+screen, below the radar.
+
 ### Other
 
 **Clock**
@@ -363,8 +374,8 @@ from its name while they show, and no name ever runs into the next column.
 - **Group**: put sections in the same group (A to G) to move them together; resizing one
   resizes the others by the same amount.
 - **Centre**: **↔** centres the section across the screen it is on, **↕** down it.
-- **Mid text**: puts the text in the middle of its box instead of at the left. The Race leader
-  and Battle banners' text is always in the middle; the Race leader row has **🏁** there instead,
+- **Mid text**: puts the text in the middle of its box instead of at the left. The Race leader,
+  Battle and Watched driver banners' text is always in the middle; the Race leader row has **🏁** there instead,
   which shows the winner's banner in move mode (pressed again, a new leader's).
 - **Tint**: a light tint behind this section's text while locked; for the track map, its
   dark square.

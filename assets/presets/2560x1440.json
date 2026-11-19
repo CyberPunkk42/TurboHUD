@@ -209,6 +209,18 @@
       "font": 22,
       "spacing": 1.0
     },
+    "watched": {
+      "x": 967,
+      "y": 962,
+      "width": 626,
+      "height": 80,
+      "visible": true,
+      "group": "",
+      "text_centred": false,
+      "tint": false,
+      "font": 22,
+      "spacing": 1.0
+    },
     "blueflag": {
       "x": 895,
       "y": 85,

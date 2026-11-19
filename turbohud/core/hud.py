@@ -656,6 +656,19 @@ RACE_SECTIONS = (
         tip='While watching a replay or spectating: two cars close together, the one behind closing in',
     ),
     Section(
+        'watched',
+        'Watched driver',
+        (
+            (
+                Row('Watching', 'title', OVERTAKE_COLOUR, centred=True),
+                Row('P20  Playername1234567', 'title', BANNER_TEXT, centred=True),
+            ),
+        ),
+        background=BANNER_BACK,
+        banner=True,
+        tip='In a replay: the driver the camera turns to, with their place',
+    ),
+    Section(
         'blueflag',
         'Blue flag',
         (),
@@ -693,7 +706,10 @@ RACE_SECTIONS = (
 PANEL_CATEGORIES = (
     ('Timing', ('lap', 'current', 'delta', 'deltabar', 'times', 'laptimes')),
     ('Car', ('fuel', 'fuelfinish', 'tires', 'health', 'draft', 'speed')),
-    ('Race', ('players', 'trackmap', 'radar', 'blueflag', 'yellowflag', 'shortcut', 'leader', 'battle')),
+    (
+        'Race',
+        ('players', 'trackmap', 'radar', 'blueflag', 'yellowflag', 'shortcut', 'leader', 'battle', 'watched'),
+    ),
     ('Other', ('localtime', 'clock')),
 )
 
@@ -1278,7 +1294,7 @@ def first_launch(sections, sizes, origin=(0, 0), reference=REFERENCE_SCREEN, mar
     at the left of a `reference`-sized screen whose top-left corner is `origin`,
     vertically centred, so the middle stays free. What does not fit in the height starts
     another column to the right; nothing overlaps. Bars (the blue flag) and the banners (race
-    leader, battle) are not in the column: see drawing_place."""
+    leader, battle, watched driver) are not in the column: see drawing_place."""
     sections = [section for section in sections if not section.bar and not section.banner]
     room = reference[1] - 2 * margin
     columns, column, height = [], [], 0
@@ -1320,6 +1336,7 @@ DELTA_BAR_DOWN = 0.07  # how far below the blue flag the delta bar goes first, o
 
 BANNER_DOWN = 0.12  # the race leader banner's first place: this share of the screen below the top centre
 BATTLE_DOWN = 0.17  # the battle warning's: below the race leader banner
+WATCHED_DOWN = 0.75  # the watched driver's: in the middle below the radar, as a TV broadcast's driver name
 
 
 def drawing_place(section, size, screen, margin=LAYOUT_MARGIN):
@@ -1330,11 +1347,11 @@ def drawing_place(section, size, screen, margin=LAYOUT_MARGIN):
         width, height = size
         x, y, screen_width, screen_height = screen
         return (x + screen_width - margin - width, y + (screen_height - height) // 2, width, height)
-    if (
-        section.banner
-    ):  # the race leader banner: under the blue flag, clear of the lap title; the battle below it
+    if section.banner:
+        # The race leader banner under the blue flag, clear of the lap title; the battle below it;
+        # the watched driver's low in the middle.
         x, y, width, height = top_centre(size, screen)
-        down = BATTLE_DOWN if section.name == 'battle' else BANNER_DOWN
+        down = {'battle': BATTLE_DOWN, 'watched': WATCHED_DOWN}.get(section.name, BANNER_DOWN)
         return (x, y + round(screen[3] * down), width, height)
     if section.drawing == 'delta':  # below where the blue flag goes
         x, y, width, height = top_centre(size, screen)

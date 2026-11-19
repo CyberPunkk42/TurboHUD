@@ -48,6 +48,7 @@ from turbohud.core.hud import (
 from turbohud.core.il2cpp import ARRAY_DATA, ARRAY_LENGTH, LIST_ITEMS, SIMPLE_TYPES, NotFound, ReadError
 from turbohud.core.settings import LAP_COLUMNS
 from turbohud.core.trackmap import OFF_TRACK_LAYERS, off_the_track
+from turbohud.core.watched import WATCHING
 
 log = logging.getLogger(__name__)
 
@@ -2487,6 +2488,7 @@ def race_sections(
     nearby_short=False,
     lead_changes=None,
     battles=None,
+    watched=None,
 ):
     """{section name: rows} for a live-reader snapshot (see core.hud.RACE_SECTIONS); a
     section with nothing to show has no rows. Nothing before the grid: in the menus, the
@@ -2502,7 +2504,9 @@ def race_sections(
     gives the shortcut section and CUT in the lap times; `retirements` (a Retirements) DNF in
     the lists; `lead_changes` (a core.leader.LeadChanges) the race leader banner, under 'leader'
     and its Banner under 'banner'; `battles` (a core.battle.Battles) the battle warning while
-    watching (a replay, or spectating), under 'battle' and its Battle under 'battlebanner'."""
+    watching (a replay, or spectating), under 'battle' and its Battle under 'battlebanner';
+    `watched` (a core.watched.WatchedDriver) the watched driver's banner in a replay, under
+    'watched' and its Watched under 'watchedbanner'."""
     if not on_grid(snapshot, now):
         return {}
     state = snapshot.state
@@ -2586,6 +2590,7 @@ def race_sections(
         sections.update(leader_banner(state, order, clock_now(snapshot, now), lead_changes))
         if state.replay:
             sections.update(battle_banner(state, order, clock_now(snapshot, now), battles, retired))
+            sections.update(watched_banner(state, order, clock_now(snapshot, now), watched))
         opacity = blue_flag_opacity(
             blue_flag(state.players, clock_now(snapshot, now), blue_within), blue_within
         )
@@ -2730,6 +2735,33 @@ def battle_banner(state, order, clock, battles, retired=frozenset()):
             Row(names, 'title', BANNER_TEXT, centred=True),
         ],
         'battlebanner': battle,
+    }
+
+
+def watched_banner(state, order, clock, watched):
+    """{'watched': its two rows, 'watchedbanner': Watched} while the watched driver's banner shows,
+    else {}: "Watching" and "P<n>  <name>" (no place in an arena event). The caller asks only in a
+    replay, where the local player is the driver the camera follows. `clock`: the race clock in its
+    units (clock_now)."""
+    if watched is None:
+        return {}
+    followed = next((player for player in state.players if player.local), None)
+    shown = watched.update(followed.name if followed is not None else None, clock / UNITS_PER_SECOND)
+    if shown is None:
+        return {}
+    name = shown_name(shown.name)
+    if state.on_a_track:
+        if order is None:
+            order = ranked(state.players, state.hotlapping, state.gates)
+        place = next((index for index, player in enumerate(order, 1) if player.name == shown.name), None)
+        if place is not None:
+            name = f'P{place}  {name}'
+    return {
+        'watched': [
+            Row(WATCHING, 'title', OVERTAKE_COLOUR, centred=True),
+            Row(name, 'title', BANNER_TEXT, centred=True),
+        ],
+        'watchedbanner': shown,
     }
 
 

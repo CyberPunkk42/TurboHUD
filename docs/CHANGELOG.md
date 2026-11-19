@@ -4,6 +4,20 @@ Every finished change, newest first: what changed, why, how it was checked and w
 Each branch adds its dated entry at the top. Where things stand now: `RESUME.md`; what is open:
 `docs/BACKLOG.md`.
 
+- 2026-11-19: The watched driver's banner, the Race Director mode's second part (`feature/watched-driver-banner`,
+  backlog item 8, asked for by the user on 2026-11-16): a new section, **Watched driver** (under Race in the
+  panel), only in a replay. Each time the replay's camera turns to another driver, the race leader banner's
+  grey-to-black box names them in two rows: "Watching" in gold and "P<n>  <name>" (no place in an arena
+  event; names cut as in the lists). The driver is the one the camera follows (`_followed`, the snapshot's
+  local player), so it reads nothing of its own. The camera must stay on a driver for 1 s (`WATCH_HOLD`), so
+  flicking through names only the one stopped at; 6 s with the same fade; a driver turned to while one shows
+  takes its place at once at full strength; the same driver not again until the camera turned away; a replay
+  rewound names it again. Not while spectating: which car the spectator camera follows is not known yet
+  (part 3). First placed in the middle below the radar (`WATCHED_DOWN`), and in the shipped layouts in the
+  free room below the radar (on 5120x1440 near the bottom, below Nearby cars, where the room under the radar is too low). Tests: when it shows,
+  the hold, flicking, the turn while one shows, back to a driver, the clock going back or standing, the rows
+  and place, never driving or spectating, the section, its place in every shipped layout. Not yet seen in a
+  replay.
 - 2026-11-18: A replay found sooner: one pass through the game's memory for every class searched
   (`fix/replay-found-sooner`, reported by the user: the HUD took a while to come in a replay on the Mac). TSU's
   log there gave no word of the replay, so TurboHUD searched every 10 s, and each search read all of the game's

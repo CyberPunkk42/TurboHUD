@@ -40,6 +40,7 @@ off. On Linux and Windows each section keeps its own window for now.
 | Penalties | SHORTCUT with the seconds TSU slows you for a shortcut; JUMP START for a false start |
 | Race leader | a banner shaded grey to black for 6 s: "New Race Leader - name" once a new driver has led for 5 s, "Race Winner - name" on a black banner with a waving checkered flag (the user's picture, `assets/resources/banner_winner.png`) as the winner finishes; from the standings' order, with no read of its own |
 | Battle | only while watching (a replay, or spectating): "Battle for P<n>", "Possible Overtake" and "name vs name" on the same banner, when a car within 1 s of the one ahead has gained 0.1 s over 3 s or sits within 0.4 s, for 2 s, or "Group around name" and the drivers behind for 3 cars or more each within 1 s of the one ahead; not in the opening lap; one at a time, the highest place, 6 s, the same two not again for a minute; from the standings' order and live gaps, with no read of its own |
+| Watched driver | only in a replay: "Watching" and "P<n>  name" on the same banner each time the camera turns to another driver and stays on them for 1 s (the replay camera's driver, `_followed`); 6 s, at once in place of one showing, the same driver not again until the camera turned away; no place in an arena event; not yet spectating (which car the spectator camera follows is not known); with no read of its own |
 | Radar | your car and the cars around you, when one is within 0.5 s behind, beside or ahead: red beside, yellow closing in, grey not counting, a class colour for another class, arrows for cars past its edge; the slipstream behind cars ahead and the car you draft outlined; cars at their real size, zoomed in when they are close; by default only in cockpit cameras |
 | Track map | the track from above, with you, the race leader (gold), the next car ahead (red), the next car behind (green), backmarkers between you and the car ahead (small, bluish), and as an option the other cars (faint grey) |
 | Clock | your computer's clock, once TSU runs |
@@ -456,6 +457,7 @@ turbohud/
     flagstack.py        the blue and yellow flags combined where both are in one spot
     leader.py           the race leader banner: when a new leader or the winner shows, and its fade
     battle.py           the battle warning while watching (Race Director mode): which two cars, when
+    watched.py          the watched driver's banner in a replay (Race Director mode): who, and when
     class_registry.py   the car classes a clan tag can name, and their colours
     stalls.py           short freezes of the whole HUD and slow garbage collections, for the log
     system_env.py       the environment for system programs TurboHUD starts (TSU, hyprctl)
