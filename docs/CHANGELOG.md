@@ -4,6 +4,12 @@ Every finished change, newest first: what changed, why, how it was checked and w
 Each branch adds its dated entry at the top. Where things stand now: `RESUME.md`; what is open:
 `docs/BACKLOG.md`.
 
+- 2026-11-20: Move mode's standings sample shows the fastest lap (`feature/sample-fastest-lap`, asked for by the
+  user: without TSU running, the sample marked no one, so the purple name could not be seen while placing). The
+  sample's first driver has a purple Best lap (`0:00.000`, `hud.SAMPLE_FASTEST_COLOR`, the same as
+  `race.SESSION_BEST_COLOR`), and with the Best column off a purple name (`race._sample_fastest` in
+  `standings_section`), as while watching; the other rows keep the widest texts the box is sized for. Tests:
+  the colour, the purple Best, the purple name without Best; drawn off-screen with and without Best.
 - 2026-11-20: The fastest lap's holder in purple without the Best column (`feature/fastest-lap-name`, asked for by
   the user): while watching (a replay, or spectating) with the Standings' Best column off, the driver holding the
   race's fastest lap (of their class, in a race with classes) has their name in its purple (`SESSION_BEST_COLOR`),

@@ -125,7 +125,8 @@ place and the name always show; every other column can be turned off under **Set
   car shows a blue **W**
 - the best lap, purple for the fastest in the race (or in the class). While you watch (a
   replay, or spectating) with the **Best** column off, the name of the driver holding the fastest
-  lap is purple instead, so you still see who has it
+  lap is purple instead, so you still see who has it. In move mode, the sample's first driver has
+  the fastest lap, to show both looks
 - the last lap, or instead: **PIT** while in the pits, then the time from pit entry to pit
   exit with the time standing in the box in brackets; an orange **CUT** with the seconds
   left while TSU slows that driver for a shortcut; an orange **JUMP** for a false start;

@@ -127,6 +127,22 @@ class StandingsSectionTests(unittest.TestCase):
         self.assertLess(self.width(fewer), self.width(everything))
         self.assertLess(self.width(fewest), self.width(fewer))
 
+    def test_the_sample_shows_the_fastest_lap(self):
+        from turbohud.core.hud import SAMPLE_FASTEST_COLOR
+
+        self.assertEqual(SAMPLE_FASTEST_COLOR, race.SESSION_BEST_COLOR)
+        first, *others = race.standings_section(self.base).samples[0][1:]
+        self.assertEqual(
+            (first.middle, first.middle_color, first.color), ('0:00.000', race.SESSION_BEST_COLOR, 'text')
+        )
+        self.assertTrue(all(row.middle_color == 'text' for row in others))
+
+    def test_without_best_the_samples_fastest_name_is_purple(self):
+        first, *others = race.standings_section(self.base, ('flag', 'current')).samples[0][1:]
+        self.assertEqual(first.color, race.SESSION_BEST_COLOR)
+        self.assertNotEqual(first.middle_color, race.SESSION_BEST_COLOR)  # the last lap's place now
+        self.assertTrue(all(row.color == 'text' for row in others))
+
     def test_tags_and_the_overall_place_go_with_their_options(self):
         rows = race.standings_section(self.base, classes=False).samples[0]
         self.assertTrue(all(not row.overall for row in rows))

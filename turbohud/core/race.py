@@ -4063,10 +4063,21 @@ def standings_section(section, columns=LAP_COLUMNS, clan_tags=True, classes=True
     if not clan_tags and not (classes and 'class' in columns):
         drop['tag'] = ''
     samples = tuple(
-        tuple(dataclasses.replace(_only_columns(row, columns), **drop) for row in sample)
+        tuple(
+            dataclasses.replace(_only_columns(_sample_fastest(row, columns), columns), **drop)
+            for row in sample
+        )
         for sample in section.samples
     )
     return dataclasses.replace(section, samples=samples)
+
+
+def _sample_fastest(row, columns):
+    """A sample row of the fastest lap's holder with its name purple where the Best column is off,
+    as while watching (lap_times_rows), so move mode shows that look too."""
+    if 'best' not in columns and row.middle_color == SESSION_BEST_COLOR:
+        return dataclasses.replace(row, color=SESSION_BEST_COLOR)
+    return row
 
 
 def _class_name(group):
