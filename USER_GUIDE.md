@@ -424,6 +424,9 @@ mode ends):
   put it through the next races, until an event of another kind comes. Nothing loads in move
   mode, or when the chosen preset is empty. TurboHUD cannot tell practice from a race, so a
   practice preset is one you load yourself.
+
+  The **Race** preset is also the default layout: TurboHUD starts in it, whatever layout it had
+  when it was last quit. With Race on **Off** (or its preset empty), it starts as it was left.
 - **Files and screens**: **Load screen default** is TurboHUD's layout for this screen's size
   (your own for that size first, see section 5). **Export…** saves the layout to a file, to
   share or keep. **Import…** loads one, fitted to this screen if it was made for another.

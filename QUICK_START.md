@@ -37,7 +37,8 @@ it goes.
    its text, an edge adds room. While it moves, a label shows its X and Y on its screen and its size.
 3. The panel shows or hides each section, sets its text size and line spacing, and has **Undo**
    and **Redo**. Its **Layouts…** window keeps five named layouts (**Save** / **Load** presets 1
-   to 5), can load one by itself as a recording, hotlapping, race or special event begins, and has
+   to 5), can load one by itself as a recording, hotlapping, race or special event begins (and starts
+   in the Race one), and has
    **Load screen default**, **Export…**, **Import…** and **Design for** for layout files per screen
    size (in `customization/display_presets`; TurboHUD's own never replace yours).
 4. Press **Ctrl+Shift+L** again (or **Lock**) to finish; a race starting also locks it. Your

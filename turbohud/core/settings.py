@@ -210,6 +210,17 @@ def preset_places(preset, names, screens):
     return places
 
 
+START_MODE = 'race'  # the kind of event whose preset is also the layout TurboHUD starts with
+
+
+def start_preset(settings):
+    """The preset TurboHUD puts the sections in as it starts, or None: the one chosen for a race
+    (Layouts > Load by itself), where it is saved (asked for by the user on 2026-11-19: the Race
+    preset is the default one). None keeps the layout as it was at the last quit."""
+    number = settings.auto_presets.get(START_MODE)
+    return number if number in settings.presets else None
+
+
 def _color(value, default):
     return value if isinstance(value, str) and _COLOR.fullmatch(value) else default
 

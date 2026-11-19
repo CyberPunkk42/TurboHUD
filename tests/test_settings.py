@@ -411,6 +411,23 @@ class PresetTests(unittest.TestCase):
         self.assertEqual((place.width, place.height), (300, 40))
 
 
+class StartPresetTests(unittest.TestCase):
+    """The Race preset is the layout TurboHUD starts with (asked for by the user on 2026-11-19)."""
+
+    def settings(self, auto, saved):
+        place = {'lap': s.SectionPlace(1, 2, 30, 40)}
+        return s.Settings(auto_presets=auto, presets={number: place for number in saved})
+
+    def test_the_preset_chosen_for_a_race(self):
+        self.assertEqual(s.start_preset(self.settings({'race': 4, 'recording': 1}, (1, 4))), 4)
+
+    def test_none_without_one_chosen_for_a_race(self):
+        self.assertIsNone(s.start_preset(self.settings({'recording': 1}, (1, 4))))
+
+    def test_none_where_it_is_not_saved(self):
+        self.assertIsNone(s.start_preset(self.settings({'race': 4}, (1,))))
+
+
 if __name__ == '__main__':
     unittest.main()
 
