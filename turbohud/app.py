@@ -36,10 +36,12 @@ from turbohud.core.settings import (
     PRESETS,
     SETTINGS_FILE,
     SectionPlace,
+    current_preset,
     fit_on_screens,
     load_settings,
     preset_label,
     preset_places,
+    preset_shown,
     save_settings,
     settings_dir,
 )
@@ -819,6 +821,22 @@ def run(args, folder):
             save_settings(path, settings)
         except OSError as error:
             log.warning('could not save the settings: %s', error)
+        show_current_preset()
+
+    last_preset = None  # the preset loaded or saved last (current_preset)
+
+    def show_current_preset():
+        """The preset in use, in move mode's panel; after every change, as each goes through the
+        settings."""
+        if panel is None:
+            return
+        names = [name for name in windows if name in settings.sections]
+        sections = {name: settings.sections[name] for name in names}
+        panel.set_current_preset(
+            preset_shown(
+                current_preset(sections, settings.presets, screens, last_preset), settings.preset_names
+            )
+        )
 
     def panel_spot():
         """Where the move-mode panel goes: on the screen that holds the first shown
@@ -1633,7 +1651,8 @@ def run(args, folder):
     @undoable
     def save_preset(number):
         """Keep the layout as it is now in a preset, and in the settings as well."""
-        nonlocal settings
+        nonlocal settings, last_preset
+        last_preset = number
         save()
         presets = {**settings.presets, number: {name: settings.sections[name] for name in windows}}
         settings = replace(settings, presets=presets)
@@ -1659,7 +1678,7 @@ def run(args, folder):
         if name:
             names[number] = name
         settings = replace(settings, preset_names=names)
-        write_settings()
+        write_settings()  # the panel's preset in use shows the new name
         log.info('preset %d named %r', number, name)
 
     def set_auto_preset(mode, number):
@@ -1691,10 +1710,12 @@ def run(args, folder):
         """Put every section as the preset has it. What the desktop reports may lag behind
         the move (Wayland), so the settings take the preset's places, not what it says."""
         nonlocal settings
+        nonlocal last_preset
         places = preset_places(settings.presets.get(number, {}), windows, screens)
         if not places:
             log.info('preset %d is empty', number)
             return
+        last_preset = number
         apply_places(places)
         settings = replace(settings, sections={**settings.sections, **places})
         write_settings()
@@ -2127,6 +2148,7 @@ def run(args, folder):
         settings.preset_names,
         settings.auto_presets,
     )
+    show_current_preset()
     panel.preset_save_requested.connect(save_preset)
     panel.preset_renamed.connect(rename_preset)
     panel.auto_preset_changed.connect(set_auto_preset)

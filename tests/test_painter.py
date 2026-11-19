@@ -1093,6 +1093,19 @@ class MovePanelPresetTests(unittest.TestCase):
         self.addCleanup(panel.close)
         return panel
 
+    def test_it_shows_the_preset_in_use(self):
+        panel = self.panel()
+        self.assertEqual(panel.current_preset.text(), 'Preset: none')
+        panel.set_current_preset('Preset: 3 Race (changed)')
+        self.assertEqual(panel.current_preset.text(), 'Preset: 3 Race (changed)')
+
+    def test_the_preset_in_use_is_bold_in_the_presets_blue(self):
+        from turbohud.overlay.layouts_window import STATUS_COLOUR
+
+        style = self.panel().current_preset.styleSheet()
+        self.assertIn(f'color: {STATUS_COLOUR}', style)
+        self.assertIn('font-weight: bold', style)
+
     def button(self, panel, number, text):
         from PySide6.QtWidgets import QPushButton
 

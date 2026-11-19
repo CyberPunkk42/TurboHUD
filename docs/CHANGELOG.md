@@ -4,6 +4,16 @@ Every finished change, newest first: what changed, why, how it was checked and w
 Each branch adds its dated entry at the top. Where things stand now: `RESUME.md`; what is open:
 `docs/BACKLOG.md`.
 
+- 2026-11-19: The preset in use, in move mode's panel (`feature/current-preset-shown`, asked for by the user):
+  a line above the panel's buttons, bold in the presets' electric blue (`STATUS_COLOUR`), says "Preset: 3 Race", "Preset: 3 Race (changed)" or "Preset: none".
+  `settings.current_preset` finds the preset whose every section is where the layout has it now, as loading
+  it would put them (`preset_places`, so one fitted to the screen counts), each box within 2 px
+  (`PRESET_MATCH_PIXELS`: a desktop may report a moved window a pixel off), the one loaded or saved last
+  first; where none is, the last one, "(changed)". It is worked out again at each change of the settings
+  (`write_settings`), so drags, nudges, Undo, Redo, a rename and a deletion all show. A line of its own: in the
+  buttons' row it made the panel too wide. Tests: the match, the 2 px, an option changed, the last first,
+  changed, deleted, fitted to the screen, a section the preset lacks, the text, the panel's line. Not yet
+  seen in the running app.
 - 2026-11-19: A preset for spectating (`feature/watching-presets`, backlog item 8's fourth part, asked for by the
   user: one layout to watch a replay, another to spectate): Layouts > Load by itself has a **Spectating** row
   after Recording (`EVENT_MODES`). `event_mode` now says 'spectating' for an online event the player only

@@ -99,7 +99,7 @@ from turbohud.hud.painter import (
     text_ink,
     text_width,
 )
-from turbohud.overlay.layouts_window import LayoutsWindow
+from turbohud.overlay.layouts_window import STATUS_COLOUR, LayoutsWindow
 
 TINT = (23, 56, 97, 153)  # move mode's background: red, green, blue, opacity (0-255)
 # Move mode's place label (SectionWindow.show_place): shown this long after the last move, this
@@ -1815,6 +1815,13 @@ class MovePanel(QWidget):
         )
         layouts.clicked.connect(self.open_layouts)
         row.addWidget(layouts)
+        # The preset in use (asked for by the user on 2026-11-19): set_current_preset.
+        self.current_preset = QLabel('Preset: none')
+        # In the presets' electric blue and bold, to stand out (asked for by the user on 2026-11-19).
+        self.current_preset.setStyleSheet(f'color: {STATUS_COLOUR}; font-weight: bold;')
+        self.current_preset.setToolTip(
+            'The preset the layout is in now; (changed): moved on from the one loaded or saved last'
+        )
         lock = QPushButton('Lock')
         settings = QPushButton('Settings…')
         settings.setToolTip('Colours, sizes, warning times and the options for the whole HUD')
@@ -1826,6 +1833,7 @@ class MovePanel(QWidget):
         row.addWidget(settings)
         row.addWidget(quit_)
         row.addStretch()
+        column.addWidget(self.current_preset)  # a line of its own: a long name would widen the row
         column.addLayout(row)
 
     def fit_height(self, available):
@@ -1927,6 +1935,10 @@ class MovePanel(QWidget):
             self.native.raise_window(self.layouts)
         else:
             self.layouts.show_at(*beside(size, anchor, screen))
+
+    def set_current_preset(self, text):
+        """Show which preset is in use (settings.preset_shown)."""
+        self.current_preset.setText(text)
 
     def set_undo_available(self, available):
         self.undo.setEnabled(available)

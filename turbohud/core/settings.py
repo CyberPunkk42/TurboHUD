@@ -212,6 +212,43 @@ def preset_places(preset, names, screens):
     return places
 
 
+PRESET_MATCH_PIXELS = 2  # how far a section may be off a preset's place and still count as there
+
+
+def _same_place(a, b):
+    """Whether two SectionPlaces are the same, the box within PRESET_MATCH_PIXELS (a desktop may
+    report a moved window a pixel off)."""
+    boxes = ((a.x, b.x), (a.y, b.y), (a.width, b.width), (a.height, b.height))
+    if any(abs(one - other) > PRESET_MATCH_PIXELS for one, other in boxes):
+        return False
+    return replace(a, x=b.x, y=b.y, width=b.width, height=b.height) == b
+
+
+def current_preset(sections, presets, screens, last=None):
+    """(number, changed): the preset the layout `sections` {name: SectionPlace} is in now (asked
+    for by the user on 2026-11-19: which preset move mode shows), or None. A preset whose every
+    section is where `sections` has it, as loading it would put them (preset_places), counts, `last`
+    (the preset loaded or saved last) first; else `last`, changed since, where it is still kept."""
+    order = ([last] if last in presets else []) + [number for number in sorted(presets) if number != last]
+    for number in order:
+        places = preset_places(presets[number], sections, screens)
+        if places and all(_same_place(sections[name], place) for name, place in places.items()):
+            return number, False
+    if last in presets:
+        return last, True
+    return None
+
+
+def preset_shown(current, names):
+    """How move mode's panel names the preset in use (current_preset): "Preset: 3 Race", with
+    "(changed)" after it where the layout has moved on, or "Preset: none"."""
+    if current is None:
+        return 'Preset: none'
+    number, changed = current
+    text = f'Preset: {preset_label(number, names)}'
+    return f'{text} (changed)' if changed else text
+
+
 def _color(value, default):
     return value if isinstance(value, str) and _COLOR.fullmatch(value) else default
 
