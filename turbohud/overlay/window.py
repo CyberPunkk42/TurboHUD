@@ -99,7 +99,7 @@ from turbohud.hud.painter import (
     text_ink,
     text_width,
 )
-from turbohud.overlay.layouts_window import LayoutsWindow
+from turbohud.overlay.layouts_window import STATUS_COLOUR, LayoutsWindow
 
 TINT = (23, 56, 97, 153)  # move mode's background: red, green, blue, opacity (0-255)
 # Move mode's place label (SectionWindow.show_place): shown this long after the last move, this
@@ -1817,6 +1817,8 @@ class MovePanel(QWidget):
         row.addWidget(layouts)
         # The preset in use (asked for by the user on 2026-11-19): set_current_preset.
         self.current_preset = QLabel('Preset: none')
+        # In the presets' electric blue and bold, to stand out (asked for by the user on 2026-11-19).
+        self.current_preset.setStyleSheet(f'color: {STATUS_COLOUR}; font-weight: bold;')
         self.current_preset.setToolTip(
             'The preset the layout is in now; (changed): moved on from the one loaded or saved last'
         )

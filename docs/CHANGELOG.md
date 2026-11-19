@@ -5,7 +5,7 @@ Each branch adds its dated entry at the top. Where things stand now: `RESUME.md`
 `docs/BACKLOG.md`.
 
 - 2026-11-19: The preset in use, in move mode's panel (`feature/current-preset-shown`, asked for by the user):
-  a line above the panel's buttons says "Preset: 3 Race", "Preset: 3 Race (changed)" or "Preset: none".
+  a line above the panel's buttons, bold in the presets' electric blue (`STATUS_COLOUR`), says "Preset: 3 Race", "Preset: 3 Race (changed)" or "Preset: none".
   `settings.current_preset` finds the preset whose every section is where the layout has it now, as loading
   it would put them (`preset_places`, so one fitted to the screen counts), each box within 2 px
   (`PRESET_MATCH_PIXELS`: a desktop may report a moved window a pixel off), the one loaded or saved last

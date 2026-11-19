@@ -392,7 +392,7 @@ from its name while they show, and no name ever runs into the next column.
   sets every text section back to the global size.
 - **Layouts…** opens the layouts window beside the panel: the presets, which preset loads
   for each kind of event, layout files and the design screen (see below).
-- The line above the buttons says which preset the layout is in now, such as **Preset: 3 Race**:
+- The line above the buttons, in electric blue, says which preset the layout is in now, such as **Preset: 3 Race**:
   the one whose sections are all where they are now (loaded, saved, or put back by Undo).
   **(changed)** after it: you have moved on from the preset loaded or saved last (save it again to
   keep the change). **Preset: none**: the layout is in none of them.
