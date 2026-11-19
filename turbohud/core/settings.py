@@ -204,7 +204,9 @@ def fit_on_screens(placement, screens):
 
 def preset_places(preset, names, screens):
     """{name: SectionPlace} to load from `preset`, for the sections in `names`: each on a
-    screen (see fit_on_screens). A section the preset does not have stays out of it."""
+    screen (see fit_on_screens). A section the preset does not have stays out of it. The Standings
+    of a preset saved before presets kept its columns gets every column, TurboHUD's default, not
+    the columns another preset left (reported by the user on 2026-11-20)."""
     places = {}
     for name in names:
         place = preset.get(name)
@@ -212,6 +214,8 @@ def preset_places(preset, names, screens):
             box = (place.x, place.y, place.width, place.height)
             x, y, width, height = fit_on_screens(box, screens)
             places[name] = replace(place, x=x, y=y, width=width, height=height)
+            if name == 'laptimes' and place.columns is None:
+                places[name] = replace(places[name], columns=LAP_COLUMNS)
     return places
 
 

@@ -28,8 +28,8 @@ Kept short: the state now and what to do next. Every change, with how it was che
 ## To try next (most recent first)
 1. **The Standings' columns in each preset** (`feature/columns-per-preset`): untick a column in Settings >
    Standings, save preset 1; tick it again, save preset 2; Load 1 and 2 in turn: the standings and the settings
-   window's switches should follow (log: `standings columns: ...`). Presets saved before keep no columns: save
-   them again.
+   window's switches should follow (log: `standings columns: ...`). A preset saved before keeps no columns and
+   loads every column (`fix/old-preset-all-columns`): save it again with the ones you want.
 2. **The Race preset at start** (`fix/race-preset-at-start`): with a Race preset chosen in Layouts > Load by
    itself, TurboHUD should start in it (log: `started in preset N, the one for a race`), and load it again as
    a race begins after a recording. If a race still keeps another layout, send the log before restarting.

@@ -533,7 +533,17 @@ class StandingsColumnsTests(unittest.TestCase):
         older = {'laptimes': s.SectionPlace(10, 20, 400, 300)}
         self.assertEqual(s.current_preset(now, {1: same}, screens), (1, False))
         self.assertIsNone(s.current_preset(now, {1: other}, screens))
-        self.assertEqual(s.current_preset(now, {1: older}, screens), (1, False))  # kept without columns
+        self.assertIsNone(s.current_preset(now, {1: older}, screens))  # kept without columns: all of them
+        every = {'laptimes': s.SectionPlace(10, 20, 400, 300, columns=s.LAP_COLUMNS)}
+        self.assertEqual(s.current_preset(every, {1: older}, screens), (1, False))
+
+    def test_a_preset_kept_without_columns_loads_every_column(self):
+        older = {'laptimes': s.SectionPlace(10, 20, 400, 300), 'lap': s.SectionPlace(10, 400, 300, 40)}
+        places = s.preset_places(older, older, ((0, 0, 1920, 1080),))
+        self.assertEqual(places['laptimes'].columns, s.LAP_COLUMNS)
+        self.assertIsNone(places['lap'].columns)  # only the Standings has columns
+        kept = {'laptimes': s.SectionPlace(10, 20, 400, 300, columns=('flag',))}
+        self.assertEqual(s.preset_places(kept, kept, ((0, 0, 1920, 1080),))['laptimes'].columns, ('flag',))
 
 
 if __name__ == '__main__':
