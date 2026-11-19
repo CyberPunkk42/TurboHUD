@@ -26,42 +26,46 @@ Kept short: the state now and what to do next. Every change, with how it was che
   The repository is kept in step with a private GitHub repository.
 
 ## To try next (most recent first)
-1. **No "New Race Leader" for your own car** (`fix/no-leader-banner-for-self`): take the lead in a race you
+1. **The preset in use in move mode** (`feature/current-preset-shown`): the panel's line above its buttons
+   should say "Preset: 3 Race" after loading or saving 3, "(changed)" after a drag, and the name again after
+   Undo; "Preset: none" with no preset matching. Does a desktop that puts a window a few pixels off (Hyprland,
+   the Mac) show "(changed)" right after a load?
+2. **No "New Race Leader" for your own car** (`fix/no-leader-banner-for-self`): take the lead in a race you
    drive and hold it: no banner. Another driver taking it still shows one, and your own win "Race Winner".
-2. **The watched driver's banner while spectating** (`feature/spectator-camera-driver`, the Race Director
+3. **The watched driver's banner while spectating** (`feature/spectator-camera-driver`, the Race Director
    mode's third part): spectate an online race and switch between drivers. The log's `spectating: the camera
    follows player N` should change at each switch, and the banner name the driver as in a replay. If it says
    `not read (...)` or stays on one player, send the log: TSU's spectator camera is then somewhere else.
-3. **The watched driver's banner** (`feature/watched-driver-banner`, the Race Director mode's second part): in a
+4. **The watched driver's banner** (`feature/watched-driver-banner`, the Race Director mode's second part): in a
    replay, switch between drivers. "Watching / P<n> name" should come 1 s after the camera stops on a driver,
    take the place of one showing at once, and name nobody while you flick through. It starts in the middle
    below the radar: is that a good place, and is it too much with the battle warning? The log says `replay:
    the camera follows player N` at each switch.
-4. **A replay found sooner** (`fix/replay-found-sooner`): on the Mac, open a replay with TurboHUD running; the
+5. **A replay found sooner** (`fix/replay-found-sooner`): on the Mac, open a replay with TurboHUD running; the
    log's `search: replay found, after N s` should say about 5 s, not 12 to 15, and the HUD come sooner. The
    reader in `.buildtools` is rebuilt already; on the Windows PC rebuild it (`sh tools/get_rust.sh` in Git
    Bash), or the log says `the reader searches for one value at a time` and it works as before.
-5. **The battle warning** (`feature/battle-warning`, the Race Director mode's first part): in a replay with
+6. **The battle warning** (`feature/battle-warning`, the Race Director mode's first part): in a replay with
    close racing, and spectating online, "Battle for P<n> / Possible Overtake / name vs name" when a car
    closes within 1 s of the one ahead or sits within 0.4 s, or "Group around name" for 3 cars or more each
    within 1 s; none in the opening lap; never while driving. Right moments now, with lap 1 left out? Do
    the groups read well, and is the names row large enough with long names? Placed well (confirmed).
-6. **Tire wear as TSU counts it** (`fix/tire-wear-per-compound`): in an event with tire wear, TurboHUD's Tires
+7. **Tire wear as TSU counts it** (`fix/tire-wear-per-compound`): in an event with tire wear, TurboHUD's Tires
    percent should match TSU's own (it was 97 against 95); the log says `tires: ... worn out at ...` once an
    event. Try a softer and a harder compound if the event has more.
-7. **The race leader banner** (`fix/banner-fade-as-one`): it now fades in and out as one picture, its colours
+8. **The race leader banner** (`fix/banner-fade-as-one`): it now fades in and out as one picture, its colours
    as when it is full (they looked off while fading, reported on 2026-11-18). Also: "New Race Leader"
    about 5 s after a pass that holds (none for one undone, none at the start), "Race Winner" with your
    flag picture as the winner crosses the line; online too; how it reads over TSU. In move mode, the panel's 🏁 switches between the two; the text is in the middle.
-8. **The log's slow-frame lines**: at 10 reads a second only real hitches (150 ms and more).
-9. **One tint per group on Windows**: tick it in Settings > Look, lock, look at a group over TSU; if
+9. **The log's slow-frame lines**: at 10 reads a second only real hitches (150 ms and more).
+10. **One tint per group on Windows**: tick it in Settings > Look, lock, look at a group over TSU; if
    right, on by default there.
-10. **The place label in move mode** (`X  Y  width×height`): on the Mac and Hyprland; the designed
+11. **The place label in move mode** (`X  Y  width×height`): on the Mac and Hyprland; the designed
    size's numbers on the design screen; none after a preset, Undo or Redo.
-11. **TurboHUD's own memory** in the log: on Linux, and in a long race on each system (does it grow?).
-12. **One window on Linux** (backlog item 1c): the window count probe over TSU on Hyprland.
-13. **The tester** (backlog item 0): his stutter times and a try at 10 reads a second.
-14. **Not yet seen**: a Single Player event and Custom races on the Mac and Linux; a replay after a race
+12. **TurboHUD's own memory** in the log: on Linux, and in a long race on each system (does it grow?).
+13. **One window on Linux** (backlog item 1c): the window count probe over TSU on Hyprland.
+14. **The tester** (backlog item 0): his stutter times and a try at 10 reads a second.
+15. **Not yet seen**: a Single Player event and Custom races on the Mac and Linux; a replay after a race
     in the same session; the delta bar turning red on a slow loss; the HUD coming at once when TSU's log
     newly says an event runs; yellow flags (thresholds `YELLOW_*` in `turbohud/core/race.py`); a broken
     track map mending after a clean lap; a purple sector turning green; a special event, King of the Hill

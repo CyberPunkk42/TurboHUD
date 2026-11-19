@@ -1815,6 +1815,11 @@ class MovePanel(QWidget):
         )
         layouts.clicked.connect(self.open_layouts)
         row.addWidget(layouts)
+        # The preset in use (asked for by the user on 2026-11-19): set_current_preset.
+        self.current_preset = QLabel('Preset: none')
+        self.current_preset.setToolTip(
+            'The preset the layout is in now; (changed): moved on from the one loaded or saved last'
+        )
         lock = QPushButton('Lock')
         settings = QPushButton('Settings…')
         settings.setToolTip('Colours, sizes, warning times and the options for the whole HUD')
@@ -1826,6 +1831,7 @@ class MovePanel(QWidget):
         row.addWidget(settings)
         row.addWidget(quit_)
         row.addStretch()
+        column.addWidget(self.current_preset)  # a line of its own: a long name would widen the row
         column.addLayout(row)
 
     def fit_height(self, available):
@@ -1927,6 +1933,10 @@ class MovePanel(QWidget):
             self.native.raise_window(self.layouts)
         else:
             self.layouts.show_at(*beside(size, anchor, screen))
+
+    def set_current_preset(self, text):
+        """Show which preset is in use (settings.preset_shown)."""
+        self.current_preset.setText(text)
 
     def set_undo_available(self, available):
         self.undo.setEnabled(available)

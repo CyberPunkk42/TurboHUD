@@ -1093,6 +1093,12 @@ class MovePanelPresetTests(unittest.TestCase):
         self.addCleanup(panel.close)
         return panel
 
+    def test_it_shows_the_preset_in_use(self):
+        panel = self.panel()
+        self.assertEqual(panel.current_preset.text(), 'Preset: none')
+        panel.set_current_preset('Preset: 3 Race (changed)')
+        self.assertEqual(panel.current_preset.text(), 'Preset: 3 Race (changed)')
+
     def button(self, panel, number, text):
         from PySide6.QtWidgets import QPushButton
 

@@ -411,6 +411,54 @@ class PresetTests(unittest.TestCase):
         self.assertEqual((place.width, place.height), (300, 40))
 
 
+class CurrentPresetTests(unittest.TestCase):
+    """Which preset the layout is in now, as move mode's panel shows it (asked for 2026-11-19)."""
+
+    SCREENS = ((0, 0, 1920, 1080),)
+
+    def layout(self, x=100, visible=True):
+        return {'lap': s.SectionPlace(x, 50, 200, 40, visible), 'fuel': s.SectionPlace(400, 50, 200, 40)}
+
+    def test_the_preset_the_sections_are_in(self):
+        presets = {1: self.layout(x=10), 3: self.layout()}
+        self.assertEqual(s.current_preset(self.layout(), presets, self.SCREENS), (3, False))
+
+    def test_a_pixel_or_two_off_still_counts(self):
+        presets = {3: self.layout()}
+        self.assertEqual(s.current_preset(self.layout(x=102), presets, self.SCREENS), (3, False))
+        self.assertIsNone(s.current_preset(self.layout(x=103), presets, self.SCREENS))
+
+    def test_an_option_changed_is_another_layout(self):
+        presets = {3: self.layout()}
+        self.assertIsNone(s.current_preset(self.layout(visible=False), presets, self.SCREENS))
+
+    def test_the_last_loaded_first_where_two_are_the_same(self):
+        presets = {2: self.layout(), 4: self.layout()}
+        self.assertEqual(s.current_preset(self.layout(), presets, self.SCREENS), (2, False))
+        self.assertEqual(s.current_preset(self.layout(), presets, self.SCREENS, last=4), (4, False))
+
+    def test_moved_on_from_the_last_it_is_changed(self):
+        presets = {3: self.layout()}
+        self.assertEqual(s.current_preset(self.layout(x=500), presets, self.SCREENS, last=3), (3, True))
+
+    def test_a_last_one_deleted_is_none(self):
+        self.assertIsNone(s.current_preset(self.layout(), {}, self.SCREENS, last=3))
+
+    def test_a_preset_off_the_screen_counts_where_loading_puts_it(self):
+        off = {'lap': s.SectionPlace(5000, 50, 200, 40), 'fuel': s.SectionPlace(400, 50, 200, 40)}
+        fitted = s.preset_places(off, off, self.SCREENS)
+        self.assertEqual(s.current_preset(fitted, {1: off}, self.SCREENS), (1, False))
+
+    def test_a_section_the_preset_lacks_is_left_alone(self):
+        presets = {3: {'lap': self.layout()['lap']}}
+        self.assertEqual(s.current_preset(self.layout(), presets, self.SCREENS), (3, False))
+
+    def test_how_the_panel_names_it(self):
+        self.assertEqual(s.preset_shown(None, {}), 'Preset: none')
+        self.assertEqual(s.preset_shown((3, False), {3: 'Race'}), 'Preset: 3 Race')
+        self.assertEqual(s.preset_shown((2, True), {}), 'Preset: 2 (changed)')
+
+
 if __name__ == '__main__':
     unittest.main()
 
