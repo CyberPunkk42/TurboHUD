@@ -80,8 +80,8 @@ Hover over a section's name in the move-mode panel for a short explanation.
 - **Blue flag**: a faster car about to lap you.
 - **Yellow flag**: an incident in your sector or the next, who and what.
 - **Penalties**: SHORTCUT with the seconds left, or JUMP START.
-- **Race leader**: a banner for 6 s, "New Race Leader - name" once a new leader has kept the
-  lead for 5 s, and "Race Winner - name" with a waving checkered flag as the winner finishes
+- **Race leader**: a banner for 6 s, "New Race Leader - name" once another driver has kept the
+  lead for 5 s (none for your own car), and "Race Winner - name" with a waving checkered flag as the winner finishes
   (the panel's **🏁** shows the winner's in move mode).
 - **Battle**: only while watching a replay or spectating, a banner "Battle for P3 / Possible
   Overtake / name vs name" when a car closes in on the one ahead or sits right behind it, or

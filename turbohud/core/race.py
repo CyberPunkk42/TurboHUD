@@ -2708,8 +2708,10 @@ def _watching_sections(
 
 def leader_banner(state, order, clock, lead_changes):
     """{'leader': [its row], 'banner': Banner} while the race leader banner shows, else {}:
-    only in a race on a track (no leader in hotlapping, nor in an arena event). `clock`: the race
-    clock in its units (clock_now)."""
+    only in a race on a track (no leader in hotlapping, nor in an arena event). "New Race Leader"
+    is not shown for the player's own car taking the lead while driving (asked for by the user on
+    2026-11-19: they know); "Race Winner" is, and in a replay the camera's driver is named as any.
+    `clock`: the race clock in its units (clock_now)."""
     if lead_changes is None or state.hotlapping or not state.on_a_track:
         return {}
 
@@ -2722,6 +2724,10 @@ def leader_banner(state, order, clock, lead_changes):
     banner = lead_changes.update(order, clock / UNITS_PER_SECOND, finish_at)
     if banner is None:
         return {}
+    if not banner.winner and not state.replay and not state.spectating:
+        own = next((player.name for player in state.players if player.local), None)
+        if own is not None and banner.name == own:
+            return {}
     name = banner.name or '?'
     if len(name) > MAX_NAME_SHOWN:
         name = name[: MAX_NAME_SHOWN - 1] + '…'
