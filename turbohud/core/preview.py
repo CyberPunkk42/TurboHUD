@@ -407,6 +407,9 @@ def preview_sections(
         'shortcuts': _Penalties(),
         'retirements': _Retired(),
         'nearby_short': nearby_short,
+        # Without the Best column, the fastest lap's holder in purple, as while watching (asked for
+        # by the user on 2026-11-20: the preview is where the look is judged).
+        'fastest_name': True,
     }
     # Twice, as the radar and the delta bar follow the cars from one read to the next.
     race.race_sections(snapshot, 1.0, speed_unit, race.Standings(), radar, track_map, **options)
