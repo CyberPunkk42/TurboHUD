@@ -80,6 +80,18 @@ class PreviewTests(unittest.TestCase):
         roles = {dot.role for dot in self.sections['trackmap'].dots}
         self.assertLessEqual({'me', 'leader', 'ahead', 'behind'}, roles)
 
+    def test_without_best_the_fastest_laps_holder_is_purple(self):
+        # The fastest lap's holder (its Best lap purple; the 19th, slowed in the pits): its name purple
+        # without the Best column, as while watching (asked for by the user on 2026-11-20).
+        with_best = self.sections['laptimes'][1:]
+        fastest = [i for i, row in enumerate(with_best) if row.middle_color == race.SESSION_BEST_COLOR]
+        self.assertEqual(len(fastest), 1)
+        self.assertNotEqual(with_best[fastest[0]].color, race.SESSION_BEST_COLOR)  # Best shows it
+        columns = tuple(c for c in race.LAP_COLUMNS if c != 'best')
+        rows = preview.preview_sections(columns=columns)['laptimes'][1:]
+        self.assertEqual([i for i, row in enumerate(rows) if row.color == race.SESSION_BEST_COLOR], fastest)
+        self.assertEqual(rows[preview.LOCAL].color, 'accent')  # you, as ever
+
     def test_the_players_options(self):
         without = preview.preview_sections(gear=False, clan_tags=False, columns=('flag', 'best'))
         self.assertEqual(len(without['speed']), 1)  # no gear row

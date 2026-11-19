@@ -2519,6 +2519,7 @@ def race_sections(
     lead_changes=None,
     battles=None,
     watched=None,
+    fastest_name=False,
 ):
     """{section name: rows} for a live-reader snapshot (see core.hud.RACE_SECTIONS); a
     section with nothing to show has no rows. Nothing before the grid: in the menus, the
@@ -2536,7 +2537,8 @@ def race_sections(
     and its Banner under 'banner'; `battles` (a core.battle.Battles) the battle warning while
     watching (a replay, or spectating), under 'battle' and its Battle under 'battlebanner';
     `watched` (a core.watched.WatchedDriver) the watched driver's banner while watching, under
-    'watched' and its Watched under 'watchedbanner'."""
+    'watched' and its Watched under 'watchedbanner'. `fastest_name`: the standings name the fastest
+    lap's holder in purple without the Best column as while watching (move mode's preview)."""
     if not on_grid(snapshot, now):
         return {}
     state = snapshot.state
@@ -2614,7 +2616,7 @@ def race_sections(
             state.compounds,
             is_wet(state.track),
             retired,
-            watching=state.replay,
+            watching=state.replay or fastest_name,
         )
         rows = shortcut_rows(state, cuts or {}, jumped)
         if rows:

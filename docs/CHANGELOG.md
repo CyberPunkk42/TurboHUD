@@ -4,6 +4,12 @@ Every finished change, newest first: what changed, why, how it was checked and w
 Each branch adds its dated entry at the top. Where things stand now: `RESUME.md`; what is open:
 `docs/BACKLOG.md`.
 
+- 2026-11-20: The purple name in move mode's preview (`fix/preview-fastest-name`, reported by the user: still not
+  purple after `feature/sample-fastest-lap`). Move mode shows the made-up Laguna Seca race (`core/preview.py`), a
+  race the player drives, not the plain samples that change touched (those show only before the preview is
+  made), and the purple name was only while watching. `race_sections` takes `fastest_name`, which the preview
+  passes, so without the Best column the fastest lap's holder (the 19th, slowed in the pits) is purple there too.
+  Tests: one row purple, the one whose Best lap is purple; drawn off-screen with the user's preset 2 columns.
 - 2026-11-20: Move mode's standings sample shows the fastest lap (`feature/sample-fastest-lap`, asked for by the
   user: without TSU running, the sample marked no one, so the purple name could not be seen while placing). The
   sample's first driver has a purple Best lap (`0:00.000`, `hud.SAMPLE_FASTEST_COLOR`, the same as
