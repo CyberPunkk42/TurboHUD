@@ -163,6 +163,31 @@ class RaceBannerTest(unittest.TestCase):
         self.assertEqual(row.text, 'New Race Leader  -  Speedy Driver')
         self.assertTrue(row.centred)
 
+    def taken_by_me(self, **kwargs):
+        """The banner 6 s after the player's own car took the lead (from Speedy Driver)."""
+        from turbohud.core import race
+
+        changes = LeadChanges()
+        units = race.UNITS_PER_SECOND
+        first = self.players()
+        race.leader_banner(self.state(first, units, **kwargs), first, units, changes)
+        now = self.players(leader_first=False)
+        race.leader_banner(self.state(now, 10 * units, **kwargs), now, 10 * units, changes)
+        return race.leader_banner(self.state(now, 16 * units, **kwargs), now, 16 * units, changes)
+
+    def test_no_new_leader_for_ones_own_car(self):
+        self.assertEqual(self.taken_by_me(), {})
+
+    def test_in_a_replay_the_cameras_driver_is_named_as_any(self):
+        self.assertEqual(self.taken_by_me(replay=True)['banner'].name, 'Me')
+
+    def test_the_winner_shows_for_ones_own_car(self):
+        from turbohud.core import race
+
+        me = race.PlayerState('Me', 0, 1, ((0, 1000), (2000,)), finished=True, local=True)
+        shown = race.leader_banner(self.state((me,), 5000), (me,), 5000, LeadChanges())
+        self.assertEqual(shown['leader'][0].text, 'Race Winner  -  Me')
+
     def test_a_long_name_is_cut_as_in_the_lists(self):
         from turbohud.core import race
 

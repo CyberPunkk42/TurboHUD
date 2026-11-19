@@ -4,6 +4,12 @@ Every finished change, newest first: what changed, why, how it was checked and w
 Each branch adds its dated entry at the top. Where things stand now: `RESUME.md`; what is open:
 `docs/BACKLOG.md`.
 
+- 2026-11-19: No "New Race Leader" for one's own car (`fix/no-leader-banner-for-self`, asked for by the user):
+  while driving, the race leader banner no longer tells the player they took the lead; another driver taking
+  it still shows, as does "Race Winner" for the player's own win. In a replay the camera's driver is named as
+  any, and spectating there is no own car. `leader_banner` leaves out a lead banner whose name is the local
+  player's; `LeadChanges` follows the lead as before, so a pass back by another driver shows. Tests: none for
+  one's own lead, the replay's driver named, the own win shown. Not yet tried in a race.
 - 2026-11-19: The watched driver's banner, the Race Director mode's second part (`feature/watched-driver-banner`,
   backlog item 8, asked for by the user on 2026-11-16): a new section, **Watched driver** (under Race in the
   panel), only in a replay. Each time the replay's camera turns to another driver, the race leader banner's

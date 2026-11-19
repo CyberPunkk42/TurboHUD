@@ -289,7 +289,8 @@ for a false start (throttle on the red lights) and 1.5 s more.
 **Race leader**
 A banner shaded from grey to black, as on F1's TV graphics: **New Race Leader - name** when
 another driver takes the lead and keeps it for 5 seconds (so a lead that changes hands and
-back, or a moment's shuffle in the order, shows nothing), and **Race Winner - name** on a black
+back, or a moment's shuffle in the order, shows nothing; none when you take the lead yourself
+while driving), and **Race Winner - name**, your own win too, on a black
 banner with a waving checkered flag at its right end as soon as the winner crosses the line. The
 text is always in the middle of the banner (of the room before the flag on the winner's). In move
 mode, the **🏁** button in the Race leader row of the panel switches the banner shown between a new
