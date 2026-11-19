@@ -313,14 +313,14 @@ cars in the pits, finished or out of the race, nor in hotlapping or the arena mo
 below the Race leader banner.
 
 **Watched driver**
-The Race Director mode's second part: only in a replay, never while you drive. Each time the
-replay's camera turns to another driver, the same grey-to-black banner names them in two rows:
+The Race Director mode's second part: only while you watch, in a replay or spectating an online
+race, never while you drive. Each time the camera turns to another driver, the same grey-to-black banner names them in two rows:
 **Watching** in gold, and the driver with their place, **P3 name** (no place in the arena modes).
 The camera must stay on a driver for 1 second first, so flicking through the drivers names only
 the one you stop at. It fades in, stays and fades out, 6 seconds in all; a driver you turn to while
 it shows takes its place at once. The same driver is not named again until the camera has turned
-away from them; rewound, the replay names the driver again. Not yet while spectating an online
-race (which car TSU's spectator camera follows is not known yet). It starts in the middle of the
+away from them; rewound, the replay names the driver again. Spectating, it shows only where
+TurboHUD can tell which car TSU's spectator camera follows. It starts in the middle of the
 screen, below the radar.
 
 ### Other

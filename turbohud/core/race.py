@@ -103,6 +103,8 @@ class LapState:
     hotlapping: bool = False  # a hotlapping event (how qualifying is run): ranked by best lap, not race order
     # Whether the race camera sits at the driver (a "CAM 5" view: cockpit_camera); None: not read.
     cockpit: bool | None = None
+    # While spectating: the driver TSU's spectator camera follows (spectated_driver); None: not read.
+    followed: str | None = None
 
     @property
     def lap_times(self):
@@ -641,6 +643,7 @@ class LapReader:
         self._track_for, self._track = None, ''  # see _track_name
         self._hotlapping_for, self._hotlapping = None, False  # see _hotlapping_event
         self._camera_logged = 'unread'  # the camera view last logged (cockpit_camera)
+        self._spectated_logged = 'unread'  # the spectator camera's driver last logged (spectated_driver)
         self._cars = {}  # vehicle object -> (its car's name, when read)
         self._gates = None  # checkpoint lines, ((x1, z1), (x2, z2)) each
         self._sector_lines = ()  # the checkpoints of type Sector (TS.CheckpointType), read with the lines
@@ -1479,7 +1482,31 @@ class LapReader:
             track=self._track_name(state),
             on_a_track=self._on_a_track(),
             hotlapping=self._hotlapping_event(state),
+            followed=self.spectated_driver(state, players),
         )
+
+    def spectated_driver(self, state, players):
+        """The name of the driver the spectator camera follows, or None where it cannot be read.
+        The race controller's m_audio.m_raceCameras.m_cameras[0] is the camera the cockpit view is
+        read from (cockpit_camera); its m_targetChooser.m_target is the TS.EventPlayer it follows,
+        as a replay's camera (_followed_driver). Not yet seen live (2026-11-19): the log says
+        `spectating: the camera follows player N` at each change, or why it was not read."""
+        il = self.il
+        try:
+            audio = self._ref('event controller', self._listener, 'm_audio')
+            cameras = self._ref('audio', audio, 'm_raceCameras')
+            camera = next(c for c in il.list_items(self._ref('race cameras', cameras, 'm_cameras')) if c)
+            chooser = self._ref('spectator camera', camera, 'm_targetChooser')
+            target = self._ref('chooser', chooser, 'm_target')
+            index = il.list_items(self._ref('state', state, 'players')).index(target)
+            name = next((p.name for p, i in zip(players, self._player_indices) if i == index), None)
+            seen = index
+        except (NotFound, OSError, StopIteration, ValueError) as error:
+            name, seen = None, f'not read ({error or "no camera"})'
+        if seen != self._spectated_logged:
+            self._spectated_logged = seen
+            log.info('spectating: the camera follows player %s', seen)
+        return name
 
     def _count_draft(self, state):
         """Add the race time since the last read to this lap's time in a slipstream (when
@@ -2505,7 +2532,7 @@ def race_sections(
     the lists; `lead_changes` (a core.leader.LeadChanges) the race leader banner, under 'leader'
     and its Banner under 'banner'; `battles` (a core.battle.Battles) the battle warning while
     watching (a replay, or spectating), under 'battle' and its Battle under 'battlebanner';
-    `watched` (a core.watched.WatchedDriver) the watched driver's banner in a replay, under
+    `watched` (a core.watched.WatchedDriver) the watched driver's banner while watching, under
     'watched' and its Watched under 'watchedbanner'."""
     if not on_grid(snapshot, now):
         return {}
@@ -2524,6 +2551,7 @@ def race_sections(
             nearby_short,
             lead_changes,
             battles,
+            watched,
         )
     if state.finished or state.laps_to_finish and state.laps_completed >= state.laps_to_finish:
         # Finished: the lap sections say so, and the rest stays (the player list above
@@ -2590,7 +2618,8 @@ def race_sections(
         sections.update(leader_banner(state, order, clock_now(snapshot, now), lead_changes))
         if state.replay:
             sections.update(battle_banner(state, order, clock_now(snapshot, now), battles, retired))
-            sections.update(watched_banner(state, order, clock_now(snapshot, now), watched))
+            local = next((player.name for player in state.players if player.local), None)
+            sections.update(watched_banner(state, order, clock_now(snapshot, now), watched, local))
         opacity = blue_flag_opacity(
             blue_flag(state.players, clock_now(snapshot, now), blue_within), blue_within
         )
@@ -2640,9 +2669,11 @@ def _watching_sections(
     nearby_short=False,
     lead_changes=None,
     battles=None,
+    watched=None,
 ):
     """What a spectator sees: the race, with the leader's lap, the player list with the
-    gaps to the leader, the lap times and the map; nothing about a car of their own."""
+    gaps to the leader, the lap times and the map; nothing about a car of their own. The watched
+    driver's banner names the driver the spectator camera follows (LapState.followed)."""
     state = snapshot.state
     sections = {'lap': [lap_title_row(state, 'Spectating  -  ')]}
     if state.players:
@@ -2667,6 +2698,7 @@ def _watching_sections(
         )
         sections.update(leader_banner(state, order, clock_now(snapshot, now), lead_changes))
         sections.update(battle_banner(state, order, clock_now(snapshot, now), battles, retired))
+        sections.update(watched_banner(state, order, clock_now(snapshot, now), watched, state.followed))
         if track_map is not None and state.on_a_track:
             shown = track_map.update(state, order)
             if shown is not None:
@@ -2738,15 +2770,15 @@ def battle_banner(state, order, clock, battles, retired=frozenset()):
     }
 
 
-def watched_banner(state, order, clock, watched):
+def watched_banner(state, order, clock, watched, followed):
     """{'watched': its two rows, 'watchedbanner': Watched} while the watched driver's banner shows,
-    else {}: "Watching" and "P<n>  <name>" (no place in an arena event). The caller asks only in a
-    replay, where the local player is the driver the camera follows. `clock`: the race clock in its
-    units (clock_now)."""
+    else {}: "Watching" and "P<n>  <name>" (no place in an arena event). The caller asks only while
+    watching: `followed` is the name of the driver the camera follows (in a replay the local player,
+    spectating LapState.followed), None where not known. `clock`: the race clock in its units
+    (clock_now)."""
     if watched is None:
         return {}
-    followed = next((player for player in state.players if player.local), None)
-    shown = watched.update(followed.name if followed is not None else None, clock / UNITS_PER_SECOND)
+    shown = watched.update(followed, clock / UNITS_PER_SECOND)
     if shown is None:
         return {}
     name = shown_name(shown.name)

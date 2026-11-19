@@ -86,7 +86,7 @@ Hover over a section's name in the move-mode panel for a short explanation.
 - **Battle**: only while watching a replay or spectating, a banner "Battle for P3 / Possible
   Overtake / name vs name" when a car closes in on the one ahead or sits right behind it, or
   "Group around name" for three cars or more within a second of each other; not in the opening lap.
-- **Watched driver**: only in a replay, a banner "Watching / P3 name" each time the camera turns
+- **Watched driver**: in a replay and spectating, a banner "Watching / P3 name" each time the camera turns
   to another driver.
 
 **Other**

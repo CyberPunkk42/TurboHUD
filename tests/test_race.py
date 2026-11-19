@@ -1591,6 +1591,36 @@ class CarTests(unittest.TestCase):
         self.assertEqual([p.name for p in state.players], ['A'])
         self.assertFalse(state.players[0].local)
 
+    def follow(self, reader, target):
+        """Give the spectated race's controller a spectator camera following `target`:
+        m_audio.m_raceCameras.m_cameras[0].m_targetChooser.m_target."""
+        g = reader.game
+        audio = g.alloc_obj(g.klass('TS', 'Audio', [('m_raceCameras', 0x88, False)]))
+        cameras = g.alloc_obj(g.klass('TS', 'RaceCameras', [('m_cameras', 0x10, False)]))
+        camera = g.alloc_obj(g.klass('TS', 'RaceCamera', [('m_targetChooser', 0x10, False)]))
+        chooser = g.alloc_obj(g.klass('TS', 'TargetChooser', [('m_target', 0x10, False)]))
+        g.q(chooser + 0x10, target)
+        g.q(camera + 0x10, chooser)
+        g.q(cameras + 0x10, g.list_of([camera]))
+        g.q(audio + 0x88, cameras)
+        g.q(g.client_controller + 0x10, audio)
+        return chooser
+
+    def test_spectating_reads_the_driver_the_camera_follows(self):
+        reader = self.spectated([100.0])
+        chooser = self.follow(reader, reader.spectator)
+        with self.assertLogs(race.log, 'INFO') as logged:
+            self.assertEqual(reader.read().followed, 'A')
+        self.assertIn('spectating: the camera follows player 1', ' '.join(logged.output))
+        reader.game.q(chooser + 0x10, 0)  # the camera follows nobody (between drivers)
+        self.assertIsNone(reader.read().followed)
+
+    def test_spectating_without_a_camera_follows_nobody(self):
+        reader = self.spectated([100.0])
+        with self.assertLogs(race.log, 'INFO') as logged:
+            self.assertIsNone(reader.read().followed)
+        self.assertIn('spectating: the camera follows player not read', ' '.join(logged.output))
+
     def test_a_watched_race_with_a_running_clock_is_not_searched_again(self):
         now = [100.0]
         reader = self.spectated(now)
