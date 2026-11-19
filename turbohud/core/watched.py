@@ -1,15 +1,15 @@
 """The watched driver's banner, the second part of the Race Director mode (asked for by the user on
-2026-11-16, started on 2026-11-19): in a recording, "Watching" and "P<n>  <name>" each time the
+2026-11-16, started on 2026-11-19): while watching, "Watching" and "P<n>  <name>" each time the
 camera turns to another driver, as a TV broadcast names the car it shows.
 
-The driver is the one TSU's replay camera follows (LapReader._followed, the snapshot's local
-player), so it needs no read of its own. The camera must stay on a driver for WATCH_HOLD seconds of
+In a replay the driver is the one TSU's replay camera follows (LapReader._followed, the snapshot's
+local player); spectating, the one the spectator camera follows (LapState.followed, the Race
+Director mode's third part). The camera must stay on a driver for WATCH_HOLD seconds of
 race clock before the banner shows, so flicking through the drivers names only the one stopped at;
 it shows BANNER_SHOWN seconds with the race leader banner's fade, and a driver the camera turns to
 while one shows takes its place at once, without fading in again. The same driver is not named
 again until the camera has turned away from it. A race clock that goes back (a replay rewound)
-starts afresh, so the driver is named again. Live spectating has no banner yet: which car TSU's
-spectator camera follows is not known (the Race Director mode's third part)."""
+starts afresh, so the driver is named again."""
 
 from dataclasses import dataclass
 
@@ -31,7 +31,7 @@ class Watched:
 
 
 class WatchedDriver:
-    """Follows the driver the replay camera follows from one read to the next and says when the
+    """Follows the driver the camera follows from one read to the next and says when the
     banner shows (`update`)."""
 
     def __init__(self, hold=WATCH_HOLD, shown=BANNER_SHOWN, fade=BANNER_FADE):

@@ -4,6 +4,16 @@ Every finished change, newest first: what changed, why, how it was checked and w
 Each branch adds its dated entry at the top. Where things stand now: `RESUME.md`; what is open:
 `docs/BACKLOG.md`.
 
+- 2026-11-19: The watched driver's banner while spectating, the Race Director mode's third part
+  (`feature/spectator-camera-driver`, backlog item 8): the reader now reads which car TSU's spectator camera
+  follows (`LapReader.spectated_driver`, `LapState.followed`) and the Watched driver banner names it while
+  spectating an online race, as in a replay. The camera is the one the cockpit view is already read from
+  (`EventController.m_audio.m_raceCameras.m_cameras[0]`, `cockpit_camera`); its `m_targetChooser.m_target`
+  is the player it follows, the same field as a replay's camera (`_followed_driver`). Not seen live: the
+  log says `spectating: the camera follows player N` at each change, or `not read (...)` with the reason.
+  `watched_banner` now takes the followed driver's name (the replay's local player, or `followed`). Tests:
+  the driver read through the camera and none without one, with the log lines; the banner while spectating
+  and none without the camera's driver. Not yet tried spectating.
 - 2026-11-19: The watched driver's banner, the Race Director mode's second part (`feature/watched-driver-banner`,
   backlog item 8, asked for by the user on 2026-11-16): a new section, **Watched driver** (under Race in the
   panel), only in a replay. Each time the replay's camera turns to another driver, the race leader banner's

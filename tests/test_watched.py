@@ -97,7 +97,8 @@ class WatchedDriverTest(unittest.TestCase):
 
 
 class RaceWatchedTest(unittest.TestCase):
-    """The banner through the race sections: only in a replay, with the driver's place."""
+    """The banner through the race sections: only while watching (a replay, or spectating), with
+    the driver's place."""
 
     def players(self, followed=1):
         from turbohud.core import race
@@ -106,14 +107,14 @@ class RaceWatchedTest(unittest.TestCase):
         behind = race.PlayerState('A' * 30, 0, 1, ((0, 11_000, 21_000),), local=followed == 1)
         return ahead, behind
 
-    def watch(self, followed=1, **state):
+    def watch(self, local=1, **state):
         from turbohud.core import race
 
         driver = WatchedDriver()
         units = race.UNITS_PER_SECOND
         found = {}
         for tenth in range(25, 60, 5):  # 2.5 s to 5.5 s of race clock
-            lap = race.LapState(tenth * units // 10, 0, 0, 5, [0], players=self.players(followed), **state)
+            lap = race.LapState(tenth * units // 10, 0, 0, 5, [0], players=self.players(local), **state)
             snapshot = race.Snapshot(race.RACING, lap, True, 0.0, moved_at=0.0)
             found = race.race_sections(snapshot, 0.0, watched=driver)
         return found
@@ -134,15 +135,21 @@ class RaceWatchedTest(unittest.TestCase):
     def test_no_place_in_an_arena_event(self):
         self.assertEqual(self.watch(0, replay=True, on_a_track=False)['watched'][1].text, 'Speedy Driver')
 
-    def test_never_while_driving_nor_spectating(self):
+    def test_never_while_driving(self):
         self.assertNotIn('watched', self.watch())
-        self.assertNotIn('watched', self.watch(spectating=True))
+
+    def test_spectating_it_names_the_driver_the_camera_follows(self):
+        found = self.watch(None, spectating=True, followed='Speedy Driver')
+        self.assertEqual(found['watched'][1].text, 'P1  Speedy Driver')
+
+    def test_spectating_without_the_cameras_driver_it_names_nobody(self):
+        self.assertNotIn('watched', self.watch(None, spectating=True))
 
     def test_none_without_a_follower(self):
         from turbohud.core import race
 
         state = race.LapState(50_000, 0, 0, 5, [0], players=self.players(), replay=True)
-        self.assertEqual(race.watched_banner(state, None, 50_000, None), {})
+        self.assertEqual(race.watched_banner(state, None, 50_000, None, 'Speedy Driver'), {})
 
 
 class WatchedSectionTest(unittest.TestCase):

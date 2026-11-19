@@ -115,9 +115,10 @@ opens a recording, and teaching the Rust reader several values a search pass (a 
 ## 8. Race Director mode (agreed 2026-11-16, next once the user says go)
 Only while watching (a recording, or spectating live), never while driving; inside TurboHUD, kept light.
 Built: (1) the battle warning (`turbohud/core/battle.py`), to see in a replay and spectating and tune
-(`BATTLE_*`); (2) the watched driver's banner in a replay (`turbohud/core/watched.py`), to see. Next:
-(3) which car the live spectator camera follows (research), then the watched driver's banner there too. A
-"Watching" kind of event for the presets (a replay is 'recording' already; spectating counts as a race).
+(`BATTLE_*`); (2) the watched driver's banner in a replay (`turbohud/core/watched.py`), to see; (3) the
+banner while spectating, from the camera TSU's cockpit view is read from (`spectated_driver`): not yet seen
+live, the log says whether it reads. Next: a "Watching" kind of event for the presets (a replay is
+'recording' already; spectating counts as a race).
 
 ## Nice to have (ideas, not planned)
 Ideas talked over and left for later; none is being worked on. Take one up only when the user asks.
