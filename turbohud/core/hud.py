@@ -488,6 +488,8 @@ def text_can_centre(section):
     return not any(row.right or row.middle or row.flag for row in rows)
 
 
+SAMPLE_FASTEST_COLOR = '#c77dff'  # race.SESSION_BEST_COLOR (race imports this module): the fastest lap
+
 RACE_SECTIONS = (
     Section(
         'lap',
@@ -598,7 +600,11 @@ RACE_SECTIONS = (
                     'small',
                     before='L99',
                     flag='DE',
-                    middle='PIT 00.0s',
+                    # The first driver has the fastest lap, in its purple (race.SESSION_BEST_COLOR), so
+                    # move mode shows how it looks (asked for by the user on 2026-11-20); the others the
+                    # widest there.
+                    middle='0:00.000' if n == 10 else 'PIT 00.0s',
+                    middle_color=SAMPLE_FASTEST_COLOR if n == 10 else 'text',
                     right='CUT 00.0s',  # the widest there: wider than (00.00s), JUMP and 0:00.0
                     tag='PROAM',  # a clan tag or class has up to 5 letters
                     tyre='M',

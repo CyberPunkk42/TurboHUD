@@ -28,7 +28,8 @@ Kept short: the state now and what to do next. Every change, with how it was che
 ## To try next (most recent first)
 1. **The fastest lap's holder in purple** (`feature/fastest-lap-name`): in a replay or spectating, turn off the
    Standings' Best column: the driver with the fastest lap should have a purple name, and it should move when
-   someone beats it. Driving, or with Best on, nothing changes.
+   someone beats it. Driving, or with Best on, nothing changes. In move mode the sample's first driver shows
+   it (`feature/sample-fastest-lap`).
 2. **The Standings' columns in each preset** (`feature/columns-per-preset`): untick a column in Settings >
    Standings, save preset 1; tick it again, save preset 2; Load 1 and 2 in turn: the standings and the settings
    window's switches should follow (log: `standings columns: ...`). A preset saved before keeps no columns and
