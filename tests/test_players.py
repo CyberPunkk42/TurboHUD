@@ -1454,6 +1454,29 @@ class LapTimesTests(unittest.TestCase):
         )
         self.assertEqual(rows[3].color, 'accent')
 
+    def fastest_names(self, **options):
+        me = player('Me', [lap(0), lap(42_000), lap(80_000, count=2)], laps=2, local=True)
+        ahead = player('Ahead', [lap(0), lap(39_000), lap(78_000, count=3)], laps=2)
+        rows = race.lap_times_rows([me, ahead], clock=90_000, **options)
+        return {row.text: row.color for row in rows[1:]}
+
+    def test_watching_without_best_the_fastest_drivers_name_is_purple(self):
+        columns = tuple(c for c in race.LAP_COLUMNS if c != 'best')
+        names = self.fastest_names(columns=columns, watching=True)
+        # Me has the fastest lap (3.8 s): purple, over the accent of the driver followed.
+        self.assertEqual(names, {'1. Ahead': 'text', '2. Me': race.SESSION_BEST_COLOR})
+
+    def test_the_fastest_name_only_while_watching_and_without_best(self):
+        columns = tuple(c for c in race.LAP_COLUMNS if c != 'best')
+        self.assertEqual(self.fastest_names(columns=columns)['2. Me'], 'accent')  # driving
+        self.assertEqual(self.fastest_names(watching=True)['2. Me'], 'accent')  # Best shows it
+
+    def test_in_the_pits_too(self):
+        me = player('Me', [lap(0), lap(38_000), lap(80_000, count=2)], laps=2)
+        me = race.dataclasses.replace(me, in_pit=True, pit_seconds=3.0)
+        rows = race.lap_times_rows([me], clock=90_000, columns=('flag',), watching=True)
+        self.assertEqual(rows[1].color, race.SESSION_BEST_COLOR)  # still the fastest lap's holder
+
     def test_at_most_the_most_drivers_it_shows(self):
         players = [
             player(f'P{i}', [lap(0), lap(40_000 + i * 100, count=3)], local=(i == 18)) for i in range(25)
