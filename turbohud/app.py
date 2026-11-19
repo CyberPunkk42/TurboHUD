@@ -79,7 +79,7 @@ log = logging.getLogger('turbohud')
 
 NARROWER = ('laptimes', 'players')  # the boxes layout 7 makes narrower
 # The banners that fade in and out (overlay.window): section name -> the key of what it shows (race_sections).
-BANNERS = {'leader': 'banner', 'battle': 'battlebanner'}
+BANNERS = {'leader': 'banner', 'battle': 'battlebanner', 'watched': 'watchedbanner'}
 
 
 def upgrade_layout(settings, path, ink, measure=None):
@@ -542,6 +542,7 @@ def run(args, folder):
             status_text,
             with_local_time,
         )
+        from turbohud.core.watched import WatchedDriver
 
         layout = RACE_SECTIONS
         if sys.platform.startswith('linux'):  # the Linux joystick interface
@@ -566,6 +567,7 @@ def run(args, folder):
         retirements = Retirements()
         lead_changes = LeadChanges()
         battles = Battles()
+        watched_driver = WatchedDriver()
 
         def contents():
             speed = windows.get('speed')
@@ -590,6 +592,10 @@ def run(args, folder):
             watching_battles = battle is not None and battle.wanted
             if not watching_battles:
                 battles.reset()
+            watched = windows.get('watched')
+            naming_watched = watched is not None and watched.wanted
+            if not naming_watched:
+                watched_driver.reset()
             current = race_sections(
                 snapshot,
                 time.monotonic(),
@@ -610,6 +616,7 @@ def run(args, folder):
                 settings.nearby_short,
                 lead_changes if following else None,
                 battles if watching_battles else None,
+                watched_driver if naming_watched else None,
             )
             if not settings.yellow_flags:
                 yellow_flags.reset()  # turned on again, it starts afresh
