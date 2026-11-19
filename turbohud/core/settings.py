@@ -75,6 +75,9 @@ class SectionPlace:
     tint: bool = False  # a light tint behind its text while locked; for the track map, its dark square
     font: int | None = None  # a text section's own text size in pixels; None: the global one
     spacing: float = 1.0  # the room between its rows, as a share of the usual (core.hud.SPACINGS)
+    # The Standings' columns shown (LAP_COLUMNS), kept with its place so each preset has its own
+    # (asked for by the user on 2026-11-20); None: not kept (other sections, older presets).
+    columns: tuple | None = None
 
 
 # The clan tags that name a car class, for a multi-class race: turbohud.core.class_registry.
@@ -221,6 +224,8 @@ def _same_place(a, b):
     boxes = ((a.x, b.x), (a.y, b.y), (a.width, b.width), (a.height, b.height))
     if any(abs(one - other) > PRESET_MATCH_PIXELS for one, other in boxes):
         return False
+    if b.columns is None:
+        b = replace(b, columns=a.columns)  # a preset kept without its columns: any count
     return replace(a, x=b.x, y=b.y, width=b.width, height=b.height) == b
 
 
@@ -315,8 +320,17 @@ def _sections(data, tint=False):
             entry.get('tint', tint) is True,
             _font(entry.get('font')),
             _spacing(entry.get('spacing')),
+            _columns(entry.get('columns')),
         )
     return places
+
+
+def _columns(value):
+    """The Standings' columns from the file (SectionPlace.columns), in LAP_COLUMNS' order; None
+    where there is no list. Unknown columns are left out; an empty list is every one off."""
+    if not isinstance(value, list):
+        return None
+    return tuple(column for column in LAP_COLUMNS if column in value)
 
 
 def _spacing(value):
@@ -386,6 +400,7 @@ def _section_data(sections):
             'tint': place.tint,
             **({'font': place.font} if place.font is not None else {}),
             **({'spacing': place.spacing} if place.spacing != 1.0 else {}),
+            **({'columns': list(place.columns)} if place.columns is not None else {}),
         }
         for name, place in sections.items()
     }

@@ -812,6 +812,7 @@ def run(args, folder):
             window.backdrop,
             getattr(window, 'own_font', None),
             window.section.spacing,
+            settings.lap_columns if window is windows.get('laptimes') else None,
         )
 
     def all_tinted():
@@ -1725,10 +1726,17 @@ def run(args, folder):
 
     def apply_places(places):
         """Put sections as `places` {name: SectionPlace} has them, moved by TurboHUD: their
-        groups stay where they are."""
+        groups stay where they are. The Standings' place brings its columns where it keeps them."""
+        nonlocal settings
         until = time.monotonic() + 1.0
         for name, place in places.items():
             window = windows[name]
+            if name == 'laptimes' and place.columns is not None and place.columns != settings.lap_columns:
+                settings = replace(settings, lap_columns=place.columns)
+                with_columns(window)
+                for column in LAP_COLUMNS:
+                    show_option(f'column_{column}', column in place.columns)
+                log.info('standings columns: %s', ', '.join(place.columns) or 'none')
             box = (place.x, place.y, place.width, place.height)
             window.quiet_place(until)  # moved by TurboHUD, not dragged: no place label
             move_window(window, box, settle=True)

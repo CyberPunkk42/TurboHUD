@@ -413,8 +413,10 @@ mode ends):
   **Load** puts the sections back as it has them (also Ctrl+Shift+1 to 5, at any time, also
   during a race), **Delete** deletes it. An electric blue line below the presets confirms each for a few
   seconds, such as "✓ Preset 2 named Race" or "✓ Preset 2 Race saved". A preset holds where
-  each section sits, its size, whether it shows and its group; colours and options stay as
-  they are.
+  each section sits, its size, whether it shows and its group, and which **Standings** columns
+  show (Settings > Standings > Columns), so each preset can have its own standings; other colours
+  and options stay as they are. A preset saved before 2026-11-20 keeps no columns: loading it
+  leaves them as they are, until you save it again.
 - **Load by itself**: "As an event begins, the preset chosen for its mode". For each kind of
   event, pick a preset (**1** to **5**) or **Off** (all are Off at first):
   - **Recording**: a recording (replay) TSU plays.
@@ -496,7 +498,8 @@ The window has two columns, under headings. The on/off options are the same as u
 - **Columns:** **Flag**, **Lap** (the lap each driver is on), **Tire**, **Gap** (to the
   leader), **Best**, **Last** (the last lap), **Class** and **Overall** (in a race with
   classes): which columns the standings show. The place and the name always show. Each
-  column left out makes the box narrower.
+  column left out makes the box narrower. A preset keeps the columns shown when it was saved and
+  loads them again (see the layouts window), as do layout files (**Export…**, **Import…**).
 
 **Sections**
 - **Nearby cars: only the leader and the cars next to you**, **Sector bars in My laps**,

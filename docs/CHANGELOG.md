@@ -4,6 +4,16 @@ Every finished change, newest first: what changed, why, how it was checked and w
 Each branch adds its dated entry at the top. Where things stand now: `RESUME.md`; what is open:
 `docs/BACKLOG.md`.
 
+- 2026-11-20: The Standings' columns in each preset (`feature/columns-per-preset`, reported by the user: the
+  columns ticked in Settings > Standings were not saved with a preset, so every preset had the same standings).
+  The columns shown are now kept with the Standings' place (`SectionPlace.columns`, `columns` in the settings
+  file and in layout files), so Save keeps them, Load, Undo, Redo, Import and the start-up preset put them back
+  (`apply_places`: the standings refitted, the settings window's switches set, logged `standings columns: ...`),
+  and the panel's preset in use says "(changed)" after a column is switched. A preset saved before keeps none:
+  loading it leaves the columns as they are, and it still counts as in use. Tests: the settings file and a layout
+  file keep them, an older preset has none, unknown columns left out, every column off kept, the preset in use
+  with and without columns. Started for 6 s on Windows (no traceback). Not yet tried by hand: save two presets
+  with different columns and switch between them.
 - 2026-11-19: The Race preset at start (`fix/race-preset-at-start`, reported by the user: their saved Race preset
   did not show): a preset loaded only as an event of its kind began, so TurboHUD started in the layout left at
   the last quit (in the user's settings, preset 5's, the last one loaded) until a race began. The preset chosen
