@@ -44,6 +44,7 @@ from turbohud.core.settings import (
     preset_shown,
     save_settings,
     settings_dir,
+    start_preset,
 )
 
 FRAME_MS = 50  # redraw interval, also what checks a race for a late read (hud.FramePacer)
@@ -2187,6 +2188,15 @@ def run(args, folder):
         panel.set_text_centred(name, window.text_centred)
         panel.set_tint(name, window.backdrop)
 
+    starting = start_preset(settings)
+    if starting is not None:
+        # The Race preset is the default layout: TurboHUD starts in it, not in the one left at the
+        # last quit (a recording's, say). Before the history, so Undo does not go back past it.
+        places = preset_places(settings.presets[starting], windows, screens)
+        apply_places(places)
+        settings = replace(settings, sections={**settings.sections, **places})
+        write_settings()
+        log.info('started in preset %d, the one for a race', starting)
     history = LayoutHistory(layout_state())
     # Move mode ends only by its shortcut or the panel's Lock (asked for by the user on
     # 2026-11-13): a click elsewhere, on the game or the desktop, no longer locks it.

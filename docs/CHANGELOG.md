@@ -4,6 +4,14 @@ Every finished change, newest first: what changed, why, how it was checked and w
 Each branch adds its dated entry at the top. Where things stand now: `RESUME.md`; what is open:
 `docs/BACKLOG.md`.
 
+- 2026-11-19: The Race preset at start (`fix/race-preset-at-start`, reported by the user: their saved Race preset
+  did not show): a preset loaded only as an event of its kind began, so TurboHUD started in the layout left at
+  the last quit (in the user's settings, preset 5's, the last one loaded) until a race began. The preset chosen
+  for a race (Layouts > Load by itself) is now the default layout: TurboHUD starts in it where it is saved
+  (`settings.start_preset`), before the Undo history, and logs `started in preset N, the one for a race`.
+  With Race on Off it starts as it was left. Tests: the preset chosen, none chosen, one not saved; started
+  for 6 s on Windows (preset 4 loaded, no traceback). Not yet tried with a race: the user's case in a race
+  could not be read, the log having been replaced since.
 - 2026-11-19: The preset in use, in move mode's panel (`feature/current-preset-shown`, asked for by the user):
   a line above the panel's buttons, bold in the presets' electric blue (`STATUS_COLOUR`), says "Preset: 3 Race", "Preset: 3 Race (changed)" or "Preset: none".
   `settings.current_preset` finds the preset whose every section is where the layout has it now, as loading
