@@ -4,6 +4,13 @@ Every finished change, newest first: what changed, why, how it was checked and w
 Each branch adds its dated entry at the top. Where things stand now: `RESUME.md`; what is open:
 `docs/BACKLOG.md`.
 
+- 2026-11-19: A preset for spectating (`feature/watching-presets`, backlog item 8's fourth part, asked for by the
+  user: one layout to watch a replay, another to spectate): Layouts > Load by itself has a **Spectating** row
+  after Recording (`EVENT_MODES`). `event_mode` now says 'spectating' for an online event the player only
+  watches, of any kind (before, it counted as a race, a hotlapping or a special event and loaded that preset);
+  joining it as a driver then loads the preset for its kind. Off at first, as the others: a player who had a
+  Race preset and spectates now keeps the layout there until they pick one. Tests: the modes, joining as a
+  driver, the row and its buttons, the choice saved and read back. Not yet tried by hand.
 - 2026-11-19: No "New Race Leader" for one's own car (`fix/no-leader-banner-for-self`, asked for by the user):
   while driving, the race leader banner no longer tells the player they took the lead; another driver taking
   it still shows, as does "Race Winner" for the player's own win. In a replay the camera's driver is named as

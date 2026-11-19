@@ -414,6 +414,9 @@ mode ends):
 - **Load by itself**: "As an event begins, the preset chosen for its mode". For each kind of
   event, pick a preset (**1** to **5**) or **Off** (all are Off at first):
   - **Recording**: a recording (replay) TSU plays.
+  - **Spectating**: an online event you only watch, with no car of your own (of any kind: a
+    race, hotlapping or an arena event). Joining it as a driver then loads the preset for its
+    kind.
   - **Hotlapping**: a hotlapping event, which is how qualifying is run.
   - **Race**: laps of a circuit, or a race from A to B.
   - **Special event**: an arena event: Battle (deathmatch and team deathmatch), Sumo, King of

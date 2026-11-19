@@ -390,6 +390,11 @@ class PresetTests(unittest.TestCase):
         loaded = s.load_settings(path)
         self.assertEqual((loaded.preset_names, loaded.auto_presets), ({}, {}))
 
+    def test_a_spectating_preset_is_kept_beside_the_recordings(self):
+        path = self.path()
+        path.write_text(json.dumps({'auto_presets': {'recording': 1, 'spectating': 5}}))
+        self.assertEqual(s.load_settings(path).auto_presets, {'recording': 1, 'spectating': 5})
+
     def test_a_preset_is_named_by_its_number_and_name(self):
         self.assertEqual(s.preset_label(3, {3: 'Race'}), '3 Race')
         self.assertEqual(s.preset_label(2, {3: 'Race'}), '2')

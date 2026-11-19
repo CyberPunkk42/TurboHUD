@@ -40,6 +40,7 @@ STATUS_COLOUR = '#1fd5ff'
 # What each mode covers, for its tooltip.
 MODE_TIPS = {
     'recording': 'A recording (replay) TSU plays',
+    'spectating': 'An online race you only watch, with no car of your own',
     'hotlapping': 'A hotlapping event, as qualifying is run',
     'race': 'A race: laps of a circuit, or from A to B',
     'special': 'An arena event: Battle (deathmatch), Sumo, King of the Hill, Tag, Soccer and the others',

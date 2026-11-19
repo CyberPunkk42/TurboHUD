@@ -163,7 +163,7 @@ The full guide to every section, menu item, button and option is
   Hyprland `TurboHUD --toggle`) switches to **move mode**: drag, nudge and size the sections, and use
   the panel to show or hide them, group and centre them and set text sizes. Its **Layouts…**
   window keeps five named presets (**Ctrl+Shift+1** to **5** load them), loads one by itself as a
-  recording, hotlapping, race or special event begins, and loads, shares or designs layouts per
+  recording, spectating, hotlapping, race or special event begins, and loads, shares or designs layouts per
   screen size.
   **Lock** or Ctrl+Shift+L again ends it, and so does a race beginning.
 - **Settings…** sets the colours, the font (your own `.ttf` or `.otf` files in
