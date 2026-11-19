@@ -117,8 +117,8 @@ Only while watching (a recording, or spectating live), never while driving; insi
 Built: (1) the battle warning (`turbohud/core/battle.py`), to see in a replay and spectating and tune
 (`BATTLE_*`); (2) the watched driver's banner in a replay (`turbohud/core/watched.py`), to see; (3) the
 banner while spectating, from the camera TSU's cockpit view is read from (`spectated_driver`): not yet seen
-live, the log says whether it reads. Next: a "Watching" kind of event for the presets (a replay is
-'recording' already; spectating counts as a race).
+live, the log says whether it reads; (4) a Spectating kind of event for the presets (Layouts > Load by
+itself), to see. What is left: nothing planned; tune the parts from what the user sees.
 
 ## Nice to have (ideas, not planned)
 Ideas talked over and left for later; none is being worked on. Take one up only when the user asks.

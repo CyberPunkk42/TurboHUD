@@ -1862,7 +1862,9 @@ class EventModeTests(unittest.TestCase):
             ({'replay': True, 'hotlapping': True}, 'recording'),  # a qualifying's recording
             ({'hotlapping': True}, 'hotlapping'),
             ({'on_a_track': False}, 'special'),  # Sumo, King of the Hill, Battle, Tag ...
-            ({'spectating': True}, 'race'),
+            ({'spectating': True}, 'spectating'),
+            ({'spectating': True, 'hotlapping': True}, 'spectating'),  # watching a qualifying
+            ({'spectating': True, 'on_a_track': False}, 'spectating'),  # watching an arena event
         ):
             with self.subTest(**state):
                 self.assertEqual(race.event_mode(self.snapshot(**state).state), mode)
@@ -1888,6 +1890,11 @@ class EventModeTests(unittest.TestCase):
         self.assertEqual(modes.began(self.snapshot(moved_at=3.0), 3.0), 'race')
         # An arena's mode read a moment later than the race began: told when known.
         self.assertEqual(modes.began(self.snapshot(on_a_track=False, moved_at=4.0), 4.0), 'special')
+
+    def test_joining_a_spectated_race_as_a_driver_is_told(self):
+        modes = race.EventModes()
+        self.assertEqual(modes.began(self.snapshot(spectating=True, moved_at=1.0), 1.0), 'spectating')
+        self.assertEqual(modes.began(self.snapshot(moved_at=2.0), 2.0), 'race')
 
     def test_not_while_the_clock_stands(self):
         modes = race.EventModes()

@@ -2443,11 +2443,14 @@ class RaceStarts:
 
 def event_mode(state):
     """The kind of event `state` (a LapState) is, as the presets by mode know it
-    (settings.EVENT_MODES): 'recording' for a replay, 'hotlapping' (how qualifying is run),
-    'special' for an arena mode (Battle, Sumo, King of the Hill, Tag, Soccer and the others,
-    which are no TS.RaceEventMode), else 'race' (a circuit, or A to B)."""
+    (settings.EVENT_MODES): 'recording' for a replay, 'spectating' for an online event the player
+    only watches (of any kind), 'hotlapping' (how qualifying is run), 'special' for an arena mode
+    (Battle, Sumo, King of the Hill, Tag, Soccer and the others, which are no TS.RaceEventMode),
+    else 'race' (a circuit, or A to B)."""
     if state.replay:
         return 'recording'
+    if state.spectating:
+        return 'spectating'
     if state.hotlapping:
         return 'hotlapping'
     if not state.on_a_track:

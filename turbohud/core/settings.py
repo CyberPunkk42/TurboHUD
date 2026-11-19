@@ -50,9 +50,11 @@ GROUPS = ('A', 'B', 'C', 'D', 'E', 'F', 'G')  # section groups (E to G since 202
 PRESETS = (1, 2, 3, 4, 5)  # the layouts a player can keep (5 since 2026-11-15, asked for by players)
 PRESET_NAME_MOST = 24  # letters in a preset's name, such as "Race" or "Recordings"
 # The kinds of event a preset can load for by itself as one begins (asked for by players on
-# 2026-11-15): (key, what the settings call it). turbohud.core.race.event_mode tells them apart.
+# 2026-11-15; Spectating since 2026-11-19, asked for by the user: a layout to watch a race online
+# apart from a replay's): (key, what the settings call it). turbohud.core.race.event_mode tells them apart.
 EVENT_MODES = (
     ('recording', 'Recording'),
+    ('spectating', 'Spectating'),
     ('hotlapping', 'Hotlapping'),
     ('race', 'Race'),
     ('special', 'Special event'),

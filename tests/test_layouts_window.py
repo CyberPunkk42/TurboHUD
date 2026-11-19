@@ -158,6 +158,17 @@ class LayoutsWindowTests(unittest.TestCase):
         self.assertTrue(window.auto_buttons['race'][2].isChecked())
         self.assertEqual(len(got), 2)
 
+    def test_spectating_has_its_own_row_after_recording(self):
+        window = self.window(auto={'recording': 1, 'spectating': 5})
+        self.assertEqual(list(window.auto_buttons)[:2], ['recording', 'spectating'])
+        self.assertTrue(window.auto_buttons['recording'][1].isChecked())
+        self.assertTrue(window.auto_buttons['spectating'][5].isChecked())
+        got = []
+        window.auto_preset_changed.connect(lambda mode, number: got.append((mode, number)))
+        window.auto_buttons['spectating'][3].click()
+        self.assertEqual(got, [('spectating', 3)])
+        self.assertTrue(window.auto_buttons['recording'][1].isChecked())  # the replay's stays
+
     def test_every_word_button_is_wide_enough_for_its_word(self):
         # As in the panel (reported by the user on 2026-11-11: macOS cut "Delete" short).
         from PySide6.QtWidgets import QPushButton
