@@ -2614,6 +2614,7 @@ def race_sections(
             state.compounds,
             is_wet(state.track),
             retired,
+            watching=state.replay,
         )
         rows = shortcut_rows(state, cuts or {}, jumped)
         if rows:
@@ -2698,6 +2699,7 @@ def _watching_sections(
             compounds=state.compounds,
             wet=is_wet(state.track),
             retired=retired,
+            watching=True,
         )
         sections.update(leader_banner(state, order, clock_now(snapshot, now), lead_changes))
         sections.update(battle_banner(state, order, clock_now(snapshot, now), battles, retired))
@@ -3908,6 +3910,7 @@ def lap_times_rows(
     compounds=None,
     wet=False,
     retired=frozenset(),
+    watching=False,
 ):
     """The lap times list: a heading, then each driver in race order with flag and name,
     their best lap and their last lap (asked for by the user on 2026-11-12; before, the running one) at
@@ -3928,7 +3931,10 @@ def lap_times_rows(
 
     `columns`: those of LAP_COLUMNS shown (asked for by the user on 2026-11-12): the flag, the
     lap number, the tire compound (compound_mark, of an event with `compounds`), the best lap
-    and the last lap (or CUT, PIT); without the best lap, the last lap takes its place."""
+    and the last lap (or CUT, PIT); without the best lap, the last lap takes its place.
+    `watching` (a replay, or spectating) with the Best column off: the driver holding the fastest
+    lap (of their class) has their name in its purple, so who has it still shows (asked for by
+    the user on 2026-11-20)."""
     order = list(ranked(players) if order is None else order)
     classes = car_classes(order, class_tags)
     places = None
@@ -3992,21 +3998,19 @@ def lap_times_rows(
             cut_text = 'JUMP'  # TSU's false-start penalty (see ShortcutPenalties.jump_starts)
         elif player.name in retired:
             cut_text = DNF_TEXT  # out of the race (Retirements), in the Last lap's place
+        holds_fastest = best is not None and best == fastest.get(group)
+        name_color = 'accent' if player.local else 'text'
+        if watching and holds_fastest and 'best' not in columns:  # in the pits too: still theirs
+            name_color = SESSION_BEST_COLOR
         rows.append(
             Row(
                 numbered(position, name, max_place),
                 'small',
-                'accent' if player.local else 'text',
+                name_color,
                 before=f'L{player_lap_number(player)}',
                 flag=flag_code(player.flag) or flag_text(player.flag),
                 middle=_pit_time(player) if timed else format_time(best),
-                middle_color=(
-                    'lift'
-                    if timed
-                    else SESSION_BEST_COLOR
-                    if best is not None and best == fastest.get(group)
-                    else 'text'
-                ),
+                middle_color='lift' if timed else SESSION_BEST_COLOR if holds_fastest else 'text',
                 right=cut_text if cut_text else 'PIT' if plain_pit else bracket or time_now,
                 right_color=SHORTCUT_COLOR if cut_text else 'lift' if plain_pit or bracket else 'text',
                 rule=rule,

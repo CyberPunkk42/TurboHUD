@@ -4,6 +4,12 @@ Every finished change, newest first: what changed, why, how it was checked and w
 Each branch adds its dated entry at the top. Where things stand now: `RESUME.md`; what is open:
 `docs/BACKLOG.md`.
 
+- 2026-11-20: The fastest lap's holder in purple without the Best column (`feature/fastest-lap-name`, asked for by
+  the user): while watching (a replay, or spectating) with the Standings' Best column off, the driver holding the
+  race's fastest lap (of their class, in a race with classes) has their name in its purple (`SESSION_BEST_COLOR`),
+  over the accent of the driver the replay follows, and in the pits too. Not while driving, nor with Best shown,
+  where the lap time is purple already. `lap_times_rows` takes `watching`. Tests: the name purple while watching
+  without Best, not while driving nor with Best, in the pits. Not yet seen in a replay.
 - 2026-11-20: A preset kept without Standings columns loads every column (`fix/old-preset-all-columns`,
   reported by the user: their preset 2, saved before presets kept columns, showed preset 3's columns after 3 and
   all of them after 1, as it left the columns as they were). `preset_places` now gives such a preset's Standings
