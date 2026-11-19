@@ -481,6 +481,61 @@ class StartPresetTests(unittest.TestCase):
         self.assertIsNone(s.start_preset(self.settings({'race': 4}, (1,))))
 
 
+class StandingsColumnsTests(unittest.TestCase):
+    """The Standings' columns kept with its place, so each preset has its own (2026-11-20)."""
+
+    def setUp(self):
+        self.folder = tempfile.TemporaryDirectory()
+        self.addCleanup(self.folder.cleanup)
+        self.path = Path(self.folder.name) / 'settings.json'
+
+    def test_a_preset_keeps_its_columns(self):
+        standings = s.SectionPlace(10, 20, 400, 300, columns=('flag', 'gap'))
+        none_off = s.SectionPlace(10, 20, 400, 300, columns=())
+        settings = s.Settings(
+            sections={'laptimes': standings},
+            presets={1: {'laptimes': standings}, 2: {'laptimes': none_off}},
+        )
+        s.save_settings(self.path, settings)
+        loaded = s.load_settings(self.path)
+        self.assertEqual(loaded.presets[1]['laptimes'].columns, ('flag', 'gap'))
+        self.assertEqual(loaded.presets[2]['laptimes'].columns, ())  # every column off
+        self.assertEqual(loaded.sections['laptimes'].columns, ('flag', 'gap'))
+
+    def test_an_older_preset_has_none_and_unknown_columns_are_left_out(self):
+        self.path.write_text(
+            json.dumps(
+                {
+                    'presets': {
+                        '1': {'laptimes': {'x': 1, 'y': 2, 'width': 300, 'height': 200}},
+                        '2': {
+                            'laptimes': {
+                                'x': 1,
+                                'y': 2,
+                                'width': 300,
+                                'height': 200,
+                                'columns': ['gap', 'x', 'flag'],
+                            }
+                        },
+                    }
+                }
+            )
+        )
+        loaded = s.load_settings(self.path)
+        self.assertIsNone(loaded.presets[1]['laptimes'].columns)
+        self.assertEqual(loaded.presets[2]['laptimes'].columns, ('flag', 'gap'))  # in LAP_COLUMNS' order
+
+    def test_the_preset_in_use_counts_its_columns(self):
+        screens = ((0, 0, 1920, 1080),)
+        now = {'laptimes': s.SectionPlace(10, 20, 400, 300, columns=('flag', 'gap'))}
+        same = {'laptimes': s.SectionPlace(10, 20, 400, 300, columns=('flag', 'gap'))}
+        other = {'laptimes': s.SectionPlace(10, 20, 400, 300, columns=('flag',))}
+        older = {'laptimes': s.SectionPlace(10, 20, 400, 300)}
+        self.assertEqual(s.current_preset(now, {1: same}, screens), (1, False))
+        self.assertIsNone(s.current_preset(now, {1: other}, screens))
+        self.assertEqual(s.current_preset(now, {1: older}, screens), (1, False))  # kept without columns
+
+
 if __name__ == '__main__':
     unittest.main()
 

@@ -44,6 +44,17 @@ class FileTests(unittest.TestCase):
         self.assertEqual(read['lap'].font, 17)
         self.assertEqual((read['radar'].x, read['radar'].width), (900, 240))
 
+    def test_a_preset_file_keeps_the_standings_columns(self):
+        places = {
+            'laptimes': place(10, 20, 400, 300, columns=('lap', 'best')),
+            'lap': place(10, 400, 300, 40),
+        }
+        path = Path(tempfile.mkdtemp()) / 'mine.json'
+        presets.save_file(path, places, (1920, 1080), 17)
+        _size, read = presets.load_file(path)
+        self.assertEqual(read['laptimes'].columns, ('lap', 'best'))
+        self.assertIsNone(read['lap'].columns)
+
     def test_what_is_not_a_preset_is_refused(self):
         self.assertIsNone(presets.read_preset({'format': 99, 'screen': [1920, 1080], 'sections': {}}))
         self.assertIsNone(presets.read_preset({'format': 1, 'screen': [0, 1080], 'sections': {'lap': {}}}))

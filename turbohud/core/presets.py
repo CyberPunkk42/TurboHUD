@@ -53,6 +53,7 @@ def preset_data(places, size, font_size):
                 'tint': place.tint,
                 'font': place.font if place.font is not None else font_size,
                 'spacing': place.spacing,
+                **({'columns': list(place.columns)} if place.columns is not None else {}),
             }
             for name, place in places.items()
         },
