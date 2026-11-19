@@ -416,7 +416,7 @@ mode ends):
   each section sits, its size, whether it shows and its group, and which **Standings** columns
   show (Settings > Standings > Columns), so each preset can have its own standings; other colours
   and options stay as they are. A preset saved before 2026-11-20 keeps no columns: loading it
-  leaves them as they are, until you save it again.
+  shows every column, until you save it again with the ones you want.
 - **Load by itself**: "As an event begins, the preset chosen for its mode". For each kind of
   event, pick a preset (**1** to **5**) or **Off** (all are Off at first):
   - **Recording**: a recording (replay) TSU plays.

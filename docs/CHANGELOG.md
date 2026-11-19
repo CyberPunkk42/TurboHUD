@@ -4,6 +4,14 @@ Every finished change, newest first: what changed, why, how it was checked and w
 Each branch adds its dated entry at the top. Where things stand now: `RESUME.md`; what is open:
 `docs/BACKLOG.md`.
 
+- 2026-11-20: A preset kept without Standings columns loads every column (`fix/old-preset-all-columns`,
+  reported by the user: their preset 2, saved before presets kept columns, showed preset 3's columns after 3 and
+  all of them after 1, as it left the columns as they were). `preset_places` now gives such a preset's Standings
+  every column, TurboHUD's default (the user's choice of the ways offered), so a preset never takes another's;
+  layout files and the shipped screen defaults still leave the columns as they are. Such a preset counts as in
+  use only with every column shown. Tests: every column for one kept without, its own for one kept with, only
+  the Standings; checked on a copy of the user's settings. The user had meanwhile saved preset 2 with preset 3's
+  columns showing: it keeps those until saved again.
 - 2026-11-20: The Standings' columns in each preset (`feature/columns-per-preset`, reported by the user: the
   columns ticked in Settings > Standings were not saved with a preset, so every preset had the same standings).
   The columns shown are now kept with the Standings' place (`SectionPlace.columns`, `columns` in the settings
