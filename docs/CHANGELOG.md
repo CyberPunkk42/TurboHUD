@@ -4,6 +4,11 @@ Every finished change, newest first: what changed, why, how it was checked and w
 Each branch adds its dated entry at the top. Where things stand now: `RESUME.md`; what is open:
 `docs/BACKLOG.md`.
 
+- 2026-11-21: The layouts window says which preset is in use (`feature/layouts-current-preset`, asked for by the
+  user: as move mode's panel does). The panel's line (`Preset: 3 Race`, `(changed)`, `Preset: none`) under the
+  Presets heading too, in the same electric blue, bold, with the same tooltip: `MovePanel.set_current_preset`
+  passes it on to `LayoutsWindow.set_current_preset`. USER_GUIDE says so. Test: the same text, style and tooltip
+  as the panel's. Not yet seen in the app.
 - 2026-11-21: Colour-blind and TSU Legacy colours, and the settings window in tabs (`feature/colour-options`,
   asked for by the user). Colour-blind friendly colours (the user's name for them): Off, All sections or Chosen sections (a tick for each), never
   the blue and yellow flags (`hud.colour_blind_for`). Each section draws in its colour map (`hud.COLOUR_BLIND`,

@@ -2389,8 +2389,9 @@ class MovePanel(QWidget):
             self.layouts.show_at(*beside(size, anchor, screen))
 
     def set_current_preset(self, text):
-        """Show which preset is in use (settings.preset_shown)."""
+        """Show which preset is in use (settings.preset_shown), here and in the layouts window."""
         self.current_preset.setText(text)
+        self.layouts.set_current_preset(text)
 
     def set_undo_available(self, available):
         self.undo.setEnabled(available)

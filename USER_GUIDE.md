@@ -443,6 +443,8 @@ not end it. Your layout is saved as you change it.
 
 **The layouts window** (**Layouts** in the panel; it closes with **Close**, and when move
 mode ends):
+- Under the **Presets** heading, the same electric blue line as in the panel says which preset is in use:
+  **Preset: 3 Race**, with **(changed)** after it, or **Preset: none** (see above).
 - **Presets** (1 to 5): each has a **Name** box: call it what it is for, such as Race,
   Hotlapping, Practice or Recordings (up to 24 letters). **Enter** (or clicking elsewhere) keeps
   the name. **Save** keeps the layout as it is now in that preset (replacing what was there),
