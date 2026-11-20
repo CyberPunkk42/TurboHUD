@@ -3,7 +3,7 @@
 Kept short: the state now and what to do next. Every change, with how it was checked, is in
 `docs/CHANGELOG.md`; open work in `docs/BACKLOG.md`; how it works in `docs/HOW_IT_WORKS.md`.
 
-## Current state (2026-11-19)
+## Current state (2026-11-20)
 - **The app** (`turbohud/`, Python with Qt): a see-through, click-through HUD over TSU with a locked
   mode and a move mode (Ctrl+Shift+L, or Ctrl+Shift+F12; quit Ctrl+Shift+Q), a tray icon, and a
   settings window. Start from the source with `run_turbohud.sh` / `run_turbohud.cmd`.
@@ -20,7 +20,7 @@ Kept short: the state now and what to do next. Every change, with how it was che
   watched driver (while watching), radar, track map, clock.
 - **Layout**: tight boxes, groups that move and size together, Centre, Undo and Redo, text sizes per
   section, a grid, five named presets (Ctrl+Shift+1 to 5) and a preset per kind of event, shipped
-  layouts per screen size and five starting presets, Export and Import, the design screen, one's own fonts.
+  layouts per screen size and five starting presets (all the user's own designs), Export and Import, the design screen, one's own fonts.
 - **Builds**: `tools/build_app.py` (PyInstaller) on each system: a Windows ZIP and a Mac disk image with
   the Rust reader, and a Linux `.tar.gz` built in Ubuntu 22.04 (`sh tools/build_linux.sh <version>`).
   The repository is kept in step with a private GitHub repository.
@@ -44,8 +44,7 @@ Kept short: the state now and what to do next. Every change, with how it was che
    `not read (...)` or stays on one player, send the log: TSU's spectator camera is then somewhere else.
 6. **The watched driver's banner** (`feature/watched-driver-banner`, the Race Director mode's second part): in a
    replay, switch between drivers. "Watching / P<n> name" should come 1 s after the camera stops on a driver,
-   take the place of one showing at once, and name nobody while you flick through. It starts in the middle
-   below the radar: is that a good place, and is it too much with the battle warning? The log says `replay:
+   take the place of one showing at once, and name nobody while you flick through. Is it too much with the battle warning? The log says `replay:
    the camera follows player N` at each switch.
 7. **A replay found sooner** (`fix/replay-found-sooner`): on the Mac, open a replay with TurboHUD running; the
    log's `search: replay found, after N s` should say about 5 s, not 12 to 15, and the HUD come sooner. The

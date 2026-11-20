@@ -69,7 +69,7 @@ Fedora 36, SteamOS 3.5, Arch or newer) and TSU's native Linux version. The downl
 2. Start it: double-click `TurboHUD` in the unpacked `TurboHUD` folder, or in a terminal
    `./TurboHUD/TurboHUD`.
 3. On Hyprland (for example Omarchy) the shortcuts are the same as on Windows: while it
-   runs, TurboHUD adds Ctrl+Shift+L, Q, 1, 2 and 3 to Hyprland's keys, only where nothing
+   runs, TurboHUD adds Ctrl+Shift+L, Q and 1 to 5 to Hyprland's keys, only where nothing
    else has them (Ctrl+Shift+F12 for move mode where Ctrl+Shift+L is taken), and takes them
    away at quit. No Hyprland file is changed; after a reload of Hyprland's settings they
    come back within a moment. Other desktops have no shortcuts in TurboHUD (Ctrl+Shift+L
@@ -170,7 +170,7 @@ The full guide to every section, menu item, button and option is
   `customization/fonts`), the size of all sections, the standings' columns, the
   warning times, the race reads a second and the on/off options (also under **Options** in
   the icon's menu).
-- **Ctrl+Shift+Q** quits; on Windows **Ctrl+Shift+F12** is a spare for Ctrl+Shift+L.
+- **Ctrl+Shift+Q** quits; on Windows and Hyprland **Ctrl+Shift+F12** is a spare for Ctrl+Shift+L.
 
 Where each section sits, its size, whether it shows, and the look are saved in
 `settings.json`, with a log of the last run in
@@ -193,8 +193,8 @@ the first run, which takes a minute; later starts are quick.
 The terminal shows TurboHUD's log while it runs; Ctrl+C there quits it.
 
 Tests, once the start script has set up `.buildtools/venv`: on macOS and Linux
-`.buildtools/venv/bin/python -B -m unittest discover -s tests` (Windows: `py -3 -B -m unittest
-discover -s tests`). Builds: `python tools/build_app.py --smoke` with the packages in
+`.buildtools/venv/bin/python -B -m unittest discover -s tests` (Windows:
+`.buildtools\venv\Scripts\python.exe -B -m unittest discover -s tests`). Builds: `python tools/build_app.py --smoke` with the packages in
 `requirements-build.txt`, run on each system you want a build for; the Rust reader for
 Windows and the Mac first with `sh tools/get_rust.sh`. The Linux build is made in an Ubuntu
 22.04 container with `sh tools/build_linux.sh <version>`, so it starts on glibc 2.35 and newer.
