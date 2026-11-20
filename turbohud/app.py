@@ -490,6 +490,7 @@ def run(args, folder):
         FrameTimes,
         GroupMover,
         LayoutHistory,
+        back_in_frame,
         below,
         beside,
         centred,
@@ -497,6 +498,7 @@ def run(args, folder):
         first_launch,
         grid_screen,
         has_tint,
+        inside,
         local_time_rows,
         main_screen,
         nudge,
@@ -1369,10 +1371,11 @@ def run(args, folder):
 
     @undoable
     def align(name, across, down):
-        """Centre a section on the screen that holds it (the panel's Centre buttons)."""
+        """Centre a section on the screen that holds it (the panel's Centre buttons); on the
+        design screen, in its frame."""
         window = windows[name]
         place = tuple(window.placement())
-        screen = screen_of(place, screens)
+        screen = design[1] if design is not None else screen_of(place, screens)
         if screen is None:
             return
         target = centred(place, screen, across, down)
@@ -1953,6 +1956,7 @@ def run(args, folder):
         design = None
         if design_frame_window is not None:
             design_frame_window.hide()
+        frame_seen.clear()
         for window in windows.values():
             window.design = None  # its place label on this screen again
         sections, _kept, font_size = own
@@ -1971,6 +1975,32 @@ def run(args, folder):
                 window.update()
         selected = name
 
+    frame_seen = {}  # section name -> its box at the last look, on the design screen
+
+    def keep_in_frame():
+        """The design screen: a section (or a whole group) dragged or sized out of the frame goes
+        back in once it stands still, so a drag is never fought (asked for by the user on
+        2026-11-20: sections stay in the design frame; the panel and TurboHUD's other windows
+        may go anywhere)."""
+        now = time.monotonic()
+        boxes = {name: tuple(window.placement()) for name, window in windows.items()}
+        still = {name: frame_seen.get(name) == box for name, box in boxes.items()}
+        frame_seen.update(boxes)
+
+        def movable(name):  # not while dragged or sized, nor right after TurboHUD moved it
+            pending = mover.pending.get(name)
+            return still[name] and (pending is None or now >= pending[1])
+
+        groups = {name: window.group for name, window in windows.items()}
+        moves = back_in_frame(boxes, groups, design[1], movable)
+        for name, target in moves.items():
+            move_window(windows[name], target, settle=True)
+            mover.known[name] = target  # TurboHUD moved it: the group is not dragged along twice
+            mover.pending[name] = (target, now + 1.0)
+            frame_seen[name] = target
+        if moves:
+            log.info('design screen: back in the frame: %s', ', '.join(sorted(moves)))
+
     def nudge_selected(dx, dy):
         """Move the section clicked last by (dx, dy): as a drag, so its group follows and a run
         of nudges is one step for Undo (asked for by the user on 2026-11-13)."""
@@ -1978,7 +2008,10 @@ def run(args, folder):
         if window is None:
             return
         x, y, width, height = window.placement()
-        move_window(window, (x + dx, y + dy, width, height), settle=True)
+        target = (x + dx, y + dy, width, height)
+        if design is not None:
+            target = inside(target, design[1])  # never out of the design frame
+        move_window(window, target, settle=True)
 
     arrows = {Qt.Key_Left: 'left', Qt.Key_Right: 'right', Qt.Key_Up: 'up', Qt.Key_Down: 'down'}
 
@@ -2337,6 +2370,8 @@ def run(args, folder):
             last_seen = time.monotonic()
             if any(w.group for w in windows.values()):
                 follow_groups(last_seen)
+            if design is not None:
+                keep_in_frame()
             state = layout_state()
             show_moved_places(state[0])
             keep_text_boxes({n: (p.x, p.y, p.width, p.height) for n, p in state[0].items()}, last_seen)

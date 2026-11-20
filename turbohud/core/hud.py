@@ -1738,6 +1738,41 @@ def place_text(place, screens, design=None):
     return f'X {x - left}  Y {y - top}  {width}×{height}'
 
 
+def inside(place, frame):
+    """`place` (x, y, width, height) moved the least to lie wholly in `frame` (x, y, width,
+    height): the design screen's frame keeps its sections in it (asked for by the user on
+    2026-11-20). One larger than the frame gets its top left corner there; its size stays."""
+    x, y, width, height = place
+    fx, fy, fw, fh = frame
+    x = max(min(x, fx + fw - width), fx)
+    y = max(min(y, fy + fh - height), fy)
+    return (x, y, width, height)
+
+
+def back_in_frame(boxes, groups, frame, movable=None):
+    """{name: box} for the sections of `boxes` {name: (x, y, width, height)} to move so that each
+    lies in `frame`: a group (`groups` {name: group letter, '' for none}) as one, by the same
+    amount, so it keeps its shape; a section on its own alone. `movable(name)` False (being
+    dragged, or just moved by TurboHUD) leaves its whole group as it is."""
+    units = {}
+    for name in boxes:
+        units.setdefault(groups.get(name) or f' {name}', []).append(name)
+    moves = {}
+    for names in units.values():
+        if movable is not None and not all(movable(name) for name in names):
+            continue
+        left = min(boxes[n][0] for n in names)
+        top = min(boxes[n][1] for n in names)
+        right = max(boxes[n][0] + boxes[n][2] for n in names)
+        bottom = max(boxes[n][1] + boxes[n][3] for n in names)
+        x, y, _w, _h = inside((left, top, right - left, bottom - top), frame)
+        if x != left or y != top:
+            for name in names:
+                bx, by, bw, bh = boxes[name]
+                moves[name] = (bx + x - left, by + y - top, bw, bh)
+    return moves
+
+
 def centred(place, screen, horizontal=False, vertical=False):
     """`place` (x, y, width, height) centred on `screen` across (horizontal), down
     (vertical) or both; its size stays."""
