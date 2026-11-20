@@ -111,17 +111,15 @@ class FileTests(unittest.TestCase):
         self.assertEqual((on_it['lap'].x, on_it['lap'].y), (10, 120))
         self.assertEqual(presets.absolute(on_it, screen), places)
 
-    def test_nearby_cars_reads_as_well_as_the_standings(self):
-        # A player found Nearby cars' text too small (2026-11-15): 8 px at 1920x1080, Standings 10.
-        # Every layout fitted from the user's (5120x1440, where they have it smaller as they like it).
+    def test_nearby_cars_never_too_small(self):
+        # A player found Nearby cars' text too small at 8 px (2026-11-15). The user's designs (2026-11-20)
+        # have it a little smaller than the Standings', never below 10 px; the fitted ones as large.
         for size in presets.SCREENS:
-            if size == (5120, 1440):
-                continue
             with self.subTest(size=size):
                 sections = json.loads((FOLDER / presets.file_name(size)).read_text(encoding='utf-8'))[
                     'sections'
                 ]
-                self.assertGreaterEqual(sections['players']['font'], sections['laptimes']['font'])
+                self.assertGreaterEqual(sections['players']['font'], 10)
 
     def test_nearby_cars_is_made_for_its_short_list(self):
         # On by default since 2026-11-15: the shipped boxes as tall as its 4 rows (as Qt measures them,
