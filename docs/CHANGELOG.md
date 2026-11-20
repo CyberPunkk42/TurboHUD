@@ -4,6 +4,9 @@ Every finished change, newest first: what changed, why, how it was checked and w
 Each branch adds its dated entry at the top. Where things stand now: `RESUME.md`; what is open:
 `docs/BACKLOG.md`.
 
+- 2026-11-20: How to build TurboHUD, by example (`docs/building`, asked for by the user): a section in
+  `docs/HOW_IT_WORKS.md` with the steps and commands for Windows, macOS and Linux, from `tools/build_app.py`,
+  `get_rust.sh`, `get_mac_python.sh` and `build_linux.sh` (the Mac pinned-Python route marked not yet tried).
 - 2026-11-20: TSU's sun understood (`chore/log-sun`): in a session of 4 races the user reported where the sun
   and shadows were at known headings, against the log's `sun:` lines. TSU's sun rises opposite
   `LocationProperties.sunDirection`, passes nearly overhead around midday and sets at it, so `sunDirection` is west

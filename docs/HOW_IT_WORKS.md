@@ -439,6 +439,39 @@ Without paid code signing, each system warns once on first start:
   Security > Open Anyway**. An Apple Developer account (paid yearly) removes this.
 - Linux: no warning.
 
+## Building TurboHUD, by example
+
+Each system builds its own app, from `main`, in the repository folder; everything the tools fetch stays in
+`.buildtools/` (gitignored). The version is `dev` or the release date, `YYYY.MM.DD`, with `.2` for a second
+build that day. `--smoke` starts the built app for a few seconds and fails if it does not quit cleanly (close
+TurboHUD first). Each archive lands in `releases/` with a `.sha256` file beside it. The checks first: the tests
+and Ruff (RESUME.md, "Working notes").
+
+**Windows** (Git Bash for the `.sh` scripts; PowerShell or a command prompt for the rest):
+1. The Rust reader, once and after a change in `reader/`: `sh tools/get_rust.sh` (fetches pinned Rust and
+   llvm-mingw into `.buildtools`, builds `.buildtools/reader/turbohud-reader.exe`). Without it the app reads TSU
+   in Python, slower, and the build warns.
+2. The build environment, once: `py -3 -m venv .buildtools\win-build-venv`, then
+   `.buildtools\win-build-venv\Scripts\python.exe -m pip install -r requirements-build.txt` (PySide6,
+   PyInstaller, Pillow, pinned).
+3. Build: `.buildtools\win-build-venv\Scripts\python.exe toolsuild_app.py --version 2026.11.20 --smoke`
+   gives `releases\TurboHUD-2026.11.20-windows-x64.zip` (`TurboHUD\TurboHUD.exe`, the reader, the guides).
+
+**macOS** (Apple silicon, Terminal):
+1. A Python for the build, once: `sh tools/get_mac_python.sh` (a pinned python-build-standalone 3.13 into
+   `.buildtools/mac-build-venv`, with requirements-build.txt), so the app starts on older macOS too. Not yet tried
+   (backlog item 4); with Homebrew's Python the build stops, as the app would need this Mac's macOS, unless
+   `--any-macos` is given.
+2. Build: `.buildtools/mac-build-venv/bin/python tools/build_app.py --version 2026.11.20 --smoke`. It runs
+   `tools/get_rust.sh` itself for the reader, checks the oldest macOS the app starts on, and gives
+   `releases/TurboHUD-2026.11.20-macos-arm64.dmg` (the app, a link to Applications, `Read Me First.txt`).
+
+**Linux** (any distro with Podman, or Docker):
+1. Build: `sh tools/build_linux.sh 2026.11.20` (Docker without its group: `sudo sh tools/build_linux.sh ...`).
+   It builds in an Ubuntu 22.04 container from the committed files only (`git archive HEAD`: commit first), runs
+   `build_app.py --smoke` there and gives `releases/TurboHUD-2026.11.20-linux-x64.tar.gz`, which starts on glibc
+   2.35 and newer. Nothing is installed on the PC; the container image is kept for the next build.
+
 ## The code
 
 ```
