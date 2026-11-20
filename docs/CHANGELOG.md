@@ -4,6 +4,9 @@ Every finished change, newest first: what changed, why, how it was checked and w
 Each branch adds its dated entry at the top. Where things stand now: `RESUME.md`; what is open:
 `docs/BACKLOG.md`.
 
+- 2026-11-20: RESUME.md's list shortened (`docs/resume-shorter`, asked for by the user): 22 items to 8 short ones,
+  what to try next on Linux; the checks on the Mac and Windows and the rare cases not yet seen went to backlog item
+  14, each one's details staying in its changelog entry.
 - 2026-11-20: The documents checked against today's changes (`docs/up-to-date`, asked for by the user). README.md:
   a preset loaded by hand kept for the session, and the log's memory lines; USER_GUIDE.md: the memory lines and
   TURBOHUD_TRACE_MEMORY=1 where it says how to report a problem; HOW_IT_WORKS: `memory.py` in the code map.
