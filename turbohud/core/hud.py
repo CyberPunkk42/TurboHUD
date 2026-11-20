@@ -38,6 +38,7 @@ class Line:
         ''  # a column lined up on the right just after the text (the overall place in the lap times)
     )
     lead: str = ''  # a column lined up on the right just before `middle` (the gap to the leader)
+    level: tuple = ()  # (0 to 1, colour): a level bar right under it (Row.level)
 
 
 @dataclass(frozen=True)
@@ -67,6 +68,8 @@ class Row:
         ''  # a column lined up on the right just after the text (the overall place in the lap times)
     )
     lead: str = ''  # a column lined up on the right just before `middle` (the gap to the leader)
+    # (0 to 1, colour): a level bar right under this row, the next row below it (Car status, one bar a row).
+    level: tuple = ()
 
 
 FLAG_WIDTH = 1.5  # a flag's room before the text, in font sizes
@@ -87,6 +90,7 @@ class Sizes:
     small: int
     gap: int  # between content rows
     hint_gap: int  # between the content and the hint, and between hint lines
+    under: int = 0  # the room a row's own level bar takes below its baseline (Row.level)
 
     @classmethod
     def for_scale(cls, scale, spacing=1.0):
@@ -96,7 +100,9 @@ class Sizes:
             return max(1, round(value * scale))
 
         gap = max(0, round(8 * scale * spacing))
-        return cls(scaled(MARGIN), scaled(16), scaled(40), scaled(20), scaled(13), gap, scaled(6))
+        margin = scaled(MARGIN)
+        under = margin - margin // 2 + max(level_space(scale), 2)  # as level_bar puts the bar below the text
+        return cls(margin, scaled(16), scaled(40), scaled(20), scaled(13), gap, scaled(6), under)
 
 
 def blend(start, end, share):
@@ -175,8 +181,11 @@ def _content(rows, sizes):
                 row.tyre_color,
                 row.overall,
                 row.lead,
+                row.level,
             )
         )
+        if row.level:
+            baseline += sizes.under  # its bar, then the next row
     return lines, baseline
 
 
@@ -555,6 +564,19 @@ EVERY_RACE_SECTION = (
         tip="Your car's health, and when damage costs grip or speed; only in events with damage",
     ),
     Section(
+        'carstatus',
+        'Car status',
+        (
+            (
+                Row('Health 100%', 'medium', tail='  less downforce', level=(1.0, 'ahead')),
+                Row(f'Tires 100%  ~{WIDE_LAPS} laps', 'medium', level=(0.8, 'ahead')),
+                Row('Fuel 100.0%', 'medium', tail=f'  ~{WIDE_LAPS} laps  +0.00%', level=(0.6, 'ahead')),
+                Row(f'Finish +{WIDE_LAPS} laps', 'medium'),
+            ),
+        ),
+        tip='Health, tire wear, fuel and fuel to finish in one box, each with its bar; only the rows the event has',
+    ),
+    Section(
         'draft',
         'Slipstream',
         (
@@ -727,11 +749,32 @@ EVERY_RACE_SECTION = (
 COMPASS_AVAILABLE = False
 HIDDEN_SECTIONS = frozenset() if COMPASS_AVAILABLE else frozenset({'compass'})
 RACE_SECTIONS = tuple(section for section in EVERY_RACE_SECTION if section.name not in HIDDEN_SECTIONS)
-# The move-mode panel lists the sections under these headings (asked for by the user on
+# Sections off where no layout says (asked for by the user on 2026-11-20): Car status shows what the
+# Fuel, Fuel to finish, Tire wear and Car health sections do, so it is one to turn on instead of them.
+OFF_AT_FIRST = frozenset({'carstatus'})
+
+
+def off_where_left_out(places, current):
+    """`places` {name: SectionPlace} a preset loads, with each OFF_AT_FIRST section it leaves out
+    hidden where it is now (`current`: the settings' places): a preset saved before Car status came
+    shows the four sections it stands for, so it is not shown twice. An empty preset loads nothing."""
+    if not places:
+        return places
+    hidden = {
+        name: replace(current[name], visible=False)
+        for name in OFF_AT_FIRST
+        if name not in places and name in current
+    }
+    return {
+        **hidden,
+        **places,
+    }  # The move-mode panel lists the sections under these headings (asked for by the user on
+
+
 # 2026-11-11); a section not named here comes under the last.
 PANEL_CATEGORIES = (
     ('Timing', ('lap', 'current', 'delta', 'deltabar', 'times', 'laptimes')),
-    ('Car', ('fuel', 'fuelfinish', 'tires', 'health', 'draft', 'speed')),
+    ('Car', ('carstatus', 'fuel', 'fuelfinish', 'tires', 'health', 'draft', 'speed')),
     (
         'Race',
         (
@@ -854,6 +897,26 @@ def level_bar(width, content_height, scale, fill, color):
     return Bar(
         margin, top, max(width - 2 * margin, 1), max(level_space(scale), 2), min(max(fill, 0.0), 1.0), color
     )
+
+
+def row_bars(lines, width, scale):
+    """[Bar, ...] for the lines that have their own level bar (Row.level), each right under
+    its text as level_bar puts a section's (Car status, asked for by the user on 2026-11-20), as
+    wide as the box between its margins."""
+    margin = round(MARGIN * scale)
+    tall = max(level_space(scale), 2)
+    return [
+        Bar(
+            margin,
+            line.baseline + margin - margin // 2,
+            max(width - 2 * margin, 1),
+            tall,
+            min(max(line.level[0], 0.0), 1.0),
+            line.level[1],
+        )
+        for line in lines
+        if line.level
+    ]
 
 
 @dataclass(frozen=True)

@@ -81,6 +81,7 @@ from turbohud.core.hud import (
     place_text,
     resize_edges,
     resized,
+    row_bars,
     sector_bars,
     steady_rows,
     text_box,
@@ -873,6 +874,8 @@ class SectionWindow(QWidget):
             reserve,
             snug=self.section.snug,
         )
+        for bar in row_bars(hud_lines(rows, scale, spacing), self.width() - inset, scale):
+            draw_level(painter, bar)  # Car status: a bar under each of its rows
         if self.section.level and rows:
             sample = (
                 SECTORS_SAMPLE

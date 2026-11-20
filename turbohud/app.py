@@ -217,7 +217,22 @@ def with_layout(settings, places, screen, sections):
         if name not in laid and section.bar:
             box = drawing_place(section, section.bar, screen)
             laid[name] = SectionPlace(*box, tint=default_tint(section))
+    for name, place in in_fuels_place(laid).items():
+        if name in sections:
+            laid[name] = replace(place, visible=False)  # off at first (hud.OFF_AT_FIRST)
     return replace(settings, sections=laid, font_size=font_size)
+
+
+def in_fuels_place(places):
+    """{name: place} for each section off at first (hud.OFF_AT_FIRST: Car status) that `places`
+    {name: place} has none for, at the Fuel section's place with its text size: where the sections
+    it stands for usually are, for when it is turned on. Nothing without a Fuel place."""
+    from turbohud.core.hud import OFF_AT_FIRST
+
+    fuel = places.get('fuel')
+    if fuel is None:
+        return {}
+    return {name: fuel for name in OFF_AT_FIRST if name not in places}
 
 
 def start_layout(settings, screen, layout, measure, ink, folder, shipped=None):
@@ -499,6 +514,7 @@ def run(args, folder):
     from turbohud.core.hud import (
         CLOCK_SECTIONS,
         FONT_SIZES,
+        OFF_AT_FIRST,
         RACE_SECTIONS,
         FramePacer,
         FrameTimes,
@@ -516,6 +532,7 @@ def run(args, folder):
         local_time_rows,
         main_screen,
         nudge,
+        off_where_left_out,
         panel_place,
         screen_of,
         session_rows,
@@ -798,6 +815,7 @@ def run(args, folder):
     if saved_places and new:
         # Sections added in a later version: below the ones the player already placed.
         defaults.update(below(new, saved_places, first, screens))
+        defaults.update(in_fuels_place(saved_places))  # Car status where Fuel is, off until turned on
     for section in layout:
         if section.bar or section.banner:
             # The blue flag, the radar and the track map: their own spots; the race leader banner too.
@@ -846,7 +864,7 @@ def run(args, folder):
         window.sector_bars = settings.sector_bars
         window.screens = screens  # move mode shows its place counted on the screen it is on
         window.show_on_top()
-        window.set_wanted(saved.visible if saved else True)
+        window.set_wanted(saved.visible if saved else name not in OFF_AT_FIRST)
         window.group = saved.group if saved else ''
         window.text_centred = saved.text_centred if saved else False
         log.info('section %s at %s%s', name, place, '' if window.wanted else ' (hidden)')
@@ -1899,6 +1917,7 @@ def run(args, folder):
         nonlocal settings
         nonlocal last_preset
         places = preset_places(settings.presets.get(number, {}), windows, screens)
+        places = off_where_left_out(places, settings.sections)
         if not places:
             log.info('preset %d is empty', number)
             return

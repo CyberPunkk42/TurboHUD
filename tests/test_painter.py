@@ -762,6 +762,43 @@ class RedrawTests(unittest.TestCase):
         self.assertGreater(purple_pixels(True), 20)
         self.assertEqual(purple_pixels(False), 0)
 
+    def test_car_status_draws_a_bar_under_each_row_that_has_one(self):
+        from turbohud.core.hud import RACE_SECTIONS, Row, text_box
+        from turbohud.core.settings import Theme
+        from turbohud.hud.painter import text_ink, text_width
+        from turbohud.overlay.window import SectionWindow
+
+        class Native:
+            def raise_window(self, window):
+                return 'test'
+
+        section = next(s for s in RACE_SECTIONS if s.name == 'carstatus')
+
+        def coloured(rows):
+            window = SectionWindow(Native(), Theme(), section)
+            self.addCleanup(window.close)
+            window.font = 13
+            window.resize(*text_box(section, (0, 0, 0, 0), 13, text_width, text_ink)[2:])
+            window.set_locked(True)
+            window.show_content(rows)
+            image = window.grab().toImage()
+            pixels = [
+                image.pixelColor(x, y) for x in range(0, image.width(), 2) for y in range(image.height())
+            ]
+            green = sum(1 for c in pixels if c.alpha() > 0 and c.green() > c.red() + 60)
+            red = sum(1 for c in pixels if c.alpha() > 0 and c.red() > c.green() + 60)
+            return green, red
+
+        with_bars = [
+            Row('Health 100%', 'medium', level=(1.0, 'ahead')),
+            Row('Fuel 20.0%', 'medium', level=(1.0, 'behind')),
+            Row('Finish -2.0 laps', 'medium'),
+        ]
+        green, red = coloured(with_bars)
+        self.assertGreater(green, 20)
+        self.assertGreater(red, 20)
+        self.assertEqual(coloured([Row('Health 100%', 'medium'), Row('Fuel 20.0%', 'medium')]), (0, 0))
+
     def test_only_the_number_changes_and_the_label_stays(self):
         from turbohud.core.hud import Row
 

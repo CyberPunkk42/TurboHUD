@@ -78,6 +78,7 @@ Hover over a section's name in the move-mode panel for a short explanation.
 **Car**
 - **Fuel** and **Fuel to finish**: fuel left, laps it lasts, and whether it reaches the end.
 - **Tire wear** and **Car health**: where the event has wear and damage.
+- **Car status** (off at first): those four in one box, a row each, only the rows the event has.
 - **Slipstream**: how much you are in someone's slipstream, who is in yours, and the event's
   drafting limits at the start.
 - **Speed and pedals**: speed, throttle and brake, and as an option gear and rev lights.

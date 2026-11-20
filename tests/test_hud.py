@@ -320,6 +320,7 @@ class TextCanCentreTests(unittest.TestCase):
                 'fuelfinish',
                 'tires',
                 'health',
+                'carstatus',
                 'draft',
                 'localtime',
                 'yellowflag',
@@ -589,6 +590,7 @@ class SectionTests(unittest.TestCase):
                 'fuelfinish',
                 'tires',
                 'health',
+                'carstatus',
                 'draft',
                 'speed',
                 'localtime',
@@ -1492,3 +1494,84 @@ class FittedNameTests(unittest.TestCase):
         self.assertEqual(hud.first_column(lines, measure, 400, 350, 300, 200, None), 200)  # the tag
         self.assertEqual(hud.first_column(lines, measure, 400, None, None, None, None), 400 - 4 * size)
         self.assertIsNone(hud.first_column(lines, measure, None, None, None, None, None))
+
+
+class CarStatusTests(unittest.TestCase):
+    """Car status: Health, Tires, Fuel and Fuel to finish in one box, a bar under each of the first
+    three, only the rows the event has (asked for by the user on 2026-11-20)."""
+
+    SECTION = next(s for s in hud.RACE_SECTIONS if s.name == 'carstatus')
+
+    def test_rows_in_the_users_order_with_their_bars(self):
+        sections = {
+            'fuel': [hud.Row('Fuel 50.0%', 'medium')],
+            'fuelfinish': [hud.Row('Finish +1.0 laps', 'medium')],
+            'tires': [hud.Row('Tires 80%', 'medium')],
+            'health': [hud.Row('Health 90%', 'medium')],
+        }
+        levels = {'fuel': (0.5, 'lift'), 'tires': (0.8, 'ahead'), 'health': (0.9, 'ahead')}
+        rows = race.car_status_rows(sections, levels)
+        self.assertEqual(
+            [r.text for r in rows], ['Health 90%', 'Tires 80%', 'Fuel 50.0%', 'Finish +1.0 laps']
+        )
+        self.assertEqual([r.level for r in rows], [(0.9, 'ahead'), (0.8, 'ahead'), (0.5, 'lift'), ()])
+
+    def test_only_what_the_event_has(self):
+        car = race.CarState(False, 0, 0, False, 0, 30.0, health=0.6, downforce_from=0.9, slowed_from=0.75)
+        rows = race.car_sections(car)['carstatus']
+        self.assertEqual([(r.text, r.level) for r in rows], [('Health 60%', (0.6, 'behind'))])
+        no_car_data = race.CarState(False, 0, 0, False, 0, 30.0)
+        self.assertNotIn('carstatus', race.car_sections(no_car_data))
+
+    def test_a_row_with_a_bar_leaves_room_for_it(self):
+        plain = [hud.Row('Health 90%', 'medium'), hud.Row('Fuel 50.0%', 'medium')]
+        barred = [hud.Row('Health 90%', 'medium', level=(0.9, 'ahead')), hud.Row('Fuel 50.0%', 'medium')]
+        under = hud.Sizes.for_scale(1.0).under
+        self.assertEqual(
+            hud.content_size(barred, 1.0, size_measure)[1],
+            hud.content_size(plain, 1.0, size_measure)[1] + under,
+        )
+        first, second = hud.hud_lines(barred)
+        (bar,) = hud.row_bars([first, second], 300, 1.0)
+        self.assertGreater(bar.y, first.baseline)  # below the first row's text
+        self.assertLess(bar.y + bar.height, second.baseline - second.size // 2)  # above the next one
+        self.assertEqual(
+            (bar.x, bar.width, bar.fill, bar.color), (hud.MARGIN, 300 - 2 * hud.MARGIN, 0.9, 'ahead')
+        )
+
+    def test_the_bar_sits_where_a_sections_own_level_bar_does(self):
+        line = hud.hud_lines([hud.Row('Fuel 50.0%', 'medium', level=(0.5, 'lift'))])[0]
+        content = hud.content_size([hud.Row('Fuel 50.0%', 'medium')], 1.0, size_measure)[1]
+        self.assertEqual(hud.row_bars([line], 300, 1.0)[0], hud.level_bar(300, content, 1.0, 0.5, 'lift'))
+
+    def test_off_at_first_and_in_the_car_category(self):
+        self.assertIn('carstatus', hud.OFF_AT_FIRST)
+        car = dict(hud.PANEL_CATEGORIES)['Car']
+        self.assertEqual(car[0], 'carstatus')
+        self.assertTrue(hud.is_text_section(self.SECTION))
+
+    def test_the_four_rows_keep_one_text_size_with_many_laps(self):
+        rows = [
+            hud.Row('Health 100%', 'medium', tail='  less downforce', level=(1.0, 'ahead')),
+            hud.Row('Tires 100%' + race._laps_text(9999.4), 'medium', level=(1.0, 'ahead')),
+            hud.Row('Fuel 100.0%', 'medium', tail=race._laps_text(99.96) + '  +9.99%', level=(1.0, 'ahead')),
+            hud.Row(f'Finish {race.laps_number(-9999.4, sign=True)} laps', 'medium'),
+        ]
+        for font in (13, 22):
+            with self.subTest(font=font):
+                width = hud.text_box(self.SECTION, (0, 0, 0, 0), font, size_measure, ink)[2]
+                scale = hud.font_scale(font)
+                self.assertEqual(hud.fitting_scale(rows, scale, width, size_measure), scale)
+
+    def test_a_preset_from_before_hides_it(self):
+        from turbohud.core.settings import SectionPlace
+
+        shown = SectionPlace(10, 20, 200, 90, visible=True)
+        fuel = SectionPlace(10, 20, 200, 40)
+        loaded = hud.off_where_left_out({'fuel': fuel}, {'carstatus': shown, 'fuel': fuel})
+        self.assertEqual(loaded, {'fuel': fuel, 'carstatus': SectionPlace(10, 20, 200, 90, visible=False)})
+        kept = hud.off_where_left_out({'fuel': fuel, 'carstatus': shown}, {'carstatus': shown})
+        self.assertEqual(kept['carstatus'], shown)  # a preset that has it keeps it as it is
+        self.assertEqual(
+            hud.off_where_left_out({}, {'carstatus': shown}), {}
+        )  # an empty preset loads nothing

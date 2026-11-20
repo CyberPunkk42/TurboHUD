@@ -159,6 +159,13 @@ that count are in `settings.json` as `class_tags` (change it while TurboHUD is c
 
 ### Car
 
+**Car status**
+Car health, tire wear, fuel and fuel to finish in one box, one row each in that order, at one text
+size; health, tires and fuel each with its bar right under it. It shows only the rows the event has
+(no Tires row without tire wear, no Health row without damage), from the top of the box, with no gap
+for the others. Off at first: tick it in move mode's panel and untick the four separate sections it
+stands for. It starts where the Fuel section is. A preset saved before Car status came hides it.
+
 **Fuel**
 The fuel left in percent, how many laps it lasts at your recent use (`~6.2 laps`; from 100 laps on in
 whole laps, `~123 laps`, here and in Tire wear and Fuel to finish), and how

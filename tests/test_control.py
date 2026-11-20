@@ -332,6 +332,16 @@ class FirstStartLayoutTests(unittest.TestCase):
                     inside = screen[0] <= place.x and place.x + place.width <= screen[0] + screen[2]
                     self.assertTrue(inside and screen[1] <= place.y <= screen[1] + screen[3], name)
 
+    def test_car_status_off_where_fuel_is(self):
+        # Asked for by the user on 2026-11-20: one box for the four, turned on in place of them.
+        sections = self.layout((0, 0, 1920, 1080)).sections
+        status, fuel = sections['carstatus'], sections['fuel']
+        self.assertFalse(status.visible)
+        self.assertEqual((status.x, status.y, status.font), (fuel.x, fuel.y, fuel.font))
+        self.assertEqual(app.in_fuels_place({'fuel': (1, 2, 3, 4)}), {'carstatus': (1, 2, 3, 4)})
+        self.assertEqual(app.in_fuels_place({'fuel': (1, 2, 3, 4), 'carstatus': (5, 6, 7, 8)}), {})
+        self.assertEqual(app.in_fuels_place({}), {})
+
     def test_the_common_text_size_is_the_global_one(self):
         result = self.layout((0, 0, 5120, 1440))
         fonts = [p.font for p in result.sections.values()]
