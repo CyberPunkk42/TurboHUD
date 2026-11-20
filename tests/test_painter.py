@@ -785,6 +785,43 @@ class RedrawTests(unittest.TestCase):
         self.assertGreater(image.pixelColor(middle, 4).alpha(), 0)  # tinted behind the row
         self.assertEqual(image.pixelColor(middle, image.height() - 4).alpha(), 0)  # see-through below
 
+    def test_colour_blind_and_legacy_colours_on_a_bar(self):
+        # Asked for by the user on 2026-11-21.
+        from turbohud.core.hud import RACE_SECTIONS, Row, text_box
+        from turbohud.core.settings import Theme
+        from turbohud.hud.painter import text_ink, text_width
+        from turbohud.overlay.window import SectionWindow
+
+        class Native:
+            def raise_window(self, window):
+                return 'test'
+
+        def colours(colour_blind=False, legacy=False):
+            section = next(s for s in RACE_SECTIONS if s.name == 'tires')
+            window = SectionWindow(Native(), Theme(), section)
+            self.addCleanup(window.close)
+            window.font = 16
+            window.resize(*text_box(section, (0, 0, 0, 0), 16, text_width, text_ink)[2:])
+            window.colour_blind, window.legacy = colour_blind, legacy
+            window.set_locked(True)
+            window.show_content([Row('Tires 100%', 'medium')], level=(1.0, 'ahead'))
+            image = window.grab().toImage()
+            found = set()
+            for x in range(0, image.width(), 2):
+                for y in range(image.height()):
+                    c = image.pixelColor(x, y)
+                    if c.alpha() == 255:
+                        found.add(c.name())
+            return found
+
+        self.assertIn('#5ee07a', colours())  # TurboHUD's green
+        blind = colours(colour_blind=True)
+        self.assertIn('#56b4e9', blind)  # sky blue instead
+        self.assertNotIn('#5ee07a', blind)
+        legacy = colours(legacy=True)
+        self.assertIn('#3a7878', legacy)  # TSU's tire colour
+        self.assertNotIn('#5ee07a', legacy)
+
     def test_car_status_draws_a_bar_under_each_row_that_has_one(self):
         from turbohud.core.hud import RACE_SECTIONS, Row, text_box
         from turbohud.core.settings import Theme

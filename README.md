@@ -169,7 +169,8 @@ The full guide to every section, menu item, button and option is
   event then stays for that kind of event until the session ends), and loads, shares or designs layouts
   per screen size.
   **Lock** or Ctrl+Shift+L again ends it, and so does a race beginning.
-- **Settings…** sets the colours, the global font (your own `.ttf` or `.otf` files in
+- **Settings…** (tabs **Look**, **Colours**, **Sections**, **Race**) sets the colours, colour-blind colours for
+  every section or those chosen, TSU's Legacy colours for the car sections' bars, the global font (your own `.ttf` or `.otf` files in
   `customization/fonts`), the size of all sections, the standings' columns, the
   warning times, the race reads a second and the on/off options (also under **Options** in
   the icon's menu).

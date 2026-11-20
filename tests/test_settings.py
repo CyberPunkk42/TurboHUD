@@ -47,6 +47,21 @@ class LoadSaveTests(unittest.TestCase):
         self.assertEqual(s.load_settings(self.path), settings)
         self.assertEqual(list(self.path.parent.iterdir()), [self.path])  # no temporary file left
 
+    def test_colour_choices_kept(self):
+        # Asked for by the user on 2026-11-21: colour-blind colours for all or chosen sections, Legacy colours.
+        settings = s.Settings(
+            colour_blind='chosen', colour_blind_sections=('fuel', 'radar'), legacy_colours=True
+        )
+        s.save_settings(self.path, settings)
+        self.assertEqual(s.load_settings(self.path), settings)
+        self.assertEqual((s.Settings().colour_blind, s.Settings().legacy_colours), ('off', False))
+        self.path.write_text(
+            '{"colour_blind": "sometimes", "colour_blind_sections": ["fuel", 3, "fuel", ""]}',
+            encoding='utf-8',
+        )
+        loaded = s.load_settings(self.path)
+        self.assertEqual((loaded.colour_blind, loaded.colour_blind_sections), ('off', ('fuel',)))
+
     def test_missing_or_broken_file_gives_defaults(self):
         self.assertEqual(s.load_settings(self.path), s.Settings())
         self.path.parent.mkdir(parents=True)

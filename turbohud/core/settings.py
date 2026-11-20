@@ -14,6 +14,8 @@ from pathlib import Path
 
 from turbohud.core.class_registry import CLASS_TAGS, MAX_CLASS_TAG, class_tag
 
+COLOUR_BLIND_MODES = ('off', 'all', 'chosen')  # Settings.colour_blind (hud.COLOUR_BLIND_MODES)
+
 APP_NAME = 'TurboHUD'
 SETTINGS_FILE = 'settings.json'
 LOG_FILE = 'turbohud.log'
@@ -123,6 +125,13 @@ def _lap_columns(value, known=None):
     return tuple(column for column in LAP_COLUMNS if column in value or column not in known)
 
 
+def _names(value):
+    """Section names from a saved list (colour_blind_sections), without anything else, each once."""
+    if not isinstance(value, list):
+        return ()
+    return tuple(dict.fromkeys(name for name in value if isinstance(name, str) and name))
+
+
 def _class_tags(value):
     """The class tags from the settings file, or CLASS_TAGS where there are none."""
     if not isinstance(value, list):
@@ -158,6 +167,12 @@ class Settings:
     # The compass's needle and N in a blue told apart with colour blindness, not red (asked for by the
     # user on 2026-11-20).
     compass_colourblind: bool = False
+    # Colour-blind colours (asked for by the user on 2026-11-21): 'off', 'all' sections or those 'chosen'
+    # (colour_blind_sections); never the blue and yellow flags (hud.colour_blind_for).
+    colour_blind: str = 'off'
+    colour_blind_sections: tuple = ()
+    # The car sections' bars in TSU's own colours (asked for by the user on 2026-11-21: hud.LEGACY_BARS).
+    legacy_colours: bool = False
     # The compass's north from the track's sun (TSU's sun sets in the west), not up on the track map
     # (asked for by the user on 2026-11-20; on by default).
     compass_sun: bool = True
@@ -476,6 +491,9 @@ def load_settings(path):
         grid=data.get('grid') is not False,
         map_others=data.get('map_others') is True,
         compass_colourblind=data.get('compass_colourblind') is True,
+        colour_blind=data.get('colour_blind') if data.get('colour_blind') in COLOUR_BLIND_MODES else 'off',
+        colour_blind_sections=_names(data.get('colour_blind_sections')),
+        legacy_colours=data.get('legacy_colours') is True,
         compass_sun=data.get('compass_sun') is not False,
         nearby_short=data.get('nearby_short') is not False,
         radar_cone=data.get('radar_cone') is not False,
@@ -524,6 +542,9 @@ def save_settings(path, settings):
         'grid': settings.grid,
         'map_others': settings.map_others,
         'compass_colourblind': settings.compass_colourblind,
+        'colour_blind': settings.colour_blind,
+        'colour_blind_sections': list(settings.colour_blind_sections),
+        'legacy_colours': settings.legacy_colours,
         'compass_sun': settings.compass_sun,
         'nearby_short': settings.nearby_short,
         'radar_cone': settings.radar_cone,

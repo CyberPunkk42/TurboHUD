@@ -52,7 +52,9 @@ it goes.
 
 ## 4. Settings
 
-Icon menu, **Settings...**: colours, all sections bigger or smaller, the **Font** of every section
+Icon menu, **Settings...**, in four tabs (**Look**, **Colours**, **Sections**, **Race**): colours, **Colour-blind colours**
+(**Off**, **All sections** or **Chosen sections**; never the blue and yellow flags) and **TSU Legacy colours** for
+the car sections' bars, all sections bigger or smaller, the **Font** of every section
 on global (your own
 **Add font...** picks a `.ttf` or `.otf` file and uses it at once; **Fonts folder...** opens `customization/fonts`), km/h or mph, a tint behind
 the sections, which standings columns show, the radar (cockpit cameras or every camera, its

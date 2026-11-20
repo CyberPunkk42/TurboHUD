@@ -31,6 +31,7 @@ from turbohud.core.hud import (
     lead_right,
     middle_right,
     overall_right,
+    shade,
     snug_width,
     steady_text,
     tag_left,
@@ -112,6 +113,30 @@ class using:
     def __exit__(self, *_exc):
         _active.pop()
         return False
+
+
+_shades = []  # the colour maps `colours` set, innermost last; none: TurboHUD's own colours
+
+
+class colours:
+    """`with colours(mapping):` draws a section's colours as `mapping` (hud.COLOUR_BLIND, or {} for
+    TurboHUD's own) says: its colour-blind choice (asked for by the user on 2026-11-21). They nest."""
+
+    def __init__(self, mapping):
+        self.mapping = mapping or {}
+
+    def __enter__(self):
+        _shades.append(self.mapping)
+        return self
+
+    def __exit__(self, *_exc):
+        _shades.pop()
+        return False
+
+
+def shaded(colour):
+    """`colour` ('#rrggbb') as the section drawn now draws it (`colours`)."""
+    return shade(colour, _shades[-1]) if _shades else colour
 
 
 @cache
@@ -454,7 +479,7 @@ def _width(text, size, family):
 
 def draw_bars(painter, bars):
     """Pedal bars from turbohud.core.hud.pedal_bars: grey, lit from the bottom."""
-    colors = {'ahead': QColor(AHEAD_COLOR), 'behind': QColor(BEHIND_COLOR)}
+    colors = {'ahead': QColor(shaded(AHEAD_COLOR)), 'behind': QColor(shaded(BEHIND_COLOR))}
     painter.setPen(QPen(QColor(0, 0, 0, 160), 1))
     for bar in bars:
         rect = QRectF(bar.x, bar.y, bar.width, bar.height)
@@ -469,17 +494,18 @@ def draw_bars(painter, bars):
 def draw_level(painter, bar):
     """A level bar from turbohud.core.hud.level_bar: grey, lit from the left."""
     colors = {
-        'ahead': QColor(AHEAD_COLOR),
-        'behind': QColor(BEHIND_COLOR),
-        'lift': QColor(LIFT_COLOR),
-        'draft': QColor(DRAFT_COLOR),
+        'ahead': QColor(shaded(AHEAD_COLOR)),
+        'behind': QColor(shaded(BEHIND_COLOR)),
+        'lift': QColor(shaded(LIFT_COLOR)),
+        'draft': QColor(shaded(DRAFT_COLOR)),
     }
     radius = min(bar.height / 2, 3)
     painter.setPen(QPen(QColor(0, 0, 0, 160), 1))
     painter.setBrush(QColor(*BAR_OFF))
     painter.drawRoundedRect(QRectF(bar.x, bar.y, bar.width, bar.height), radius, radius)
     if bar.fill > 0:
-        painter.setBrush(colors[bar.color])
+        # A theme name, or a colour of its own (TSU's, hud.LEGACY_BARS).
+        painter.setBrush(colors[bar.color] if bar.color in colors else QColor(shaded(bar.color)))
         painter.drawRoundedRect(QRectF(bar.x, bar.y, bar.width * bar.fill, bar.height), radius, radius)
 
 
@@ -489,7 +515,7 @@ def draw_sectors(painter, bars, colours):
     painter.setPen(QPen(QColor(0, 0, 0, 160), 1))
     for bar, colour in zip(bars, colours):
         radius = min(bar.height / 2, 3)
-        painter.setBrush(QColor(colour) if colour else QColor(*BAR_OFF))
+        painter.setBrush(QColor(shaded(colour)) if colour else QColor(*BAR_OFF))
         painter.drawRoundedRect(QRectF(bar.x, bar.y, bar.width, bar.height), radius, radius)
 
 
@@ -642,10 +668,10 @@ def draw_hud(painter, lines, theme, scale=None, left=0, width=None, centre=False
     colors = {
         'text': QColor(theme.text_color),
         'accent': QColor(theme.accent_color),
-        'ahead': QColor(AHEAD_COLOR),
-        'behind': QColor(BEHIND_COLOR),
-        'lift': QColor(LIFT_COLOR),
-        'draft': QColor(DRAFT_COLOR),
+        'ahead': QColor(shaded(AHEAD_COLOR)),
+        'behind': QColor(shaded(BEHIND_COLOR)),
+        'lift': QColor(shaded(LIFT_COLOR)),
+        'draft': QColor(shaded(DRAFT_COLOR)),
     }
     outline = _rgba(theme.outline_color)
     margin = round(MARGIN * (theme.scale if scale is None else scale))
@@ -780,7 +806,7 @@ DELTA_BAR_DARKER = 130  # the fill a little darker than the text colours, so the
 def delta_bar_color(trend):
     """'#rrggbb' for a delta bar's `trend`: green at -1 (gaining), red at 1 (losing), and
     in between, through yellow, only while it fades from one to the other."""
-    return blend(AHEAD_COLOR, BEHIND_COLOR, (trend + 1) / 2)
+    return blend(shaded(AHEAD_COLOR), shaded(BEHIND_COLOR), (trend + 1) / 2)
 
 
 def draw_delta_bar(painter, width, height, fill, trend, text, theme):
@@ -809,7 +835,7 @@ def _pick(colors, name):
     """The QColor for a row's colour: a theme name ('text', 'ahead' ...) or a colour of
     its own, '#rrggbb' (such as a blend from turbohud.core.hud.blend)."""
     if name.startswith('#'):
-        return QColor(name)
+        return QColor(shaded(name))
     return colors[name]
 
 

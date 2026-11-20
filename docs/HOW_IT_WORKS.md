@@ -522,13 +522,13 @@ turbohud/
                         starts the reader beside TSU (LocalReader); asks it over a pipe
     bottle_reader.py    the reader in Python (with a Windows Python in the bottle):
                         the fallback, TURBOHUD_PY_READER=1
-  hud/painter.py        Qt drawing of text, bars and flags; the texts kept per font, each
+  hud/painter.py        Qt drawing of text, bars and flags, in a section's colour map (`colours`, `shaded`: hud.COLOUR_BLIND); the texts kept per font, each
                         section drawn in its own font or the global one (`using`)
   overlay/
     window.py           the section windows (drawings: blue flag, delta bar, radar, track
                         map), the one-window canvas (Mac), the grid and the move-mode panel
                         (its General and Text tabs over the same rows of sections)
-    settings_window.py  colours, size, options, warning times, reads a second
+    settings_window.py  tabs Look, Colours, Sections, Race: colours, colour-blind and Legacy colours, size, options, warning times, reads a second
     class_sheet.py      the list of car classes, opened from the settings
     windows.py          Win32: RegisterHotKey, focus hand-back
     macos.py            Cocoa: window level above Fullscreen, all Spaces; Carbon hotkeys

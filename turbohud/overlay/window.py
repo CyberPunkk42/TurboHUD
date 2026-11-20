@@ -48,6 +48,7 @@ from PySide6.QtWidgets import (
 
 from turbohud.core.hud import (
     BANNER_SHADE,
+    COLOUR_BLIND,
     FONT_SIZES,
     LEADER_GREY,
     MARGIN,
@@ -74,6 +75,7 @@ from turbohud.core.hud import (
     hud_lines,
     is_text_section,
     label_spot,
+    legacy_bar,
     level_bar,
     panel_categories,
     pedal_bars,
@@ -109,6 +111,7 @@ from turbohud.hud.painter import (
     DRAFT_COLOR,
     LIFT_COLOR,
     cap_height,
+    colours,
     draw_bars,
     draw_delta_bar,
     draw_hud,
@@ -116,6 +119,7 @@ from turbohud.hud.painter import (
     draw_sectors,
     measures,
     outlined_text,
+    shaded,
     text_advance,
     text_ink,
     text_width,
@@ -390,6 +394,8 @@ class SectionWindow(QWidget):
             False  # the compass's needle and N in COMPASS_COLOURBLIND, not red (an option)
         )
         self.compass_sun = True  # the compass's north from the track's sun (an option): its sample shows it
+        self.colour_blind = False  # drawn in colour-blind colours (hud.colour_blind_for, an option)
+        self.legacy = False  # its bars in TSU's colours (hud.legacy_for, an option)
         self.sector_bars = True  # a section with sector bars shows them (an option)
         # A text section's text size in pixels (core.hud.font_scale): the app sets it, and its box
         # follows (text_box). None: the box sets the size, as before text sizes.
@@ -757,7 +763,7 @@ class SectionWindow(QWidget):
         In its own font where it has one (own_family)."""
         if not self.wanted:
             return
-        with using(self.own_family):
+        with using(self.own_family), colours(COLOUR_BLIND if self.colour_blind else {}):
             self._draw(painter, own_tint, faded)
 
     def _draw(self, painter, own_tint, faded):
@@ -787,6 +793,11 @@ class SectionWindow(QWidget):
             painter.setBrush(QColor(*TINT))
             painter.drawRoundedRect(QRectF(self.rect()).adjusted(1, 1, -1, -1), 8, 8)
             rows = rows or list(self.section.samples[0])  # something to place, also before a race
+        if self.legacy:  # TSU's colour for each value's bar (hud.LEGACY_BARS), in Car status
+            rows = [
+                replace(row, level=legacy_bar(row.level, row.level[2])) if len(row.level) > 2 else row
+                for row in rows
+            ]
         painter.save()  # the race leader banner fades as a whole: restored at the end
         winner = False
         if self.section.banner and self.locked and self.banner is not None:
@@ -889,6 +900,8 @@ class SectionWindow(QWidget):
                 else LEVEL_SAMPLE
             )
             level = self.level or (None if self.locked else sample)
+            if self.legacy and level is not None and not isinstance(level, Sectors):
+                level = legacy_bar(level, self.section.name)  # TSU's colour for fuel, tires or health
             if self.section.sectors and not self.sector_bars:
                 level = None  # turned off: the room stays, so the text keeps its size
             if level is not None:
@@ -1082,7 +1095,7 @@ class SectionWindow(QWidget):
                 QPointF(centre.x() + dx * inner, centre.y() + dy * inner),
                 QPointF(centre.x() + dx * radius * 0.97, centre.y() + dy * radius * 0.97),
             )
-        needle = QColor(COMPASS_COLOURBLIND if self.compass_colourblind else COMPASS_NEEDLE)
+        needle = QColor(COMPASS_COLOURBLIND if self.compass_colourblind else shaded(COMPASS_NEEDLE))
         letter = max(6, round(radius * COMPASS_LETTER))
         for degrees, name in ((0, 'N'), (90, 'E'), (180, 'S'), (270, 'W')):
             angle = math.radians(degrees - view.heading)
@@ -1143,7 +1156,7 @@ class SectionWindow(QWidget):
             painter.translate(centre.x() + side * per_unit, centre.y() - ahead * per_unit)
             painter.rotate(math.degrees(angle))
             painter.setPen(QPen(QColor(0, 0, 0, 160), 1))
-            painter.setBrush(QColor(color))
+            painter.setBrush(QColor(shaded(color)))
             painter.drawRoundedRect(QRectF(-w / 2, -h / 2, w, h), w / 4, w / 4)
             painter.restore()
 
@@ -1159,7 +1172,7 @@ class SectionWindow(QWidget):
             for step in range(CONE_STEPS + 1):
                 turn = math.radians(-spread + 2 * spread * step / CONE_STEPS)
                 points.append(QPointF(radius * math.sin(turn), tail + radius * math.cos(turn)))
-            color = QColor(DRAFT_COLOR)
+            color = QColor(shaded(DRAFT_COLOR))
             color.setAlpha(CONE_IN if blip.in_cone else CONE_OUT)
             painter.setPen(Qt.NoPen)
             painter.setBrush(color)
@@ -1194,7 +1207,7 @@ class SectionWindow(QWidget):
             pen = QPen(QColor(*RADAR_ARROW_PEN[0]), RADAR_ARROW_PEN[1])
             pen.setJoinStyle(Qt.RoundJoin)
             painter.setPen(pen)
-            painter.setBrush(QColor(color))
+            painter.setBrush(QColor(shaded(color)))
             painter.drawPolygon(QPolygonF([QPointF(*point) for point in points]))
             painter.restore()
 
@@ -1211,7 +1224,7 @@ class SectionWindow(QWidget):
                     painter.save()
                     painter.translate(centre.x() + blip.side * per_unit, centre.y() - blip.ahead * per_unit)
                     painter.rotate(math.degrees(blip.angle))
-                    painter.setPen(QPen(QColor(color), RADAR_CLASS_WARNING))
+                    painter.setPen(QPen(QColor(shaded(color)), RADAR_CLASS_WARNING))
                     painter.setBrush(Qt.NoBrush)
                     pad = RADAR_CLASS_WARNING / 2
                     painter.drawRoundedRect(
@@ -1222,7 +1235,7 @@ class SectionWindow(QWidget):
                 painter.save()
                 painter.translate(centre.x() + blip.side * per_unit, centre.y() - blip.ahead * per_unit)
                 painter.rotate(math.degrees(blip.angle))
-                painter.setPen(QPen(QColor(DRAFT_COLOR), 2))
+                painter.setPen(QPen(QColor(shaded(DRAFT_COLOR)), 2))
                 painter.setBrush(Qt.NoBrush)
                 painter.drawRoundedRect(QRectF(-w / 2 - 1, -h / 2 - 1, w + 2, h + 2), w / 4, w / 4)
                 painter.restore()
@@ -1277,7 +1290,7 @@ class SectionWindow(QWidget):
             painter.setClipRect(box)  # a car off the learnt track (a road from the grid) stays inside
             for dot in view.dots:
                 painter.setOpacity(MAP_PIT_OPACITY if dot.in_pit else 1.0)
-                color = QColor(MAP_COLORS[dot.role])
+                color = QColor(shaded(MAP_COLORS[dot.role]))
                 if dot.role == 'other':
                     color.setAlpha(MAP_OTHER_ALPHA)
                 r = radius * MAP_SIZES[dot.role]
@@ -1296,7 +1309,7 @@ class SectionWindow(QWidget):
                     painter.drawEllipse(at(dot.position), r + 5, r + 5)
                 if dot.ahead_too:  # the leader is also the next car ahead: a red ring
                     painter.setPen(Qt.NoPen)
-                    painter.setBrush(QColor(MAP_COLORS['ahead']))
+                    painter.setBrush(QColor(shaded(MAP_COLORS['ahead'])))
                     painter.drawEllipse(at(dot.position), r + 3, r + 3)
                 if dot.role == 'me':
                     # A ring, open in the middle: a car under it still shows.
