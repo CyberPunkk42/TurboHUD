@@ -662,6 +662,7 @@ class LapReader:
         self._draft_time = {}  # lap index -> race time spent in a slipstream (0.1 ms)
         self._draft_clock = None  # race clock at the read before, for that time
         self._player_indices = []
+        self._position_spots, self._players_found = [], 0  # see _positions_together
         self._recorder_tick, self._recorder_moved = None, 0
         self._client_class = None  # TS.ClientEventController, once looked up
         self._host_class = None  # TS.HostEventController, once looked up (False: not in the game)
@@ -1769,16 +1770,40 @@ class LapReader:
         except (NotFound, OSError):
             return ()
         found, indices = [], []
+        self._position_spots = []  # (place in `found`, where its car's position is), for _positions_together
         for index, player in enumerate(players):
             if not player:
                 continue
             try:
+                self._players_found = len(found)  # its place in `found`, for _position_spots
                 found.append(self._player_state(player))
                 indices.append(index)
             except (NotFound, OSError):
                 continue  # one unreadable player must not hide the others
         self._player_indices = indices  # each one's place in the game's list
-        return tuple(found)
+        return tuple(self._positions_together(found))
+
+    def _positions_together(self, found):
+        """Every car's position read again at the end, all in one request, so that they are of the
+        same moment. Read in turn with the rest of each car, a car's came up to a read's length after
+        another's (33-41 ms in a race of 20 cars on Linux), varying from read to read: the proximity
+        radar's cars, placed from the gap to one's own, jumped forward and back (reported by the user
+        on 2026-11-20). Where the batch cannot be read, the positions read in turn stay."""
+        spots = self._position_spots
+        if not spots:
+            return found
+        try:
+            data = self.il.memory.read_many([where for _place, where in spots], 12)
+        except OSError:
+            return found
+        for (place, _where), raw in zip(spots, data):
+            if raw is None:
+                continue
+            x, _y, z = struct.unpack('<3f', raw)
+            position = _known_position(x, z)
+            if position is not None:
+                found[place] = dataclasses.replace(found[place], position=position)
+        return found
 
     def _recorded_positions(self, clock):
         """{place in the game's player list: (x, z)} from the replay recorder of an
@@ -1941,6 +1966,9 @@ class LapReader:
                 where = vehicle + self._offset('vehicle', vehicle, 'm_statsNewPosition')
                 x, _y, z = struct.unpack('<3f', memory.read(where, 12))
                 position = _known_position(x, z)
+                # Read again with every other car's at the end (_positions_together): this player's
+                # place in the list being built is how many are in it now.
+                self._position_spots.append((self._players_found, where))
             except (NotFound, ReadError):
                 pass
         return PlayerState(
@@ -4671,7 +4699,12 @@ RADAR_VIEW_MAX = 24.0
 # far as the farthest of them needs, with this much room round them, but never closer than RADAR_ZOOM_LEAST.
 RADAR_ZOOM_ROOM = 1.5
 RADAR_ZOOM_LEAST = 10.0  # game units behind and ahead: 2.5 car lengths
-RADAR_ZOOM_EASE = 0.25  # share of the way in it goes per read; out at once, so no car leaves the edge
+# The zoom fits the nearest car that counts (radar_zoom), a share of the way a read: in gently (about 1.5 s),
+# out quickly (about 0.15 s), never a snap. Fitting the farthest made it pump in and out in the opening laps,
+# and snap out again and again with cars spread around; the user asked for it to stay on the car closest as
+# long as it is there, the cars further behind arrows at the edge (2026-11-20).
+RADAR_ZOOM_EASE = 0.08  # in
+RADAR_ZOOM_OUT_EASE = 0.5  # out
 RADAR_MIN_SPEED = 3.0  # slower (standing on the grid): no radar, the direction is unknown
 HEADING_SPAN = 0.3  # seconds of movement a car's direction and speed are taken from (no game values)
 MAX_CARRY = 0.25  # seconds a car's position is carried on along its velocity since its last update
@@ -4771,13 +4804,15 @@ def radar_view(speed, within=RADAR_FROM):
 
 
 def radar_zoom(blips, view):
-    """How far behind and ahead the radar shows: in on the cars that count (a time gap) and are
-    within `view` (radar_view), so the room between them is seen; `view` with none. The radar is
-    square, so the side counts as much as ahead."""
+    """How far behind and ahead the radar shows: in on the nearest car that counts (a time gap)
+    within `view` (radar_view), so the room to it is seen; `view` with none. Cars further away go
+    past the edge, an arrow there where they are behind (asked for by the user on 2026-11-20: fitting
+    them all, it zoomed in and out as they came and went). The radar is square, so the side counts as
+    much as ahead."""
     near = [b for b in blips if b.seconds is not None and abs(b.ahead) <= view]
     if not near:
         return view
-    need = max(max(abs(b.ahead) + CAR_LENGTH / 2, abs(b.side) + CAR_WIDTH / 2) for b in near)
+    need = min(max(abs(b.ahead) + CAR_LENGTH / 2, abs(b.side) + CAR_WIDTH / 2) for b in near)
     return min(view, max(RADAR_ZOOM_LEAST, need * RADAR_ZOOM_ROOM))
 
 
@@ -5060,10 +5095,11 @@ class Radar:
             else:
                 self.opacity, self.counted_at = 0.0, None
             target = radar_zoom(blips, radar_view(speed, self.within))
-            if self.view is None or target >= self.view:
-                self.view = target  # out at once: a car coming up stays on the radar
+            if self.view is None:
+                self.view = target
             else:
-                self.view += (target - self.view) * RADAR_ZOOM_EASE
+                ease = RADAR_ZOOM_OUT_EASE if target > self.view else RADAR_ZOOM_EASE
+                self.view += (target - self.view) * ease
         if self.opacity <= 0:
             self.view = None
             return None

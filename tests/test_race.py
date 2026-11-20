@@ -2107,6 +2107,35 @@ class CarTests(unittest.TestCase):
         self.assertEqual(len(reader._cars), 1)
         self.assertEqual(next(p for p in reader.read().players if p.local).car, 'Ligier JS320')
 
+    def test_every_cars_position_is_read_together_at_the_end(self):
+        # Read in turn with the rest of each car, positions came up to a read's length apart, varying:
+        # the radar's cars jumped forward and back (reported by the user on 2026-11-20).
+        reader = build(
+            [10_000], laps_completed=0, clock=20_000, limit=0, car=(12.5, -3.0), gates=STRAIGHT, name='A'
+        )
+        memory = reader.il.memory
+        asked = []
+
+        def together(addresses, size):
+            if [where for _place, where in reader._position_spots] != addresses:
+                return [memory.read(address, size) for address in addresses]
+            asked.append(len(addresses))
+            return [struct.pack('<3f', 14.0, 0.0, -2.0) for _ in addresses]  # a moment later
+
+        memory._read_many = together
+        me = next(p for p in reader.read().players if p.local)
+        self.assertEqual(me.position, (14.0, -2.0))  # from the one request at the end
+        self.assertEqual(asked, [1])
+
+        def unreadable(addresses, size):
+            if [where for _place, where in reader._position_spots] != addresses:
+                return [memory.read(address, size) for address in addresses]
+            return [None for _ in addresses]
+
+        memory._read_many = unreadable
+        me = next(p for p in reader.read().players if p.local)
+        self.assertEqual(me.position, (12.5, -3.0))  # not readable together: the one read in turn
+
     def test_without_car_data_there_are_no_car_sections(self):
         reader = build([10_000], laps_completed=0, clock=20_000, limit=0)
         self.assertIsNone(reader.read().car)
