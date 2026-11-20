@@ -4,6 +4,15 @@ Every finished change, newest first: what changed, why, how it was checked and w
 Each branch adds its dated entry at the top. Where things stand now: `RESUME.md`; what is open:
 `docs/BACKLOG.md`.
 
+- 2026-11-20: Move mode's panel in two tabs (`feature/panel-text-tab`, asked for by the user): **General** (Show,
+  Group, Centre, Tint) and **Text** (Show, Mid text with the Race leader's 🏁, Size px, Lines %, Font), each with
+  every section in the same rows and order, so all of them stay in view; the Show ticks are the same in both
+  (one request, whichever is ticked), and All and None are in both. Below the tabs (the group buttons, the global
+  text size and font, the preset in use, the buttons) nothing changed. Both tabs are as tall and as wide as the
+  larger, so switching moves nothing, and scroll together on a short screen; the tab widget is sized by hand, as
+  it does not follow its pages. The panel is 606 px wide offscreen (639 before), 20 px taller for the tab bar.
+  Tests: the columns in each tab, the same rows, Show in step and asked once, All in the Text tab, switching
+  tabs moving nothing; the tests of the scrolling rows pass unchanged. Not yet seen on the Mac and Linux.
 - 2026-11-20: A font for each section and each preset (`feature/fonts-per-preset-and-section`, asked for by the
   user; the backlog's "A font per section" idea, taken off Nice to have): move mode's panel has a **Font** list
   per text section (**global** by default, System font, one's own fonts, "(missing)" for a gone one) and, below

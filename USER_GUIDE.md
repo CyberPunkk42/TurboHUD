@@ -296,7 +296,7 @@ back, or a moment's shuffle in the order, shows nothing; none when you take the 
 while driving), and **Race Winner - name**, your own win too, on a black
 banner with a waving checkered flag at its right end as soon as the winner crosses the line. The
 text is always in the middle of the banner (of the room before the flag on the winner's). In move
-mode, the **🏁** button in the Race leader row of the panel switches the banner shown between a new
+mode, the **🏁** button in the Race leader row of the panel's **Text** tab switches the banner shown between a new
 leader's and the winner's, to see both while placing it. Each fades in, stays and fades out, 6
 seconds in all. Not at the start (the leader off the grid is no change), nor in hotlapping or
 the arena modes; spectating, it shows too. Between banners nothing of it is drawn. Untick it
@@ -373,16 +373,22 @@ from its name while they show, and no name ever runs into the next column.
   writes them. Sections TurboHUD moves itself (a preset, **Undo**, **Redo**, the design
   screen opening or closing) show no label.
 
-**The panel's columns**, one row per section, under the headings Timing, Car, Race, Other:
+**The panel's tabs.** The panel has two tabs, **General** and **Text**, each with one row per
+section, the same sections in the same order, under the headings Timing, Car, Race, Other. The
+**Show** column is in both, and the same in both:
 - **Show**: tick to show the section. **All** and **None** show or hide every section at once.
+
+**General** has where each section goes and its tint:
 - **Group**: put sections in the same group (A to G) to move them together; resizing one
   resizes the others by the same amount.
 - **Centre**: **↔** centres the section across the screen it is on, **↕** down it.
+- **Tint**: a light tint behind this section's text while locked; for the track map, its
+  dark square.
+
+**Text** has its text:
 - **Mid text**: puts the text in the middle of its box instead of at the left. The Race leader,
   Battle and Watched driver banners' text is always in the middle; the Race leader row has **🏁** there instead,
   which shows the winner's banner in move mode (pressed again, a new leader's).
-- **Tint**: a light tint behind this section's text while locked; for the track map, its
-  dark square.
 - **Size px**: this section's text size in pixels, or **global** to follow the global size.
   Flags, tire rings and bars grow with it.
 - **Lines %**: the room between its rows, in percent of the usual.
@@ -391,7 +397,7 @@ from its name while they show, and no name ever runs into the next column.
   whose file is gone shows as "(missing)", and the section is drawn in the system font until it
   comes back. Its box is fitted to the font at once.
 
-**Below the rows**
+**Below the tabs** (the same whichever tab is open)
 - **Same text size and width, group:** **A** to **G** gives that group's text
   sections the largest text size among them and one width (save a preset first to be able
   to go back).

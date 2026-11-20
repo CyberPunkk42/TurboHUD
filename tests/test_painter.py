@@ -1469,6 +1469,74 @@ class MovePanelPresetTests(unittest.TestCase):
         self.assertIsNone(clock.relearn)  # no track map, no button
         clock.set_relearn_available(True)
 
+    # Two tabs over the same rows (asked for by the user on 2026-11-20): General and Text.
+
+    @staticmethod
+    def headings(area):
+        from PySide6.QtWidgets import QLabel
+
+        found = [label.text() for label in area.findChildren(QLabel)]
+        return [text.replace('<small><b>', '').replace('</b></small>', '') for text in found]
+
+    def test_general_and_text_tabs_split_the_columns(self):
+        panel = self.panel()
+        self.assertEqual([panel.tabs.tabText(i) for i in range(panel.tabs.count())], ['General', 'Text'])
+        general, text = self.headings(panel.rows_area), self.headings(panel.text_area)
+        for heading in ('Group', 'Centre', 'Tint'):
+            self.assertIn(heading, general)
+            self.assertNotIn(heading, text)
+        for heading in ('Mid text', 'Size px', 'Lines %', 'Font'):
+            self.assertIn(heading, text)
+            self.assertNotIn(heading, general)
+        self.assertTrue(panel.rows_area.isAncestorOf(panel.groups['lap']))
+        self.assertTrue(panel.text_area.isAncestorOf(panel.centres['lap']))
+        self.assertTrue(panel.text_area.isAncestorOf(panel.font_sizes['lap']))
+        self.assertTrue(panel.text_area.isAncestorOf(panel.winner_preview))  # the 🏁 in Mid text's column
+
+    def test_both_tabs_list_every_section_in_the_same_order(self):
+        panel = self.panel()
+        self.assertEqual(list(panel.boxes), list(panel.text_boxes))
+        self.assertEqual(
+            [box.text() for box in panel.boxes.values()], [box.text() for box in panel.text_boxes.values()]
+        )
+
+    def test_show_is_the_same_in_both_tabs_and_asks_once(self):
+        panel = self.panel()
+        asked = []
+        panel.wanted_changed.connect(lambda name, wanted: asked.append((name, wanted)))
+        panel.text_boxes['fuel'].setChecked(True)
+        self.assertTrue(panel.boxes['fuel'].isChecked())
+        panel.boxes['fuel'].setChecked(False)
+        self.assertFalse(panel.text_boxes['fuel'].isChecked())
+        self.assertEqual(asked, [('fuel', True), ('fuel', False)])
+        panel.set_wanted('lap', True)  # from the app: both, saying nothing back
+        self.assertTrue(panel.boxes['lap'].isChecked() and panel.text_boxes['lap'].isChecked())
+        self.assertEqual(len(asked), 2)
+
+    def test_all_and_none_in_the_text_tab(self):
+        from PySide6.QtWidgets import QPushButton
+
+        panel = self.panel()
+        every = []
+        panel.all_wanted.connect(every.append)
+        button = next(b for b in panel.text_area.findChildren(QPushButton) if b.text() == 'All')
+        button.click()
+        self.assertEqual(every, [True])
+        self.assertTrue(all(box.isChecked() for box in (*panel.boxes.values(), *panel.text_boxes.values())))
+
+    def test_switching_tabs_moves_nothing_below_them(self):
+        panel = self.panel()
+        panel.fit_height(600)
+        self.assertEqual(panel.rows_area.size(), panel.text_area.size())
+        self.assertTrue(panel.rows_scroll())
+        self.assertEqual(panel.text_area.verticalScrollBarPolicy(), panel.rows_area.verticalScrollBarPolicy())
+        place = panel.undo.geometry()
+        panel.tabs.setCurrentIndex(1)
+        self.assertEqual(panel.undo.geometry(), place)
+        self.assertEqual(
+            panel.tabs.height(), panel.rows_area.height() + panel.tabs.tabBar().sizeHint().height()
+        )
+
     def test_the_panel_stays_compact(self):
         # It was 675 x 978 px with the options and a row per preset: most of a laptop's screen.
         # Since 2026-11-13 it fits the screen it opens on (fit_height), its rows scrolling.
