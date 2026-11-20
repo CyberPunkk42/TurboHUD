@@ -11,8 +11,9 @@ Each branch adds its dated entry at the top. Where things stand now: `RESUME.md`
   (`/retire`), and `TS.DisableReason` (Unknown, Finished, OutOfTime, ProRules, Collision, Disconnected,
   DisabledBetweenRounds, Weapon, Retired). The reader reads `disabled` with the slow state (once a second for
   other cars; `PlayerState.disabled`), and `Retirements` gives each marked car a label: DSQ for Disqualified,
-  DNF for Retired, AFK for a car idle over a minute (the old rule: outside the pits, slower than about 29 km/h for
-  60 s), shown where DNF was (`out_text`). A kick or a ban is a network disconnect reason, not a car flag, in the
+  DNF for Retired, AFK for a car slower than 10 km/h for over a minute outside the pits, gone as soon as it is
+  faster (`AFK_KMH`, asked for by the user; the old idle rule's 29 km/h both ways before), shown where DNF was
+  (`out_text`). A kick or a ban is a network disconnect reason, not a car flag, in the
   metadata: whether TSU marks a kicked or banned car Disqualified is not known; each change of a car's flags is
   logged (`player <name>: disabled flags N (were M)`) to see it. Tests: DNF and DSQ from the flags (in the pits,
   finished, both), AFK, the log, the labels in both lists. Not yet seen in a race: the field's byte, /retire,

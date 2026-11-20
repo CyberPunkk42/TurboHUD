@@ -3809,6 +3809,11 @@ AFK_TEXT = 'AFK'  # idle for over a minute (YELLOW_IDLE_AFTER), not out of the r
 # Drowned 8, Finished 16, Retired 32. TSU's RaceLogic.RetirePlayer sets Retired for /retire.
 DISABLED_DISQUALIFIED = 2
 DISABLED_RETIRED = 32
+# AFK: slower than this for YELLOW_IDLE_AFTER, and gone as soon as faster (asked for by the user on
+# 2026-11-20); km/h as the Speed section shows it. The same both ways, so a car crawling just above it
+# does not turn AFK and back every minute.
+AFK_KMH = 10.0
+AFK_SPEED = AFK_KMH / SPEED_TO_KMH  # game units a second along the car
 
 
 def out_text(out, name):
@@ -3823,9 +3828,9 @@ class Retirements:
     """Which cars the lists mark, and how (asked for by the user on 2026-11-13; changed on
     2026-11-20): DSQ for a car TSU disqualified, DNF for one that retired (/retire in the chat),
     both TSU's own flags on the car (PlayerState.disabled), and AFK for one idle for over a minute:
-    not finished, outside the pit area, and slower than YELLOW_SLOW (either way) for
-    YELLOW_IDLE_AFTER seconds of race time (only going faster than that again ends it). Before,
-    every idle car showed DNF, as TSU's flags were not known."""
+    not finished, outside the pit area, and slower than AFK_KMH (either way) for YELLOW_IDLE_AFTER
+    seconds of race time; going faster than that ends it at once. Before, every idle car showed DNF,
+    as TSU's flags were not known."""
 
     def __init__(self):
         self._slow_since = {}  # name -> race clock (seconds) since when it is that slow
@@ -3849,7 +3854,7 @@ class Retirements:
             since = self._slow_since.get(player.name)
             speed = player.forward_speed
             if speed is not None:
-                if abs(speed) >= YELLOW_SLOW:
+                if abs(speed) > AFK_SPEED:
                     since = None
                 elif since is None or since > now:  # or a new race's clock
                     since = now

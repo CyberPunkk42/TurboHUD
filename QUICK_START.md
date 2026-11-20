@@ -70,7 +70,7 @@ Hover over a section's name in the move-mode panel for a short explanation.
 - **My laps**: your last and best lap, with coloured sector bars (purple fastest, green yours).
 - **Standings**: every driver in race order, with flag, lap, gap to the leader, tire, best and
   last lap, PIT, CUT (shortcut penalty), JUMP (false start), DNF (retired), DSQ (disqualified),
-  AFK (idle over a minute); grouped by class in a
+  AFK (under 10 km/h for over a minute); grouped by class in a
   multi-class race. Every column but place and name can be turned off; watching without Best,
   the fastest lap's holder has a purple name.
 

@@ -1796,6 +1796,22 @@ class DnfTests(unittest.TestCase):
         )
         self.assertEqual(out.update(self.state(100, *cars)), {'Banned': 'DSQ', 'Both': 'DSQ'})
 
+    def test_afk_goes_as_soon_as_the_car_is_faster_than_10_kmh(self):
+        # Asked for by the user on 2026-11-20. Speeds in game units a second: km/h is 3.6 times as much.
+        out = race.Retirements()
+        out.update(self.state(0, self.car('Idle', 0.0)))
+        self.assertEqual(out.update(self.state(61, self.car('Idle', 0.0))), {'Idle': 'AFK'})
+        self.assertEqual(out.update(self.state(62, self.car('Idle', 9.5 / 3.6))), {'Idle': 'AFK'})  # 9.5 km/h
+        self.assertEqual(out.update(self.state(63, self.car('Idle', 10.5 / 3.6))), {})  # 10.5 km/h: gone
+        self.assertEqual(out.update(self.state(64, self.car('Idle', 0.0))), {})  # a minute again before AFK
+
+    def test_a_car_crawling_above_10_kmh_is_never_afk(self):
+        out = race.Retirements()
+        crawling = self.car('Crawl', 15 / 3.6)  # 15 km/h: slow, but driving
+        out.update(self.state(0, crawling))
+        self.assertEqual(out.update(self.state(500, crawling)), {})
+        self.assertAlmostEqual(race.AFK_SPEED * race.SPEED_TO_KMH, 10.0)
+
     def test_an_idle_car_is_no_longer_dnf(self):
         out = race.Retirements()
         out.update(self.state(0, self.car('Stopped', 0.0)))

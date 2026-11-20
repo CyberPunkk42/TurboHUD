@@ -28,7 +28,7 @@ Kept short: the state now and what to do next. Every change, with how it was che
 
 ## To try next (most recent first)
 1. **DNF, DSQ and AFK** (`fix/dnf-only-retired`): in an online race, `/retire` should show DNF at once (log:
-   `player <name>: disabled flags 32`); a car idle a minute AFK; a kicked or banned driver DSQ, if TSU sets its
+   `player <name>: disabled flags 32`); a car under 10 km/h for a minute AFK, gone above 10 km/h; a kicked or banned driver DSQ, if TSU sets its
    Disqualified flag (2): the log's flags line says what TSU sets, so send it after a kick or ban.
 2. **The time left from the lights going out** (`fix/time-left-from-lights-out`): in a timed race with 5 lights,
    Race progress should stand at the race's length (10:00) on the grid and start counting as the lights go out.
