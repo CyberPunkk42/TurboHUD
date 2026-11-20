@@ -28,10 +28,9 @@ Kept short: the state now and what to do next. Every change, with how it was che
   The repository is kept in step with a private GitHub repository.
 
 ## To try next (most recent first)
-0. **TurboHUD's memory on Linux** (`fix/memory-growth`, backlog item 10): text outlines are no longer kept
-   (about 110 MB less). In a race of a few tracks, the log's `memory:` should level off near 350 MB, not 450-540.
-   Started as `TURBOHUD_TRACE_MEMORY=1 sh run_turbohud.sh`, its `memory grew:` lines say where Python's slow
-   rise is.
+0. **TurboHUD's memory** (backlog item 10): on Linux it now levels off near 300 MB in a race (465 before). Left:
+   a session started as `TURBOHUD_TRACE_MEMORY=1 sh run_turbohud.sh` for Python's slow rise, and a long race on
+   the Mac and Windows.
 1. **The compass's north from the sun** (confirmed on 5 tracks, 2026-11-20): still to see, **Compass north from
    the sun** turned off in a race: north up on the map, no small sun.
 2. **Move mode on Hyprland** (`fix/place-label-hyprland-drag`): sections drag again, with their place label
