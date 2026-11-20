@@ -429,7 +429,8 @@ section, the same sections in the same order, under the headings Timing, Car, Ra
 **Below the tabs** (the same whichever tab is open)
 - **Same text size and width, group:** **A** to **G** gives that group's text
   sections the largest text size among them and one width (save a preset first to be able
-  to go back).
+  to go back). **Ungroup all** at the end of the row takes every section out of its group at
+  once (one step for **Undo**); it is greyed out while no section is in a group.
 - **Global text size (px)**: the text size of every section set to global. **All global**
   sets every text section back to the global size.
 - **Global font**: the font of every section whose **Font** is global, the same as Settings >

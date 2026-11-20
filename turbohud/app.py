@@ -1377,6 +1377,17 @@ def run(args, folder):
         save()
         log.info('section %s in group %s', name, group or '(none)')
 
+    @undoable
+    def ungroup_all():
+        """Every section out of its group (the panel's Ungroup all; asked for by the user on 2026-11-20)."""
+        grouped = [name for name, window in windows.items() if window.group]
+        for name in grouped:
+            windows[name].group = ''
+            panel.set_group(name, '')
+        mover.known.clear()  # start comparing afresh
+        save()
+        log.info('ungrouped: %s', ', '.join(grouped) or 'none were grouped')
+
     # Move mode on Wayland: Qt does not know where the sections are, so their place labels follow
     # what the desktop says at each look (on Windows and the Mac each window shows its own as it moves).
     seen_places = {}
@@ -2408,6 +2419,7 @@ def run(args, folder):
     panel.wanted_changed.connect(set_wanted)
     panel.all_wanted.connect(set_all_wanted)
     panel.group_changed.connect(set_group)
+    panel.ungroup_all_requested.connect(ungroup_all)
     panel.align_requested.connect(align)
     show_fonts()
     for name, window in windows.items():
