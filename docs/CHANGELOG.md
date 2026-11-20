@@ -4,6 +4,20 @@ Every finished change, newest first: what changed, why, how it was checked and w
 Each branch adds its dated entry at the top. Where things stand now: `RESUME.md`; what is open:
 `docs/BACKLOG.md`.
 
+- 2026-11-20: DNF only for a retired driver, DSQ and AFK (`fix/dnf-only-retired`, asked for by the user): DNF
+  was any car idle for a minute, as TSU's own mark was not known. Found in the game's metadata
+  (`global-metadata.dat`, read only): `TS.DisabledFlags` (Permanent 1, Disqualified 2, Wrecked 4, Drowned 8,
+  Finished 16, Retired 32) on each car's `VehicleState.disabled`, Retired set by `RaceLogic.RetirePlayer`
+  (`/retire`), and `TS.DisableReason` (Unknown, Finished, OutOfTime, ProRules, Collision, Disconnected,
+  DisabledBetweenRounds, Weapon, Retired). The reader reads `disabled` with the slow state (once a second for
+  other cars; `PlayerState.disabled`), and `Retirements` gives each marked car a label: DSQ for Disqualified,
+  DNF for Retired, AFK for a car slower than 10 km/h for over a minute outside the pits, gone as soon as it is
+  faster (`AFK_KMH`, asked for by the user; the old idle rule's 29 km/h both ways before), shown where DNF was
+  (`out_text`). A kick or a ban is a network disconnect reason, not a car flag, in the
+  metadata: whether TSU marks a kicked or banned car Disqualified is not known; each change of a car's flags is
+  logged (`player <name>: disabled flags N (were M)`) to see it. Tests: DNF and DSQ from the flags (in the pits,
+  finished, both), AFK, the log, the labels in both lists. Not yet seen in a race: the field's byte, /retire,
+  a kick.
 - 2026-11-20: The time left counts from the lights going out (`fix/time-left-from-lights-out`, reported by the
   user): TSU's race clock runs from the grid and its time limit counts the lights, so Race progress counted down
   through them (10:07 ... 10:00) and reached the race's length just as they went out, telling when they would,

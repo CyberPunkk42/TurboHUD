@@ -1753,19 +1753,22 @@ class DnfTests(unittest.TestCase):
             players=tuple(players),
         )
 
-    def test_a_car_standing_for_a_minute_is_out_until_it_drives_again(self):
+    # Changed on 2026-11-20 (asked for by the user): an idle car is AFK; DNF only for one TSU has retired
+    # (/retire in the chat), DSQ for one it disqualified, both from TSU's flags on the car.
+
+    def test_a_car_standing_for_a_minute_is_afk_until_it_drives_again(self):
         out = race.Retirements()
         stopped, racing = self.car('Stopped', 0.0), self.car('Racer', 30.0)
-        self.assertEqual(out.update(self.state(100, stopped, racing)), frozenset())
+        self.assertEqual(out.update(self.state(100, stopped, racing)), {})
+        self.assertEqual(out.update(self.state(100 + race.YELLOW_IDLE_AFTER - 1, stopped, racing)), {})
         self.assertEqual(
-            out.update(self.state(100 + race.YELLOW_IDLE_AFTER - 1, stopped, racing)), frozenset()
+            out.update(self.state(100 + race.YELLOW_IDLE_AFTER, stopped, racing)), {'Stopped': 'AFK'}
         )
-        self.assertEqual(out.update(self.state(100 + race.YELLOW_IDLE_AFTER, stopped, racing)), {'Stopped'})
         unread = self.car('Stopped', None)  # its speed not read this time: no change
-        self.assertEqual(out.update(self.state(170, unread, racing)), {'Stopped'})
-        self.assertEqual(out.update(self.state(171, self.car('Stopped', 20.0), racing)), frozenset())
+        self.assertEqual(out.update(self.state(170, unread, racing)), {'Stopped': 'AFK'})
+        self.assertEqual(out.update(self.state(171, self.car('Stopped', 20.0), racing)), {})
 
-    def test_in_the_pits_finished_or_on_the_grid_is_not_out(self):
+    def test_in_the_pits_finished_or_on_the_grid_is_not_afk(self):
         out = race.Retirements()
         cars = (
             self.car('Pit', 0.0, in_pit=True),
@@ -1773,7 +1776,70 @@ class DnfTests(unittest.TestCase):
             dataclasses.replace(self.car('Grid', 0.0), checkpoints=((0,),)),
         )
         out.update(self.state(0, *cars))
-        self.assertEqual(out.update(self.state(500, *cars)), frozenset())
+        self.assertEqual(out.update(self.state(500, *cars)), {})
+
+    def test_dnf_only_for_a_car_tsu_has_retired_at_once(self):
+        out = race.Retirements()
+        retired = dataclasses.replace(self.car('Gone', 30.0), disabled=race.DISABLED_RETIRED)
+        wrecked = dataclasses.replace(self.car('Wreck', 30.0), disabled=4)  # Wrecked: not out by /retire
+        self.assertEqual(out.update(self.state(100, retired, wrecked)), {'Gone': 'DNF'})
+        # Retired in the pits, or with TSU's Permanent flag too, it is still DNF.
+        in_pit = dataclasses.replace(self.car('Gone', 0.0, in_pit=True), disabled=race.DISABLED_RETIRED | 1)
+        self.assertEqual(out.update(self.state(101, in_pit)), {'Gone': 'DNF'})
+
+    def test_dsq_for_a_disqualified_car_over_the_rest(self):
+        out = race.Retirements()
+        both = race.DISABLED_DISQUALIFIED | race.DISABLED_RETIRED
+        cars = (
+            dataclasses.replace(self.car('Banned', 0.0), disabled=race.DISABLED_DISQUALIFIED),
+            dataclasses.replace(self.car('Both', 0.0, finished=True), disabled=both),
+        )
+        self.assertEqual(out.update(self.state(100, *cars)), {'Banned': 'DSQ', 'Both': 'DSQ'})
+
+    def test_afk_goes_as_soon_as_the_car_is_faster_than_10_kmh(self):
+        # Asked for by the user on 2026-11-20. Speeds in game units a second: km/h is 3.6 times as much.
+        out = race.Retirements()
+        out.update(self.state(0, self.car('Idle', 0.0)))
+        self.assertEqual(out.update(self.state(61, self.car('Idle', 0.0))), {'Idle': 'AFK'})
+        self.assertEqual(out.update(self.state(62, self.car('Idle', 9.5 / 3.6))), {'Idle': 'AFK'})  # 9.5 km/h
+        self.assertEqual(out.update(self.state(63, self.car('Idle', 10.5 / 3.6))), {})  # 10.5 km/h: gone
+        self.assertEqual(out.update(self.state(64, self.car('Idle', 0.0))), {})  # a minute again before AFK
+
+    def test_a_car_crawling_above_10_kmh_is_never_afk(self):
+        out = race.Retirements()
+        crawling = self.car('Crawl', 15 / 3.6)  # 15 km/h: slow, but driving
+        out.update(self.state(0, crawling))
+        self.assertEqual(out.update(self.state(500, crawling)), {})
+        self.assertAlmostEqual(race.AFK_SPEED * race.SPEED_TO_KMH, 10.0)
+
+    def test_an_idle_car_is_no_longer_dnf(self):
+        out = race.Retirements()
+        out.update(self.state(0, self.car('Stopped', 0.0)))
+        self.assertEqual(out.update(self.state(500, self.car('Stopped', 0.0))), {'Stopped': 'AFK'})
+
+    def test_a_change_of_flags_is_logged_once(self):
+        out = race.Retirements()
+        gone = dataclasses.replace(self.car('Gone', 30.0), disabled=race.DISABLED_RETIRED)
+        with self.assertLogs('turbohud.core.race', level='INFO') as logged:
+            out.update(self.state(100, gone))
+            out.update(self.state(101, gone))
+        self.assertEqual(logged.output, ['INFO:turbohud.core.race:player Gone: disabled flags 32 (were 0)'])
+
+    def test_each_label_in_both_lists(self):
+        cars = [self.car(name, 0.0) for name in ('Gone', 'Banned', 'Idle', 'Racer')]
+        out = {'Gone': 'DNF', 'Banned': 'DSQ', 'Idle': 'AFK'}
+        rows = race.lap_times_rows(cars, order=cars, clock=100_000, retired=out)
+        self.assertEqual([r.right for r in rows[1:4]], ['DNF', 'DSQ', 'AFK'])
+        self.assertTrue(all(r.right_color == race.SHORTCUT_COLOR for r in rows[1:4]))
+        listed = race.players_rows(cars, cars, 100_000, watching=True, retired=out)
+        self.assertEqual(
+            sorted(r.right for r in listed if r.right in ('DNF', 'DSQ', 'AFK')), ['AFK', 'DNF', 'DSQ']
+        )
+
+    def test_the_game_flags_are_read_from_the_cars_state(self):
+        # TS.DisabledFlags, from the game's metadata (2026-11-20).
+        self.assertEqual((race.DISABLED_DISQUALIFIED, race.DISABLED_RETIRED), (2, 32))
+        self.assertIsNone(race.PlayerState('A', 0, 0, ()).disabled)
 
     def test_dnf_in_the_lap_times_last_column(self):
         cars = [self.car('Stopped', 0.0), self.car('Racer', 30.0)]

@@ -606,6 +606,9 @@ class PlayerState:
     # pit area). Seen in a replay on the user's PC (2026-11-13): on while the car stood in its box being
     # serviced, off as it left, and off for a car stopped in the pit lane outside a box. None: not read.
     in_box: bool | None = None
+    # TSU's TS.DisabledFlags for the car (VehicleState.disabled): Retired after /retire, Disqualified ...
+    # (race.Retirements tells DNF and DSQ by them). None: not read.
+    disabled: int | None = None
 
     @functools.cached_property
     def passed(self):
@@ -1850,7 +1853,7 @@ class LapReader:
             if passed:
                 checkpoints.append(passed)
         in_pit, position, velocity, forward, draft_drag = False, None, None, None, None
-        forward_speed = wheel_grips = wheel_layers = spawns = compound = in_box = None
+        forward_speed = wheel_grips = wheel_layers = spawns = compound = in_box = disabled = None
         car = ''
         shortcut = jump_start = wrecked = False
         try:
@@ -1869,7 +1872,7 @@ class LapReader:
             slow = self._kept_slow.get(player)
             if self._full or local or slow is None:
                 slow = self._kept_slow[player] = self._slow_state(vehicle, updater)
-            area, wrecked, compound, spawns, jump_start, wheel_grips, wheel_layers = slow
+            area, wrecked, compound, spawns, jump_start, wheel_grips, wheel_layers, disabled = slow
             in_pit = in_pit or area
             if updater is not None:
                 velocity, forward = (
@@ -1918,6 +1921,7 @@ class LapReader:
             wrecked=wrecked,
             compound=compound,
             in_box=in_box,
+            disabled=disabled,
         )
 
     def _read_compounds(self, updater):
@@ -1952,10 +1956,10 @@ class LapReader:
 
     def _slow_state(self, vehicle, updater):
         """(in the pit area, wrecked, tire compound, respawns, jump start, wheel grips, wheel
-        layers) of a car: what changes slowly, read once a second for the other cars."""
+        layers, disabled flags) of a car: what changes slowly, read once a second for the other cars."""
         memory = self.il.memory
         area = wrecked = jump_start = False
-        compound = spawns = grips = layers = None
+        compound = spawns = grips = layers = disabled = None
         try:
             # The whole pit area, from its entrance to its exit, not only the pit box.
             state = self._ref('vehicle', vehicle, 'm_state')
@@ -1973,11 +1977,17 @@ class LapReader:
             spawns = self._number('vstate', state, 'spawnCount')
             # Seen 2026-11-11 for half a second on the player's car at a start.
             jump_start = bool(memory.u8(state + self._offset('vstate', state, 'startPenaltyOn')))
+            try:
+                # TS.DisabledFlags (DISABLED_RETIRED, DISABLED_DISQUALIFIED ...), found in the game's
+                # metadata on 2026-11-20: why the car is out, as TSU has it. One byte: its flags end at 64.
+                disabled = memory.u8(state + self._offset('vstate', state, 'disabled'))
+            except (NotFound, ReadError):
+                pass
         except (NotFound, ReadError):
             pass
         if updater is not None:
             grips, layers = self._wheels(updater)[1:]
-        return area, wrecked, compound, spawns, jump_start, grips, layers
+        return area, wrecked, compound, spawns, jump_start, grips, layers, disabled
 
     def _wheels(self, updater, surfaces=True):
         """(speed along the car, the grip under each of its four wheels, those surfaces'
@@ -3682,7 +3692,7 @@ def players_rows(
                 tail=tail,
                 tail_color='lift',
                 flag=flag_code(player.flag) or flag_text(player.flag),
-                middle=DNF_TEXT if player.name in retired else gap_text(found),
+                middle=out_text(retired, player.name) or gap_text(found),
                 middle_color=SHORTCUT_COLOR if player.name in retired else gap_color,
                 **tag,
                 **_tyre_column(player, compounds, wet),
@@ -3716,7 +3726,7 @@ def _standings_rows(players, order, clock, gates, retired=frozenset(), max_rows=
                 tail=tail,
                 tail_color='lift',
                 flag=flag_code(player.flag) or flag_text(player.flag),
-                right=DNF_TEXT if player.name in retired else gap_text(found),
+                right=out_text(retired, player.name) or gap_text(found),
                 right_color=SHORTCUT_COLOR if player.name in retired else 'text',
             )
         )
@@ -3790,40 +3800,78 @@ class ShortcutPenalties:
         return found
 
 
-DNF_TEXT = (
-    'DNF'  # in the lists' gap and Last lap columns, in SHORTCUT_COLOR (asked for by the user on 2026-11-13)
-)
+# What the lists show in a car's gap and Last lap columns, in SHORTCUT_COLOR (asked for by the user on
+# 2026-11-13; DSQ and AFK on 2026-11-20).
+DNF_TEXT = 'DNF'  # retired: TSU's Retired flag, after /retire in the chat
+DSQ_TEXT = 'DSQ'  # disqualified: TSU's Disqualified flag
+AFK_TEXT = 'AFK'  # idle for over a minute (YELLOW_IDLE_AFTER), not out of the race as TSU has it
+# TS.DisabledFlags (found in the game's metadata on 2026-11-20): Permanent 1, Disqualified 2, Wrecked 4,
+# Drowned 8, Finished 16, Retired 32. TSU's RaceLogic.RetirePlayer sets Retired for /retire.
+DISABLED_DISQUALIFIED = 2
+DISABLED_RETIRED = 32
+# AFK: slower than this for YELLOW_IDLE_AFTER, and gone as soon as faster (asked for by the user on
+# 2026-11-20); km/h as the Speed section shows it. The same both ways, so a car crawling just above it
+# does not turn AFK and back every minute.
+AFK_KMH = 10.0
+AFK_SPEED = AFK_KMH / SPEED_TO_KMH  # game units a second along the car
+
+
+def out_text(out, name):
+    """What the lists show for a car out of the race or idle (Retirements' `out`), else ''.
+    `out` may be a set of names (older callers, the preview): DNF for each."""
+    if name not in out:
+        return ''
+    return out.get(name, DNF_TEXT) if isinstance(out, dict) else DNF_TEXT
 
 
 class Retirements:
-    """Which cars are out of the race, shown DNF in the lists (asked for by the user on
-    2026-11-13). TSU keeps no such mark for a car, so TurboHUD goes by what the yellow flags
-    call idle: not finished, outside the pit area, and slower than YELLOW_SLOW (either way)
-    for YELLOW_IDLE_AFTER seconds of race time. Only going faster than that again ends it."""
+    """Which cars the lists mark, and how (asked for by the user on 2026-11-13; changed on
+    2026-11-20): DSQ for a car TSU disqualified, DNF for one that retired (/retire in the chat),
+    both TSU's own flags on the car (PlayerState.disabled), and AFK for one idle for over a minute:
+    not finished, outside the pit area, and slower than AFK_KMH (either way) for YELLOW_IDLE_AFTER
+    seconds of race time; going faster than that ends it at once. Before, every idle car showed DNF,
+    as TSU's flags were not known."""
 
     def __init__(self):
         self._slow_since = {}  # name -> race clock (seconds) since when it is that slow
+        self._flags = {}  # name -> its disabled flags at the last read, to log a change
 
     def update(self, state):
-        """The names of the cars out of the race now."""
+        """{name: DSQ_TEXT, DNF_TEXT or AFK_TEXT} for the cars marked now."""
         now = state.clock / UNITS_PER_SECOND
-        out, kept = set(), {}
+        out, kept = {}, {}
         for player in state.players:
+            self._log_flags(player)
+            flags = player.disabled or 0
+            if flags & DISABLED_DISQUALIFIED:
+                out[player.name] = DSQ_TEXT
+                continue
+            if flags & DISABLED_RETIRED:
+                out[player.name] = DNF_TEXT
+                continue
             if player.finished or player.in_pit or len(player.passed) < 2:
-                continue  # done, in the pits, or still on the grid: not out
+                continue  # done, in the pits, or still on the grid: not idle
             since = self._slow_since.get(player.name)
             speed = player.forward_speed
             if speed is not None:
-                if abs(speed) >= YELLOW_SLOW:
+                if abs(speed) > AFK_SPEED:
                     since = None
                 elif since is None or since > now:  # or a new race's clock
                     since = now
             if since is not None:
                 kept[player.name] = since
                 if now - since >= YELLOW_IDLE_AFTER:
-                    out.add(player.name)
+                    out[player.name] = AFK_TEXT
         self._slow_since = kept
-        return frozenset(out)
+        return out
+
+    def _log_flags(self, player):
+        """Log a car's disabled flags as they change: what TSU sets on /retire, a kick or a ban."""
+        before = self._flags.get(player.name, 0)
+        now = player.disabled or 0
+        if now != before:
+            log.info('player %s: disabled flags %d (were %d)', player.name, now, before)
+            self._flags[player.name] = now
 
 
 def shortcut_rows(state, left, jumped=frozenset()):
@@ -4049,7 +4097,9 @@ def lap_times_rows(
         elif player.name in jumped:
             cut_text = 'JUMP'  # TSU's false-start penalty (see ShortcutPenalties.jump_starts)
         elif player.name in retired:
-            cut_text = DNF_TEXT  # out of the race (Retirements), in the Last lap's place
+            cut_text = out_text(
+                retired, player.name
+            )  # DNF, DSQ or AFK (Retirements), in the Last lap's place
         holds_fastest = best is not None and best == fastest.get(group)
         name_color = 'accent' if player.local else 'text'
         if watching and holds_fastest and 'best' not in columns:  # in the pits too: still theirs
