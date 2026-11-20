@@ -13,6 +13,10 @@ Each branch adds its dated entry at the top. Where things stand now: `RESUME.md`
   it does not follow its pages. The panel is 606 px wide offscreen (639 before), 20 px taller for the tab bar.
   Tests: the columns in each tab, the same rows, Show in step and asked once, All in the Text tab, switching
   tabs moving nothing; the tests of the scrolling rows pass unchanged. Not yet seen on the Mac and Linux.
+  Then (reported by the user: as plain words under the help text, the tabs were easy to miss) the tabs made to
+  stand out: bold names in boxes with the panel's light blue border, the open one filled light blue with dark
+  text, a 2 px line in that blue under them joining it to its rows, and 8 px of room above them; the tabs' height
+  counts that line and its room, so the last row is not cut off. Looked at in images of both tabs.
 - 2026-11-20: A font for each section and each preset (`feature/fonts-per-preset-and-section`, asked for by the
   user; the backlog's "A font per section" idea, taken off Nice to have): move mode's panel has a **Font** list
   per text section (**global** by default, System font, one's own fonts, "(missing)" for a gone one) and, below

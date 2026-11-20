@@ -1533,9 +1533,17 @@ class MovePanelPresetTests(unittest.TestCase):
         place = panel.undo.geometry()
         panel.tabs.setCurrentIndex(1)
         self.assertEqual(panel.undo.geometry(), place)
-        self.assertEqual(
-            panel.tabs.height(), panel.rows_area.height() + panel.tabs.tabBar().sizeHint().height()
-        )
+        from turbohud.overlay.window import PANEL_TAB_GAP, PANEL_TAB_LINE
+
+        bar = panel.tabs.tabBar().sizeHint().height() + PANEL_TAB_LINE + PANEL_TAB_GAP
+        self.assertEqual(panel.tabs.height(), panel.rows_area.height() + bar)  # no row cut off at the bottom
+
+    def test_the_tabs_stand_out_from_the_help_text_above(self):
+        # Reported by the user on 2026-11-20: plain words under the help text, they were easy to miss.
+        style = self.panel().tabs.styleSheet()
+        self.assertIn('font-weight: bold', style)
+        self.assertIn('QTabBar::tab:selected', style)
+        self.assertIn('border-top: 2px solid', style)  # the line joining the open tab to its rows
 
     def test_the_panel_stays_compact(self):
         # It was 675 x 978 px with the options and a row per preset: most of a laptop's screen.

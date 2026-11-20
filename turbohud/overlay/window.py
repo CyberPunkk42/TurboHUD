@@ -131,6 +131,9 @@ PANEL_COMBO_WIDTH = 56  # the move-mode panel's group lists: wide enough for '-'
 PANEL_SMALL_BUTTON = 32  # its one-character buttons (centre, match a group, delete a preset)
 PANEL_FONT_WIDTH = 96  # its font lists: a font's name, cut where longer (the list opens wider)
 PANEL_FONT_OPEN = 220  # an open font list: wide enough for most fonts' names in full
+PANEL_TABS_ROOM = 8  # room between the help text and the tabs
+PANEL_TAB_LINE, PANEL_TAB_GAP = 2, 4  # the line below the tabs, and the room between it and the rows
+PANEL_TAB_TEXT = '#0f1e37'  # the open tab's name: the panel's dark blue, on the border's light blue
 FONT_GLOBAL = 'global'  # a section's font list: the global font (FONT_GLOBAL_KEY its item's data)
 FONT_GLOBAL_KEY = '\x00global'  # not a font's name: Qt keeps no None as an item's data
 SYSTEM_FONT = 'System font'
@@ -1644,21 +1647,25 @@ class MovePanel(QWidget):
         self.rows, self.rows_area = self._scrolling(general)
         self.text_rows, self.text_area = self._scrolling(text)
         self.tabs = QTabWidget()
-        self.tabs.setDocumentMode(True)  # no frame round the rows: the panel draws its own
-        self.tabs.tabBar().setDrawBase(
-            False
-        )  # its white line across the panel: the chosen tab's line is enough
+        self.tabs.tabBar().setDrawBase(False)  # the style's own line: the pane's (below) instead
         self.tabs.addTab(self.rows_area, 'General')
         self.tabs.addTab(self.text_area, 'Text')
         self.tabs.setTabToolTip(0, 'Show, group, centre and tint each section')
         self.tabs.setTabToolTip(1, 'Where the text sits, its size, line spacing and font, for each section')
+        # Tabs that read as tabs, apart from the help text above them (reported by the user on
+        # 2026-11-20: plain words, they were easy to miss): bold, boxed, the open one filled, on a line
+        # that joins it to its rows.
+        edge = f'rgb{BORDER}'
         self.tabs.setStyleSheet(
-            'QTabWidget::pane { border: none; }'
-            f' QTabBar::tab {{ color: {PANEL_HEADING}; background: transparent; padding: 3px 14px;'
-            ' border: 1px solid transparent; border-bottom: 2px solid transparent; }'
-            f' QTabBar::tab:selected {{ color: white; border-bottom: 2px solid rgb{BORDER}; }}'
-            ' QTabBar::tab:hover { color: white; }'
+            f'QTabWidget::pane {{ border: none; border-top: {PANEL_TAB_LINE}px solid {edge};'
+            f' background: transparent; padding-top: {PANEL_TAB_GAP}px; }}'
+            f' QTabBar::tab {{ color: {PANEL_HEADING}; background: rgba(120, 170, 230, 35);'
+            f' border: 1px solid {edge}; border-bottom: none; border-top-left-radius: 5px;'
+            ' border-top-right-radius: 5px; padding: 5px 22px; margin-right: 4px; font-weight: bold; }'
+            f' QTabBar::tab:selected {{ color: {PANEL_TAB_TEXT}; background: {edge}; }}'
+            ' QTabBar::tab:!selected:hover { color: white; background: rgba(120, 170, 230, 80); }'
         )
+        column.addSpacing(PANEL_TABS_ROOM)
         column.addWidget(self.tabs)
         self._finish(column, sections)
         self.fit_height(None)
@@ -2004,7 +2011,8 @@ class MovePanel(QWidget):
         # Both tabs as tall and as wide as the larger: switching tabs moves nothing below them.
         areas = ((self.rows, self.rows_area), (self.text_rows, self.text_area))
         full = max(rows.sizeHint().height() for rows, _area in areas)
-        tab_bar = self.tabs.tabBar().sizeHint().height()
+        # The tab bar, and the line below it with its room (the pane's style): the rows come after them.
+        tab_bar = self.tabs.tabBar().sizeHint().height() + PANEL_TAB_LINE + PANEL_TAB_GAP
         for _rows, area in areas:
             area.setFixedHeight(full)
         self.tabs.setFixedHeight(full + tab_bar)  # the tabs follow their rows only when told
