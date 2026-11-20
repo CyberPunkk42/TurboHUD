@@ -120,6 +120,14 @@ banner while spectating, from the camera TSU's cockpit view is read from (`spect
 live, the log says whether it reads; (4) a Spectating kind of event for the presets (Layouts > Load by
 itself), to see. What is left: nothing planned; tune the parts from what the user sees.
 
+## 9. The compass: north from the sun (next, agreed in principle 2026-11-20)
+TSU's sun sets at `LocationProperties.sunDirection`, so north is `sunDirection` + 90° (found in a session of 4
+races: `experiments/README.md`, "TSU's sun"). The user asked for the sun only where a track's maker moved it
+(not 0); advised against, as every track has its sun, so N would then disagree with the sun seen on tracks left at 0
+(Coco Jumbo) and jump between map and sun from track to track. Recommended: a setting **North: from the sun**
+(default) or **Up on the map**, read once an event; maybe a ☀ mark in the readout when from the sun. The user
+decides when the session resumes. Keep the sun log line (`_log_sun`) until then.
+
 ## Nice to have (ideas, not planned)
 Ideas talked over and left for later; none is being worked on. Take one up only when the user asks.
 - **Offered earlier, not taken up:** the Mac's one-window canvas only as large as its sections; the
