@@ -4,6 +4,8 @@ Every finished change, newest first: what changed, why, how it was checked and w
 Each branch adds its dated entry at the top. Where things stand now: `RESUME.md`; what is open:
 `docs/BACKLOG.md`.
 
+- 2026-11-20: Confirmed by the user in the running app on Hyprland: the design screen (`fix/design-screen-hyprland`),
+  its frame at its size and the sections inside it. Taken off RESUME.md's list.
 - 2026-11-20: The design screen on Hyprland (`fix/design-screen-hyprland`, reported by the user): its yellow frame
   opened at Qt's 640×480 in the screen's corner, and its sections went back to where they had been, then were
   pulled into the frame one by one (`back in the frame` in the log). TurboHUD's moves on Hyprland went through
