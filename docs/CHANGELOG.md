@@ -4,6 +4,11 @@ Every finished change, newest first: what changed, why, how it was checked and w
 Each branch adds its dated entry at the top. Where things stand now: `RESUME.md`; what is open:
 `docs/BACKLOG.md`.
 
+- 2026-11-20: Confirmed by the user in the running app: sections staying in the design screen's frame
+  (`fix/design-sections-in-frame`), the shipped layouts and starting presets (`feature/ship-user-layouts`), the
+  fastest lap's holder in purple without the Best column (`feature/fastest-lap-name`, `fix/preview-fastest-name`)
+  and the Standings' columns in each preset (`feature/columns-per-preset`, `fix/old-preset-all-columns`); taken
+  off RESUME.md's list. The rest of that list is not yet tried.
 - 2026-11-20: Sections stay in the design screen's frame (`fix/design-sections-in-frame`, asked for by the user):
   a section dragged or sized out of the frame goes back in once it stands still (two looks of move mode, 0.2 s
   apart, the same: the desktop moves a dragged window, so the drag itself is never fought), a group as one by the
