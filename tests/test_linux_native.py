@@ -206,6 +206,17 @@ class LinuxNativeTests(unittest.TestCase):
             native._place_next()
         self.assertEqual(order, [(50, 0, 10, 10)])  # where it was raised last
 
+    def test_to_front_for_a_known_window_only(self):
+        hypr = FakeHypr()
+        fronts = []
+        hypr.to_front = fronts.append
+        native = self.native(hypr)
+        widget = FakeWidget()
+        native.to_front(widget)  # not found in Hyprland yet: nothing
+        native.addresses[id(widget)] = '0xlabel'
+        native.to_front(widget)
+        self.assertEqual(fronts, ['0xlabel'])
+
     def test_hyprland_keeps_the_place_labels_open(self):
         self.assertTrue(self.native(FakeHypr()).keeps_labels_open)
         self.assertFalse(self.native(None).keeps_labels_open)

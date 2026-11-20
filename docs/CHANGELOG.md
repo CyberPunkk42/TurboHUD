@@ -22,8 +22,10 @@ Each branch adds its dated entry at the top. Where things stand now: `RESUME.md`
   in the log), and the panel then gave the focus to the game (fixed by (2)). Now the waiting windows are placed
   in order (`place_rank`): those taking clicks first, then the sections, then the labels, one per turn of Qt's
   loop, and a window placed twice while waiting only once; the panel goes in front again once all are placed
-  (`to_front`).
-  Tests: the order and the panel in front again, one placement for a window raised twice; the label open all
+  (`to_front`). (5) A label above its section hid behind a section above it that was clicked before (Hyprland
+  brings a clicked window to the front; reported by the user): on Hyprland a label comes in front each time it
+  shows (`Native.to_front`).
+  Tests: the label in front each time it shows, not at each move; the order and the panel in front again, one placement for a window raised twice; the label open all
   through move mode and closed with its section or as it locks, placed as it opens, none elsewhere until moved;
   the focus given back only by the window that took it, kept by one taking clicks; the fixed size and its release,
   a section left alone. Not yet seen by hand on Hyprland.

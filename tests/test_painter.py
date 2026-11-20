@@ -1958,6 +1958,19 @@ class PlaceLabelTests(unittest.TestCase):
         window.set_locked(True)
         self.assertFalse(label.isVisible())  # closed as it locks
 
+    def test_on_hyprland_it_comes_in_front_each_time_it_shows(self):
+        # A section clicked before went in front of it and covered it (reported by the user on 2026-11-20).
+        fronts = []
+        window = self.window(keeps_labels_open=True, to_front=lambda self, widget: fronts.append(widget))
+        window.set_locked(False)
+        self.assertEqual(fronts, [])  # opened empty: nothing to see yet
+        window.show_place((500, 400, 300, 60))
+        window.show_place((510, 400, 300, 60))  # moving on: already in front
+        self.assertEqual(fronts, [window.label_window])
+        window.hide_place()
+        window.show_place((520, 400, 300, 60))
+        self.assertEqual(fronts, [window.label_window] * 2)
+
     def test_elsewhere_no_label_window_until_it_moves(self):
         window = self.window()
         window.set_locked(False)

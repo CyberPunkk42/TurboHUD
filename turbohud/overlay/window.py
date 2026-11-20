@@ -1619,9 +1619,15 @@ class PlaceLabel(QWidget):
         """Show `text` ('' paints nothing) at `place` (x, y, width, height; None: where it is):
         moved where the desktop must move it. A window opening is given its place and size first,
         or the desktop places Qt's default one (640×480 at the screen's corner)."""
+        appears = bool(text) and not self.text
         if text != self.text:
             self.text = text
             self.update()
+        to_front = getattr(self.native, 'to_front', None)
+        if appears and to_front is not None and self.isVisible():
+            # In front of the sections: one clicked earlier went in front of it (Hyprland brings a
+            # clicked window to the front), and covered it above the section dragged (2026-11-20).
+            to_front(self)
         if place is None:
             return
         if not self.isVisible():

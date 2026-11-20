@@ -203,6 +203,12 @@ class Native:
             # and focusing the game moved the mouse to the game's screen (reported on 2026-11-20).
             self.give_focus_back(only_from=address)
 
+    def to_front(self, widget):
+        """In front of TurboHUD's other windows now (a place label as it shows)."""
+        address = self.addresses.get(id(widget))
+        if self.hypr is not None and address is not None:
+            self.hypr.to_front(address)
+
     def set_movable(self, widget, movable):
         """Move mode on or off for a shown window: on Hyprland it must take the mouse to
         be dragged, and must not when locked."""
