@@ -4,6 +4,17 @@ Every finished change, newest first: what changed, why, how it was checked and w
 Each branch adds its dated entry at the top. Where things stand now: `RESUME.md`; what is open:
 `docs/BACKLOG.md`.
 
+- 2026-11-20: A preset loaded by hand remembered for the session (`feature/session-presets`, asked for by the user,
+  who loaded preset 5 by hand at every event, as only it had the compass). Load by itself's preset for each kind of
+  event (race, hotlapping, recording, spectating, special) loads as before; a preset loaded by hand during an event
+  (its key, the panel, the command line) now takes its place for that kind for the rest of the session
+  (`SessionPresets` in `race.py`, `load_preset_by_hand` in `app.py`; per kind and until TSU's menu, the user's
+  choices). The session is over once TSU has had no session (its menu, or no TSU) for 5 s (SESSION_GAP); between
+  its events TSU sets the next race up, which does not count. The next session starts with Load by itself's
+  choices, and its first event loads its preset even of the same kind as the last (`EventModes.reset`). Loaded in
+  the menu, a preset is only loaded. The guides say so. Tests: Load by itself's until one by hand, each kind its
+  own, recordings and spectating, none outside a session, over after 5 s in the menu but not between events, TSU
+  closed, the next session's first event told. Not yet seen in a session.
 - 2026-11-20: Text outlines no longer kept (`fix/memory-growth`, backlog item 10). In a race with the new
   `memory parts:` line (Linux, about 20 cars) glibc's heap in use grew 133 to 363 MB, with nothing freed but held;
   the biggest step came as the outline cache filled. A text's stroked outline with round joins is 4,600-7,400

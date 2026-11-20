@@ -2003,6 +2003,67 @@ class EventModeTests(unittest.TestCase):
         modes = race.EventModes()
         self.assertIsNone(modes.began(self.snapshot(moved_at=0.0), race.STILL_SECONDS + 5))
 
+    def test_a_new_session_tells_its_first_event_whatever_its_mode(self):
+        modes = race.EventModes()
+        modes.began(self.snapshot(moved_at=1.0), 1.0)
+        modes.reset()  # the session is over (SessionPresets)
+        self.assertEqual(modes.began(self.snapshot(moved_at=9.0), 9.0), 'race')
+
+
+class SessionPresetTests(unittest.TestCase):
+    """A preset loaded by hand during an event stays for that kind of event for the rest of the session
+    (asked for by the user on 2026-11-20)."""
+
+    def setUp(self):
+        self.usual = {'race': 4, 'hotlapping': 3, 'recording': 1, 'spectating': 2}
+
+    def test_load_by_itself_until_one_is_loaded_by_hand(self):
+        session = race.SessionPresets()
+        session.began('race')
+        self.assertEqual(session.preset('race', self.usual), (4, False))
+        self.assertEqual(session.by_hand(5), 'race')
+        self.assertEqual(session.preset('race', self.usual), (5, True))
+        self.assertEqual(session.preset('hotlapping', self.usual), (3, False))  # each kind its own
+        session.began('hotlapping')
+        session.by_hand(1)
+        self.assertEqual(session.preset('hotlapping', self.usual), (1, True))
+        self.assertEqual(session.preset('race', self.usual), (5, True))
+        self.assertEqual(session.preset('special', self.usual), (None, False))
+
+    def test_for_recordings_and_spectating_too(self):
+        session = race.SessionPresets()
+        for mode, number in (('recording', 3), ('spectating', 5)):
+            session.began(mode)
+            session.by_hand(number)
+            self.assertEqual(session.preset(mode, self.usual), (number, True))
+
+    def test_outside_a_session_a_preset_is_only_loaded(self):
+        session = race.SessionPresets()
+        self.assertIsNone(session.by_hand(5))  # TSU's menu, before any event
+        self.assertEqual(session.preset('race', self.usual), (4, False))
+
+    def test_over_after_some_seconds_in_tsus_menu_not_between_events(self):
+        session = race.SessionPresets(gap=5.0)
+        session.began('race')
+        session.by_hand(5)
+        self.assertFalse(session.over(race.STARTING, 10.0))  # the next race being set up
+        self.assertFalse(session.over(race.WAITING_FOR_RACE, 11.0))
+        self.assertFalse(session.over(race.WAITING_FOR_RACE, 15.0))  # a moment only
+        self.assertFalse(session.over(race.RACING, 16.0))
+        self.assertEqual(session.preset('race', self.usual), (5, True))
+        self.assertFalse(session.over(race.WAITING_FOR_RACE, 20.0))
+        self.assertTrue(session.over(race.WAITING_FOR_RACE, 25.0))  # the menu, long enough
+        self.assertEqual(session.preset('race', self.usual), (4, False))  # Load by itself's again
+        self.assertIsNone(session.by_hand(3))  # in the menu now
+        self.assertFalse(session.over(race.WAITING_FOR_RACE, 40.0))  # told once
+        self.assertFalse(race.SessionPresets().over(race.WAITING_FOR_GAME, 99.0))  # never one: nothing to end
+
+    def test_tsu_closed_ends_it_too(self):
+        session = race.SessionPresets(gap=5.0)
+        session.began('hotlapping')
+        session.over(race.WAITING_FOR_GAME, 0.0)
+        self.assertTrue(session.over(race.WAITING_FOR_GAME, 6.0))
+
 
 class GearSectionTests(unittest.TestCase):
     """The Gear section: the gear and its rev lights, green, yellow and red (asked for by the user

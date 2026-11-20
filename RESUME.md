@@ -28,6 +28,10 @@ Kept short: the state now and what to do next. Every change, with how it was che
   The repository is kept in step with a private GitHub repository.
 
 ## To try next (most recent first)
+- **A preset by hand kept for the session** (`feature/session-presets`): in a session of races and hotlapping,
+  load 5 by hand in the first race: every later race starts in 5 (log: `preset 5 for every race this session`,
+  `a race began: preset 5, loaded by hand this session`), hotlapping in its own until you load one there. Back in
+  TSU's menu for 5 s: `the session is over`; the next session starts with Load by itself's choices.
 0. **TurboHUD's memory** (backlog item 10): on Linux it now levels off near 300 MB in a race (465 before). Left:
    a session started as `TURBOHUD_TRACE_MEMORY=1 sh run_turbohud.sh` for Python's slow rise, and a long race on
    the Mac and Windows.

@@ -581,6 +581,9 @@ def run(args, folder):
     live = start_live_race()
     pad = None
     track_map = None  # the live race's TrackMap, for Relearn
+    from turbohud.core.race import SessionPresets
+
+    session_presets = SessionPresets()  # the preset each kind of event loads this session
     if live is not None:
         from turbohud.core.battle import Battles
         from turbohud.core.leader import LeadChanges
@@ -634,8 +637,12 @@ def run(args, folder):
             if race_starts.started(snapshot, time.monotonic()) and not locked:
                 log.info('a race began: locking')
                 set_locked(True)  # move mode forgotten: the race is no time for it
+            if session_presets.over(snapshot.status, time.monotonic()):
+                event_modes.reset()  # the next session's first event loads its preset, whatever its kind
+                log.info('the session is over: presets as Load by itself has them again')
             mode = event_modes.began(snapshot, time.monotonic())
             if mode is not None:
+                session_presets.began(mode)
                 QTimer.singleShot(0, lambda: preset_for_mode(mode))  # after this read is shown
             track_map.others = settings.map_others
             radar.within = settings.radar_seconds
@@ -1838,9 +1845,13 @@ def run(args, folder):
         log.info('as a %s begins: %s', mode, f'preset {number}' if number in PRESETS else 'no preset')
 
     def preset_for_mode(mode):
-        """An event of `mode` began (race.EventModes): its preset, where one is chosen and saved.
-        Not in move mode or on the design screen, where the player is placing sections."""
-        number = settings.auto_presets.get(mode)
+        """An event of `mode` began (race.EventModes): its preset, where one is chosen and saved:
+        the one loaded by hand during an event of that kind this session, else Load by itself's
+        (race.SessionPresets). Not in move mode or on the design screen, where the player is placing
+        sections."""
+        number, by_hand = session_presets.preset(mode, settings.auto_presets)
+        if by_hand:
+            log.info('a %s began: preset %d, loaded by hand this session', mode, number)
         if number is None:
             log.info('a %s began; no preset chosen for it', mode)
         elif not locked or design is not None:
@@ -1848,8 +1859,17 @@ def run(args, folder):
         elif number not in settings.presets:
             log.info('a %s began; preset %d is empty', mode, number)
         else:
-            log.info('a %s began: preset %d', mode, number)
+            if not by_hand:
+                log.info('a %s began: preset %d', mode, number)
             load_preset(number)
+
+    def load_preset_by_hand(number):
+        """A preset the player loads (its key, the command line, the panel): during a session, kept
+        for the kind of event it is in until the session is over (race.SessionPresets)."""
+        mode = session_presets.by_hand(number)
+        if mode is not None:
+            log.info('preset %d for every %s this session', number, mode)
+        load_preset(number)
 
     @undoable
     def load_preset(number):
@@ -2300,7 +2320,7 @@ def run(args, folder):
         elif number in HOTKEY_PRESETS:
             preset = HOTKEY_PRESETS[number]
             log.info('Ctrl+Shift+%d pressed', preset)
-            QTimer.singleShot(0, lambda: load_preset(preset))
+            QTimer.singleShot(0, lambda: load_preset_by_hand(preset))
 
     shortcuts = native.register_hotkeys(on_hotkey)
     lock_keys = getattr(native, 'lock_keys', [])
@@ -2323,7 +2343,7 @@ def run(args, folder):
             'lock': lambda: set_locked(True),
             'settings': open_settings,
             'quit': app.quit,
-            **{f'preset{number}': partial(load_preset, number) for number in PRESETS},
+            **{f'preset{number}': partial(load_preset_by_hand, number) for number in PRESETS},
         }
         action = actions.get(command)
         if action is None:
@@ -2356,7 +2376,7 @@ def run(args, folder):
     panel.preset_save_requested.connect(save_preset)
     panel.preset_renamed.connect(rename_preset)
     panel.auto_preset_changed.connect(set_auto_preset)
-    panel.preset_load_requested.connect(load_preset)
+    panel.preset_load_requested.connect(load_preset_by_hand)
     panel.preset_delete_requested.connect(delete_preset)
     panel.match_requested.connect(match_group)
     panel.font_size_changed.connect(set_own_font)

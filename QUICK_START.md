@@ -43,7 +43,8 @@ it goes.
    **global**: the **Global font** changes every such section at once). It has **Undo**
    and **Redo**, and says which preset the layout is in (**Preset: 3 Race**). Its **Layouts** window
    keeps five named layouts, each with its own fonts (**Save** / **Load** presets 1 to 5), can load one by itself as a recording,
-   spectating, hotlapping, race or special event begins (and starts in the Race one), and has
+   spectating, hotlapping, race or special event begins (and starts in the Race one; one you load
+   yourself during an event then stays for that kind of event for the session), and has
    **Load screen default**, **Export…**, **Import…** and **Design for** for layout files per screen
    size (in `customization/display_presets`; TurboHUD's own never replace yours).
 4. Press **Ctrl+Shift+L** again (or **Lock**) to finish; a race starting also locks it. Your

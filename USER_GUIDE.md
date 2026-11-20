@@ -479,6 +479,14 @@ mode ends):
   mode, or when the chosen preset is empty. TurboHUD cannot tell practice from a race, so a
   practice preset is one you load yourself.
 
+  A preset you load yourself during an event (its key, the panel or the command line) takes
+  the place of the one chosen here for that kind of event, for the rest of the session: load
+  preset 5 during a race, and every race of the session starts in 5, while hotlapping keeps its
+  own until you load another during a hotlapping event too. The session is over once TSU has
+  been back in its menu for a few seconds; the next one starts with the choices here, and its
+  first event loads its preset even when it is of the same kind as the last one. Loaded in
+  TSU's menu, a preset is only loaded.
+
   The **Race** preset is also the default layout: TurboHUD starts in it, whatever layout it had
   when it was last quit. With Race on **Off** (or its preset empty), it starts as it was left.
 - **Files and screens**: **Load screen default** is TurboHUD's layout for this screen's size
