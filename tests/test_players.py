@@ -1768,15 +1768,29 @@ class DnfTests(unittest.TestCase):
         self.assertEqual(out.update(self.state(170, unread, racing)), {'Stopped': 'AFK'})
         self.assertEqual(out.update(self.state(171, self.car('Stopped', 20.0), racing)), {})
 
-    def test_in_the_pits_finished_or_on_the_grid_is_not_afk(self):
+    def test_finished_or_on_the_grid_is_not_afk(self):
         out = race.Retirements()
         cars = (
-            self.car('Pit', 0.0, in_pit=True),
             self.car('Done', 0.0, finished=True),
             dataclasses.replace(self.car('Grid', 0.0), checkpoints=((0,),)),
         )
         out.update(self.state(0, *cars))
         self.assertEqual(out.update(self.state(500, *cars)), {})
+
+    def test_a_minute_standing_in_the_pits_is_afk_too(self):
+        # Asked for by the user on 2026-11-20: a driver may stop in the pits and leave the computer.
+        out = race.Retirements()
+        parked = self.car('Parked', 0.0, in_pit=True)
+        out.update(self.state(0, parked))
+        self.assertEqual(out.update(self.state(30, parked)), {})  # a pit stop: not yet
+        self.assertEqual(out.update(self.state(61, parked)), {'Parked': 'AFK'})
+        leaving = self.car('Parked', 40 / 3.6, in_pit=True)  # driving off down the lane at 40 km/h
+        self.assertEqual(out.update(self.state(62, leaving)), {})
+
+    def test_afk_shows_in_the_pits_in_place_of_pit(self):
+        parked = self.car('Parked', 0.0, in_pit=True)
+        rows = race.lap_times_rows([parked], order=[parked], clock=100_000, retired={'Parked': 'AFK'})
+        self.assertEqual((rows[1].right, rows[1].right_color), ('AFK', race.SHORTCUT_COLOR))
 
     def test_dnf_only_for_a_car_tsu_has_retired_at_once(self):
         out = race.Retirements()

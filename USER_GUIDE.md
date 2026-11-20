@@ -133,8 +133,8 @@ place and the name always show; every other column can be turned off under **Set
   exit with the time standing in the box in brackets; an orange **CUT** with the seconds
   left while TSU slows that driver for a shortcut; an orange **JUMP** for a false start; in
   orange too, **DNF** for a driver who retired (`/retire` in TSU's chat), **DSQ** for one TSU
-  disqualified, and **AFK** for one slower than 10 km/h for over a minute outside the pits
-  (gone as soon as they go faster than 10 km/h). DNF and DSQ are TSU's own marks on the car, not a guess.
+  disqualified, and **AFK** for one slower than 10 km/h for over a minute, on the track or
+  standing in the pits (gone as soon as they go faster than 10 km/h). DNF and DSQ are TSU's own marks on the car, not a guess.
 A heading row names the columns (**Driver**, **Ovr**, **Gap**, **Best**, **Last**). Your own
 row is in the highlight colour. With more than 20 drivers it shows the leader and the
 drivers around you. Every column keeps room for its widest entry, so a pit stop, a penalty
