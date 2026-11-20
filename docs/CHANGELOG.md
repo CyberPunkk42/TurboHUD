@@ -4,6 +4,18 @@ Every finished change, newest first: what changed, why, how it was checked and w
 Each branch adds its dated entry at the top. Where things stand now: `RESUME.md`; what is open:
 `docs/BACKLOG.md`.
 
+- 2026-11-20: The time left counts from the lights going out (`fix/time-left-from-lights-out`, reported by the
+  user): TSU's race clock runs from the grid and its time limit counts the lights, so Race progress counted down
+  through them (10:07 ... 10:00) and reached the race's length just as they went out, telling when they would,
+  also with 5 lights, which TSU puts out at random. Now, in a race the player drives, until lap 1 has begun on the
+  race clock (`LapState.before_lights_out`; TSU starts the first lap at lights out) the time left stands at the
+  race's length in whole minutes (10:00; none for a race under a minute), and counts down from there as before.
+  Hotlapping, arena events, replays and spectating unchanged. The log says `race: on the grid, ...` and `race:
+  lights out, race clock ..., lap 1 began at ...` (`lights_out_seen`), to check in a race that lap 1's start is
+  the lights going out. Not yet seen in a race: that lap 1 begins at lights out (and not at the grid) is from the
+  code's reading of TSU, and a race length in whole minutes is assumed (an older test's grid read, 21:06 for a
+  21-minute race, fits both). Tests: the grid, lights out, a lap 1 not yet begun, under a minute, the events left
+  as they were, the log; the grid test made from that read shows 21:00 now.
 - 2026-11-20: Confirmed by the user in the running app on Windows: move mode's place label beside the section
   (`feature/place-label-outside`). Hyprland and the Mac are still to see (RESUME.md).
 - 2026-11-20: Move mode's place label beside the section, not over it (`feature/place-label-outside`, asked for
