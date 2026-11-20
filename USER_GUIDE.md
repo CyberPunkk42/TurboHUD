@@ -160,7 +160,8 @@ that count are in `settings.json` as `class_tags` (change it while TurboHUD is c
 ### Car
 
 **Fuel**
-The fuel left in percent, how many laps it lasts at your recent use (`~6.2 laps`), and how
+The fuel left in percent, how many laps it lasts at your recent use (`~6.2 laps`; from 100 laps on in
+whole laps, `~123 laps`, here and in Tire wear and Fuel to finish), and how
 much you saved (green) or burnt more (red) on this lap than usual. The bar below goes from
 green through yellow to red, and turns red when the fuel does not last to the finish.
 

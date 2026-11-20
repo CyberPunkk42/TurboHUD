@@ -36,21 +36,23 @@ Kept short: the state now and what to do next. Every change, with how it was che
 ## To try next (most recent first)
 Details of each: its entry in `docs/CHANGELOG.md`. Checks on the Mac and Windows, and rare cases not yet seen:
 backlog item 14.
-1. **Ungroup all**: in move mode, the button at the end of the group row ungroups every section; Undo brings
+1. **Car sections the same text size**: Fuel, Tire wear, Fuel to finish and Car health at one text size look
+   the same, also with ~100 laps of tires (shown whole from 100 on).
+2. **Ungroup all**: in move mode, the button at the end of the group row ungroups every section; Undo brings
    the groups back.
-2. **A preset by hand kept for the session**: load 5 by hand in a race; later races start in 5, hotlapping
+3. **A preset by hand kept for the session**: load 5 by hand in a race; later races start in 5, hotlapping
    keeps its own; 5 s in TSU's menu ends the session (log: `preset 5 for every race this session`, `the session
    is over`).
-3. **TurboHUD's memory** (backlog item 10): a session started as `TURBOHUD_TRACE_MEMORY=1 sh run_turbohud.sh`;
+4. **TurboHUD's memory** (backlog item 10): a session started as `TURBOHUD_TRACE_MEMORY=1 sh run_turbohud.sh`;
    the `memory grew:` lines say where Python's slow rise is.
-4. **Watching (Race Director mode)**: in a replay and spectating online, the battle warning's moments and
+5. **Watching (Race Director mode)**: in a replay and spectating online, the battle warning's moments and
    groups, and the watched driver's banner at each camera switch (log: `the camera follows player N`).
-5. **Presets**: the panel's "Preset: 3 Race" right after a load on Hyprland (or "(changed)"?); the Recording
+6. **Presets**: the panel's "Preset: 3 Race" right after a load on Hyprland (or "(changed)"?); the Recording
    and Spectating presets loading by themselves.
-6. **A font per section and per preset**: their own fonts kept by presets and Undo; is the panel's Font column
+7. **A font per section and per preset**: their own fonts kept by presets and Undo; is the panel's Font column
    wide enough on Linux?
-7. **Banners**: none for your own car taking the lead; "Race Winner" with your flag picture at the finish.
-8. **Tire wear**: TurboHUD's Tires percent the same as TSU's (log: `tires: ... worn out at ...`).
+8. **Banners**: none for your own car taking the lead; "Race Winner" with your flag picture at the finish.
+9. **Tire wear**: TurboHUD's Tires percent the same as TSU's (log: `tires: ... worn out at ...`).
 
 The Race Director mode (backlog item 8) has all its planned parts: what is left is tuning from what you see.
 
