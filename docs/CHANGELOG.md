@@ -4,6 +4,10 @@ Every finished change, newest first: what changed, why, how it was checked and w
 Each branch adds its dated entry at the top. Where things stand now: `RESUME.md`; what is open:
 `docs/BACKLOG.md`.
 
+- 2026-11-20: The Windows test command corrected (`docs/windows-test-python`): `RESUME.md` and `AGENTS.md` said
+  `py -3`, which has no PySide6, so 15 Qt tests failed with it; now `.buildtools\venv\Scripts\python.exe`, the
+  environment `run_turbohud.cmd` sets up (all 1522 tests pass with it). Also noted in `RESUME.md`: the Rust
+  reader is rebuilt on the Windows PC (42 tests pass), so a replay is found sooner there too.
 - 2026-11-20: Every shipped layout now the user's own design (`chore/ship-all-designs`, asked for by the user): their
   new 3840x2160 design (saved on the design screen at 02:28) replaces the one fitted from 5120x1440; the five
   other sizes and the starting presets were theirs already (no change). Made with `tools/make_layouts.py`
