@@ -17,7 +17,8 @@ Kept short: the state now and what to do next. Every change, with how it was che
 - **Sections**: lap and time left, running lap, delta and delta bar, last and best lap with sector
   bars, fuel, fuel to finish, tires, health, slipstream, speed with pedals, Nearby cars, Standings, blue
   and yellow flags, penalties, the race leader banner, the battle warning (while watching), the
-  watched driver (while watching), radar, track map, clock.
+  watched driver (while watching), radar, track map, compass, clock. In the lists DNF (retired), DSQ
+  (disqualified), both TSU's own flags, and AFK (idle a minute); the time left counts from lights out.
 - **Layout**: tight boxes, groups that move and size together, Centre, Undo and Redo, text sizes per
   section, a grid, five named presets (Ctrl+Shift+1 to 5) and a preset per kind of event, shipped
   layouts per screen size and five starting presets (all the user's own designs), Export and Import, the design screen, one's own fonts

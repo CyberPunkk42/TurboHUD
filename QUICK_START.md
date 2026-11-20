@@ -1,7 +1,7 @@
 # TurboHUD - Quick Start
 
 TurboHUD is an overlay for Turbo Sliders Unlimited: lap times, standings, the cars around you,
-fuel, tires, a track map, a radar, flags and more, on top of the running game. It only reads
+fuel, tires, a track map, a radar, a compass, flags and more, on top of the running game. It only reads
 the game; it never changes it. Every part is explained in detail in `User Guide.txt`.
 
 ## 1. Install
