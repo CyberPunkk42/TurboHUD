@@ -64,6 +64,9 @@ behind the **^** arrow), and in the tray of your desktop's panel on Linux. Its m
     the car ahead, you and the car behind (4 rows). On by default; off, it shows the 3 cars
     ahead and the 3 behind.
   - **Other cars on the track map**: every other car as a faint grey dot.
+
+  The colour choices (**Colour-blind friendly colours** and **TSU Legacy colours**) are only in the settings
+  window's **Colours** tab (section 6).
 - **Relearn this track's map**: during a race, forgets the map of this track (the saved one
   too); the map is then learnt again from the next whole clean lap.
 - **Settings…**: opens the settings window (section 6).

@@ -4,6 +4,15 @@ Every finished change, newest first: what changed, why, how it was checked and w
 Each branch adds its dated entry at the top. Where things stand now: `RESUME.md`; what is open:
 `docs/BACKLOG.md`.
 
+- 2026-11-21: The documents checked against the app as it is, and screenshots (`docs/current-state`, asked for by
+  the user). RESUME: the current state of 2026-11-21 (Car status, the colours, the settings tabs, the preset in
+  use in the layouts window). HOW_IT_WORKS: the code map's settings window, painter and `layouts_window.py`.
+  USER_GUIDE: the colour choices only in the settings window. experiments/README: where TSU's HUD colours came
+  from (not in its files; read from a screenshot). New: `docs/screenshots/`, 33 pictures drawn by TurboHUD's own
+  code: every section with move mode's preview race (its made-up drivers; the banners with no preview content as
+  move mode's sample), Car status in colour-blind friendly and Legacy colours, each settings tab, both tabs of move
+  mode's panel and the layouts window. README links them. Made on Windows in the system font; country flags show as
+  codes without TSU's flag pictures.
 - 2026-11-21: The layouts window says which preset is in use (`feature/layouts-current-preset`, asked for by the
   user: as move mode's panel does). The panel's line (`Preset: 3 Race`, `(changed)`, `Preset: none`) under the
   Presets heading too, in the same electric blue, bold, with the same tooltip: `MovePanel.set_current_preset`

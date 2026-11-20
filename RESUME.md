@@ -3,7 +3,7 @@
 Kept short: the state now and what to do next. Every change, with how it was checked, is in
 `docs/CHANGELOG.md`; open work in `docs/BACKLOG.md`; how it works in `docs/HOW_IT_WORKS.md`.
 
-## Current state (2026-11-20)
+## Current state (2026-11-21)
 - **The app** (`turbohud/`, Python with Qt): a see-through, click-through HUD over TSU with a locked
   mode and a move mode (Ctrl+Shift+L, or Ctrl+Shift+F12; quit Ctrl+Shift+Q), a tray icon, and a
   settings window. Start from the source with `run_turbohud.sh` / `run_turbohud.cmd`.
@@ -15,22 +15,22 @@ Kept short: the state now and what to do next. Every change, with how it was che
   - Windows: the same Rust reader beside TSU (since 2026-11-11); a window per section; the overlay shows
     over TSU's Fullscreen without Exclusive (2026-11-16).
 - **Sections**: lap and time left, running lap, delta and delta bar, last and best lap with sector
-  bars, fuel, fuel to finish, tires, health, car status (those four in one box), slipstream, speed with pedals, Nearby cars, Standings, blue
-  and yellow flags, penalties, the race leader banner, the battle warning (while watching), the
-  watched driver (while watching), radar, track map, clock (a compass is built, hidden for now: backlog
+  bars, fuel, fuel to finish, tires, health, car status (those four in one box), slipstream, speed with
+  pedals, Nearby cars, Standings, blue and yellow flags, penalties, the race leader banner, the battle
+  warning (while watching), the watched driver (while watching), radar, track map, clock (a compass is built, hidden for now: backlog
   item 13). In the lists DNF (retired), DSQ (disqualified), both TSU's own flags, and AFK (idle a minute);
   the time left counts from lights out.
 - **Layout**: tight boxes, groups that move and size together (Ungroup all), Centre, Undo and Redo, text
   sizes per section, a grid, five named presets (Ctrl+Shift+1 to 5) and a preset per kind of event (one
   loaded by hand kept for the session), shipped layouts per screen size and five starting presets (all the
   user's own designs), Export and Import, the design screen, one's own fonts (a global one, and per section
-  and per preset), move mode's panel in General and Text tabs.
-- **Colours**: colour-blind friendly colours (Okabe-Ito) for every section or those chosen, never the flags; TSU's
-  Legacy colours for the car sections' bars; the settings window in tabs Look, Colours, Sections, Race.
-- **Today (2026-11-20, Linux)**: move mode, the design screen and TurboHUD's windows fixed on Hyprland; the
-  compass's north from the track's sun (then hidden for now); text outlines no longer kept (a race levels off
-  near 300-360 MB, not 465-540) and the log's `memory parts:` line; the radar's cars read together and its zoom
-  on the closest car; a preset loaded by hand kept for the session; Ungroup all.
+  and per preset), move mode's panel in General and Text tabs, the preset in use shown in the panel and the
+  layouts window.
+- **Colours**: colour-blind friendly colours (Okabe-Ito) for every section or those chosen, never the flags;
+  TSU's Legacy colours for the car sections' bars; the settings window in tabs Look, Colours, Sections, Race.
+- **Latest (2026-11-20 and 21, Windows)**: Ungroup all; Car status; the car sections' text size kept with many
+  laps; colour-blind friendly and Legacy colours; the settings window in tabs; the preset in use in the layouts
+  window. None of these is seen over TSU yet (To try next).
 - **Builds**: `tools/build_app.py` (PyInstaller) on each system: a Windows ZIP and a Mac disk image with
   the Rust reader, and a Linux `.tar.gz` built in Ubuntu 22.04 (`sh tools/build_linux.sh <version>`).
   The repository is kept in step with a private GitHub repository.
