@@ -1775,6 +1775,7 @@ class MovePanel(QWidget):
     preset_renamed = Signal(int, str)  # the preset's number, its name
     auto_preset_changed = Signal(str, int)  # an event mode, the preset loaded as one begins (0: none)
     match_requested = Signal(str)  # the group
+    ungroup_all_requested = Signal()  # every section out of its group (asked for by the user on 2026-11-20)
     undo_requested = Signal()
     redo_requested = Signal()  # forward again after Undo (asked for by the user on 2026-11-13)
     screen_default_requested = Signal()  # the shipped layout for this screen
@@ -2145,6 +2146,10 @@ class MovePanel(QWidget):
             match.clicked.connect(lambda _checked=False, group=name: self.match_requested.emit(group))
             matches.addWidget(match)
             self.matches[name] = match
+        self.ungroup_all = QPushButton('Ungroup all')
+        self.ungroup_all.setToolTip('Take every section out of its group (one step for Undo)')
+        self.ungroup_all.clicked.connect(self.ungroup_all_requested)
+        matches.addWidget(self.ungroup_all)
         matches.addStretch()
         column.addLayout(matches)
         self._update_matches()
@@ -2280,6 +2285,8 @@ class MovePanel(QWidget):
         for group, button in self.matches.items():
             members = [name for name in self.text_sections if self.groups[name].currentText() == group]
             button.setEnabled(len(members) >= 2)
+        if hasattr(self, 'ungroup_all'):  # the rows are made before the buttons below them
+            self.ungroup_all.setEnabled(any(combo.currentText() != '-' for combo in self.groups.values()))
 
     def set_tint(self, name, tint):
         box = self.tints.get(name)

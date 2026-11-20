@@ -1096,6 +1096,19 @@ class MovePanelPresetTests(unittest.TestCase):
         self.addCleanup(panel.close)
         return panel
 
+    def test_ungroup_all_only_with_a_group_and_it_asks_for_it(self):
+        # Asked for by the user on 2026-11-20.
+        panel = self.panel()
+        asked = []
+        panel.ungroup_all_requested.connect(lambda: asked.append(True))
+        self.assertFalse(panel.ungroup_all.isEnabled())  # no group yet
+        panel.groups['fuel'].setCurrentText('A')
+        self.assertTrue(panel.ungroup_all.isEnabled())
+        panel.ungroup_all.click()
+        self.assertEqual(asked, [True])
+        panel.set_group('fuel', '')  # as the app does for each section
+        self.assertFalse(panel.ungroup_all.isEnabled())
+
     def test_it_shows_the_preset_in_use(self):
         panel = self.panel()
         self.assertEqual(panel.current_preset.text(), 'Preset: none')

@@ -38,7 +38,7 @@ it goes.
    and outside a race every section shows a made-up race at Laguna Seca, so you see it filled.
 2. Drag a section, or click it and nudge it with the arrow keys (Shift: 10 px). A corner sizes
    its text, an edge adds room. While it moves, a label shows its X and Y on its screen and its size.
-3. The panel shows or hides each section; its **General** tab groups, centres and tints them, its
+3. The panel shows or hides each section; its **General** tab groups (**Ungroup all** below), centres and tints them, its
    **Text** tab sets their text in the middle, text size, line spacing and **Font** (its own, or
    **global**: the **Global font** changes every such section at once). It has **Undo**
    and **Redo**, and says which preset the layout is in (**Preset: 3 Race**). Its **Layouts** window
