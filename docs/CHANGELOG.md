@@ -4,6 +4,16 @@ Every finished change, newest first: what changed, why, how it was checked and w
 Each branch adds its dated entry at the top. Where things stand now: `RESUME.md`; what is open:
 `docs/BACKLOG.md`.
 
+- 2026-11-20: The user's own designs shipped for four sizes (`chore/ship-new-presets`, asked for by the user): the
+  layouts they made on the design screen for 1920x1080, 2294x1490, 2560x1440 and 2560x1600 are now the shipped
+  ones for those sizes, as designed; 3840x2160 stays fitted from their 5120x1440 (their own file for it is from
+  2026-11-13, without the newer sections), and 5120x1440 and the starting presets were already theirs (no
+  change). `tools/make_layouts.py` takes `--settings` and `--designed` (each checked: a size TurboHUD ships,
+  every section there). Their designs put the Battle warning over the shortcut penalty's box (never shown
+  together) and the Watched driver banner off-centre, at 1920x1080 over the track map and at 2294x1490 and
+  2560x1600 over the running lap and delta (both shown in a replay; the banner 6 s at a time): kept as designed,
+  told to the user. Nearby cars is a little smaller than the Standings in them (12 against 14 to 16), never
+  below 10 px. Tests changed to that: the banners on the screen, Nearby cars at least 10 px.
 - 2026-11-20: Sections stay in the design screen's frame (`fix/design-sections-in-frame`, asked for by the user):
   a section dragged or sized out of the frame goes back in once it stands still (two looks of move mode, 0.2 s
   apart, the same: the desktop moves a dragged window, so the drag itself is never fought), a group as one by the

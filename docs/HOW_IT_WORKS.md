@@ -333,8 +333,10 @@ missing or older. A first start takes the one for the main screen; they never re
 already placed, nor a layout file of the player's own. A first start also takes the starting presets
 (`assets/presets/starting/presets.json`: the user's five, with names and Load by itself choices),
 fitted to the screen (`app.with_starting_presets`), where the player has none. Both are made with
-`tools/make_layouts.py LAYOUT.json [SETTINGS.json]` from a layout the user exported and their
-settings; fitting keeps Nearby cars' text at least the Standings' (`presets.readable_nearby`).
+`tools/make_layouts.py LAYOUT.json --settings SETTINGS.json --designed SIZE.json ...` from a layout
+the user exported, their settings and the layouts they designed for other sizes (shipped as they
+are); a size without one is fitted, keeping Nearby cars' text at least the Standings'
+(`presets.readable_nearby`).
 
 It writes nothing into the game's folders and changes nothing in the system.
 

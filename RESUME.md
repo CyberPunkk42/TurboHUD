@@ -32,7 +32,8 @@ Kept short: the state now and what to do next. Every change, with how it was che
 2. **The shipped layouts and starting presets** (`feature/ship-user-layouts`): a first start on another screen
    size (or with an empty settings folder: TurboHUD's settings folder moved aside) should lay out your layout
    fitted to it and fill presets 1 to 5 with their names and Load by itself choices. Remake them after changing
-   yours: `py -3 tools/make_layouts.py customization/display_presets/5120x1440.json <settings.json>`.
+   yours: `py -3 tools/make_layouts.py customization/display_presets/5120x1440.json --settings <settings.json>
+   --designed customization/display_presets/{1920x1080,2294x1490,2560x1440,2560x1600}.json`.
 3. **The fastest lap's holder in purple** (`feature/fastest-lap-name`): in a replay or spectating, turn off the
    Standings' Best column: the driver with the fastest lap should have a purple name, and it should move when
    someone beats it. Driving, or with Best on, nothing changes. In move mode the made-up race's 19th driver
