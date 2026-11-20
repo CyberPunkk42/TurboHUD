@@ -454,7 +454,7 @@ and Ruff (RESUME.md, "Working notes").
 2. The build environment, once: `py -3 -m venv .buildtools\win-build-venv`, then
    `.buildtools\win-build-venv\Scripts\python.exe -m pip install -r requirements-build.txt` (PySide6,
    PyInstaller, Pillow, pinned).
-3. Build: `.buildtools\win-build-venv\Scripts\python.exe toolsuild_app.py --version 2026.11.20 --smoke`
+3. Build: `.buildtools\win-build-venv\Scripts\python.exe tools\build_app.py --version 2026.11.20 --smoke`
    gives `releases\TurboHUD-2026.11.20-windows-x64.zip` (`TurboHUD\TurboHUD.exe`, the reader, the guides).
 
 **macOS** (Apple silicon, Terminal):
