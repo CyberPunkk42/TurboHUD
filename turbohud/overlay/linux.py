@@ -244,8 +244,12 @@ class Native:
         `settle` once the drag is over: on Hyprland it then also gets its workspace and pin
         again, in case it went to another monitor."""
         x, y, width, height = place
+        # Qt is told too, also on Hyprland, where it cannot place the window itself: a window not
+        # known to Hyprland yet then opens there, and one brought in front again (raise_window) stays
+        # there. Otherwise the design screen's frame opened at Qt's 640×480 in the corner, and its
+        # sections went back where they had been (reported by the user on 2026-11-20).
+        widget.setGeometry(x, y, width, height)
         if self.hypr is None:
-            widget.setGeometry(x, y, width, height)
             return
         address = self.addresses.get(id(widget))
         if address is None:
