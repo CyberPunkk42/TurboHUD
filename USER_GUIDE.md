@@ -295,7 +295,7 @@ shortcut (on tracks whose maker defined shortcuts), and **JUMP START** while TSU
 for a false start (throttle on the red lights) and 1.5 s more.
 
 **Race leader**
-A banner shaded from grey to black, as on F1's TV graphics: **New Race Leader - name** when
+A grey banner, as on F1's TV graphics: **New Race Leader - name** when
 another driver takes the lead and keeps it for 5 seconds (so a lead that changes hands and
 back, or a moment's shuffle in the order, shows nothing; none when you take the lead yourself
 while driving), and **Race Winner - name**, your own win too, on a black
@@ -303,27 +303,27 @@ banner with a waving checkered flag at its right end as soon as the winner cross
 text is always in the middle of the banner (of the room before the flag on the winner's). In move
 mode, the **🏁** button in the Race leader row of the panel's **Text** tab switches the banner shown between a new
 leader's and the winner's, to see both while placing it. Each fades in, stays and fades out, 6
-seconds in all. Not at the start (the leader off the grid is no change), nor in hotlapping or
+seconds in all, each fade taking two thirds of a second. Not at the start (the leader off the grid is no change), nor in hotlapping or
 the arena modes; spectating, it shows too. Between banners nothing of it is drawn. Untick it
 in the panel if you do not want it; ticked again, it starts from the leader at that moment.
 
 **Battle**
 The first part of a Race Director mode: only while you watch, in a replay or spectating, never
-while you drive. On the same grey-to-black banner, in three rows: **Battle for P3**, **Possible
+while you drive. On a banner shaded from grey to black, in three rows: **Battle for P3**, **Possible
 Overtake** in gold, and the two drivers, **name vs name**, the car ahead first. It shows when a car
 is within 1 second of the car ahead and has gained at least 0.1 s on it over the last 3 seconds, or
 sits within 0.4 s of it, and stays so for 2 seconds (a gap that flickers for a moment shows nothing).
 Three cars or more in a row, each within 1 second of the car ahead, are a group instead: **Battle
 for P5**, **Group around name** (the group's first driver) and the drivers behind it (three names,
 then "+2" for more). One battle at a time, the one for the highest place; each fades in, stays and
-fades out, 6 seconds in all, and the same two cars (or a group with the same first driver) not again
+fades out, 6 seconds in all (each fade a second), and the same two cars (or a group with the same first driver) not again
 for a minute. Nothing in the opening lap, while the cars are still close from the start, nor for
 cars in the pits, finished or out of the race, nor in hotlapping or the arena modes. Where it
 starts depends on the layout for your screen; in move mode, place it like any section.
 
 **Watched driver**
 The Race Director mode's second part: only while you watch, in a replay or spectating an online
-race, never while you drive. Each time the camera turns to another driver, the same grey-to-black banner names them in two rows:
+race, never while you drive. Each time the camera turns to another driver, the Battle's grey-to-black banner names them in two rows:
 **Watching** in gold, and the driver with their place, **P3 name** (no place in the arena modes).
 The camera must stay on a driver for 1 second first, so flicking through the drivers names only
 the one you stop at. It fades in, stays and fades out, 6 seconds in all; a driver you turn to while

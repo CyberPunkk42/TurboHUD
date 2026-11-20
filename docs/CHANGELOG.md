@@ -30,6 +30,13 @@ Each branch adds its dated entry at the top. Where things stand now: `RESUME.md`
   code's reading of TSU, and a race length in whole minutes is assumed (an older test's grid read, 21:06 for a
   21-minute race, fits both). Tests: the grid, lights out, a lap 1 not yet begun, under a minute, the events left
   as they were, the log; the grid test made from that read shows 21:00 now.
+- 2026-11-20: The race leader banner in one grey, fading in 0.67 s (`fix/leader-banner-plain-grey`, asked for by the
+  user: shaded grey to black, it looked broken as it faded in and out). The "New Race Leader" banner's box is one
+  grey (`LEADER_GREY` #4a4a4a, `_paint_shade`), and it fades in and out over 0.67 s (`LEADER_FADE`), still 6 s in
+  all. The winner's banner (the user's black picture) is unchanged but fades the same, being the same section;
+  the Battle and Watched driver banners keep their shading and their 1 s fades (`BANNER_FADE`). The fade still
+  steps with the race reads (10 a second by default): about 7 steps now, 10 before. Tests: one grey end to end,
+  the Battle banner still shaded, the fade's times, Battle and Watched unchanged; all tests pass.
 - 2026-11-20: Confirmed by the user in the running app on Windows: move mode's place label beside the section
   (`feature/place-label-outside`). Hyprland and the Mac are still to see (RESUME.md).
 - 2026-11-20: Move mode's place label beside the section, not over it (`feature/place-label-outside`, asked for

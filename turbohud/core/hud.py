@@ -440,7 +440,7 @@ class Section:
     snug: bool = False
     spacing: float = 1.0  # the room between its rows, as a share of the usual (a section's own option)
     tip: str = ''  # what it shows, in a line: the tooltip on its name in the panel and on its box
-    # The race leader banner: shaded from grey to black, the whole box fading in and out (its
+    # A banner: the race leader's grey, the Battle and Watched ones shaded from grey to black, the whole box fading in and out (its
     # Banner's opacity), and the race's winner has a checkered flag at its right end.
     banner: bool = False
     end: float = 0.0  # room at the right end of the box, after its text, as a share of its height
@@ -457,7 +457,10 @@ WINNER_FLAG_SHARE = (WINNER_SIZE[0] - WINNER_FLAG_FROM) / WINNER_SIZE[
     1
 ]  # the flag part's width over its height
 BANNER_BACK = '#15151e'  # the race leader banner's box (BANNER_SHADE draws it shaded)
-BANNER_SHADE = ('#5c5c5c', '#0a0a0a')  # grey at its left edge to black at its right
+BANNER_SHADE = ('#5c5c5c', '#0a0a0a')  # grey at its left edge to black at its right (Battle, Watched)
+# The race leader banner in one grey, not shaded (asked for by the user on 2026-11-20: shaded, it
+# looked broken as it faded in and out).
+LEADER_GREY = '#4a4a4a'
 BANNER_TEXT = '#ffffff'
 OVERTAKE_COLOUR = '#ffc61a'  # the battle warning's "Possible Overtake": gold, as the leader on the map
 

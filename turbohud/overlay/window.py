@@ -49,6 +49,7 @@ from PySide6.QtWidgets import (
 from turbohud.core.hud import (
     BANNER_SHADE,
     FONT_SIZES,
+    LEADER_GREY,
     MARGIN,
     SPACINGS,
     WINNER_BLACK_FROM,
@@ -881,13 +882,16 @@ class SectionWindow(QWidget):
         painter.drawRoundedRect(QRectF(self.rect()), 6, 6)
 
     def _paint_shade(self, painter):
-        """The race leader banner's box, shaded from grey at the left to black at the right
-        (BANNER_SHADE), where the name goes."""
-        shade = QLinearGradient(0, 0, self.width(), 0)
-        shade.setColorAt(0.0, QColor(BANNER_SHADE[0]))
-        shade.setColorAt(1.0, QColor(BANNER_SHADE[1]))
+        """A banner's box: the race leader's in one grey (LEADER_GREY), the Battle and Watched
+        banners' shaded from grey at the left to black at the right (BANNER_SHADE)."""
+        if self.section.name == 'leader':
+            brush = QColor(LEADER_GREY)
+        else:
+            brush = QLinearGradient(0, 0, self.width(), 0)
+            brush.setColorAt(0.0, QColor(BANNER_SHADE[0]))
+            brush.setColorAt(1.0, QColor(BANNER_SHADE[1]))
         painter.setPen(Qt.NoPen)
-        painter.setBrush(shade)
+        painter.setBrush(brush)
         painter.drawRoundedRect(QRectF(self.rect()), 6, 6)
 
     def _paint_winner(self, painter, flag_width):
