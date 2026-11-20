@@ -12,14 +12,16 @@ Each branch adds its dated entry at the top. Where things stand now: `RESUME.md`
   car is the closest (`radar_zoom`); cars further behind show as arrows at the edge, as before. Towards that, a
   share of the way a read: out quickly (about 0.15 s), in gently (about 1.5 s), never a snap. The user guide says
   so. Tests: the nearest car sets the zoom; in step by step, out over a few reads; a car further back counting for
-  a second then not for three, over and over: no change of zoom, an arrow while it counts. Not yet seen in a race.
+  a second then not for three, over and over: no change of zoom, an arrow while it counts. Seen by the user in a
+  race of about 20 cars on Linux: "it runs smooth".
 - 2026-11-20: Every car's position read together (`fix/radar-positions-together`, reported by the user: on Linux
   the proximity radar's cars jumped forward and back). Each car was read in turn, its position near the end of its
   turn, so in a race of 20 cars (reads of 33-41 ms) one car's position came up to a read's length after another's,
   by a varying amount; the radar places cars by the gap to one's own, and 35 ms is about 1.75 m at 180 km/h. Now
   every position is read again at the end of a read, all in one request (`_positions_together`), so they are of
   the same moment; where that request cannot be read, the positions read in turn stay. Tests: the positions from
-  the one request, and those read in turn where it fails; the race tests pass. Not yet seen in a race.
+  the one request, and those read in turn where it fails; the race tests pass. Seen by the user in races of about
+  20 cars on Linux: the radar's cars no longer jump (reads 29-35 ms, as before).
 - 2026-11-20: Text outlines no longer kept (`fix/memory-growth`, backlog item 10). In a race with the new
   `memory parts:` line (Linux, about 20 cars) glibc's heap in use grew 133 to 363 MB, with nothing freed but held;
   the biggest step came as the outline cache filled. A text's stroked outline with round joins is 4,600-7,400
