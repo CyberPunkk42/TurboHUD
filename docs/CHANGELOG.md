@@ -4,6 +4,18 @@ Every finished change, newest first: what changed, why, how it was checked and w
 Each branch adds its dated entry at the top. Where things stand now: `RESUME.md`; what is open:
 `docs/BACKLOG.md`.
 
+- 2026-11-20: The compass's north from the track's sun (`feature/compass-north-from-sun`, backlog item 9, the
+  recommendation the user chose). TSU's sun sets at `LocationProperties.sunDirection` (found in a session of 4
+  races: `experiments/README.md`, "TSU's sun"), so north is it + 90° (`sun_north` in `race.py`). The reader keeps
+  the sun it reads once an event with the track's name (`_read_sun`, which still logs the `sun:` line) in the race's
+  state (`sun_direction`), and the compass turns its headings by it (`compass_view(players, north)`). A new
+  option, **Compass north from the sun** (settings window, Sections, and the icon's menu; on by default,
+  `compass_sun`): off, north is up on the track map as before. While north comes from the sun a small yellow sun,
+  drawn (no font needed), shows after the degrees (`_paint_sun`), also on move mode's sample; a track whose sun is
+  not read keeps north up on the map, without it. The guides and HOW_IT_WORKS say so; backlog item 9 is
+  done. Tests: north from the sun, Coco Jumbo's reading (98° on the map: 008° N), the sun in the race's
+  state and None unread, the option on by default and kept, the small sun drawn only from the sun, the sample
+  following the option. Looked at in an image. Not yet seen in a race.
 - 2026-11-20: Confirmed by the user in the running app on Hyprland: the design screen (`fix/design-screen-hyprland`),
   its frame at its size and the sections inside it. Taken off RESUME.md's list.
 - 2026-11-20: The design screen on Hyprland (`fix/design-screen-hyprland`, reported by the user): its yellow frame

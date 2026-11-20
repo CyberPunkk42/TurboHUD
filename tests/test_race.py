@@ -2083,9 +2083,11 @@ class CarTests(unittest.TestCase):
             )
             with self.assertLogs('turbohud.core.race', level='INFO') as logged:
                 reader.read()
-                reader.read()  # the same event: not again
+                state = reader.read()  # the same event: not again
+            self.suns.append(state.sun_direction)
             return [line for line in logged.output if 'sun:' in line]
 
+        self.suns = []
         self.assertEqual(
             read(sun=(135.5, 17.25, 3)),
             ["INFO:turbohud.core.race:sun: track 'Spa', location 3, sunDirection 135.5, time 17.25"],
@@ -2093,6 +2095,7 @@ class CarTests(unittest.TestCase):
         lines = read()  # a level without its nature: said so, and the race still read
         self.assertEqual(len(lines), 1)
         self.assertIn('sun: not read', lines[0])
+        self.assertEqual(self.suns, [135.5, None])  # in the race's state for the compass, None unread
 
     def test_reader_reads_each_cars_position_for_the_radar(self):
         reader = build(
@@ -3959,6 +3962,35 @@ class CompassTests(unittest.TestCase):
         self.assertGreater(top_of_dial, layout.text_baseline)  # the readout above the dial
         self.assertLessEqual(layout.centre[1] + layout.radius, 176)
         self.assertEqual(layout.centre[0], 75)
+
+    def test_north_from_the_sun(self):
+        # TSU's sun sets at sunDirection, in the compass's degrees: west, so north is 90° on (2026-11-20).
+        self.assertEqual(race.sun_north(0.0), 90.0)
+        self.assertEqual(race.sun_north(300.0), 30.0)
+        self.assertIsNone(race.sun_north(None))
+        self.assertIsNone(race.sun_north(float('nan')))
+        me = race.PlayerState('Me', 0, 0, (), local=True, forward=(1.0, 0.0))  # 90° on the map
+        self.assertEqual(race.compass_view((me,), north=90.0), race.CompassView(0, sun=True))  # north
+        self.assertEqual(race.compass_view((me,), north=135.0), race.CompassView(315, sun=True))
+        self.assertEqual(race.compass_view((me,)), race.CompassView(90))  # up on the map: no sun
+        # Coco Jumbo (sunDirection 0): heading 98° on the map, the sun to the left, a little behind.
+        coco = race.PlayerState(
+            'Me', 0, 0, (), local=True, forward=(math.sin(math.radians(98)), math.cos(math.radians(98)))
+        )
+        self.assertEqual(race.compass_view((coco,), race.sun_north(0.0)).text, '008° N')
+
+    def test_the_sun_option_is_on_by_default_and_kept(self):
+        import tempfile
+        from pathlib import Path
+
+        from turbohud.core import settings
+
+        self.assertTrue(settings.Settings().compass_sun)
+        path = Path(tempfile.mkdtemp()) / 'settings.json'
+        settings.save_settings(path, settings.Settings(compass_sun=False))
+        self.assertFalse(settings.load_settings(path).compass_sun)
+        path.write_text('{}', encoding='utf-8')  # from before the option: on
+        self.assertTrue(settings.load_settings(path).compass_sun)
 
     def test_the_colour_blind_option_is_kept(self):
         import tempfile

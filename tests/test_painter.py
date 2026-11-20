@@ -2313,6 +2313,41 @@ class CompassDrawingTests(unittest.TestCase):
         window = self.window()
         self.assertEqual(self.needle(window, 0).rgb(), self.needle(window, 135).rgb())
 
+    def sun_pixels(self, window):
+        """How many pixels of the readout's strip are the small sun's yellow."""
+        from turbohud.core.hud import compass_layout
+
+        image = window.grab().toImage()
+        strip = round(compass_layout(window.width(), window.height()).text_baseline) + 2
+        return sum(
+            1
+            for x in range(window.width())
+            for y in range(strip)
+            if (c := image.pixelColor(x, y)).alpha() > 200
+            and c.red() > 200
+            and c.green() > 150
+            and c.blue() < 120
+        )
+
+    def test_a_small_sun_by_the_readout_while_north_is_from_the_sun(self):
+        from turbohud.core.race import CompassView
+
+        window = self.window()
+        window.resize(220, 260)
+        window.show_content(CompassView(8, sun=True))
+        self.assertGreater(self.sun_pixels(window), 5)
+        window.show_content(CompassView(8))  # up on the map: none
+        self.assertEqual(self.sun_pixels(window), 0)
+
+    def test_move_modes_sample_shows_the_option(self):
+        window = self.window()
+        window.resize(220, 260)
+        window.set_locked(False)
+        self.assertGreater(self.sun_pixels(window), 5)
+        window.compass_sun = False
+        window.update()
+        self.assertEqual(self.sun_pixels(window), 0)
+
     def test_nothing_without_a_heading_and_a_sample_in_move_mode(self):
         window = self.window()
         window.show_content([])

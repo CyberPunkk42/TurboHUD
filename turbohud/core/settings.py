@@ -158,6 +158,9 @@ class Settings:
     # The compass's needle and N in a blue told apart with colour blindness, not red (asked for by the
     # user on 2026-11-20).
     compass_colourblind: bool = False
+    # The compass's north from the track's sun (TSU's sun sets in the west), not up on the track map
+    # (asked for by the user on 2026-11-20; on by default).
+    compass_sun: bool = True
     # Nearby cars shows only the leader, the car ahead, you and the car behind (asked for by players
     # on 2026-11-15, on by default); off: the 3 cars ahead and the 3 behind.
     nearby_short: bool = True
@@ -473,6 +476,7 @@ def load_settings(path):
         grid=data.get('grid') is not False,
         map_others=data.get('map_others') is True,
         compass_colourblind=data.get('compass_colourblind') is True,
+        compass_sun=data.get('compass_sun') is not False,
         nearby_short=data.get('nearby_short') is not False,
         radar_cone=data.get('radar_cone') is not False,
         radar_cockpit_only=data.get('radar_cockpit_only') is not False,
@@ -520,6 +524,7 @@ def save_settings(path, settings):
         'grid': settings.grid,
         'map_others': settings.map_others,
         'compass_colourblind': settings.compass_colourblind,
+        'compass_sun': settings.compass_sun,
         'nearby_short': settings.nearby_short,
         'radar_cone': settings.radar_cone,
         'radar_cockpit_only': settings.radar_cockpit_only,
