@@ -47,8 +47,8 @@ off. On Linux and Windows each section keeps its own window for now.
 | Time since start | how long TurboHUD has run; only on a system TurboHUD cannot read TSU on, instead of the race sections |
 
 Spectating an online race, only Race progress (with "Spectating" and the leader's lap),
-Nearby cars (gaps to the leader), Standings, the track map (every car), the Race leader and
-Battle banners and the Clock show.
+Nearby cars (gaps to the leader), Standings, the track map (every car), the Race leader,
+Battle and Watched driver banners and the Clock show.
 
 The race sections appear once the cars are on the grid and go away in the lobby. In
 the menus only the Clock shows; while TurboHUD waits for TSU, nothing does.
@@ -444,7 +444,7 @@ Without paid code signing, each system warns once on first start:
 launch_turbohud.py      start file; the bundles run the same code
 QUICK_START.md, USER_GUIDE.md  the players' guides, in every download (Quick Start.txt, User Guide.txt)
 run_turbohud.sh/.cmd    start from the source, setting up PySide6 in .buildtools/venv;
-                        also --toggle, --move, --lock, --settings, --quit (Linux, macOS)
+                        also --toggle, --move, --lock, --settings, --preset N, --quit (Linux, macOS)
 requirements.txt        PySide6, pinned; requirements-build.txt adds PyInstaller
 turbohud/
   app.py                start-up: settings, log, section windows, tray menu, shortcuts,
@@ -453,7 +453,8 @@ turbohud/
   core/                 shared, no Qt
     settings.py         settings and theme, where they live on each system
     hud.py              the sections, their sizes, places, nudges and the grid's screen
-    presets.py          layout files per screen size, and fitting one to another size
+    presets.py          layout files per screen size, fitting one to another size, the
+                        starting presets, and the design screen's frame
     fonts.py            the player's own fonts: the customization/fonts folder and its files
     il2cpp.py           finds the game's classes and fields by name
     race.py             reads the race and works out what each section shows
@@ -488,13 +489,15 @@ turbohud/
     macos.py            Cocoa: window level above Fullscreen, all Spaces; Carbon hotkeys
     linux.py            Linux: Hyprland or XWayland; shortcuts on Hyprland only
     hyprland.py         asks Hyprland to float, place and pin TurboHUD's own windows, binds its keys
-assets/                 the icon, and presets/ (the shipped layouts per screen size)
+assets/                 the icon; presets/ (the shipped layouts per screen size, and in
+                        starting/ the five starting presets); preview/ (move mode's made-up
+                        race); resources/ (the winner banner's picture)
 experiments/            the probes that settled the design; tsu_memory_probe.py is what
                         the Steam launch option runs from the source
 reader/                 the reader in Rust (a Windows program, no dependencies): in the
                         bottle on macOS, beside TSU on Windows; answers as bottle_reader.py does
 tools/build_app.py      PyInstaller build, archive and smoke test for this system
-tools/make_layouts.py   the shipped layouts and starting presets from the user's own
+tools/make_layouts.py   the shipped layouts and starting presets from the user's own designs
 tools/build_linux.sh    the Linux build in an Ubuntu 22.04 container
 tools/get_rust.sh       Rust and llvm-mingw into .buildtools (pinned), then builds the Rust reader
 tools/get_mac_python.sh a pinned Python for the Mac build, for older macOS versions too
@@ -505,7 +508,7 @@ tests/                  unit tests on any system
 
 A tray icon (the menu bar on the Mac) offers Move mode, Options (the on/off options),
 Relearn this track's map, Settings…, About and Quit;
-on Linux, which has no shortcuts, the commands above can be bound to a key in the
-desktop's own settings. First build sizes: Windows 40 MB ZIP, Mac 28 MB ZIP (75 MB
+on Linux desktops other than Hyprland, which have no shortcuts in TurboHUD, the commands
+above can be bound to a key in the desktop's own settings. First build sizes: Windows 40 MB ZIP, Mac 28 MB ZIP (75 MB
 unpacked), Linux 74 MB `.tar.gz` (with Qt's X11 libraries packed in).
 

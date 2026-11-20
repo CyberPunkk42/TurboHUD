@@ -217,9 +217,9 @@ gives up letters to them and ends in "…"), the clan tag (in a race with classe
 and the place in it, `GT3 P7`, in the class's colour), the tire compound, and the live gap to
 you (or `+1 L` for a lap). A name in orange is a lap or more ahead of you in the race (let it
 by), in blue a lap or more behind. **DNF** marks a car out of the race. Spectating, it shows
-the gaps to the leader. Its text is as large as the standings' in the layouts TurboHUD comes
-with (since 2026-11-15); to make it larger in your own layout, set its **Size px** in move
-mode, or drag a corner of it.
+the gaps to the leader. In the layouts TurboHUD comes with, its text is as large as the
+standings' or a little smaller (never below 10 px); to make it larger in your own layout, set
+its **Size px** in move mode, or drag a corner of it.
 
 **Track map**
 The track from above, with you as a white ring (always on top, ringed in yellow when you
@@ -313,8 +313,8 @@ for P5**, **Group around name** (the group's first driver) and the drivers behin
 then "+2" for more). One battle at a time, the one for the highest place; each fades in, stays and
 fades out, 6 seconds in all, and the same two cars (or a group with the same first driver) not again
 for a minute. Nothing in the opening lap, while the cars are still close from the start, nor for
-cars in the pits, finished or out of the race, nor in hotlapping or the arena modes. It starts
-below the Race leader banner.
+cars in the pits, finished or out of the race, nor in hotlapping or the arena modes. Where it
+starts depends on the layout for your screen; in move mode, place it like any section.
 
 **Watched driver**
 The Race Director mode's second part: only while you watch, in a replay or spectating an online
@@ -324,8 +324,8 @@ The camera must stay on a driver for 1 second first, so flicking through the dri
 the one you stop at. It fades in, stays and fades out, 6 seconds in all; a driver you turn to while
 it shows takes its place at once. The same driver is not named again until the camera has turned
 away from them; rewound, the replay names the driver again. Spectating, it shows only where
-TurboHUD can tell which car TSU's spectator camera follows. It starts in the middle of the
-screen, below the radar.
+TurboHUD can tell which car TSU's spectator camera follows. Where it starts depends on the
+layout for your screen; in move mode, place it like any section.
 
 ### Other
 

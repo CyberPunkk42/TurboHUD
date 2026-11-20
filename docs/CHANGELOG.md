@@ -4,6 +4,15 @@ Every finished change, newest first: what changed, why, how it was checked and w
 Each branch adds its dated entry at the top. Where things stand now: `RESUME.md`; what is open:
 `docs/BACKLOG.md`.
 
+- 2026-11-20: The documents brought up to the app as it is (`docs/up-to-date`, asked for by the user): the
+  guides, README and HOW_IT_WORKS checked against every change since the last refresh (2026-11-15). Corrected:
+  the Battle and Watched driver banners no longer said to start below the leader banner and the radar (the
+  shipped layouts, the user's own designs, place them otherwise); Nearby cars' text in those layouts as large as
+  the Standings' or a little smaller, never below 10 px (fitted sizes still raise it); README's Hyprland keys 1 to
+  5 (not 1 to 3), Ctrl+Shift+F12 on Hyprland too and the Windows test command; HOW_IT_WORKS's spectating list
+  (the Watched driver banner), `--preset`, `presets.py`, `assets/` and Linux shortcuts on Hyprland; RESUME.md's
+  date and a question about the banner's place that no longer applies. Checked against the code and the
+  shipped files; `tests/test_guides.py` and all tests pass.
 - 2026-11-20: The Windows test command corrected (`docs/windows-test-python`): `RESUME.md` and `AGENTS.md` said
   `py -3`, which has no PySide6, so 15 Qt tests failed with it; now `.buildtools\venv\Scripts\python.exe`, the
   environment `run_turbohud.cmd` sets up (all 1522 tests pass with it). Also noted in `RESUME.md`: the Rust
