@@ -142,6 +142,20 @@ Built and confirmed (north from the sun on 5 tracks), but not offered to players
 the settings and presets are kept. To offer it: set it True, and bring back its guide text (USER_GUIDE.md's
 **Compass** section and its two options, QUICK_START.md's line, README.md's lists) from commit `89cacf1`.
 
+## 14. Checks on the Mac and Windows, and rare cases not yet seen (from RESUME.md, 2026-11-20)
+Each one's details are in its changelog entry.
+- **The Mac and Windows**: the radar on the closest car; TurboHUD's memory in a long race; the Race preset at
+  start; the panel's General and Text tabs (Mac); the place label following a drag and staying above the
+  sections (Mac); a replay found in about 5 s (Mac, reader rebuilt); one tint per group (Windows, then on by
+  default there); the tester's stutter times and 10 reads a second (item 0).
+- **Linux**: the window count probe over TSU on Hyprland (item 1c); the log's slow-frame lines only for real
+  hitches (150 ms and more).
+- **Not yet seen**: a Single Player event and Custom races on the Mac and Linux; a replay after a race in the
+  same session; the delta bar red on a slow loss; the HUD at once when TSU's log says an event runs; yellow
+  flags (`YELLOW_*` in `race.py`); a broken track map mending after a clean lap; a purple sector turning green;
+  King of the Hill or Sumo; a track without sector lines (3 even bars); joining as a driver after spectating;
+  a race leader banner for a pass undone or at the start (none).
+
 ## Nice to have (ideas, not planned)
 Ideas talked over and left for later; none is being worked on. Take one up only when the user asks.
 - **The `sun:` log line without the location** (`location not read (Bad address)` at every event): the compass
