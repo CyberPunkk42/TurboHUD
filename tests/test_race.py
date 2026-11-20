@@ -1,5 +1,6 @@
 import dataclasses
 import itertools
+import math
 import socket
 import struct
 import sys
@@ -3875,3 +3876,60 @@ class ShownGearTests(unittest.TestCase):
             race.shown_gear(self.car(-3.0)), '3'
         )  # sliding backwards after a spin, not in reverse
         self.assertEqual(race.shown_gear(self.car(30.0, reversing=True)), '3')  # forwards: the sound's gear
+
+
+class CompassTests(unittest.TestCase):
+    """The compass (asked for by the user on 2026-11-20): north is up on the track map (+z, which the map
+    never turns), degrees clockwise from it."""
+
+    def test_headings_from_the_way_the_car_points(self):
+        for direction, degrees in (((0, 1), 0), ((1, 0), 90), ((0, -1), 180), ((-1, 0), 270), ((1, 1), 45)):
+            self.assertAlmostEqual(race.heading_degrees(direction), degrees, msg=direction)
+        self.assertIsNone(race.heading_degrees(None))
+        self.assertIsNone(race.heading_degrees((0, 0)))
+        self.assertIsNone(race.heading_degrees((float('nan'), 1)))
+
+    def test_the_readout(self):
+        for heading, text in (
+            (47, '047° NE'),
+            (0, '000° N'),
+            (90, '090° E'),
+            (225, '225° SW'),
+            (359, '359° N'),
+        ):
+            self.assertEqual(race.CompassView(heading).text, text)
+
+    def test_it_follows_the_local_car(self):
+        me = race.PlayerState('Me', 0, 0, (), local=True, forward=(1.0, 0.0), velocity=(0.0, 5.0))
+        other = race.PlayerState('Other', 0, 0, (), forward=(0.0, -1.0))
+        self.assertEqual(race.compass_view((other, me)), race.CompassView(90))  # its nose, not its way
+        moving = race.PlayerState('Me', 0, 0, (), local=True, velocity=(-3.0, 0.0))
+        self.assertEqual(race.compass_view((moving,)), race.CompassView(270))  # no nose read: its way
+        self.assertIsNone(race.compass_view((other,)))  # spectating: no car of one's own
+
+    def test_whole_degrees_so_a_straight_does_not_redraw_it(self):
+        me = race.PlayerState('Me', 0, 0, (), local=True, forward=(math.sin(0.8), math.cos(0.8)))
+        self.assertEqual(race.compass_view((me,)).heading, round(math.degrees(0.8)))
+        north = race.PlayerState('Me', 0, 0, (), local=True, forward=(-0.0001, 1.0))
+        self.assertEqual(race.compass_view((north,)).heading, 0)  # 359.99°: 0, not 360
+
+    def test_the_dial_fits_below_the_readout(self):
+        from turbohud.core import hud
+
+        layout = hud.compass_layout(150, 176)
+        top_of_dial = layout.centre[1] - layout.radius
+        self.assertGreater(top_of_dial, layout.text_baseline)  # the readout above the dial
+        self.assertLessEqual(layout.centre[1] + layout.radius, 176)
+        self.assertEqual(layout.centre[0], 75)
+
+    def test_the_colour_blind_option_is_kept(self):
+        import tempfile
+        from pathlib import Path
+
+        from turbohud.core import settings
+
+        folder = Path(tempfile.mkdtemp())
+        path = folder / 'settings.json'
+        settings.save_settings(path, settings.Settings(compass_colourblind=True))
+        self.assertTrue(settings.load_settings(path).compass_colourblind)
+        self.assertFalse(settings.Settings().compass_colourblind)  # red by default

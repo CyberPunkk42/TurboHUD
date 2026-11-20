@@ -27,69 +27,72 @@ Kept short: the state now and what to do next. Every change, with how it was che
   The repository is kept in step with a private GitHub repository.
 
 ## To try next (most recent first)
-1. **DNF, DSQ and AFK** (`fix/dnf-only-retired`): in an online race, `/retire` should show DNF at once (log:
+1. **The compass** (`feature/compass`): place it in move mode (it starts at the right edge; no shipped layout
+   has it yet), drive: the dial should turn the right way (left turn: N moves right) and the degrees match the
+   track map (heading up the map: 000° N). Colour-blind option: needle and N blue.
+2. **DNF, DSQ and AFK** (`fix/dnf-only-retired`): in an online race, `/retire` should show DNF at once (log:
    `player <name>: disabled flags 32`); a car under 10 km/h for a minute AFK, in the pits too (`fix/afk-in-pits`), gone above 10 km/h; a kicked or banned driver DSQ, if TSU sets its
    Disqualified flag (2): the log's flags line says what TSU sets, so send it after a kick or ban.
-2. **The time left from the lights going out** (`fix/time-left-from-lights-out`): in a timed race with 5 lights,
+3. **The time left from the lights going out** (`fix/time-left-from-lights-out`): in a timed race with 5 lights,
    Race progress should stand at the race's length (10:00) on the grid and start counting as the lights go out.
    The log's `race: lights out, race clock X s, lap 1 began at Y s` should have Y within a read of X (if Y is
    about 0, lap 1 begins at the grid and the fix needs another sign of the start; send the log).
-3. **The place label beside the section** (`feature/place-label-outside`; works on Windows, confirmed): on
+4. **The place label beside the section** (`feature/place-label-outside`; works on Windows, confirmed): on
    Hyprland and the Mac, does the label's own window follow a drag smoothly, and stay above the sections?
-4. **The panel's General and Text tabs** (`feature/panel-text-tab`): in move mode, switch tabs: the rows
+5. **The panel's General and Text tabs** (`feature/panel-text-tab`): in move mode, switch tabs: the rows
    stay put, a Show tick changes in both, the 🏁 is in Text. How the tabs look over TSU on each system.
-5. **A font per section and per preset** (`feature/fonts-per-preset-and-section`): in move mode, give two or
+6. **A font per section and per preset** (`feature/fonts-per-preset-and-section`): in move mode, give two or
    three sections their own **Font** in the panel and change **Global font**: only the sections on global
    change, each box fits its font. Save presets in different fonts and load them (also Ctrl+Shift+1 to 5 and
    by kind of event): each brings back its fonts; Undo goes back over a font change. In a race with two or three
    fonts, the log's `HUD frames` drawing share should stay about as before (each font keeps its own texts, in
    the same limits). The Linux and Mac panels: is the Font column (96 px, opening wider) wide enough?
-6. **The Race preset at start** (`fix/race-preset-at-start`): with a Race preset chosen in Layouts > Load by
+7. **The Race preset at start** (`fix/race-preset-at-start`): with a Race preset chosen in Layouts > Load by
    itself, TurboHUD should start in it (log: `started in preset N, the one for a race`), and load it again as
    a race begins after a recording. If a race still keeps another layout, send the log before restarting.
-7. **The preset in use in move mode** (`feature/current-preset-shown`): the panel's line above its buttons
+8. **The preset in use in move mode** (`feature/current-preset-shown`): the panel's line above its buttons
    should say "Preset: 3 Race" after loading or saving 3, "(changed)" after a drag, and the name again after
    Undo; "Preset: none" with no preset matching. Does a desktop that puts a window a few pixels off (Hyprland,
    the Mac) show "(changed)" right after a load?
-8. **A preset for spectating** (`feature/watching-presets`): in Layouts > Load by itself, pick one preset for
+9. **A preset for spectating** (`feature/watching-presets`): in Layouts > Load by itself, pick one preset for
    Recording and another for Spectating (e.g. 1 and 5). Open a replay: the first loads; spectate an online
    race: the second; join it as a driver: the Race one. The log says `a spectating began: preset N`.
-9. **No "New Race Leader" for your own car** (`fix/no-leader-banner-for-self`): take the lead in a race you
+10. **No "New Race Leader" for your own car** (`fix/no-leader-banner-for-self`): take the lead in a race you
    drive and hold it: no banner. Another driver taking it still shows one, and your own win "Race Winner".
-10. **The watched driver's banner while spectating** (`feature/spectator-camera-driver`, the Race Director
+11. **The watched driver's banner while spectating** (`feature/spectator-camera-driver`, the Race Director
    mode's third part): spectate an online race and switch between drivers. The log's `spectating: the camera
    follows player N` should change at each switch, and the banner name the driver as in a replay. If it says
    `not read (...)` or stays on one player, send the log: TSU's spectator camera is then somewhere else.
-11. **The watched driver's banner** (`feature/watched-driver-banner`, the Race Director mode's second part): in a
+12. **The watched driver's banner** (`feature/watched-driver-banner`, the Race Director mode's second part): in a
    replay, switch between drivers. "Watching / P<n> name" should come 1 s after the camera stops on a driver,
    take the place of one showing at once, and name nobody while you flick through. Is it too much with the battle warning? The log says `replay:
    the camera follows player N` at each switch.
-12. **A replay found sooner** (`fix/replay-found-sooner`): on the Mac, open a replay with TurboHUD running; the
+13. **A replay found sooner** (`fix/replay-found-sooner`): on the Mac, open a replay with TurboHUD running; the
    log's `search: replay found, after N s` should say about 5 s, not 12 to 15, and the HUD come sooner. The
    reader in `.buildtools` is rebuilt on the Mac and the Windows PC (2026-11-20); a reader not rebuilt makes
    the log say `the reader searches for one value at a time`, and it works as before.
-13. **The battle warning** (`feature/battle-warning`, the Race Director mode's first part): in a replay with
+14. **The battle warning** (`feature/battle-warning`, the Race Director mode's first part): in a replay with
    close racing, and spectating online, "Battle for P<n> / Possible Overtake / name vs name" when a car
    closes within 1 s of the one ahead or sits within 0.4 s, or "Group around name" for 3 cars or more each
    within 1 s; none in the opening lap; never while driving. Right moments now, with lap 1 left out? Do
    the groups read well, and is the names row large enough with long names? Placed well (confirmed).
-14. **Tire wear as TSU counts it** (`fix/tire-wear-per-compound`): in an event with tire wear, TurboHUD's Tires
+15. **Tire wear as TSU counts it** (`fix/tire-wear-per-compound`): in an event with tire wear, TurboHUD's Tires
    percent should match TSU's own (it was 97 against 95); the log says `tires: ... worn out at ...` once an
    event. Try a softer and a harder compound if the event has more.
-15. **The race leader banner** (`fix/banner-fade-as-one`, `fix/leader-banner-plain-grey`): one grey now, not
+16. **The race leader banner** (`fix/banner-fade-as-one`, `fix/leader-banner-plain-grey`): one grey now, not
    shaded, fading in and out over 0.67 s as one picture: does it still look broken as it fades, and is the
    shorter fade smooth enough at 10 reads a second (about 7 steps)? Also: "New Race Leader"
    about 5 s after a pass that holds (none for one undone, none at the start), "Race Winner" with your
    flag picture as the winner crosses the line; online too; how it reads over TSU. In move mode, the panel's 🏁 switches between the two; the text is in the middle.
-16. **The log's slow-frame lines**: at 10 reads a second only real hitches (150 ms and more).
-17. **One tint per group on Windows**: tick it in Settings > Look, lock, look at a group over TSU; if
+17. **The log's slow-frame lines**: at 10 reads a second only real hitches (150 ms and more).
+18. **One tint per group on Windows**: tick it in Settings > Look, lock, look at a group over TSU; if
    right, on by default there.
-18. **The place label in move mode** (`X  Y  width×height`): on the Mac and Hyprland; the designed
+19. **The place label in move mode** (`X  Y  width×height`): on the Mac and Hyprland; the designed
    size's numbers on the design screen; none after a preset, Undo or Redo.
-19. **TurboHUD's own memory** in the log: on Linux, and in a long race on each system (does it grow?).
-20. **One window on Linux** (backlog item 1c): the window count probe over TSU on Hyprland.
-21. **The tester** (backlog item 0): his stutter times and a try at 10 reads a second.
-22. **Not yet seen**: a Single Player event and Custom races on the Mac and Linux; a replay after a race
+20. **TurboHUD's own memory** in the log: on Linux, and in a long race on each system (does it grow?).
+21. **One window on Linux** (backlog item 1c): the window count probe over TSU on Hyprland.
+22. **The tester** (backlog item 0): his stutter times and a try at 10 reads a second.
+23. **Not yet seen**: a Single Player event and Custom races on the Mac and Linux; a replay after a race
     in the same session; the delta bar turning red on a slow loss; the HUD coming at once when TSU's log
     newly says an event runs; yellow flags (thresholds `YELLOW_*` in `turbohud/core/race.py`); a broken
     track map mending after a clean lap; a purple sector turning green; a special event, King of the Hill

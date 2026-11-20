@@ -155,6 +155,9 @@ class Settings:
         True  # move mode's grid on the main screen (a switch since 2026-11-16, asked for by the user)
     )
     map_others: bool = False  # the track map also shows the other cars, as faint grey dots
+    # The compass's needle and N in a blue told apart with colour blindness, not red (asked for by the
+    # user on 2026-11-20).
+    compass_colourblind: bool = False
     # Nearby cars shows only the leader, the car ahead, you and the car behind (asked for by players
     # on 2026-11-15, on by default); off: the 3 cars ahead and the 3 behind.
     nearby_short: bool = True
@@ -469,6 +472,7 @@ def load_settings(path):
         group_tint=data['group_tint'] if isinstance(data.get('group_tint'), bool) else group_tint_default(),
         grid=data.get('grid') is not False,
         map_others=data.get('map_others') is True,
+        compass_colourblind=data.get('compass_colourblind') is True,
         nearby_short=data.get('nearby_short') is not False,
         radar_cone=data.get('radar_cone') is not False,
         radar_cockpit_only=data.get('radar_cockpit_only') is not False,
@@ -515,6 +519,7 @@ def save_settings(path, settings):
         'group_tint': settings.group_tint,
         'grid': settings.grid,
         'map_others': settings.map_others,
+        'compass_colourblind': settings.compass_colourblind,
         'nearby_short': settings.nearby_short,
         'radar_cone': settings.radar_cone,
         'radar_cockpit_only': settings.radar_cockpit_only,

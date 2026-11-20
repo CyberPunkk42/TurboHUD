@@ -60,6 +60,7 @@ from turbohud.core.hud import (
     base_size,
     beside,
     centred_text,
+    compass_layout,
     content_shift,
     content_size,
     drawn_scale,
@@ -90,6 +91,7 @@ from turbohud.core.leader import NEW_LEADER, WINNER
 from turbohud.core.race import (
     RADAR_FULL,
     Blip,
+    CompassView,
     DeltaBarView,
     RadarView,
     radar_arrow,
@@ -111,6 +113,8 @@ from turbohud.hud.painter import (
     draw_level,
     draw_sectors,
     measures,
+    outlined_text,
+    text_advance,
     text_ink,
     text_width,
     using,
@@ -205,6 +209,19 @@ RADAR_SAMPLE = (
     Blip(-9.5, -1.0, 0.1, 0.3),
     Blip(11.0, 0.5, -0.05, None, False),
 )
+# The compass (asked for by the user on 2026-11-20).
+COMPASS_SAMPLE = CompassView(47)  # move mode: 047° NE, to place it
+COMPASS_BACK = (10, 14, 22, 140)  # the dark disc behind the dial (its tint), RGBA
+COMPASS_RING = (205, 212, 224, 220)  # the ring and its marks
+# The needle and N: red, as on a real compass (asked for by the user on 2026-11-20); with the colour-blind
+# option, the Okabe-Ito palette's sky blue, told apart from the rest with any of the common kinds of
+# colour blindness, where red is what red-green colour blindness sees worst.
+COMPASS_NEEDLE = '#e8262c'
+COMPASS_COLOURBLIND = '#56b4e9'
+COMPASS_LINE = (255, 255, 255, 200)  # the thin line through the dial: white, apart from the needle
+COMPASS_TICK = 10  # a mark every this many degrees, a longer one every 30
+COMPASS_LETTER = 0.26  # N, E, S and W: their text size, as a share of the dial's radius
+COMPASS_ARROW = 0.22  # the car's arrow in the middle: its length up from the middle, as a share of the radius
 MAP_BACK = (10, 14, 22, 110)  # behind the track map, RGBA
 MAP_ROAD = (205, 212, 224, 210)
 MAP_ROAD_EDGE = (0, 0, 0, 170)
@@ -365,6 +382,9 @@ class SectionWindow(QWidget):
         self.banner = None  # the race leader banner's core.leader.Banner while it shows
         self.preview_winner = False  # move mode shows the race winner's banner (the panel's 🏁)
         self.radar_cone = True  # the radar's sample in move mode shows slipstream cones (an option)
+        self.compass_colourblind = (
+            False  # the compass's needle and N in COMPASS_COLOURBLIND, not red (an option)
+        )
         self.sector_bars = True  # a section with sector bars shows them (an option)
         # A text section's text size in pixels (core.hud.font_scale): the app sets it, and its box
         # follows (text_box). None: the box sets the size, as before text sizes.
@@ -718,6 +738,9 @@ class SectionWindow(QWidget):
         if self.section.drawing == 'map':
             self._paint_map(painter)
             return
+        if self.section.drawing == 'compass':
+            self._paint_compass(painter)
+            return
         if self.section.drawing == 'delta':
             self._paint_delta(painter)
             return
@@ -948,6 +971,79 @@ class SectionWindow(QWidget):
         ):
             painter.drawRect(rect)
         painter.restore()
+
+    def _paint_compass(self, painter):
+        """The compass (asked for by the user on 2026-11-20): a dial that turns as the car does, under
+        an arrow and a thin line that stay pointing up, the car's way; where the line crosses the
+        ring is its heading, also above the dial as '047° NE'. North is up on the track map. In move
+        mode a sample, with a border."""
+        view = self.rows if isinstance(self.rows, CompassView) else None
+        if view is None and not self.locked:
+            view = COMPASS_SAMPLE
+        if view is None:
+            return
+        layout = compass_layout(self.width(), self.height())
+        if not self.locked:  # to place it
+            painter.setPen(QPen(QColor(*RADAR_EDGE), 1.5))
+            painter.setBrush(Qt.NoBrush)
+            painter.drawRoundedRect(QRectF(self.rect()).adjusted(1, 1, -1, -1), 10, 10)
+        outline = QColor(self.theme.outline_color[:7])
+        text = view.text
+        size = layout.text_size
+        outlined_text(
+            painter,
+            (self.width() - text_advance(text, size)) / 2,
+            layout.text_baseline,
+            text,
+            size,
+            QColor(self.theme.text_color),
+            outline,
+        )
+        centre, radius = QPointF(*layout.centre), layout.radius
+        painter.setRenderHint(QPainter.Antialiasing)
+        if self.backdrop:  # its tint: a dark disc behind the dial
+            painter.setPen(Qt.NoPen)
+            painter.setBrush(QColor(*COMPASS_BACK))
+            painter.drawEllipse(centre, radius, radius)
+        painter.setPen(QPen(QColor(*COMPASS_RING), max(1.0, radius / 40)))
+        painter.setBrush(Qt.NoBrush)
+        painter.drawEllipse(centre, radius, radius)
+        # The dial, turned so that the car's heading is at the top.
+        for degrees in range(0, 360, COMPASS_TICK):
+            angle = math.radians(degrees - view.heading)
+            long = degrees % 30 == 0
+            inner = radius * (0.80 if long else 0.88)
+            dx, dy = math.sin(angle), -math.cos(angle)
+            painter.setPen(QPen(QColor(*COMPASS_RING), max(1.0, radius / (30 if long else 60))))
+            painter.drawLine(
+                QPointF(centre.x() + dx * inner, centre.y() + dy * inner),
+                QPointF(centre.x() + dx * radius * 0.97, centre.y() + dy * radius * 0.97),
+            )
+        needle = QColor(COMPASS_COLOURBLIND if self.compass_colourblind else COMPASS_NEEDLE)
+        letter = max(6, round(radius * COMPASS_LETTER))
+        for degrees, name in ((0, 'N'), (90, 'E'), (180, 'S'), (270, 'W')):
+            angle = math.radians(degrees - view.heading)
+            reach = radius * 0.60
+            x = centre.x() + math.sin(angle) * reach - text_advance(name, letter) / 2
+            y = centre.y() - math.cos(angle) * reach + cap_height(letter) / 2
+            colour = needle if name == 'N' else QColor(self.theme.text_color)
+            outlined_text(painter, x, y, name, letter, colour, outline)
+        # The thin line through the dial, straight up and down, and the car's needle on it: both fixed.
+        painter.setPen(QPen(QColor(*COMPASS_LINE), max(1.0, radius / 50)))
+        painter.drawLine(QPointF(centre.x(), centre.y() - radius), QPointF(centre.x(), centre.y() + radius))
+        arrow = radius * COMPASS_ARROW
+        painter.setPen(QPen(outline, max(1.0, radius / 45)))
+        painter.setBrush(needle)
+        painter.drawPolygon(
+            QPolygonF(
+                [
+                    QPointF(centre.x(), centre.y() - arrow),
+                    QPointF(centre.x() + arrow * 0.6, centre.y() + arrow * 0.7),
+                    QPointF(centre.x(), centre.y() + arrow * 0.35),
+                    QPointF(centre.x() - arrow * 0.6, centre.y() + arrow * 0.7),
+                ]
+            )
+        )
 
     def _paint_radar(self, painter):
         """The proximity radar: the local car in the middle heading up, the others

@@ -471,14 +471,15 @@ OLD_LAP_TIME_ROWS = 16  # before layout 3
 
 def has_tint(section):
     """Whether a section has a Tint option: every text section (a light tint behind its
-    text) and the track map (its dark square)."""
-    return (not section.drawing and not section.background) or section.drawing == 'map'
+    text), the track map (its dark square) and the compass (its dark disc)."""
+    return (not section.drawing and not section.background) or section.drawing in ('map', 'compass')
 
 
 def default_tint(section, backdrop=False):
     """A section's tint where nothing saved says: the track map has its dark square, as
-    before it had the option; a text section follows `backdrop` (Settings.backdrop)."""
-    return True if section.drawing == 'map' else backdrop
+    before it had the option, and the compass its dark disc; a text section follows `backdrop`
+    (Settings.backdrop)."""
+    return True if section.drawing in ('map', 'compass') else backdrop
 
 
 def text_can_centre(section):
@@ -709,6 +710,14 @@ RACE_SECTIONS = (
         drawing='map',
         tip='The track from above: you, the leader, and the cars just ahead and behind',
     ),
+    Section(
+        'compass',
+        'Compass',
+        (),
+        bar=(150, 176),  # the dial, and the degrees above it
+        drawing='compass',
+        tip='Which way your car points: north is up on the track map, degrees clockwise from it',
+    ),
 )
 # The move-mode panel lists the sections under these headings (asked for by the user on
 # 2026-11-11); a section not named here comes under the last.
@@ -717,7 +726,18 @@ PANEL_CATEGORIES = (
     ('Car', ('fuel', 'fuelfinish', 'tires', 'health', 'draft', 'speed')),
     (
         'Race',
-        ('players', 'trackmap', 'radar', 'blueflag', 'yellowflag', 'shortcut', 'leader', 'battle', 'watched'),
+        (
+            'players',
+            'trackmap',
+            'radar',
+            'compass',
+            'blueflag',
+            'yellowflag',
+            'shortcut',
+            'leader',
+            'battle',
+            'watched',
+        ),
     ),
     ('Other', ('localtime', 'clock')),
 )
@@ -1369,7 +1389,35 @@ def drawing_place(section, size, screen, margin=LAYOUT_MARGIN):
         width, height = size
         x, y, screen_width, screen_height = screen
         return (x + (screen_width - width) // 2, y + round(screen_height * RADAR_DOWN), width, height)
+    if section.drawing == 'compass':  # at the right edge, above where the track map starts
+        width, height = size
+        x, y, screen_width, screen_height = screen
+        return (x + screen_width - margin - width, y + round(screen_height * COMPASS_DOWN), width, height)
     return top_centre(size, screen)
+
+
+COMPASS_DOWN = 0.12  # the compass's first place: this share of the screen down, at its right edge
+COMPASS_TEXT_SHARE = 0.17  # the compass's readout (047° NE): this share of its box's height, above the dial
+COMPASS_INSET = 2  # pixels between the dial and its box
+
+
+@dataclass(frozen=True)
+class CompassLayout:
+    text_size: int  # the readout's text size in pixels
+    text_baseline: float  # where its baseline is, from the box's top
+    centre: tuple  # the dial's middle (x, y) in the box
+    radius: float
+
+
+def compass_layout(width, height):
+    """Where the compass's readout and dial go in a box `width` x `height`: the readout across the
+    top, the dial as large as fits below it, in the middle. Sized by the box (a drawing section)."""
+    strip = max(10.0, height * COMPASS_TEXT_SHARE)
+    room_width = max(width - 2 * COMPASS_INSET, 2)
+    room_height = max(height - strip - 2 * COMPASS_INSET, 2)
+    radius = min(room_width, room_height) / 2
+    centre = (width / 2, strip + COMPASS_INSET + room_height / 2)
+    return CompassLayout(max(6, round(strip * 0.75)), strip * 0.82, centre, radius)
 
 
 GROUP_TOLERANCE = 3  # pixels: a window this close to where TurboHUD moved it has arrived

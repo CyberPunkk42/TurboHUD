@@ -4,6 +4,19 @@ Every finished change, newest first: what changed, why, how it was checked and w
 Each branch adds its dated entry at the top. Where things stand now: `RESUME.md`; what is open:
 `docs/BACKLOG.md`.
 
+- 2026-11-20: A compass (`feature/compass`, asked for by the user, the turning dial and "047° NE" chosen by them):
+  a new drawing section under Race. TSU has no north, so north is up on the track map (+z), which never turns a
+  track (`map_transform`); the heading is the local car's `forward` (else its velocity) in whole degrees clockwise
+  from it (`heading_degrees`, `compass_view`, `CompassView` in `race.py`), so no new read of the game. The dial
+  with N, E, S and W and a mark every 10° turns under a fixed red needle and a thin white line, the degrees and
+  the nearest of eight points above it (`compass_layout`, `_paint_compass`); N red as the needle. A new option,
+  **Compass in colour-blind colours** (settings window and icon menu, `compass_colourblind`), makes both the
+  Okabe-Ito sky blue (asked for by the user). Its Tint is its dark disc (on by default), its text the global
+  font (the user: the same for everyone). First place at the screen's right edge, 12% down; a first start's
+  shipped layout, made before it, gets each drawing it lacks at its first place (`with_layout`), the shipped
+  files unchanged. Not shown spectating. Tests: headings, the readout, which car, whole degrees, the layout,
+  the option kept, the needle red and blue and staying up as the dial turns, nothing without a heading and a
+  sample in move mode; the section lists. Looked at in images. Not yet seen in a race.
 - 2026-11-20: AFK in the pits too (`fix/afk-in-pits`, asked for by the user: drivers stop in the pits and leave
   the computer): `Retirements` no longer skips the pit area, so a car under 10 km/h for over a minute there is
   AFK, shown in place of PIT, and goes as it drives off faster than 10 km/h. A pit stop is shorter than a minute.

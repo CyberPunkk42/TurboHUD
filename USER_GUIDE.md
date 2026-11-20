@@ -64,6 +64,8 @@ behind the **^** arrow), and in the tray of your desktop's panel on Linux. Its m
     the car ahead, you and the car behind (4 rows). On by default; off, it shows the 3 cars
     ahead and the 3 behind.
   - **Other cars on the track map**: every other car as a faint grey dot.
+  - **Compass in colour-blind colours**: the compass's needle and N in sky blue instead of red,
+    as red is the colour red-green colour blindness sees worst.
 - **Relearn this track's map**: during a race, forgets the map of this track (the saved one
   too); the map is then learnt again from the next whole clean lap.
 - **Settings…**: opens the settings window (section 6).
@@ -272,6 +274,18 @@ The cones can be turned off with **Slipstream cones on the radar**. By default t
 shows only in the cockpit cameras; **Every camera** in the settings window (or **Radar in
 every camera** in the icon's menu) shows it in the views from outside the car too. In move
 mode the preview shows each of these at once.
+
+**Compass**
+Which way your car points. TSU has no north of its own, so north is **up on the track map** (the map
+never turns a track, so it is the same on every visit), and the degrees go clockwise from it: 0° up
+the map, 90° to its right (east), 180° down, 270° to its left. The red needle in the middle and the
+thin white line through it always point up, the way the car goes; the dial with N, E, S and W turns
+under them as you steer, so the heading is where the line crosses the ring, and above the dial it
+reads, for example, **047° NE**. N is red too, as on a compass (sky blue with **Compass in colour-blind
+colours**). It follows your car, or the driver a replay follows; spectating, it does not show. Its
+**Tint** in move mode turns its dark disc on (the default) or off. Its text is in the global font,
+the same for everyone. It comes at the right edge of the screen; the layouts TurboHUD comes with were
+made before it, so place it in move mode.
 
 **Blue flag**
 A navy bar that fades in when a car about to lap you is within 2 seconds behind (faint at
@@ -548,7 +562,8 @@ The window has two columns, under headings. The on/off options are the same as u
 
 **Sections**
 - **Nearby cars: only the leader and the cars next to you**, **Sector bars in My laps**,
-  **Gear and revs in the speed section** and **Other cars on the track map**.
+  **Gear and revs in the speed section**, **Other cars on the track map** and **Compass in
+  colour-blind colours**.
 
 **Radar**
 - **Show in:** **Cockpit cameras** (the default: only while TSU's camera sits at the driver,

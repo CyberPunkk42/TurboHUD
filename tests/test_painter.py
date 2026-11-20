@@ -1177,7 +1177,7 @@ class MovePanelPresetTests(unittest.TestCase):
 
         self.assertEqual(inked(20, (200, 80)), inked(20, (400, 300)))  # a bigger box: no bigger text
         self.assertGreater(inked(30, (400, 300)), inked(20, (400, 300)) * 1.5)
-        drawn = {'deltabar', 'trackmap', 'radar', 'blueflag'}
+        drawn = {'deltabar', 'trackmap', 'radar', 'blueflag', 'compass'}
         by_text = {s.name for s in RACE_SECTIONS if SectionWindow(Native(), Theme(), s).text}
         self.assertEqual(by_text, {s.name for s in RACE_SECTIONS} - drawn)
 
@@ -1393,7 +1393,7 @@ class MovePanelPresetTests(unittest.TestCase):
         tinted = {
             s.name for s in RACE_SECTIONS if not s.drawing and not s.background
         }  # a background is its own
-        self.assertEqual(set(panel.tints), tinted | {'trackmap'})
+        self.assertEqual(set(panel.tints), tinted | {'trackmap', 'compass'})  # the compass: its dark disc
         panel.tints['trackmap'].setChecked(True)
         self.assertEqual(got.pop(), ('trackmap', True))
         panel.tints['fuel'].setChecked(True)
@@ -2210,3 +2210,70 @@ class SectionTipTests(unittest.TestCase):
         self.assertEqual(labels['laptimes'], 'Standings')
         self.assertEqual(labels['players'], 'Nearby cars')
         self.assertEqual(labels['times'], 'My laps')
+
+
+@unittest.skipUnless(importlib.util.find_spec('PySide6'), 'needs Qt')
+class CompassDrawingTests(unittest.TestCase):
+    """The compass's dial (asked for by the user on 2026-11-20): a red needle, blue with the option."""
+
+    @classmethod
+    def setUpClass(cls):
+        os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
+        from PySide6.QtWidgets import QApplication
+
+        cls.app = QApplication.instance() or QApplication([])
+
+    def window(self):
+        from turbohud.core.hud import RACE_SECTIONS
+        from turbohud.core.settings import Theme
+        from turbohud.overlay.window import SectionWindow
+
+        class Native:
+            def raise_window(self, window):
+                return 'test'
+
+        window = SectionWindow(Native(), Theme(), next(s for s in RACE_SECTIONS if s.name == 'compass'))
+        self.addCleanup(window.close)
+        window.resize(150, 176)
+        window.set_locked(True)
+        return window
+
+    def needle(self, window, heading=0):
+        """The colour just above the dial's middle: the needle's."""
+        from turbohud.core.hud import compass_layout
+        from turbohud.core.race import CompassView
+
+        window.show_content(CompassView(heading))
+        image = window.grab().toImage()
+        layout = compass_layout(window.width(), window.height())
+        x, y = layout.centre
+        return image.pixelColor(round(x), round(y - layout.radius * 0.1))  # on the needle, over the line
+
+    def test_the_needle_is_red(self):
+        colour = self.needle(self.window())
+        self.assertGreater(colour.red(), 150)
+        self.assertGreater(colour.red(), colour.green() + 100)
+
+    def test_colour_blind_the_needle_is_blue(self):
+        window = self.window()
+        window.compass_colourblind = True
+        colour = self.needle(window)
+        self.assertGreater(colour.blue(), 150)
+        self.assertGreater(colour.blue(), colour.red() + 60)
+
+    def test_the_needle_stays_up_as_the_dial_turns(self):
+        window = self.window()
+        self.assertEqual(self.needle(window, 0).rgb(), self.needle(window, 135).rgb())
+
+    def test_nothing_without_a_heading_and_a_sample_in_move_mode(self):
+        window = self.window()
+        window.show_content([])
+        blank = window.grab().toImage()
+        self.assertFalse(
+            any(blank.pixelColor(x, y).alpha() for x in range(0, 150, 5) for y in range(0, 176, 5))
+        )
+        window.set_locked(False)
+        sample = window.grab().toImage()
+        self.assertTrue(
+            any(sample.pixelColor(x, y).alpha() for x in range(0, 150, 5) for y in range(0, 176, 5))
+        )

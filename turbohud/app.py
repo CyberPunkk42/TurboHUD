@@ -20,6 +20,7 @@ from turbohud.core.hud import (
     base_size,
     common_font,
     default_tint,
+    drawing_place,
     font_of_box,
     font_scale,
     is_text_section,
@@ -86,6 +87,7 @@ log = logging.getLogger('turbohud')
 
 
 NARROWER = ('laptimes', 'players')  # the boxes layout 7 makes narrower
+COMPASS_COLOURBLIND_LABEL = 'Compass in colour-blind colours'  # the option, in the settings and the menu
 # The banners that fade in and out (overlay.window): section name -> the key of what it shows (race_sections).
 BANNERS = {'leader': 'banner', 'battle': 'battlebanner', 'watched': 'watchedbanner'}
 
@@ -208,6 +210,12 @@ def with_layout(settings, places, screen, sections):
     fonts = [p.font for n, p in laid.items() if is_text_section(sections[n]) and p.font is not None]
     font_size = common_font(fonts)
     laid = {n: replace(p, font=None if p.font == font_size else p.font) for n, p in laid.items()}
+    # A drawing the layout was made without (the compass, added after the shipped layouts were
+    # designed): its own first place, at its own size.
+    for name, section in sections.items():
+        if name not in laid and section.bar:
+            box = drawing_place(section, section.bar, screen)
+            laid[name] = SectionPlace(*box, tint=default_tint(section))
     return replace(settings, sections=laid, font_size=font_size)
 
 
@@ -817,6 +825,7 @@ def run(args, folder):
         window.setGeometry(*place)
         window.backdrop = saved.tint if saved else default_tint(window.section, settings.backdrop)
         window.radar_cone = settings.radar_cone
+        window.compass_colourblind = settings.compass_colourblind
         window.sector_bars = settings.sector_bars
         window.screens = screens  # move mode shows its place counted on the screen it is on
         window.show_on_top()
@@ -1073,6 +1082,15 @@ def run(args, folder):
                     'Every other car as a faint grey dot',
                 )
             )
+        if any(section.drawing == 'compass' for section in layout):
+            listed.append(
+                (
+                    'compass_colourblind',
+                    COMPASS_COLOURBLIND_LABEL,
+                    settings.compass_colourblind,
+                    "The compass's needle and N in blue, told apart with colour blindness, not red",
+                )
+            )
         if any(section.sectors for section in layout):
             listed.append(
                 (
@@ -1256,6 +1274,19 @@ def run(args, folder):
         log.info(
             'nearby cars: %s', 'the leader and the cars next to you' if short else '3 ahead and 3 behind'
         )
+
+    def set_compass_colourblind(on):
+        """The compass's needle and N in the colour-blind blue, or red."""
+        nonlocal settings
+        settings = replace(settings, compass_colourblind=on)
+        compass_colourblind_action.setChecked(on)
+        show_option('compass_colourblind', on)
+        for window in windows.values():
+            window.compass_colourblind = on
+            if window.section.drawing == 'compass':
+                window.update()
+        save()
+        log.info('compass in colour-blind colours %s', 'on' if on else 'off')
 
     def set_map_others(others):
         nonlocal settings
@@ -1474,6 +1505,7 @@ def run(args, folder):
                 'radar_cone': set_radar_cone,
                 'radar_cockpit_only': set_radar_cockpit_only,
                 'map_others': set_map_others,
+                'compass_colourblind': set_compass_colourblind,
                 'nearby_short': set_nearby_short,
                 'sector_bars': set_sector_bars,
                 'yellow_flags': set_yellow_flags,
@@ -2199,6 +2231,11 @@ def run(args, folder):
     map_others_action.triggered.connect(lambda checked: set_map_others(checked))
     if any(section.drawing == 'map' for section in layout):
         options_menu.addAction(map_others_action)
+    compass_colourblind_action = QAction(COMPASS_COLOURBLIND_LABEL, menu, checkable=True)
+    compass_colourblind_action.setChecked(settings.compass_colourblind)
+    compass_colourblind_action.triggered.connect(lambda checked: set_compass_colourblind(checked))
+    if any(section.drawing == 'compass' for section in layout):
+        options_menu.addAction(compass_colourblind_action)
     relearn_action = QAction('Relearn this track\'s map', menu)
     relearn_action.setToolTip('Forget the map of the track being raced; the next clean lap draws it again')
     relearn_action.triggered.connect(lambda: relearn_track())

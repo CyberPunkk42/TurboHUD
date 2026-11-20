@@ -42,7 +42,7 @@ COLOURS = (
 GROUPS = {
     'look': ('backdrop', 'group_tint', 'grid', 'mph'),
     'standings': ('classes', 'clan_tags'),
-    'sections': ('nearby_short', 'sector_bars', 'gear', 'map_others'),
+    'sections': ('nearby_short', 'sector_bars', 'gear', 'map_others', 'compass_colourblind'),
     'radar': ('radar_cone',),
     'flags': ('yellow_flags',),
 }
