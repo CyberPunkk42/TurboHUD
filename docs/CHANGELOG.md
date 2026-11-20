@@ -4,6 +4,16 @@ Every finished change, newest first: what changed, why, how it was checked and w
 Each branch adds its dated entry at the top. Where things stand now: `RESUME.md`; what is open:
 `docs/BACKLOG.md`.
 
+- 2026-11-20: Move mode's place label beside the section, not over it (`feature/place-label-outside`, asked for
+  by the user: on a small screen it covered a small section, hiding what it showed as it was sized). The label
+  is now a small window of its own (`PlaceLabel` in `overlay/window.py`, see-through and click-through), just
+  above the section, left-aligned with it; below it where there is no room above on its screen (at the very
+  top); over its top-left corner only for a section as tall as its screen; kept on the screen at its edges
+  (`label_spot` in `core/hud.py`). Moved through the desktop where it must be (Hyprland's `move_window`,
+  without settling at each move). It goes as before (2 s after the last move, locking, TurboHUD's own moves)
+  and also when the section is hidden. Tests: above, below at the top of either monitor, over the corner,
+  kept on the screen, the window's place, hidden or locked, moved through the desktop; all tests pass, a 6 s
+  start logged no error. Not yet seen by hand on any system (on Hyprland: a new small window per section).
 - 2026-11-20: The class columns clearer, and buttons without three dots (`fix/class-columns-clearer`, reported by
   the user: Settings > Standings' "Class" read as the same switch as "Classes in the standings"). The columns are
   named for what they show, **Class code** and **Overall place**, and are greyed out (their tick kept, the

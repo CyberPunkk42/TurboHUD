@@ -1738,6 +1738,32 @@ def place_text(place, screens, design=None):
     return f'X {x - left}  Y {y - top}  {width}×{height}'
 
 
+PLACE_LABEL_GAP = 4  # pixels between a section and its place label, above or below it
+
+
+def label_spot(place, size, screens, gap=PLACE_LABEL_GAP):
+    """(x, y) of the place label (`size`: width, height) for a section at `place` (x, y, width,
+    height): just above the section, out of its way (asked for by the user on 2026-11-20: over a
+    small section on a small screen it hid what the section shows as it was sized); below it where
+    there is no room above on its screen (screen_of), at the very top; over its top-left corner only
+    where neither fits. Left-aligned with the section, kept on its screen."""
+    x, y, _width, height = place
+    label_width, label_height = size
+    # No screens known: room enough above.
+    screen = screen_of(place, screens) or (x, y - label_height - gap, label_width, height + 2 * label_height)
+    left, top, screen_width, screen_height = screen
+    above = y - gap - label_height
+    below = y + height + gap
+    if above >= top:
+        spot_y = above
+    elif below + label_height <= top + screen_height:
+        spot_y = below
+    else:
+        spot_y = max(y, top)  # a section as tall as its screen: over its corner, as before
+    spot_x = min(max(x, left), left + screen_width - label_width)
+    return round(max(spot_x, left)), round(spot_y)
+
+
 def inside(place, frame):
     """`place` (x, y, width, height) moved the least to lie wholly in `frame` (x, y, width,
     height): the design screen's frame keeps its sections in it (asked for by the user on

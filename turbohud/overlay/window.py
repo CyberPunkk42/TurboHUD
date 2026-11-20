@@ -18,7 +18,18 @@ from pathlib import Path
 from typing import ClassVar
 
 from PySide6.QtCore import QPointF, QRect, QRectF, Qt, QTimer, Signal
-from PySide6.QtGui import QColor, QFontInfo, QImage, QLinearGradient, QPainter, QPainterPath, QPen, QPolygonF
+from PySide6.QtGui import (
+    QColor,
+    QFont,
+    QFontInfo,
+    QFontMetricsF,
+    QImage,
+    QLinearGradient,
+    QPainter,
+    QPainterPath,
+    QPen,
+    QPolygonF,
+)
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -60,6 +71,7 @@ from turbohud.core.hud import (
     help_lines,
     hud_lines,
     is_text_section,
+    label_spot,
     level_bar,
     panel_categories,
     pedal_bars,
@@ -365,6 +377,7 @@ class SectionWindow(QWidget):
         # Move mode: where it is and its size while moved, resized or nudged, and a moment after
         # (place_text; asked for by the user on 2026-11-16). '' when not shown.
         self.place_label = ''
+        self.label_window = None  # the label's own window (PlaceLabel), made the first time it shows
         self.screens = None  # the screens (x, y, width, height) its place is counted on; the app sets them
         self._place_seen = None  # its place when Qt last said it moved (_moved)
         # On the design screen: (frame, scale), so its place is shown on the designed size (place_text).
@@ -424,16 +437,20 @@ class SectionWindow(QWidget):
         """Move mode: show where it is (`place`, else where Qt has it) and its size for a moment."""
         if self.locked or not self.wanted or self.screens is None or time.monotonic() < self._quiet_until:
             return
-        text = place_text(place or self.geometry().getRect(), self.screens, self.design)
-        if text != self.place_label:
-            self.place_label = text
-            self.update()
+        box = place or self.geometry().getRect()
+        text = place_text(box, self.screens, self.design)
+        self.place_label = text
+        # Beside the section, in a window of its own (PlaceLabel): above it, or below at the top.
+        if self.label_window is None:
+            self.label_window = PlaceLabel(self.native)
+        size = self.label_window.size_for(text)
+        self.label_window.show_text(text, (*label_spot(box, size, self.screens), *size))
         self._place_timer.start()  # gone PLACE_LABEL_MS after the last move
 
     def hide_place(self):
-        if self.place_label:
-            self.place_label = ''
-            self.update()
+        self.place_label = ''
+        if self.label_window is not None and self.label_window.isVisible():
+            self.label_window.hide()
 
     def quiet_place(self, until):
         """TurboHUD moves it now, not the player (a preset, Undo or Redo, the design screen): no label
@@ -527,7 +544,7 @@ class SectionWindow(QWidget):
             return
         self.locked = locked
         if locked:
-            self.place_label = ''  # move mode's place is not shown over the race
+            self.hide_place()  # move mode's place is not shown over the race
         if not self.wanted:
             return  # hidden: stays click-through and empty in both modes
         in_place = _set_input(self, self.native, locked)
@@ -548,6 +565,8 @@ class SectionWindow(QWidget):
         if wanted == self.wanted:
             return
         self.wanted = wanted
+        if not wanted:
+            self.hide_place()  # its label goes with it
         in_place = _set_input(self, self.native, self.locked or not wanted)
         movable = getattr(self.native, 'set_movable', None)
         if movable is not None:
@@ -653,27 +672,8 @@ class SectionWindow(QWidget):
             painter.setPen(QPen(QColor(LIFT_COLOR), 2))
             painter.setBrush(Qt.NoBrush)
             painter.drawRoundedRect(QRectF(self.rect()).adjusted(1, 1, -1, -1), 8, 8)
-        if not self.locked and self.wanted and self.place_label:
-            self._paint_place(painter)
         painter.end()
         SectionWindow.drawing_time += time.perf_counter() - began
-
-    def _paint_place(self, painter):
-        """Move mode: the place label (show_place) in a small dark box at the top left, over the
-        section's sample text, readable over any game."""
-        painter.save()
-        font = painter.font()
-        font.setPixelSize(PLACE_LABEL_PX)
-        font.setBold(True)
-        painter.setFont(font)
-        metrics = painter.fontMetrics()
-        box = QRectF(4, 4, metrics.horizontalAdvance(self.place_label) + 12, metrics.height() + 6)
-        painter.setPen(Qt.NoPen)
-        painter.setBrush(QColor(*PLACE_LABEL_BACK))
-        painter.drawRoundedRect(box, 4, 4)
-        painter.setPen(QColor(LIFT_COLOR))
-        painter.drawText(box, Qt.AlignCenter, self.place_label)
-        painter.restore()
 
     def drew(self, seconds):
         """Count `seconds` of drawing for this section (the log's costliest sections)."""
@@ -1456,6 +1456,59 @@ class GroupTints:
     def close(self):
         for tint in self.tints.values():
             tint.close()
+
+
+class PlaceLabel(QWidget):
+    """Move mode's place label (SectionWindow.show_place) as a small window of its own beside the
+    section, not drawn inside it (asked for by the user on 2026-11-20: over a small section on a
+    small screen it hid what the section shows): see-through and click-through."""
+
+    on_canvas = False  # never drawn on the HUD canvas: its own window, in move mode only
+
+    def __init__(self, native):
+        super().__init__(None, window_flags())
+        self.native = native
+        self.text = ''
+        self.setWindowTitle('TurboHUD - Place')
+        self.setAttribute(Qt.WA_TranslucentBackground)
+        self.setAttribute(Qt.WA_ShowWithoutActivating)
+        self.setWindowFlag(Qt.WindowTransparentForInput, True)
+
+    def label_font(self):
+        font = QFont(self.font())
+        font.setPixelSize(PLACE_LABEL_PX)
+        font.setBold(True)
+        return font
+
+    def size_for(self, text):
+        """(width, height) of the label showing `text`."""
+        metrics = QFontMetricsF(self.label_font())
+        return math.ceil(metrics.horizontalAdvance(text)) + 12, math.ceil(metrics.height()) + 6
+
+    def show_text(self, text, place):
+        """Show `text` at `place` (x, y, width, height): moved where the desktop must move it."""
+        if text != self.text:
+            self.text = text
+            self.update()
+        move = getattr(self.native, 'move_window', None)
+        if move is not None:
+            move(self, place, False)
+        else:
+            self.setGeometry(*place)
+        if not self.isVisible():
+            self.show()
+            self.native.raise_window(self)  # above the sections
+
+    def paintEvent(self, _event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.Antialiasing)
+        painter.setFont(self.label_font())
+        painter.setPen(Qt.NoPen)
+        painter.setBrush(QColor(*PLACE_LABEL_BACK))
+        painter.drawRoundedRect(QRectF(self.rect()), 4, 4)
+        painter.setPen(QColor(LIFT_COLOR))
+        painter.drawText(QRectF(self.rect()), Qt.AlignCenter, self.text)
+        painter.end()
 
 
 class DesignFrame(QWidget):

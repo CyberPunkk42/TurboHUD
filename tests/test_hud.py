@@ -1019,6 +1019,31 @@ class CentreTests(unittest.TestCase):
         self.assertEqual(hud.place_text((1500, -1300, 480, 24), self.SCREENS), 'X 220  Y 140  480×24')
         self.assertEqual(hud.place_text((10.4, 20.6, 100, 50), []), 'X 10  Y 21  100×50')  # no screens
 
+    def test_the_place_label_sits_above_the_section(self):
+        # Asked for by the user on 2026-11-20: not over the section, whose content it hid.
+        gap = hud.PLACE_LABEL_GAP
+        self.assertEqual(
+            hud.label_spot((1580, 1110, 506, 270), (150, 20), self.SCREENS), (1580, 1110 - 20 - gap)
+        )
+
+    def test_at_the_top_of_its_screen_the_place_label_goes_below(self):
+        gap = hud.PLACE_LABEL_GAP
+        self.assertEqual(hud.label_spot((300, 10, 200, 40), (150, 20), self.SCREENS), (300, 10 + 40 + gap))
+        # The upper monitor's top (y -1440): below there too.
+        self.assertEqual(
+            hud.label_spot((1500, -1440, 480, 24), (150, 20), self.SCREENS), (1500, -1440 + 24 + gap)
+        )
+
+    def test_a_section_as_tall_as_its_screen_has_the_label_over_its_corner(self):
+        screen = self.SCREENS[0]
+        place = (screen[0] + 40, screen[1], 300, screen[3])
+        self.assertEqual(hud.label_spot(place, (150, 20), self.SCREENS), (place[0], place[1]))
+
+    def test_the_place_label_stays_on_the_screen_at_its_right_edge(self):
+        left, top, width, _height = self.SCREENS[0]
+        place = (left + width - 60, top + 500, 60, 40)  # a narrow section at the right edge
+        self.assertEqual(hud.label_spot(place, (150, 20), self.SCREENS)[0], left + width - 150)
+
     def test_on_the_design_screen_the_place_label_is_on_the_designed_size(self):
         # The design screen shows another size in a frame, to scale: the label tells where the section
         # goes on that size, as Save design writes it, not on this screen (found on 2026-11-16).
