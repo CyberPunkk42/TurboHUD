@@ -81,11 +81,13 @@ from turbohud.core.hud import (
     place_text,
     resize_edges,
     resized,
+    row_bars,
     sector_bars,
     steady_rows,
     text_box,
     text_can_centre,
     tight_height,
+    tint_height,
 )
 from turbohud.core.leader import NEW_LEADER, WINNER
 from turbohud.core.race import (
@@ -832,7 +834,10 @@ class SectionWindow(QWidget):
             if self.opacity is not None and not self.section.banner:
                 self._paint_blue_frame(painter, scale)  # the blue flag too (turbohud.core.flagstack)
         elif self.locked and self.backdrop and rows and own_tint:
-            self._paint_backdrop(painter)
+            # Car status: to just below its last row where the event has fewer (Section.tint_to_rows).
+            self._paint_backdrop(
+                painter, height=tint_height(self.section, rows, self.height(), scale, text_ink)
+            )
         if self.section.pedals and rows:  # no bars without a speed (menu, no game)
             throttle, brake = self.pedals or (None, None)
             draw_bars(painter, pedal_bars(self.width(), self.height(), scale, throttle, brake))
@@ -873,6 +878,8 @@ class SectionWindow(QWidget):
             reserve,
             snug=self.section.snug,
         )
+        for bar in row_bars(hud_lines(rows, scale, spacing), self.width() - inset, scale):
+            draw_level(painter, bar)  # Car status: a bar under each of its rows
         if self.section.level and rows:
             sample = (
                 SECTORS_SAMPLE
@@ -925,16 +932,20 @@ class SectionWindow(QWidget):
         painter.drawImage(QRectF(0, 0, self.width(), self.height()), whole)
         painter.restore()
 
-    def _paint_backdrop(self, painter, color=None):
+    def _paint_backdrop(self, painter, color=None, height=None):
         """The light tint behind a section's text, filling the section's whole box: one that
         followed the text left part of a box bare, such as the player list's below its last
         driver (reported by the user on 2026-11-14). `color` ('#rrggbb'): a solid box of that
         colour instead (Section.background): a box that followed the text changed its size
         with each incident (the yellow flag, reported by the user on 2026-11-11). Either way
-        its size is the one given it in move mode, and the text keeps its size in it."""
+        its size is the one given it in move mode, and the text keeps its size in it. height: only that
+        much of it from the top (hud.tint_height: Car status with fewer rows than it has room for)."""
         painter.setPen(Qt.NoPen)
         painter.setBrush(QColor(color) if color else QColor(*BACKDROP))
-        painter.drawRoundedRect(QRectF(self.rect()), 6, 6)
+        box = QRectF(self.rect())
+        if height is not None:
+            box.setHeight(min(height, box.height()))
+        painter.drawRoundedRect(box, 6, 6)
 
     def _paint_shade(self, painter):
         """A banner's box: the race leader's in one grey (LEADER_GREY), the Battle and Watched

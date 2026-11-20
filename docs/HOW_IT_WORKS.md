@@ -31,6 +31,7 @@ off. On Linux and Windows each section keeps its own window for now.
 | Fuel to finish | laps of fuel to spare (green) or missing (red) for the finish |
 | Tire wear | tire life left and the laps it lasts; a level bar |
 | Car health | car health as the game counts it; yellow with less downforce, red when slowed; a level bar |
+| Car status | health, tires, fuel and fuel to finish in one box, a level bar under each of the first three (`Row.level`, `hud.row_bars`); only the rows the event has (`race.car_status_rows`), its tint ending below the last (`hud.tint_height`); off at first (`hud.OFF_AT_FIRST`), at Fuel's place |
 | Slipstream | how strong the slipstream is (of the event's most), with a bar; the downforce it costs; the event's drafting at the start ("Up to -10% drag, -80% downforce, 30 m, 20°": the most it takes off the air resistance and the downforce, how far behind a car it reaches and how far off its line), then the last lap's time in a slipstream; who drafts you |
 | Speed and pedals | km/h or mph, yellow while coasting; throttle and brake bars beside it; as an option the gear and rev lights |
 | Nearby cars | the leader, then the car ahead of and the car behind you on the track (3 of each with its short list off): position, flag, name, PIT with its timers, clan tag (or class and place in it), tire, and the live gap to you (or +1 L for laps), DNF, DSQ or AFK in the gap's place |

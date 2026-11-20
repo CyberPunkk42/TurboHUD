@@ -3324,6 +3324,20 @@ def shown_gear(car):
     return str(car.gear)
 
 
+CAR_STATUS_ORDER = ('health', 'tires', 'fuel', 'fuelfinish')  # the user's order (2026-11-20)
+
+
+def car_status_rows(sections, levels):
+    """The Car status section's rows (asked for by the user on 2026-11-20): health, tires, fuel and
+    fuel to finish, each with its level bar under it, of those the event has, with no gap for the
+    others. `sections` and `levels`: what car_sections made for the separate sections."""
+    return [
+        dataclasses.replace(row, level=levels[name]) if isinstance(levels.get(name), tuple) else row
+        for name in CAR_STATUS_ORDER
+        for row in sections.get(name, [])
+    ]
+
+
 def car_sections(car, laps_to_go=None, speed_unit='kmh'):
     """{section: rows} for fuel, tires and speed; empty where the event has none.
     `laps_to_go` (LapState.laps_to_go) gives the fuel margin to the finish."""
@@ -3386,6 +3400,9 @@ def car_sections(car, laps_to_go=None, speed_unit='kmh'):
         levels['draft'] = (car.draft, 'draft')
     if car.gear is not None and car.revs is not None:
         levels['speed'] = Sectors(rev_lights(rev_share(car.revs)))  # below the speed
+    status = car_status_rows(sections, levels)
+    if status:
+        sections['carstatus'] = status
     if levels:
         sections['levels'] = levels  # {section: (0 to 1, colour)} for the bars below the text
     return sections

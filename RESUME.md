@@ -15,7 +15,7 @@ Kept short: the state now and what to do next. Every change, with how it was che
   - Windows: the same Rust reader beside TSU (since 2026-11-11); a window per section; the overlay shows
     over TSU's Fullscreen without Exclusive (2026-11-16).
 - **Sections**: lap and time left, running lap, delta and delta bar, last and best lap with sector
-  bars, fuel, fuel to finish, tires, health, slipstream, speed with pedals, Nearby cars, Standings, blue
+  bars, fuel, fuel to finish, tires, health, car status (those four in one box), slipstream, speed with pedals, Nearby cars, Standings, blue
   and yellow flags, penalties, the race leader banner, the battle warning (while watching), the
   watched driver (while watching), radar, track map, clock (a compass is built, hidden for now: backlog
   item 13). In the lists DNF (retired), DSQ (disqualified), both TSU's own flags, and AFK (idle a minute);
@@ -36,8 +36,9 @@ Kept short: the state now and what to do next. Every change, with how it was che
 ## To try next (most recent first)
 Details of each: its entry in `docs/CHANGELOG.md`. Checks on the Mac and Windows, and rare cases not yet seen:
 backlog item 14.
-1. **Car sections the same text size**: Fuel, Tire wear, Fuel to finish and Car health at one text size look
-   the same, also with ~100 laps of tires (shown whole from 100 on).
+1. **Car status**: tick it in move mode (untick the four it stands for): Health, Tires, Fuel, Finish in one
+   box with a bar under each of the first three, only the rows the event has, the tint ending below the last. The four separate ones at one
+   text size look the same too, also with ~100 laps of tires (shown whole from 100 on).
 2. **Ungroup all**: in move mode, the button at the end of the group row ungroups every section; Undo brings
    the groups back.
 3. **A preset by hand kept for the session**: load 5 by hand in a race; later races start in 5, hotlapping
