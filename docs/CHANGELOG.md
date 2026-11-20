@@ -4,6 +4,10 @@ Every finished change, newest first: what changed, why, how it was checked and w
 Each branch adds its dated entry at the top. Where things stand now: `RESUME.md`; what is open:
 `docs/BACKLOG.md`.
 
+- 2026-11-20: AFK in the pits too (`fix/afk-in-pits`, asked for by the user: drivers stop in the pits and leave
+  the computer): `Retirements` no longer skips the pit area, so a car under 10 km/h for over a minute there is
+  AFK, shown in place of PIT, and goes as it drives off faster than 10 km/h. A pit stop is shorter than a minute.
+  Tests: AFK after a minute in the pits, not after 30 s, gone driving off, shown over PIT; all tests pass.
 - 2026-11-20: DNF only for a retired driver, DSQ and AFK (`fix/dnf-only-retired`, asked for by the user): DNF
   was any car idle for a minute, as TSU's own mark was not known. Found in the game's metadata
   (`global-metadata.dat`, read only): `TS.DisabledFlags` (Permanent 1, Disqualified 2, Wrecked 4, Drowned 8,

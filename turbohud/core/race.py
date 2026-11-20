@@ -3828,7 +3828,7 @@ class Retirements:
     """Which cars the lists mark, and how (asked for by the user on 2026-11-13; changed on
     2026-11-20): DSQ for a car TSU disqualified, DNF for one that retired (/retire in the chat),
     both TSU's own flags on the car (PlayerState.disabled), and AFK for one idle for over a minute:
-    not finished, outside the pit area, and slower than AFK_KMH (either way) for YELLOW_IDLE_AFTER
+    not finished, anywhere (the pits too), and slower than AFK_KMH (either way) for YELLOW_IDLE_AFTER
     seconds of race time; going faster than that ends it at once. Before, every idle car showed DNF,
     as TSU's flags were not known."""
 
@@ -3849,8 +3849,10 @@ class Retirements:
             if flags & DISABLED_RETIRED:
                 out[player.name] = DNF_TEXT
                 continue
-            if player.finished or player.in_pit or len(player.passed) < 2:
-                continue  # done, in the pits, or still on the grid: not idle
+            # In the pits too (asked for by the user on 2026-11-20: a driver may stop there and leave the
+            # computer): a minute standing is longer than any service.
+            if player.finished or len(player.passed) < 2:
+                continue  # done, or still on the grid: not idle
             since = self._slow_since.get(player.name)
             speed = player.forward_speed
             if speed is not None:
