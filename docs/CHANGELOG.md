@@ -5,14 +5,14 @@ Each branch adds its dated entry at the top. Where things stand now: `RESUME.md`
 `docs/BACKLOG.md`.
 
 - 2026-11-20: The radar steady in a pack (`fix/radar-positions-together`, reported by the user: in the opening
-  laps it zoomed in and out, as if it could not keep up). It zoomed out at once to fit the cars that count, and came
-  back in a quarter of the way at each read (about half a second): with the cars around changing all the time, it
-  pumped. A first try held 2 s before coming in: the user saw it come in smoothly, then snap out again and again
-  with cars spread around. Now it follows the most room the cars that counted needed in the last 5 s
-  (RADAR_ZOOM_MEMORY), out quickly (half the way a read, about 0.15 s, a car at the edge an arrow meanwhile) and
-  in gently (8% a read, about a second and a half), never a snap. The user guide says so. Tests: held for 5 s,
-  then in step by step, out over a few reads; a car counting for a second then not for three, over and over: no
-  change of zoom. Not yet seen in a race.
+  laps it zoomed in and out, as if it could not keep up). It zoomed to fit every car that counts, out at once and
+  back in within about half a second: with the cars around changing all the time, it pumped. Two tries followed
+  (held 2 s before coming in; the most room needed in the last 5 s): it still snapped out again and again with
+  cars spread around. As the user asked, it now zooms in on the nearest car that counts and stays there while that
+  car is the closest (`radar_zoom`); cars further behind show as arrows at the edge, as before. Towards that, a
+  share of the way a read: out quickly (about 0.15 s), in gently (about 1.5 s), never a snap. The user guide says
+  so. Tests: the nearest car sets the zoom; in step by step, out over a few reads; a car further back counting for
+  a second then not for three, over and over: no change of zoom, an arrow while it counts. Not yet seen in a race.
 - 2026-11-20: Every car's position read together (`fix/radar-positions-together`, reported by the user: on Linux
   the proximity radar's cars jumped forward and back). Each car was read in turn, its position near the end of its
   turn, so in a race of 20 cars (reads of 33-41 ms) one car's position came up to a read's length after another's,

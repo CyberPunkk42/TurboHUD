@@ -4699,12 +4699,10 @@ RADAR_VIEW_MAX = 24.0
 # far as the farthest of them needs, with this much room round them, but never closer than RADAR_ZOOM_LEAST.
 RADAR_ZOOM_ROOM = 1.5
 RADAR_ZOOM_LEAST = 10.0  # game units behind and ahead: 2.5 car lengths
-# The zoom follows the most room the cars that counted needed in the last RADAR_ZOOM_MEMORY seconds: in the
-# opening laps the cars that count change all the time, and following each read made it pump in and out,
-# then, held 2 s and snapping out at once, snap out again and again with cars spread around (both reported
-# by the user on 2026-11-20). Towards it, a share of the way a read: in gently (about 1.5 s), out quickly
-# (about 0.15 s, a car at the edge an arrow meanwhile), never a snap.
-RADAR_ZOOM_MEMORY = 5.0
+# The zoom fits the nearest car that counts (radar_zoom), a share of the way a read: in gently (about 1.5 s),
+# out quickly (about 0.15 s), never a snap. Fitting the farthest made it pump in and out in the opening laps,
+# and snap out again and again with cars spread around; the user asked for it to stay on the car closest as
+# long as it is there, the cars further behind arrows at the edge (2026-11-20).
 RADAR_ZOOM_EASE = 0.08  # in
 RADAR_ZOOM_OUT_EASE = 0.5  # out
 RADAR_MIN_SPEED = 3.0  # slower (standing on the grid): no radar, the direction is unknown
@@ -4806,13 +4804,15 @@ def radar_view(speed, within=RADAR_FROM):
 
 
 def radar_zoom(blips, view):
-    """How far behind and ahead the radar shows: in on the cars that count (a time gap) and are
-    within `view` (radar_view), so the room between them is seen; `view` with none. The radar is
-    square, so the side counts as much as ahead."""
+    """How far behind and ahead the radar shows: in on the nearest car that counts (a time gap)
+    within `view` (radar_view), so the room to it is seen; `view` with none. Cars further away go
+    past the edge, an arrow there where they are behind (asked for by the user on 2026-11-20: fitting
+    them all, it zoomed in and out as they came and went). The radar is square, so the side counts as
+    much as ahead."""
     near = [b for b in blips if b.seconds is not None and abs(b.ahead) <= view]
     if not near:
         return view
-    need = max(max(abs(b.ahead) + CAR_LENGTH / 2, abs(b.side) + CAR_WIDTH / 2) for b in near)
+    need = min(max(abs(b.ahead) + CAR_LENGTH / 2, abs(b.side) + CAR_WIDTH / 2) for b in near)
     return min(view, max(RADAR_ZOOM_LEAST, need * RADAR_ZOOM_ROOM))
 
 
@@ -5011,7 +5011,6 @@ class Radar:
         self.opacity = 0.0
         self.counted_at = None  # read time a car last counted
         self.view = None  # how far it shows now (radar_zoom, eased); None: not shown
-        self.needed = []  # (read time, room the cars that counted needed then), RADAR_ZOOM_MEMORY seconds of it
 
     def _record(self, players, read_at):
         names = set()
@@ -5095,9 +5094,7 @@ class Radar:
                 self.opacity = max(RADAR_FAINT, self.opacity + (RADAR_FAINT - self.opacity) * RADAR_EASE)
             else:
                 self.opacity, self.counted_at = 0.0, None
-            self.needed = [(t, room) for t, room in self.needed if read_at - t < RADAR_ZOOM_MEMORY]
-            self.needed.append((read_at, radar_zoom(blips, radar_view(speed, self.within))))
-            target = max(room for _t, room in self.needed)
+            target = radar_zoom(blips, radar_view(speed, self.within))
             if self.view is None:
                 self.view = target
             else:
