@@ -474,6 +474,8 @@ turbohud/
     watched.py          the watched driver's banner while watching (Race Director mode): who, and when
     class_registry.py   the car classes a clan tag can name, and their colours
     stalls.py           short freezes of the whole HUD and slow garbage collections, for the log
+    memory.py           TurboHUD's own memory for the log: the total, its parts (Python, the C heap,
+                        the drawn texts) and, with TURBOHUD_TRACE_MEMORY=1, where Python's grew
     system_env.py       the environment for system programs TurboHUD starts (TSU, hyprctl)
   tsu/                  the game
     probe.py            Linux: the memory probe (started with TSU by the launch option)
