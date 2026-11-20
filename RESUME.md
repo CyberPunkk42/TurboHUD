@@ -31,8 +31,9 @@ Kept short: the state now and what to do next. Every change, with how it was che
 1. **Next: the compass's north from the sun** (backlog item 9): the sun was read in a session of 4 races
    (2026-11-20): `sunDirection` is west, north is it + 90°. Decide: from the sun (recommended, default) or up
    on the map, or the sun only where a track's maker moved it (the user's idea; see the backlog).
-2. **The place label beside the section** (`feature/place-label-outside`; works on Windows, confirmed): on
-   Hyprland and the Mac, does the label's own window follow a drag smoothly, and stay above the sections?
+2. **Move mode on Hyprland** (`fix/place-label-hyprland-drag`): sections drag again, with their place label
+   above them following the drag; the settings and layouts windows open at their size (no large view first) and
+   the mouse stays where it is; move mode's panel comes at once, the sections after it. On the Mac: does the label follow a drag smoothly and stay above the sections?
 3. **The panel's General and Text tabs** (`feature/panel-text-tab`; works on Windows, confirmed): how the tabs
    look over TSU on the Mac and Linux.
 4. **A font per section and per preset** (`feature/fonts-per-preset-and-section`): in move mode, give two or

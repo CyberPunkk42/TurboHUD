@@ -1892,6 +1892,7 @@ class PlaceLabelTests(unittest.TestCase):
         moved = []
         window = self.window(move_window=lambda self, widget, place, settle: moved.append((place, settle)))
         window.set_locked(False)
+        window.show_place((480, 400, 300, 60))  # opens there: placed as it opens
         window.show_place((500, 400, 300, 60))
         place, settle = moved[-1]
         self.assertEqual(place[:2], (500, 400 - place[3] - 4))
@@ -1927,6 +1928,40 @@ class PlaceLabelTests(unittest.TestCase):
         window.design = ((1000, 200, 960, 540), 0.5)  # 1920x1080 shown at 50%
         window.setGeometry(1100, 300, 200, 50)
         self.assertEqual(window.place_label, 'X 200  Y 200  400×100')
+
+    def test_it_opens_at_its_place_and_size_not_qts_default(self):
+        # Hyprland placed it where Qt had it as it opened: 640×480 at the screen's corner (2026-11-20).
+        window = self.window()
+        window.set_locked(False)
+        window.show_place((500, 400, 300, 60))
+        label = window.label_window
+        self.assertEqual(label.size().toTuple(), label.size_for(label.text))
+        self.assertEqual(label.x(), 500)
+
+    def test_on_hyprland_its_window_stays_open_all_through_move_mode(self):
+        # A window that opens there takes the focus and ends the drag (reported by the user on 2026-11-20).
+        window = self.window(keeps_labels_open=True)
+        window.set_locked(False)
+        label = window.label_window
+        self.assertTrue(label.isVisible())  # open as move mode begins
+        self.assertEqual(label.text, '')  # and empty
+        window.show_place((500, 400, 300, 60))
+        self.assertIs(window.label_window, label)
+        self.assertEqual(label.text, 'X 500  Y 400  300×60')
+        window.hide_place()  # as the timer does
+        self.assertTrue(label.isVisible())
+        self.assertEqual((window.place_label, label.text), ('', ''))
+        window.set_wanted(False)
+        self.assertFalse(label.isVisible())  # hidden with its section
+        window.set_wanted(True)
+        self.assertTrue(label.isVisible())
+        window.set_locked(True)
+        self.assertFalse(label.isVisible())  # closed as it locks
+
+    def test_elsewhere_no_label_window_until_it_moves(self):
+        window = self.window()
+        window.set_locked(False)
+        self.assertIsNone(window.label_window)
 
     def test_on_wayland_the_app_shows_what_the_desktop_says(self):
         window = self.window(placement=lambda self, widget: (500, 400, 300, 60))

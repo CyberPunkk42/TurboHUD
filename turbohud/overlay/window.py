@@ -468,9 +468,29 @@ class SectionWindow(QWidget):
         self.label_window.show_text(text, (*label_spot(box, size, self.screens), *size))
         self._place_timer.start()  # gone PLACE_LABEL_MS after the last move
 
+    def _keeps_label_open(self):
+        """Whether its label's window stays open, empty, all through move mode: on Hyprland a window
+        that opens takes the focus, which ends the drag that showed it (reported by the user on
+        2026-11-20: the section could not be moved)."""
+        return getattr(self.native, 'keeps_labels_open', False) and not self.locked and self.wanted
+
+    def _open_label(self):
+        """Move mode begins, or the section shows in it: its label's window opens now, empty."""
+        if not self._keeps_label_open() or self.screens is None:
+            return
+        if self.label_window is None:
+            self.label_window = PlaceLabel(self.native)
+        box = self.geometry().getRect()
+        size = self.label_window.size_for(place_text(box, self.screens, self.design))
+        self.label_window.show_text('', (*label_spot(box, size, self.screens), *size))
+
     def hide_place(self):
         self.place_label = ''
-        if self.label_window is not None and self.label_window.isVisible():
+        if self.label_window is None or not self.label_window.isVisible():
+            return
+        if self._keeps_label_open():
+            self.label_window.show_text('', None)  # open and empty: no new window at the next drag
+        else:
             self.label_window.hide()
 
     def quiet_place(self, until):
@@ -576,6 +596,7 @@ class SectionWindow(QWidget):
         if not in_place or self.canvas is not None:
             self.show_on_top()  # changing a window flag hides the window; the canvas hides it
         self.update()
+        self._open_label()  # after the section, so that it opens above it
 
     def set_wanted(self, wanted):
         """Show or hide the section (the panel's tick boxes). A hidden section keeps its
@@ -600,6 +621,7 @@ class SectionWindow(QWidget):
         if not in_place:
             self.show_on_top()
         self.update()
+        self._open_label()  # shown in move mode: its label's window too, on Hyprland
 
     def _edges_at(self, event):
         """The edges under the pointer that resize this section (resize_edges); () where none."""
@@ -613,11 +635,18 @@ class SectionWindow(QWidget):
             return
         self.clicked.emit(self.section.name)
         self.activateWindow()  # the keyboard to TurboHUD: the arrow keys nudge it
-        self.show_place(self.placement())  # where it is, before it moves
         edges = self._edges_at(event)
+        if self._follows_live():
+            self.show_place(self.placement())  # where it is, before it moves
         if not edges:
+            # Windows' move returns only once the drag is over; Wayland's at once, and its label
+            # moves after it, so that nothing comes between the press and the desktop's drag.
             self.windowHandle().startSystemMove()
+            if not self._follows_live():
+                self.show_place(self.placement())
             return
+        if not self._follows_live():
+            self.show_place(self.placement())
         if self.text:
             # Height sets its text size, width adds room: followed here, to size the text live.
             self._resizing = (edges, event.globalPosition(), self.geometry().getRect())
@@ -1564,6 +1593,7 @@ class PlaceLabel(QWidget):
     small screen it hid what the section shows): see-through and click-through."""
 
     on_canvas = False  # never drawn on the HUD canvas: its own window, in move mode only
+    float_at_open = True  # Hyprland floats it as it opens, at its size (overlay.linux.FloatAtOpen)
 
     def __init__(self, native):
         super().__init__(None, window_flags())
@@ -1586,20 +1616,30 @@ class PlaceLabel(QWidget):
         return math.ceil(metrics.horizontalAdvance(text)) + 12, math.ceil(metrics.height()) + 6
 
     def show_text(self, text, place):
-        """Show `text` at `place` (x, y, width, height): moved where the desktop must move it."""
+        """Show `text` ('' paints nothing) at `place` (x, y, width, height; None: where it is):
+        moved where the desktop must move it. A window opening is given its place and size first,
+        or the desktop places Qt's default one (640×480 at the screen's corner)."""
         if text != self.text:
             self.text = text
             self.update()
+        if place is None:
+            return
+        if not self.isVisible():
+            self.setGeometry(*place)
+            self.show()
+            self.native.raise_window(self)  # above the sections, where it is now
+            return
+        if self.size().toTuple() != tuple(place[2:]):
+            self.resize(*place[2:])
         move = getattr(self.native, 'move_window', None)
         if move is not None:
             move(self, place, False)
         else:
             self.setGeometry(*place)
-        if not self.isVisible():
-            self.show()
-            self.native.raise_window(self)  # above the sections
 
     def paintEvent(self, _event):
+        if not self.text:
+            return  # open but empty (Hyprland, between drags): see-through
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing)
         painter.setFont(self.label_font())

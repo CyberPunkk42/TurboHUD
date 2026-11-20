@@ -261,6 +261,16 @@ class Hyprland:
             )
         )
 
+    def to_front(self, address):
+        """In front of the other floating windows; True if taken."""
+        window = f'address:{address}'
+        return self.dispatch(
+            (
+                f"hl.dsp.window.alter_zorder({{ mode = 'top', window = '{window}' }})",
+                f'alterzorder top,{window}',
+            )
+        )
+
     def focus(self, address):
         return self.dispatch(focus_command(f'address:{address}'))
 

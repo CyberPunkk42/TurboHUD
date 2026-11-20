@@ -43,6 +43,9 @@ class FakeWidget:
     def isVisible(self):
         return self.visible
 
+    def windowTitle(self):
+        return 'TurboHUD - Test'
+
 
 @unittest.skipUnless(importlib.util.find_spec('PySide6'), 'needs Qt')
 class LinuxNativeTests(unittest.TestCase):
@@ -93,6 +96,119 @@ class LinuxNativeTests(unittest.TestCase):
         hypr.active = '0xbrowser'
         native.give_focus_back()
         self.assertEqual(hypr.focused, [])
+
+    def test_focus_back_only_from_the_window_that_just_took_it(self):
+        hypr = FakeHypr()
+        native = self.native(hypr)
+        native.prepare_app()
+        native.addresses.update({1: '0xsettings', 2: '0xlabel'})
+        hypr.active = '0xsettings'  # the player clicks in the settings
+        native.give_focus_back(only_from='0xlabel')
+        self.assertEqual(hypr.focused, [])
+        hypr.active = '0xlabel'  # the label took it as it opened
+        native.give_focus_back(only_from='0xlabel')
+        self.assertEqual(hypr.focused, ['0xgame'])
+
+    def test_a_window_that_takes_clicks_keeps_the_focus_once_placed(self):
+        # Focusing the game moved the mouse to the game's screen (reported by the user on 2026-11-20).
+        hypr = FakeHypr()
+        hypr.own_window = lambda pid, title: '0xsettings'
+        hypr.set_focusable = lambda address, focusable: True
+        native = self.native(hypr)
+        native.prepare_app()
+        hypr.active = '0xsettings'
+        widget = FakeWidget()
+        widget.focusable = True
+        native._place(widget, (10, 20, 300, 200), 1)
+        self.assertEqual(hypr.placed[0], '0xsettings')
+        self.assertEqual(hypr.focused, [])
+        section = FakeWidget()  # takes no focus: it is given back, as before
+        hypr.own_window = lambda pid, title: '0xsection'
+        hypr.active = '0xsection'
+        native._place(section, (10, 20, 300, 200), 1)
+        self.assertEqual(hypr.focused, ['0xgame'])
+
+    def test_a_window_that_takes_clicks_opens_with_a_fixed_size_for_a_moment(self):
+        # Hyprland floats a window of a fixed size as it opens: no large tiled window first.
+        from PySide6.QtCore import QEvent
+        from PySide6.QtWidgets import QWidget
+
+        from turbohud.overlay.linux import FloatAtOpen
+
+        float_at_open = FloatAtOpen()
+        settings, section = QWidget(), QWidget()
+        settings.focusable = True
+        for widget in (settings, section):
+            self.addCleanup(widget.close)
+            widget.setMinimumSize(50, 40)
+            widget.resize(300, 200)
+            float_at_open.eventFilter(widget, QEvent(QEvent.Show))
+        self.assertEqual(settings.minimumSize().toTuple(), (300, 200))
+        self.assertEqual(settings.maximumSize().toTuple(), (300, 200))
+        self.assertEqual(section.minimumSize().toTuple(), (50, 40))  # a section is left alone
+        float_at_open.release(id(settings))
+        self.assertEqual(settings.minimumSize().toTuple(), (50, 40))
+        self.assertGreater(settings.maximumSize().width(), 10000)
+
+    def test_the_panel_is_placed_first_and_brought_in_front_again(self):
+        # Move mode opens some 50 windows: the panel, opened last, came 2 s after the key (2026-11-20).
+        hypr = FakeHypr()
+        order, fronts = [], []
+        hypr.own_window = lambda pid, title: '0x' + title
+        hypr.place = lambda address, *place, focusable=False: order.append(address) or True
+        hypr.to_front = lambda address: fronts.append(address) or True
+        native = self.native(hypr)
+
+        class Window(FakeWidget):
+            def __init__(self, title, **kind):
+                self.title = title
+                self.__dict__.update(kind)
+
+            def windowTitle(self):
+                return self.title
+
+            def x(self):
+                return 0
+
+            y = x
+
+            def width(self):
+                return 10
+
+            height = width
+
+        windows = [
+            Window('grid'),
+            Window('label', float_at_open=True),
+            Window('fuel'),
+            Window('panel', focusable=True),
+        ]
+        for window in windows:
+            native.raise_window(window)
+        while native.waiting:
+            native._place_next()
+        self.assertEqual(order, ['0xpanel', '0xgrid', '0xfuel', '0xlabel'])
+        self.assertEqual(fronts, ['0xpanel'])  # above the sections placed after it
+
+    def test_a_window_raised_twice_while_waiting_is_placed_once(self):
+        hypr = FakeHypr()
+        order = []
+        hypr.own_window = lambda pid, title: '0xaaa'
+        hypr.place = lambda address, *place, focusable=False: order.append(place) or True
+        native = self.native(hypr)
+        widget = mock.Mock(focusable=False, float_at_open=False, locked=True)
+        widget.x.return_value, widget.y.return_value = 0, 0
+        widget.width.return_value = widget.height.return_value = 10
+        native.raise_window(widget)
+        widget.x.return_value = 50
+        native.raise_window(widget)
+        while native.waiting:
+            native._place_next()
+        self.assertEqual(order, [(50, 0, 10, 10)])  # where it was raised last
+
+    def test_hyprland_keeps_the_place_labels_open(self):
+        self.assertTrue(self.native(FakeHypr()).keeps_labels_open)
+        self.assertFalse(self.native(None).keeps_labels_open)
 
     def test_move_mode_remembers_the_window_focused_then(self):
         hypr = FakeHypr()

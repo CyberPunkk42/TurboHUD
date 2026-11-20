@@ -4,6 +4,29 @@ Every finished change, newest first: what changed, why, how it was checked and w
 Each branch adds its dated entry at the top. Where things stand now: `RESUME.md`; what is open:
 `docs/BACKLOG.md`.
 
+- 2026-11-20: Move mode and TurboHUD's windows on Hyprland (`fix/place-label-hyprland-drag`, reported by the user
+  on Omarchy). (1) A section could not be dragged: at the press its place label opened as a new window, at Qt's
+  default 640×480 in the screen's corner (the log), and a window opening there takes the focus, which ended the
+  drag. On Hyprland each label's window now opens, empty and see-through, as move mode begins (and as a section is
+  shown in it), stays open between drags and closes as move mode ends (`keeps_labels_open`, `_open_label`); the
+  label moves only after the drag has begun. Everywhere a label opens at its own place and size. (2) The mouse
+  went to another screen as the settings or layouts window opened: once placed, a window taking clicks gave the
+  focus back to the game, and Hyprland moves the mouse onto the window it focuses. Now only a window taking no
+  clicks that took the focus as it opened gives it back (`give_focus_back(only_from=...)`). (3) Those windows showed
+  large, tiled, then shrank to their size: Hyprland floats a window of a fixed size as it opens (probed on the
+  user's desktop: 300×200 floating, a plain one tiled at 1261×688), so the windows taking clicks, dialogs and the
+  labels keep their size fixed for their first 0.5 s (`FloatAtOpen` in `overlay/linux.py`, an event filter on
+  TurboHUD's own app; no Hyprland rule). Sections are left out, as TurboHUD may size them just after they open.
+  (4) Move mode's panel came late, and the mouse jumped to another screen as it came (both reported by the
+  user): each window was placed with a dozen hyprctl requests, the grid and every section before the panel (2 s
+  in the log), and the panel then gave the focus to the game (fixed by (2)). Now the waiting windows are placed
+  in order (`place_rank`): those taking clicks first, then the sections, then the labels, one per turn of Qt's
+  loop, and a window placed twice while waiting only once; the panel goes in front again once all are placed
+  (`to_front`).
+  Tests: the order and the panel in front again, one placement for a window raised twice; the label open all
+  through move mode and closed with its section or as it locks, placed as it opens, none elsewhere until moved;
+  the focus given back only by the window that took it, kept by one taking clicks; the fixed size and its release,
+  a section left alone. Not yet seen by hand on Hyprland.
 - 2026-11-20: TSU's sun understood (`chore/log-sun`): in a session of 4 races the user reported where the sun
   and shadows were at known headings, against the log's `sun:` lines. TSU's sun rises opposite
   `LocationProperties.sunDirection`, passes nearly overhead around midday and sets at it, so `sunDirection` is west
