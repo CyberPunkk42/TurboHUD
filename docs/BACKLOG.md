@@ -136,6 +136,12 @@ A race of about 20 cars on Linux: reads took 29-41 ms (3.4 ms hotlapping alone),
 20 a second; each car is read in turn, several dozen requests each. Read the cars' fields in batches
 (`read_many`), as their positions are since 2026-11-20.
 
+## 13. The compass, hidden for now (2026-11-20)
+Built and confirmed (north from the sun on 5 tracks), but not offered to players for now (the user's call):
+`hud.COMPASS_AVAILABLE = False` leaves it out of RACE_SECTIONS, so no window, panel row or options; places in
+the settings and presets are kept. To offer it: set it True, and bring back its guide text (USER_GUIDE.md's
+**Compass** section and its two options, QUICK_START.md's line, README.md's lists) from commit `89cacf1`.
+
 ## Nice to have (ideas, not planned)
 Ideas talked over and left for later; none is being worked on. Take one up only when the user asks.
 - **The `sun:` log line without the location** (`location not read (Bad address)` at every event): the compass

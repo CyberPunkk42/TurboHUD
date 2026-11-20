@@ -577,7 +577,7 @@ class PedalBarTests(unittest.TestCase):
 
 class SectionTests(unittest.TestCase):
     def test_race_sections_have_distinct_names(self):
-        names = [section.name for section in hud.RACE_SECTIONS]
+        names = [section.name for section in hud.EVERY_RACE_SECTION]
         self.assertEqual(
             names,
             [
@@ -607,6 +607,13 @@ class SectionTests(unittest.TestCase):
             ],
         )
         self.assertEqual(len(set(names)), len(names))
+
+    def test_the_compass_is_built_but_not_offered_yet(self):
+        # Asked for by the user on 2026-11-20: not for players for now.
+        self.assertFalse(hud.COMPASS_AVAILABLE)
+        self.assertIn('compass', {s.name for s in hud.EVERY_RACE_SECTION})
+        self.assertNotIn('compass', {s.name for s in hud.RACE_SECTIONS})
+        self.assertEqual(len(hud.RACE_SECTIONS), len(hud.EVERY_RACE_SECTION) - len(hud.HIDDEN_SECTIONS))
 
     def test_a_middle_column_lines_up_before_the_right_one(self):
         rows = [
@@ -1060,7 +1067,7 @@ class CentreTests(unittest.TestCase):
     def test_only_the_drawings_have_centre_buttons(self):
         self.assertEqual(
             {s.name for s in hud.RACE_SECTIONS if s.drawing},
-            {'blueflag', 'deltabar', 'radar', 'trackmap', 'compass'},
+            {'blueflag', 'deltabar', 'radar', 'trackmap', 'compass'} - hud.HIDDEN_SECTIONS,
         )
 
 
@@ -1254,7 +1261,9 @@ class TextSizeTests(unittest.TestCase):
 
     def test_only_text_sections_have_a_text_size(self):
         drawn = {s.name for s in hud.RACE_SECTIONS if not hud.is_text_section(s)}
-        self.assertEqual(drawn, {'deltabar', 'trackmap', 'radar', 'blueflag', 'compass'})
+        self.assertEqual(
+            drawn, {'deltabar', 'trackmap', 'radar', 'blueflag', 'compass'} - hud.HIDDEN_SECTIONS
+        )
 
 
 class ResizeEdgeTests(unittest.TestCase):

@@ -494,7 +494,7 @@ def text_can_centre(section):
 
 SAMPLE_FASTEST_COLOR = '#c77dff'  # race.SESSION_BEST_COLOR (race imports this module): the fastest lap
 
-RACE_SECTIONS = (
+EVERY_RACE_SECTION = (
     Section(
         'lap',
         'Race progress',
@@ -716,9 +716,15 @@ RACE_SECTIONS = (
         (),
         bar=(150, 176),  # the dial, and the degrees above it
         drawing='compass',
-        tip='Which way your car points: north is up on the track map, degrees clockwise from it',
+        tip="Which way your car points, in degrees clockwise from north (from the track's sun)",
     ),
 )
+# Sections built but not offered yet (asked for by the user on 2026-11-20: the compass, not for players
+# for now). Left out of RACE_SECTIONS, they get no window, no row in the panel and no options; their
+# places in the settings and the presets are kept for when they come (app.save, save_preset).
+COMPASS_AVAILABLE = False
+HIDDEN_SECTIONS = frozenset() if COMPASS_AVAILABLE else frozenset({'compass'})
+RACE_SECTIONS = tuple(section for section in EVERY_RACE_SECTION if section.name not in HIDDEN_SECTIONS)
 # The move-mode panel lists the sections under these headings (asked for by the user on
 # 2026-11-11); a section not named here comes under the last.
 PANEL_CATEGORIES = (
