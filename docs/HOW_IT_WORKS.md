@@ -339,6 +339,11 @@ the user exported, their settings and the layouts they designed for other sizes 
 are); a size without one is fitted, keeping Nearby cars' text at least the Standings'
 (`presets.readable_nearby`).
 
+As an event begins, the preset for its kind (`race.event_mode`: race, hotlapping, recording, spectating,
+special) loads, once a kind changes (`race.EventModes`): the player's Load by itself choice, or the one they
+loaded by hand during an event of that kind this session (`race.SessionPresets`). A session is over once TSU
+has had none for 5 s (its menu); the next starts with the Load by itself choices again.
+
 It writes nothing into the game's folders and changes nothing in the system.
 
 ## Fairness online
