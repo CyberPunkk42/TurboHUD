@@ -454,9 +454,9 @@ mode ends):
 ## 5. Layouts for every screen size
 
 TurboHUD comes with layouts for 1920x1080, 2294x1490 (a Mac's), 2560x1440, 2560x1600, 3840x2160 and
-5120x1440: each designed for its size on the design screen, except 3840x2160, which is the
-5120x1440 one fitted to it. Fitted to a smaller screen, the **Nearby cars** text is never smaller
-than the **Standings**' text.
+5120x1440, each designed for its size on the design screen. For any other size TurboHUD fits the
+nearest one to your screen, and then the **Nearby cars** text is never smaller than the
+**Standings**' text.
 They are in the **`customization/display_presets`** folder beside TurboHUD: beside
 `TurboHUD.exe` on Windows, beside the `TurboHUD` program on Linux; on the Mac, and wherever
 that folder cannot be written to, in TurboHUD's settings folder (section 8). They are named
