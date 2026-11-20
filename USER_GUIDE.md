@@ -252,8 +252,9 @@ your car in the middle, heading up; what is above the middle line is ahead of yo
 behind. The cars are drawn at their real size, so cars that touch on the radar touch in the
 game. It shows up to six car lengths ahead and behind, and zooms in when cars are close (down
 to about two and a half car lengths), so the room between you and them is easy to see. It
-zooms out again at once when a car comes up from further back, and comes back in only after
-two seconds without needing the room, and slowly, so it stays steady in a pack.
+keeps the room the cars around you needed in the last five seconds: it zooms out quickly when
+a car comes up from further back, and back in slowly once no car has needed the room for five
+seconds, so it stays steady in a pack.
 
 It appears only when a car is close: faintly once one is within half a second behind or
 ahead of you, fully once it is alongside or within a tenth of a second, and it fades away

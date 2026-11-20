@@ -943,7 +943,7 @@ class WarningTimeTests(unittest.TestCase):
         self.assertEqual(race.radar_zoom((race.Blip(-2.0, 9.0, 0.0, None),), view), view)
         self.assertEqual(race.radar_zoom((race.Blip(-30.0, 0.0, 0.0, 0.5),), view), view)
 
-    def test_the_radar_zooms_in_gently_and_out_at_once(self):
+    def test_the_radar_zooms_in_gently_and_out_quickly(self):
         def me(t):
             return moving('Me', (0.0, 40.0 * t), (0.0, 40.0), local=True)
 
@@ -956,20 +956,23 @@ class WarningTimeTests(unittest.TestCase):
         radar = race.Radar()
         far = (14.0 + race.CAR_LENGTH / 2) * race.RADAR_ZOOM_ROOM
         self.assertAlmostEqual(radar.update([me(0.0), beside(0.0), behind(0.0)], 0.0).view, far)
-        # The car behind drops back out of reach: the radar holds its room for RADAR_ZOOM_HOLD, then
-        # comes in on the one beside, a step a read (it pumped in and out in a pack: 2026-11-20).
-        times = [i * 0.05 for i in range(1, 120)]
+        # The car behind drops back out of reach: the radar keeps the room it needed in the last
+        # RADAR_ZOOM_MEMORY seconds, then comes in on the one beside, a step a read.
+        times = [i * 0.05 for i in range(1, 200)]
         views = [radar.update([me(t), beside(t)], t).view for t in times]
-        held = [v for t, v in zip(times, views) if t < race.RADAR_ZOOM_HOLD]
-        coming = [v for t, v in zip(times, views) if t >= race.RADAR_ZOOM_HOLD]
+        held = [v for t, v in zip(times, views) if t < race.RADAR_ZOOM_MEMORY]
+        coming = [v for t, v in zip(times, views) if t >= race.RADAR_ZOOM_MEMORY]
         self.assertTrue(all(abs(v - far) < 1e-9 for v in held))
         self.assertTrue(all(a > b for a, b in itertools.pairwise(coming)))
-        self.assertLess(coming[20], race.RADAR_ZOOM_LEAST + 3)  # mostly in a second after
         self.assertAlmostEqual(views[-1], race.RADAR_ZOOM_LEAST, places=1)
-        t = 120 * 0.05
-        self.assertAlmostEqual(radar.update([me(t), beside(t), behind(t)], t).view, far)  # out at once
+        # The car behind comes back: out quickly, over a few reads, not in one snap.
+        outs = [radar.update([me(t), beside(t), behind(t)], t).view for t in (10.0, 10.05, 10.1, 10.15, 10.2)]
+        self.assertLess(outs[0], far - 1.0)
+        self.assertTrue(all(a < b for a, b in itertools.pairwise(outs)))
+        self.assertGreater(outs[-1], far - 0.5)
 
-    def test_in_a_pack_it_stays_out_instead_of_pumping(self):
+    def test_cars_coming_and_going_keep_it_steady(self):
+        # In the opening laps it pumped, then snapped out again and again (reported by the user on 2026-11-20).
         def me(t):
             return moving('Me', (0.0, 40.0 * t), (0.0, 40.0), local=True)
 
@@ -981,9 +984,9 @@ class WarningTimeTests(unittest.TestCase):
 
         radar = race.Radar()
         views = []
-        for i in range(40):  # the car behind counts, then not, every half second
+        for i in range(200):  # the car behind counts for a second, then not for three, over and over
             t = i * 0.05
-            cars = [me(t), beside(t)] + ([behind(t)] if (i // 10) % 2 == 0 else [])
+            cars = [me(t), beside(t)] + ([behind(t)] if (i // 20) % 4 == 0 else [])
             views.append(radar.update(cars, t).view)
         self.assertAlmostEqual(min(views), max(views))  # steady
 
