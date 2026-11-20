@@ -96,8 +96,10 @@ from turbohud.hud.painter import (
     draw_hud,
     draw_level,
     draw_sectors,
+    measures,
     text_ink,
     text_width,
+    using,
 )
 from turbohud.overlay.layouts_window import STATUS_COLOUR, LayoutsWindow
 
@@ -126,6 +128,37 @@ REVS_SAMPLE = Sectors(rev_lights(0.75))  # the gear's rev lights in move mode
 PANEL_LINES_WIDTH = 50  # the move-mode panel's line spacing boxes: three digits and the arrows
 PANEL_COMBO_WIDTH = 56  # the move-mode panel's group lists: wide enough for '-' and A to G
 PANEL_SMALL_BUTTON = 32  # its one-character buttons (centre, match a group, delete a preset)
+PANEL_FONT_WIDTH = 96  # its font lists: a font's name, cut where longer (the list opens wider)
+PANEL_FONT_OPEN = 220  # an open font list: wide enough for most fonts' names in full
+FONT_GLOBAL = 'global'  # a section's font list: the global font (FONT_GLOBAL_KEY its item's data)
+FONT_GLOBAL_KEY = '\x00global'  # not a font's name: Qt keeps no None as an item's data
+SYSTEM_FONT = 'System font'
+
+
+def family_of(data):
+    """A font list item's family as the app takes it: None for global, else the family."""
+    return None if data == FONT_GLOBAL_KEY else data
+
+
+def fill_fonts(box, families, chosen, with_global=False):
+    """Fill the font list `box`: global first (`with_global`, a section's list), the system font,
+    then `families` ({family: file name}); `chosen` picked (None global, '' the system font), a
+    chosen family no longer there listed as missing. Says nothing while it fills."""
+    box.blockSignals(True)
+    box.clear()
+    if with_global:
+        box.addItem(FONT_GLOBAL, FONT_GLOBAL_KEY)
+    box.addItem(SYSTEM_FONT, '')
+    for family, file in families.items():
+        box.addItem(family, family)
+        box.setItemData(box.count() - 1, file, Qt.ToolTipRole)
+    if chosen and chosen not in families:
+        box.addItem(f'{chosen} (missing)', chosen)
+    wanted = FONT_GLOBAL_KEY if chosen is None and with_global else chosen
+    box.setCurrentIndex(max(box.findData(wanted), 0))
+    box.blockSignals(False)
+
+
 # Its word buttons (All, None, Save, Load, Delete) are at least this wide, and wider where the
 # system's buttons need it for the word: with a fixed width macOS cut "None" and "Delete" short.
 PANEL_WORD_BUTTON = 54
@@ -322,6 +355,8 @@ class SectionWindow(QWidget):
         self.text = is_text_section(section)  # sized by a text size, not by its box
         self.resizable = True  # at its edges in move mode: a text section by its text size (_resize_text)
         self.own_font = None  # a text section's own text size; None: the global one (the app sets it)
+        # A text section's own font family ('' the system's); None: the global one (the app sets it).
+        self.own_family = None
         self.selected = False  # clicked last in move mode: the arrow keys nudge it
         # Move mode: where it is and its size while moved, resized or nudged, and a moment after
         # (place_text; asked for by the user on 2026-11-16). '' when not shown.
@@ -365,6 +400,16 @@ class SectionWindow(QWidget):
             self.setMinimumSize(1, 1)  # its box follows its text size, however small
         else:
             self.setMinimumSize(MIN_WIDTH, lowest if section.bar else max(lowest, MIN_HEIGHT))
+
+    @property
+    def measure(self):
+        """text_width in this section's font, for turbohud.core.hud's `measure`."""
+        return measures(self.own_family)[0]
+
+    @property
+    def ink(self):
+        """text_ink in this section's font, for turbohud.core.hud's `ink`."""
+        return measures(self.own_family)[1]
 
     def placement(self):
         # On Wayland only the desktop knows where the window is; ask it where possible.
@@ -569,11 +614,11 @@ class SectionWindow(QWidget):
         x, y, width, height = resized(box, edges, dx, dy, (1, 1))
         corner = len(edges) == 2
         if corner:
-            font = font_for_height(self.section, height, text_ink)
+            font = font_for_height(self.section, height, self.ink)
             if font != self.font:
                 self.font = self.own_font = font
         fitted = text_box(
-            self.section, (x, y, width, height), self.font, text_width, text_ink, keep_height=not corner
+            self.section, (x, y, width, height), self.font, self.measure, self.ink, keep_height=not corner
         )
         if 'top' in edges:  # the bottom edge stays put
             fitted = (fitted[0], box[1] + box[3] - fitted[3], *fitted[2:])
@@ -649,9 +694,15 @@ class SectionWindow(QWidget):
         """Draw the section into `painter`, its top-left corner at (0, 0) and as large as
         this window: on the window itself, or on a HudCanvas that holds every section.
         `own_tint` False: no tint of its own, as its group's one tint is behind it.
-        `faded` False: the race leader banner at full strength (_paint_faded fades it)."""
+        `faded` False: the race leader banner at full strength (_paint_faded fades it).
+        In its own font where it has one (own_family)."""
         if not self.wanted:
             return
+        with using(self.own_family):
+            self._draw(painter, own_tint, faded)
+
+    def _draw(self, painter, own_tint, faded):
+        """draw, in the section's font."""
         if faded and self._fading():
             self._paint_faded(painter, own_tint)
             return
@@ -1513,6 +1564,11 @@ class MovePanel(QWidget):
     font_size_changed = Signal(str, int)  # section name, its own text size in pixels; 0: the global one
     global_font_changed = Signal(int)  # the global text size in pixels
     all_global_requested = Signal()  # every text section follows the global text size
+    # A section's own font (asked for by the user on 2026-11-20): its name and the family, '' the
+    # system font, None the global one.
+    family_changed = Signal(str, object)
+    global_family_changed = Signal(str)  # the global font: a family, '' the system's
+    all_global_family_requested = Signal()  # every text section in the global font
     spacing_changed = Signal(str, int)  # section name, its line spacing in percent of the usual
 
     focusable = True  # it takes clicks on its tick boxes and buttons
@@ -1547,6 +1603,8 @@ class MovePanel(QWidget):
         self.tints = {}
         self.font_sizes = {}
         self.spacings = {}
+        self.families = {}  # section name -> its font list
+        self._fonts = ({}, '')  # the fonts offered and the global one (set_fonts)
         grid = QGridLayout()
         grid.setHorizontalSpacing(6)
         grid.setVerticalSpacing(0)
@@ -1577,6 +1635,7 @@ class MovePanel(QWidget):
                 'Its text size in pixels, or the global one; flags, tire rings and bars go with it',
             ),
             (7, 1, 'Lines %', 'The room between its rows, in percent of the usual'),
+            (8, 1, 'Font', 'Its own font, or the global one (Global font, below)'),
         ):
             grid.addWidget(self._heading(text, tip), 0, column_, 1, span, Qt.AlignHCenter | Qt.AlignBottom)
         row = 0
@@ -1585,11 +1644,11 @@ class MovePanel(QWidget):
                 row += 1
                 label = self._heading(heading.upper(), '')
                 label.setContentsMargins(0, 3, 0, 0)
-                grid.addWidget(label, row, 0, 1, 8)
+                grid.addWidget(label, row, 0, 1, 9)
             for section in listed:
                 row += 1
                 self._section_row(grid, row, section)
-        grid.setColumnStretch(8, 1)
+        grid.setColumnStretch(9, 1)
         # The rows scroll where the screen is too short for them all (fit_height).
         self.rows = QWidget()
         self.rows.setLayout(grid)
@@ -1748,6 +1807,21 @@ class MovePanel(QWidget):
             self.spacings[section.name] = lines
         else:
             grid.addWidget(self._empty(), row, 7, Qt.AlignHCenter)
+        if is_text_section(section):
+            family = QComboBox()
+            family.setFixedWidth(PANEL_FONT_WIDTH)
+            family.view().setMinimumWidth(PANEL_FONT_OPEN)
+            family.setToolTip(f'The font of {section.label.lower()}: its own, or the global one')
+            fill_fonts(family, {}, None, True)
+            family.currentIndexChanged.connect(
+                lambda index, name=section.name, box=family: self.family_changed.emit(
+                    name, family_of(box.itemData(index))
+                )
+            )
+            grid.addWidget(family, row, 8)
+            self.families[section.name] = family
+        else:
+            grid.addWidget(self._empty(), row, 8, Qt.AlignHCenter)
 
     @staticmethod
     def _size_box(tip):
@@ -1788,6 +1862,25 @@ class MovePanel(QWidget):
         every.addWidget(follow)
         every.addStretch()
         column.addLayout(every)
+        # The global font, as in the settings window (Look > Font): every section on global is in it.
+        typeface = QHBoxLayout()
+        typeface.addWidget(QLabel('Global font:'))
+        self.global_family = QComboBox()
+        self.global_family.setSizeAdjustPolicy(QComboBox.AdjustToContents)
+        self.global_family.setToolTip(
+            'The font of every section set to global, as Settings > Look > Font; a preset keeps it'
+        )
+        fill_fonts(self.global_family, {}, '')
+        self.global_family.currentIndexChanged.connect(
+            lambda index: self.global_family_changed.emit(self.global_family.itemData(index))
+        )
+        typeface.addWidget(self.global_family)
+        every_font = QPushButton('All global')
+        every_font.setToolTip('Every text section in the global font (one step for Undo)')
+        every_font.clicked.connect(self.all_global_family_requested)
+        typeface.addWidget(every_font)
+        typeface.addStretch()
+        column.addLayout(typeface)
         row = QHBoxLayout()
         self.undo = QPushButton('Undo')
         self.undo.setToolTip('Go back one change to the layout, as often as there are changes')
@@ -1917,6 +2010,26 @@ class MovePanel(QWidget):
             self.global_size.blockSignals(True)
             self.global_size.setValue(font)
             self.global_size.blockSignals(False)
+
+    def set_fonts(self, families, chosen):
+        """Offer `families` ({family: file name}) in every font list, `chosen` the global font ('' the
+        system's), saying nothing back; each section keeps the font it shows."""
+        self._fonts = (dict(families), chosen)
+        fill_fonts(self.global_family, families, chosen)
+        for box in self.families.values():
+            fill_fonts(box, families, family_of(box.currentData()), True)
+
+    def set_family(self, name, family):
+        """Show a section's own font (None: the global one), saying nothing back."""
+        box = self.families.get(name)
+        if box is not None and family_of(box.currentData()) != family:
+            fill_fonts(box, self._fonts[0], family, True)
+
+    def set_global_family(self, family):
+        """Show the global font, saying nothing back."""
+        if self.global_family.currentData() != family:
+            self._fonts = (self._fonts[0], family)
+            fill_fonts(self.global_family, self._fonts[0], family)
 
     def set_presets_saved(self, numbers):
         self.layouts.set_presets_saved(numbers)

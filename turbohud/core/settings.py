@@ -78,6 +78,20 @@ class SectionPlace:
     # The Standings' columns shown (LAP_COLUMNS), kept with its place so each preset has its own
     # (asked for by the user on 2026-11-20); None: not kept (other sections, older presets).
     columns: tuple | None = None
+    # A text section's own font (asked for by the user on 2026-11-20): a family from
+    # customization/fonts or the system's, '' for the system font; None: the global one
+    # (Settings.font_family). Kept with its place, so presets and layout files keep it.
+    family: str | None = None
+
+
+FAMILY_MOST = 100  # the most letters a font family's name has in the settings file
+
+
+def font_family_value(value):
+    """A font family from a file: a name ('' the system font), or None where there is none."""
+    if not isinstance(value, str):
+        return None
+    return value.strip()[:FAMILY_MOST]
 
 
 # The clan tags that name a car class, for a multi-class race: turbohud.core.class_registry.
@@ -156,6 +170,9 @@ class Settings:
     layout_version: int = 1  # how to read the section sizes: LAYOUT_VERSION is the latest
     presets: dict = field(default_factory=dict)  # number (one of PRESETS) -> a kept `sections`
     preset_names: dict = field(default_factory=dict)  # number -> the player's name for it; none: unnamed
+    # Number -> the global font (font_family) the preset was saved with, loaded with it (asked for by
+    # the user on 2026-11-20); none: a preset saved before, which leaves the font as it is.
+    preset_fonts: dict = field(default_factory=dict)
     # Event mode (a key of EVENT_MODES) -> the preset loaded as such an event begins; none: off.
     auto_presets: dict = field(default_factory=dict)
     blue_seconds: float = 2.0  # how far behind a car about to lap the player shows the blue flag
@@ -233,13 +250,18 @@ def _same_place(a, b):
     return replace(a, x=b.x, y=b.y, width=b.width, height=b.height) == b
 
 
-def current_preset(sections, presets, screens, last=None):
+def current_preset(sections, presets, screens, last=None, fonts=None, family=''):
     """(number, changed): the preset the layout `sections` {name: SectionPlace} is in now (asked
     for by the user on 2026-11-19: which preset move mode shows), or None. A preset whose every
     section is where `sections` has it, as loading it would put them (preset_places), counts, `last`
-    (the preset loaded or saved last) first; else `last`, changed since, where it is still kept."""
+    (the preset loaded or saved last) first; else `last`, changed since, where it is still kept.
+    A preset that keeps a global font (`fonts` {number: family}) counts only with `family`, the
+    global font now."""
+    fonts = fonts or {}
     order = ([last] if last in presets else []) + [number for number in sorted(presets) if number != last]
     for number in order:
+        if fonts.get(number, family) != family:
+            continue
         places = preset_places(presets[number], sections, screens)
         if places and all(_same_place(sections[name], place) for name, place in places.items()):
             return number, False
@@ -325,6 +347,7 @@ def _sections(data, tint=False):
             _font(entry.get('font')),
             _spacing(entry.get('spacing')),
             _columns(entry.get('columns')),
+            font_family_value(entry.get('family')),
         )
     return places
 
@@ -357,6 +380,14 @@ def _presets(data, tint=False):
         return {}
     kept = {number: _sections(data.get(str(number)), tint) for number in PRESETS}
     return {number: sections for number, sections in kept.items() if sections}
+
+
+def _preset_fonts(data):
+    """{number: font family} from the file; an unknown number or no name is left out."""
+    if not isinstance(data, dict):
+        return {}
+    fonts = {number: font_family_value(data.get(str(number))) for number in PRESETS}
+    return {number: family for number, family in fonts.items() if family is not None}
 
 
 def preset_name(value):
@@ -405,6 +436,7 @@ def _section_data(sections):
             **({'font': place.font} if place.font is not None else {}),
             **({'spacing': place.spacing} if place.spacing != 1.0 else {}),
             **({'columns': list(place.columns)} if place.columns is not None else {}),
+            **({'family': place.family} if place.family is not None else {}),
         }
         for name, place in sections.items()
     }
@@ -450,6 +482,7 @@ def load_settings(path):
         layout_version=_layout_version(data.get('layout_version')),
         presets=_presets(data.get('presets'), data.get('backdrop') is True),
         preset_names=_preset_names(data.get('preset_names')),
+        preset_fonts=_preset_fonts(data.get('preset_fonts')),
         auto_presets=_auto_presets(data.get('auto_presets')),
         blue_seconds=_seconds(data.get('blue_seconds'), Settings.blue_seconds, BLUE_SECONDS),
         radar_seconds=_seconds(data.get('radar_seconds'), Settings.radar_seconds, RADAR_SECONDS),
@@ -502,6 +535,7 @@ def save_settings(path, settings):
         'sections': _section_data(settings.sections),
         'presets': {str(number): _section_data(kept) for number, kept in settings.presets.items()},
         'preset_names': {str(number): name for number, name in settings.preset_names.items()},
+        'preset_fonts': {str(number): family for number, family in settings.preset_fonts.items()},
         'auto_presets': dict(settings.auto_presets),
     }
     if settings.class_tags != CLASS_TAGS:  # else the registry's, which may grow

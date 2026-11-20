@@ -22,7 +22,7 @@ from dataclasses import replace
 from pathlib import Path
 
 from turbohud.core.hud import FONT_SIZES, is_text_section, text_box
-from turbohud.core.settings import SectionPlace, _font, _sections, _spacing
+from turbohud.core.settings import SectionPlace, _font, _sections, _spacing, font_family_value
 
 FORMAT = 1  # the preset file's format, written into it
 # The shipped ones (assets/presets); 2294x1490, a Mac's, since 2026-11-15 (asked for by the user).
@@ -34,13 +34,15 @@ def file_name(size):
     return f'{size[0]}x{size[1]}.json'
 
 
-def preset_data(places, size, font_size):
+def preset_data(places, size, font_size, family=''):
     """A preset file's data: `places` {name: SectionPlace} on a screen of `size` (width, height),
     at its top left (0, 0). Each text section's text size is written out (a section following the
-    global one gets `font_size`), so the file stands on its own."""
+    global one gets `font_size`), so the file stands on its own. So is the global font `family`
+    where it is not the system's: read_preset gives it to the sections without a font of their own."""
     return {
         'format': FORMAT,
         'screen': list(size),
+        **({'font_family': family} if family else {}),
         'sections': {
             name: {
                 'x': place.x,
@@ -54,6 +56,7 @@ def preset_data(places, size, font_size):
                 'font': place.font if place.font is not None else font_size,
                 'spacing': place.spacing,
                 **({'columns': list(place.columns)} if place.columns is not None else {}),
+                **({'family': place.family} if place.family is not None else {}),
             }
             for name, place in places.items()
         },
@@ -80,6 +83,14 @@ def read_preset(data):
             places[name] = replace(
                 places[name], font=_font(entry.get('font')), spacing=_spacing(entry.get('spacing'))
             )
+    # The global font the file was made with: the font of each section without its own, so it
+    # looks as made, and the player's own global font is left as it is.
+    made_in = font_family_value(data.get('font_family'))
+    if made_in:
+        places = {
+            name: replace(place, family=made_in) if place.family is None else place
+            for name, place in places.items()
+        }
     return tuple(screen), places
 
 
@@ -91,11 +102,12 @@ def load_file(path):
         return None
 
 
-def save_file(path, places, size, font_size):
+def save_file(path, places, size, font_size, family=''):
     """Write a preset file (preset_data), whole or not at all."""
     path = Path(path)
     temporary = path.with_name(path.name + '.tmp')
-    temporary.write_text(json.dumps(preset_data(places, size, font_size), indent=2) + '\n', encoding='utf-8')
+    data = preset_data(places, size, font_size, family)
+    temporary.write_text(json.dumps(data, indent=2) + '\n', encoding='utf-8')
     temporary.replace(path)
 
 

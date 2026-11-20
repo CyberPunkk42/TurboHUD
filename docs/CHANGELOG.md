@@ -4,6 +4,23 @@ Every finished change, newest first: what changed, why, how it was checked and w
 Each branch adds its dated entry at the top. Where things stand now: `RESUME.md`; what is open:
 `docs/BACKLOG.md`.
 
+- 2026-11-20: A font for each section and each preset (`feature/fonts-per-preset-and-section`, asked for by the
+  user; the backlog's "A font per section" idea, taken off Nice to have): move mode's panel has a **Font** list
+  per text section (**global** by default, System font, one's own fonts, "(missing)" for a gone one) and, below
+  the rows, **Global font** (the same as Settings > Look > Font: it changes every section on global at once)
+  with an **All global** that puts every section back on it. A section's font is kept on its place
+  (`SectionPlace.family`: None global, '' the system font), so presets, Undo and layout files keep it; each
+  preset also keeps the global font it was saved with (`Settings.preset_fonts`), loaded with it, also at the
+  start in the Race preset; a preset saved before keeps the font as it is. A preset counts as the one in use
+  only in its global font. Layout files write each section's own font and the maker's global font, which
+  Import gives to the sections without their own, so the player's global font is left alone. The painter keeps
+  every text by its font (`_advance`, `_path`, `_outline`, `_ink`, `_width`, `_cap`, the text images), and a
+  section is measured and drawn in its own (`using`, `measures`: one pair of measures per font, as core keeps box
+  heights by them). The panel's Font column is 96 px, its list opening 220 px wide, so the panel stays under
+  650 px. Global font changes are a step for Undo now, from either window. Tests: the settings file, presets'
+  fonts, broken values, layout files both ways, the preset in use, the painter in two fonts (measures, nesting,
+  text images per font), the panel's lists and buttons; all tests pass, and a 6 s start logged no error. Not
+  yet tried by hand: move mode with fonts per section, presets in different fonts, a race's drawing share.
 - 2026-11-20: The documents brought up to the app as it is (`docs/up-to-date`, asked for by the user): the
   guides, README and HOW_IT_WORKS checked against every change since the last refresh (2026-11-15). Corrected:
   the Battle and Watched driver banners no longer said to start below the leader banner and the radar (the

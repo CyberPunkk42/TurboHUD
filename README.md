@@ -161,12 +161,13 @@ The full guide to every section, menu item, button and option is
   radar, track map and more), each in its own box. Locked, clicks go through them to the game.
 - **Ctrl+Shift+L** (or **Move mode** in the TurboHUD icon's menu; on Linux outside
   Hyprland `TurboHUD --toggle`) switches to **move mode**: drag, nudge and size the sections, and use
-  the panel to show or hide them, group and centre them and set text sizes. Its **Layouts…**
-  window keeps five named presets (**Ctrl+Shift+1** to **5** load them), loads one by itself as a
+  the panel to show or hide them, group and centre them and set text sizes and fonts (each
+  section its own, or the global one). Its **Layouts…**
+  window keeps five named presets, each with its own fonts (**Ctrl+Shift+1** to **5** load them), loads one by itself as a
   recording, spectating, hotlapping, race or special event begins, and loads, shares or designs layouts per
   screen size.
   **Lock** or Ctrl+Shift+L again ends it, and so does a race beginning.
-- **Settings…** sets the colours, the font (your own `.ttf` or `.otf` files in
+- **Settings…** sets the colours, the global font (your own `.ttf` or `.otf` files in
   `customization/fonts`), the size of all sections, the standings' columns, the
   warning times, the race reads a second and the on/off options (also under **Options** in
   the icon's menu).

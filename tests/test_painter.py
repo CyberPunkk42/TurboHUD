@@ -46,6 +46,7 @@ class TextPathTests(unittest.TestCase):
         # each time took most of their drawing (2026-11-12).
         from PySide6.QtGui import QFontMetricsF
 
+        from turbohud.hud import painter
         from turbohud.hud.painter import cap_height, hud_font, text_advance, text_ink, text_path, text_width
 
         metrics = QFontMetricsF(hud_font(17))
@@ -54,9 +55,9 @@ class TextPathTests(unittest.TestCase):
         box = text_path('L12', 17).boundingRect()
         self.assertEqual(text_width('L12', 17), box.right() + 17 / 7)
         self.assertAlmostEqual(text_ink('L12', 17)[0], -box.top() + 17 / 14)
-        hits = text_advance.cache_info().hits
+        hits = painter._advance.cache_info().hits
         text_advance('+00.000', 17)
-        self.assertEqual(text_advance.cache_info().hits, hits + 1)
+        self.assertEqual(painter._advance.cache_info().hits, hits + 1)
 
 
 @unittest.skipUnless(importlib.util.find_spec('PySide6'), 'needs Qt')

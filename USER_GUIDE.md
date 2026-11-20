@@ -386,6 +386,10 @@ from its name while they show, and no name ever runs into the next column.
 - **Size px**: this section's text size in pixels, or **global** to follow the global size.
   Flags, tire rings and bars grow with it.
 - **Lines %**: the room between its rows, in percent of the usual.
+- **Font**: this section's own font, or **global** (the default) to follow the global font (below,
+  and Settings > Look > Font). The list has **System font** and your own fonts (section 6); a font
+  whose file is gone shows as "(missing)", and the section is drawn in the system font until it
+  comes back. Its box is fitted to the font at once.
 
 **Below the rows**
 - **Same text size and width, group:** **A** to **G** gives that group's text
@@ -393,6 +397,9 @@ from its name while they show, and no name ever runs into the next column.
   to go back).
 - **Global text size (px)**: the text size of every section set to global. **All global**
   sets every text section back to the global size.
+- **Global font**: the font of every section whose **Font** is global, the same as Settings >
+  Look > Font: change it here to change them all at once. **All global** beside it sets every
+  text section back to the global font. Both are a step for **Undo**.
 - **Layouts…** opens the layouts window beside the panel: the presets, which preset loads
   for each kind of event, layout files and the design screen (see below).
 - The line above the buttons, in electric blue, says which preset the layout is in now, such as **Preset: 3 Race**:
@@ -400,7 +407,7 @@ from its name while they show, and no name ever runs into the next column.
   **(changed)** after it: you have moved on from the preset loaded or saved last (save it again to
   keep the change). **Preset: none**: the layout is in none of them.
 - **Undo** goes back one change to the layout at a time (moving, sizing, showing, groups,
-  centring, matching, presets); a drag or a run of nudges is one change. **Redo** goes
+  centring, matching, fonts, presets); a drag or a run of nudges is one change. **Redo** goes
   forward again. Colours and options are not in it, and it starts afresh at each start.
 - **Relearn map**: the same as **Relearn this track's map** in the icon's menu.
 - **Lock** ends move mode. **Settings…** opens the settings window. **Quit TurboHUD** quits.
@@ -416,10 +423,12 @@ mode ends):
   **Load** puts the sections back as it has them (also Ctrl+Shift+1 to 5, at any time, also
   during a race), **Delete** deletes it. An electric blue line below the presets confirms each for a few
   seconds, such as "✓ Preset 2 named Race" or "✓ Preset 2 Race saved". A preset holds where
-  each section sits, its size, whether it shows and its group, and which **Standings** columns
-  show (Settings > Standings > Columns), so each preset can have its own standings; other colours
-  and options stay as they are. A preset saved before 2026-11-20 keeps no columns: loading it
-  shows every column, until you save it again with the ones you want.
+  each section sits, its size, whether it shows and its group, which **Standings** columns
+  show (Settings > Standings > Columns), so each preset can have its own standings, and the
+  fonts: the global font and each section's own **Font**, so each preset can have its own look;
+  other colours and options stay as they are. A preset saved before 2026-11-20 keeps no columns
+  and no fonts: loading it shows every column and leaves the global font as it is, until you
+  save it again.
 - **Load by itself**: "As an event begins, the preset chosen for its mode". For each kind of
   event, pick a preset (**1** to **5**) or **Off** (all are Off at first):
   - **Recording**: a recording (replay) TSU plays.
@@ -478,7 +487,11 @@ like `2560x1440 (TurboHUD default).json`.
   deleted). To change one, arrange the HUD and save it under another name: **Export…** does.
 
 **Export…**, **Import…** and **Save design…** open that folder. A layout file holds only
-places, sizes, text sizes and options: nothing personal, so it can be shared.
+places, sizes, text sizes, fonts and options: nothing personal, so it can be shared. Its fonts
+are names: the font files themselves are not in it, so whoever imports it needs the same fonts
+in their fonts folder (else those sections show the system font, and the **Font** list says
+"(missing)"). Imported, the sections that followed the global font of the file's maker get
+that font as their own, so the layout looks as it was made, and your global font stays as it is.
 
 
 ## 6. The settings window
@@ -493,8 +506,9 @@ The window has two columns, under headings. The on/off options are the same as u
   parts (your own row, headings) and of the thin outline that keeps text readable over
   the game. **Reset colours** puts the defaults back.
 - **All sections:** **Smaller** and **Bigger** make every section 10% smaller or bigger.
-- **Font:** the font of every section: **System font** (the usual one), or a font of your
-  own. **Add font...** opens a file window: choose a font file (`.ttf` or `.otf`) and it is copied
+- **Font:** the global font, for every section whose own **Font** in move mode is global (all
+  of them, until you give one its own): **System font** (the usual one), or a font of your
+  own. The move-mode panel's **Global font** is the same setting. **Add font...** opens a file window: choose a font file (`.ttf` or `.otf`) and it is copied
   into the **`customization/fonts`** folder (beside `customization/display_presets`, section 5)
   and used at once; your own file stays where it was. **Fonts folder...** opens that folder, to
   add files by hand or delete one to remove its font. As the folder's window would open beneath

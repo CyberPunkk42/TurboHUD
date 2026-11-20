@@ -793,6 +793,7 @@ def run(args, folder):
         if is_text_section(window.section):
             window.own_font = saved.font if saved else None
             window.font = window.own_font or settings.font_size
+            window.own_family = saved.family if saved else None
             window.section = replace(window.section, spacing=saved.spacing if saved else 1.0)
             if name == 'speed':
                 window.section = replace(
@@ -806,7 +807,7 @@ def run(args, folder):
             # A snug section (the standings) is as wide as its columns need, no more: its columns
             # sit after the names whatever the box's width, so more would only be empty room.
             snug = window.section.snug
-            place = text_box(window.section, place, window.font, text_width, text_ink, not snug, True)
+            place = text_box(window.section, place, window.font, window.measure, window.ink, not snug, True)
         place = fit_on_screens(place, screens)
         window.setGeometry(*place)
         window.backdrop = saved.tint if saved else default_tint(window.section, settings.backdrop)
@@ -847,6 +848,7 @@ def run(args, folder):
             getattr(window, 'own_font', None),
             window.section.spacing,
             settings.lap_columns if window is windows.get('laptimes') else None,
+            window.own_family if is_text_section(window.section) else None,
         )
 
     def all_tinted():
@@ -868,11 +870,10 @@ def run(args, folder):
             return
         names = [name for name in windows if name in settings.sections]
         sections = {name: settings.sections[name] for name in names}
-        panel.set_current_preset(
-            preset_shown(
-                current_preset(sections, settings.presets, screens, last_preset), settings.preset_names
-            )
+        current = current_preset(
+            sections, settings.presets, screens, last_preset, settings.preset_fonts, settings.font_family
         )
+        panel.set_current_preset(preset_shown(current, settings.preset_names))
 
     def panel_spot():
         """Where the move-mode panel goes: on the screen that holds the first shown
@@ -1236,7 +1237,13 @@ def run(args, folder):
         if window is not None:
             with_nearby(window)
             place = text_box(
-                window.section, tuple(window.placement()), window.font, text_width, text_ink, True, False
+                window.section,
+                tuple(window.placement()),
+                window.font,
+                window.measure,
+                window.ink,
+                True,
+                False,
             )
             resize_sections({'players': place})
             window.update()
@@ -1274,7 +1281,7 @@ def run(args, folder):
         sections = {}
         for name, window in windows.items():
             sections[name] = section_place(window, found.get(name) or window.placement())
-        return sections, settings.presets, settings.font_size
+        return sections, settings.presets, settings.font_size, settings.font_family, settings.preset_fonts
 
     def undoable(action):
         """A change from a button or a shortcut: one step for Undo. A drag it comes right
@@ -1515,7 +1522,7 @@ def run(args, folder):
             window.font = font
         boxes = {
             window.section.name: text_box(
-                window.section, tuple(window.placement()), font, text_width, text_ink, keep_width=False
+                window.section, tuple(window.placement()), font, window.measure, window.ink, keep_width=False
             )
             for window in members
         }
@@ -1540,18 +1547,46 @@ def run(args, folder):
         settings = replace(settings, sections=places)
         write_settings()
 
+    @undoable
     def set_font_family(family):
-        """The HUD's font from the settings window ('' for the system's): every text section is
-        fitted to it and drawn again."""
+        """The global font, from the settings window or the panel ('' for the system's): every
+        text section in it is fitted to it and drawn again."""
+        use_global_family(family)
+        log.info('font: %s', family or 'the system font')
+
+    def use_global_family(family):
+        """The global font `family` in the settings, both font lists and the sections that follow it."""
         nonlocal settings
         settings = replace(settings, font_family=family)
+        if panel is not None:
+            panel.set_global_family(family)
+        if settings_window is not None and settings_window.font_choice.currentData() != family:
+            settings_window.set_fonts(own_fonts(), family)  # not while it tells its own pick
         if set_family(family if font_there(family) else ''):
-            resize_sections({name: fitted(window) for name, window in text_windows().items()})
+            following = {n: w for n, w in text_windows().items() if w.own_family is None}
+            resize_sections({name: fitted(window) for name, window in following.items()})
             for window in windows.values():
                 window.update()
         else:
             write_settings()
-        log.info('font: %s', family or 'the system font')
+
+    @undoable
+    def set_section_family(name, family):
+        """A section's own font from the move-mode panel (None: the global one; asked for by the
+        user on 2026-11-20): its box fitted to it."""
+        window = windows[name]
+        window.own_family = family
+        resize_sections({name: fitted(window)})
+        log.info('section %s: font %s', name, 'global' if family is None else family or 'the system font')
+
+    @undoable
+    def all_global_family():
+        """Every text section in the global font (the panel's All global beside Global font)."""
+        for window in text_windows().values():
+            window.own_family = None
+        resize_sections({name: fitted(window) for name, window in text_windows().items()})
+        show_fonts()
+        log.info('every section: the global font')
 
     def open_fonts_folder():
         """The fonts folder in the system's file manager. Its window opens beneath TurboHUD's, which
@@ -1586,12 +1621,13 @@ def run(args, folder):
             return
         log.info('font added: %s (%s)', family, copied.name)
         settings_window.set_fonts(families, family)
+        panel.set_fonts(families, settings.font_family)  # the new font in the panel's lists too
         set_font_family(family)
 
     def fitted(window, keep_width=False):
         """A text section's box at its text size, where it is now."""
         return text_box(
-            window.section, tuple(window.placement()), window.font, text_width, text_ink, keep_width
+            window.section, tuple(window.placement()), window.font, window.measure, window.ink, keep_width
         )
 
     def text_windows():
@@ -1632,9 +1668,11 @@ def run(args, folder):
         if panel is None:
             return
         panel.set_global_font(settings.font_size)
+        panel.set_global_family(settings.font_family)
         for name, window in text_windows().items():
             panel.set_font_size(name, window.own_font)
             panel.set_spacing(name, window.section.spacing)
+            panel.set_family(name, window.own_family)
 
     @undoable
     def set_spacing(name, percent):
@@ -1663,7 +1701,7 @@ def run(args, folder):
             pending = mover.pending.get(name)
             if box is None or (pending is not None and now < pending[1]):
                 continue
-            right = text_box(window.section, box, window.font, text_width, text_ink)
+            right = text_box(window.section, box, window.font, window.measure, window.ink)
             off = max(abs(a - b) for a, b in zip(box[2:], right[2:]))
             # Once per size: a desktop that keeps a box a pixel or two off is left alone.
             if off > 1 and refits.get(name) != tuple(box[2:]):
@@ -1692,7 +1730,8 @@ def run(args, folder):
         last_preset = number
         save()
         presets = {**settings.presets, number: {name: settings.sections[name] for name in windows}}
-        settings = replace(settings, presets=presets)
+        fonts = {**settings.preset_fonts, number: settings.font_family}  # its global font with it
+        settings = replace(settings, presets=presets, preset_fonts=fonts)
         write_settings()
         panel.set_presets_saved(settings.presets)
         preset_status(f'Preset {preset_label(number, settings.preset_names)} saved')
@@ -1702,7 +1741,8 @@ def run(args, folder):
     def delete_preset(number):
         nonlocal settings
         presets = {kept: places for kept, places in settings.presets.items() if kept != number}
-        settings = replace(settings, presets=presets)
+        fonts = {kept: family for kept, family in settings.preset_fonts.items() if kept != number}
+        settings = replace(settings, presets=presets, preset_fonts=fonts)
         write_settings()
         panel.set_presets_saved(presets)
         preset_status(f'Preset {preset_label(number, settings.preset_names)} deleted')
@@ -1753,6 +1793,10 @@ def run(args, folder):
             log.info('preset %d is empty', number)
             return
         last_preset = number
+        family = settings.preset_fonts.get(number)  # None: a preset saved before presets kept the font
+        if family is not None and family != settings.font_family:
+            use_global_family(family)
+            log.info('preset %d: font %s', number, family or 'the system font')
         apply_places(places)
         settings = replace(settings, sections={**settings.sections, **places})
         write_settings()
@@ -1784,8 +1828,10 @@ def run(args, folder):
             if is_text_section(window.section):
                 window.own_font = place.font
                 window.font = place.font or settings.font_size
+                window.own_family = place.family
                 window.section = replace(window.section, spacing=place.spacing)
-                fixed = text_box(window.section, box, window.font, text_width, text_ink)
+                panel.set_family(name, place.family)
+                fixed = text_box(window.section, box, window.font, window.measure, window.ink)
                 if fixed != box:
                     move_window(window, fixed, settle=True)
                     mover.known[name] = fixed
@@ -1809,8 +1855,10 @@ def run(args, folder):
         state = history.redo(layout_state())
         if state is None:
             return
-        sections, kept, font_size = state
-        settings = replace(settings, font_size=font_size)
+        sections, kept, font_size, family, fonts = state
+        settings = replace(settings, font_size=font_size, preset_fonts=fonts)
+        if family != settings.font_family:
+            use_global_family(family)
         apply_places(sections)
         show_fonts()
         settings = replace(settings, sections={**settings.sections, **sections}, presets=kept)
@@ -1866,7 +1914,7 @@ def run(args, folder):
             return
         places = layout_presets.relative(layout_state()[0], target)
         try:
-            layout_presets.save_file(chosen, places, target[2:], settings.font_size)
+            layout_presets.save_file(chosen, places, target[2:], settings.font_size, settings.font_family)
         except OSError as error:
             log.warning('the layout could not be exported: %s', error.strerror or error)
             warn(panel, native, f'The layout could not be saved there ({error.strerror}).')
@@ -1939,7 +1987,7 @@ def run(args, folder):
         if not chosen:
             return  # still designing
         try:
-            layout_presets.save_file(chosen, places, size, settings.font_size)
+            layout_presets.save_file(chosen, places, size, settings.font_size, settings.font_family)
         except OSError as error:
             log.warning('the design could not be saved: %s', error.strerror or error)
             warn(panel, native, f'The design could not be saved there ({error.strerror}).')
@@ -1959,8 +2007,10 @@ def run(args, folder):
         frame_seen.clear()
         for window in windows.values():
             window.design = None  # its place label on this screen again
-        sections, _kept, font_size = own
+        sections, _kept, font_size, family, _fonts = own
         settings = replace(settings, font_size=font_size)
+        if family != settings.font_family:
+            use_global_family(family)
         load_layout(sections, 'own layout back after designing')
         show_fonts()
         panel.set_designing(False)
@@ -2044,8 +2094,10 @@ def run(args, folder):
         previous = history.undo(layout_state())
         if previous is None:
             return
-        sections, presets, font_size = previous
-        settings = replace(settings, font_size=font_size)
+        sections, presets, font_size, family, fonts = previous
+        settings = replace(settings, font_size=font_size, preset_fonts=fonts)
+        if family != settings.font_family:
+            use_global_family(family)
         apply_places(sections)
         show_fonts()
         settings = replace(settings, sections={**settings.sections, **sections}, presets=presets)
@@ -2232,6 +2284,10 @@ def run(args, folder):
     panel.font_size_changed.connect(set_own_font)
     panel.global_font_changed.connect(set_global_font)
     panel.all_global_requested.connect(all_global)
+    panel.set_fonts(own_fonts(), settings.font_family)  # each section's own: show_fonts, below
+    panel.family_changed.connect(set_section_family)
+    panel.global_family_changed.connect(set_font_family)
+    panel.all_global_family_requested.connect(all_global_family)
     panel.spacing_changed.connect(set_spacing)
     panel.undo_requested.connect(undo)
     panel.redo_requested.connect(redo)
@@ -2266,6 +2322,9 @@ def run(args, folder):
         # The Race preset is the default layout: TurboHUD starts in it, not in the one left at the
         # last quit (a recording's, say). Before the history, so Undo does not go back past it.
         places = preset_places(settings.presets[starting], windows, screens)
+        family = settings.preset_fonts.get(starting)  # its global font, where it keeps one
+        if family is not None and family != settings.font_family:
+            use_global_family(family)
         apply_places(places)
         settings = replace(settings, sections={**settings.sections, **places})
         write_settings()

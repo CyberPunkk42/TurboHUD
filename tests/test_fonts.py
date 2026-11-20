@@ -221,5 +221,238 @@ class SettingsWindowTests(unittest.TestCase):
         self.assertEqual(asked, [True])
 
 
+# A font for each section and each preset (asked for by the user on 2026-11-20).
+
+
+def place(**options):
+    return settings.SectionPlace(10, 20, 200, 40, **options)
+
+
+class SectionFontSettingsTests(unittest.TestCase):
+    def setUp(self):
+        folder = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, folder)
+        self.path = folder / 'settings.json'
+
+    def round_trip(self, kept):
+        settings.save_settings(self.path, kept)
+        return settings.load_settings(self.path)
+
+    def test_a_sections_own_font_is_kept_and_global_is_none(self):
+        sections = {'lap': place(family='Alpha Sans'), 'fuel': place(family=''), 'tires': place()}
+        read = self.round_trip(settings.Settings(sections=sections)).sections
+        self.assertEqual(read['lap'].family, 'Alpha Sans')
+        self.assertEqual(read['fuel'].family, '')  # the system font, chosen for this section
+        self.assertIsNone(read['tires'].family)  # the global font
+
+    def test_a_preset_keeps_its_sections_fonts_and_its_global_font(self):
+        kept = settings.Settings(
+            presets={2: {'lap': place(family='Beta Mono')}, 3: {'lap': place()}},
+            preset_fonts={2: 'Alpha Sans', 3: ''},
+        )
+        read = self.round_trip(kept)
+        self.assertEqual(read.presets[2]['lap'].family, 'Beta Mono')
+        self.assertEqual(read.preset_fonts, {2: 'Alpha Sans', 3: ''})
+
+    def test_a_preset_saved_before_keeps_no_font(self):
+        self.path.write_text('{"presets": {"1": {"lap": {"x": 1, "y": 2, "width": 90, "height": 30}}}}')
+        read = settings.load_settings(self.path)
+        self.assertEqual(read.preset_fonts, {})
+        self.assertIsNone(read.presets[1]['lap'].family)
+
+    def test_a_broken_font_in_the_file_is_global(self):
+        self.path.write_text(
+            '{"sections": {"lap": {"x": 1, "y": 2, "width": 90, "height": 30, "family": 7}},'
+            ' "preset_fonts": {"1": 3, "2": "Alpha Sans", "9": "Beta"}}'
+        )
+        read = settings.load_settings(self.path)
+        self.assertIsNone(read.sections['lap'].family)
+        self.assertEqual(read.preset_fonts, {2: 'Alpha Sans'})
+
+
+class LayoutFileFontTests(unittest.TestCase):
+    def test_a_sections_own_font_and_the_global_one_go_into_the_file(self):
+        from turbohud.core import presets
+
+        data = presets.preset_data(
+            {'lap': place(family='Beta Mono'), 'fuel': place()}, (1920, 1080), 18, 'Alpha Sans'
+        )
+        self.assertEqual(data['font_family'], 'Alpha Sans')
+        self.assertEqual(data['sections']['lap']['family'], 'Beta Mono')
+        self.assertNotIn('family', data['sections']['fuel'])
+
+    def test_read_the_files_global_font_is_the_font_of_the_sections_without_their_own(self):
+        # So it looks as made, and the player's own global font stays as it is.
+        from turbohud.core import presets
+
+        data = presets.preset_data(
+            {'lap': place(family='Beta Mono'), 'fuel': place(), 'tires': place(family='')},
+            (1920, 1080),
+            18,
+            'Alpha Sans',
+        )
+        _size, places = presets.read_preset(data)
+        self.assertEqual(places['lap'].family, 'Beta Mono')
+        self.assertEqual(places['fuel'].family, 'Alpha Sans')
+        self.assertEqual(places['tires'].family, '')
+
+    def test_a_file_made_in_the_system_font_leaves_the_global_font(self):
+        from turbohud.core import presets
+
+        data = presets.preset_data({'fuel': place()}, (1920, 1080), 18)
+        self.assertNotIn('font_family', data)
+        self.assertIsNone(presets.read_preset(data)[1]['fuel'].family)
+
+
+class PresetInUseFontTests(unittest.TestCase):
+    def test_a_preset_counts_only_in_the_global_font_it_keeps(self):
+        sections = {'lap': place()}
+        kept = {1: {'lap': place()}}
+        screens = [(0, 0, 1920, 1080)]
+        self.assertEqual(settings.current_preset(sections, kept, screens, None, {1: 'Alpha Sans'}, ''), None)
+        self.assertEqual(
+            settings.current_preset(sections, kept, screens, None, {1: 'Alpha Sans'}, 'Alpha Sans'),
+            (1, False),
+        )
+        self.assertEqual(settings.current_preset(sections, kept, screens, None, {}, 'Beta'), (1, False))
+
+    def test_a_sections_own_font_is_part_of_the_preset(self):
+        screens = [(0, 0, 1920, 1080)]
+        kept = {1: {'lap': place(family='Beta Mono')}}
+        self.assertEqual(settings.current_preset({'lap': place()}, kept, screens, 1), (1, True))
+
+
+class SectionFontPainterTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        from PySide6.QtWidgets import QApplication
+
+        cls.app = QApplication.instance() or QApplication([])
+
+    def setUp(self):
+        from turbohud.hud import painter
+
+        self.painter = painter
+        self.addCleanup(painter.set_family, '')
+        found = a_system_font()
+        if found is None:
+            self.skipTest('no monospace font file on this system')
+        folder = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, folder)
+        shutil.copy(found, folder / found.name)
+        ((self.family, _file),) = painter.load_font_files(fonts.font_files(folder)).items()
+
+    def test_a_section_draws_in_its_own_font_and_the_global_one_stays(self):
+        usual = self.painter.text_width('Playername 1234', 20)
+        with self.painter.using(self.family):
+            self.assertEqual(self.painter.font_family(), self.family)
+            own = self.painter.text_width('Playername 1234', 20)
+        self.assertNotAlmostEqual(own, usual, delta=1.0)
+        self.assertEqual(self.painter.font_family(), '')  # after it, the global font again
+        self.assertAlmostEqual(self.painter.text_width('Playername 1234', 20), usual)
+
+    def test_global_is_the_global_font_and_the_innermost_counts(self):
+        self.painter.set_family(self.family)
+        with self.painter.using(None):
+            self.assertEqual(self.painter.font_family(), self.family)
+            with self.painter.using(''):
+                self.assertEqual(self.painter.font_family(), '')
+            self.assertEqual(self.painter.font_family(), self.family)
+        self.assertEqual(self.painter.global_family(), self.family)
+
+    def test_each_font_has_its_own_measures_the_same_each_time(self):
+        width, ink = self.painter.measures(self.family)
+        self.assertIs(self.painter.measures(self.family)[0], width)  # core keeps box heights by them
+        self.assertEqual(self.painter.measures(None), (self.painter.text_width, self.painter.text_ink))
+        with self.painter.using(self.family):
+            self.assertEqual(width('L12', 20), self.painter.text_width('L12', 20))
+            self.assertEqual(ink('L12', 20), self.painter.text_ink('L12', 20))
+        self.assertNotAlmostEqual(
+            width('Playername', 20), self.painter.text_width('Playername', 20), delta=1.0
+        )
+
+    def test_a_text_image_is_kept_for_each_font(self):
+        white, black = 0xFFFFFFFF, 0xFF000000
+        usual = self.painter.text_image('Player', 20, white, black, 1.0)[0]
+        with self.painter.using(self.family):
+            own = self.painter.text_image('Player', 20, white, black, 1.0)[0]
+        self.assertNotEqual(own.width(), usual.width())
+        self.assertIs(self.painter.text_image('Player', 20, white, black, 1.0)[0], usual)
+
+
+class PanelFontTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        from PySide6.QtWidgets import QApplication
+
+        cls.app = QApplication.instance() or QApplication([])
+
+    def panel(self):
+        from turbohud.core.hud import RACE_SECTIONS
+        from turbohud.overlay.window import MovePanel
+
+        class Native:
+            def raise_window(self, window):
+                return 'test'
+
+        panel = MovePanel(Native(), RACE_SECTIONS, True)
+        self.addCleanup(panel.close)
+        panel.set_fonts({'Alpha Sans': 'alpha.ttf'}, '')
+        return panel
+
+    @staticmethod
+    def listed(box):
+        return [box.itemText(i) for i in range(box.count())]
+
+    def test_each_text_section_has_a_font_list_with_global_first(self):
+        panel = self.panel()
+        self.assertEqual(self.listed(panel.families['lap']), ['global', 'System font', 'Alpha Sans'])
+        self.assertEqual(panel.families['lap'].currentText(), 'global')
+        self.assertNotIn('radar', panel.families)  # a drawing has no text
+        self.assertEqual(self.listed(panel.global_family), ['System font', 'Alpha Sans'])
+
+    def test_picking_a_font_tells_the_section_and_global_is_none(self):
+        panel = self.panel()
+        picked = []
+        panel.family_changed.connect(lambda name, family: picked.append((name, family)))
+        box = panel.families['lap']
+        box.setCurrentIndex(2)
+        box.setCurrentIndex(1)
+        box.setCurrentIndex(0)
+        self.assertEqual(picked, [('lap', 'Alpha Sans'), ('lap', ''), ('lap', None)])
+
+    def test_shown_from_the_app_says_nothing_back(self):
+        panel = self.panel()
+        picked = []
+        panel.family_changed.connect(lambda name, family: picked.append(name))
+        panel.global_family_changed.connect(picked.append)
+        panel.set_family('lap', 'Alpha Sans')
+        panel.set_global_family('Alpha Sans')
+        self.assertEqual(picked, [])
+        self.assertEqual(panel.families['lap'].currentText(), 'Alpha Sans')
+        self.assertEqual(panel.global_family.currentText(), 'Alpha Sans')
+
+    def test_a_font_no_longer_there_is_missing_and_kept(self):
+        panel = self.panel()
+        panel.set_family('lap', 'Gone Font')
+        self.assertEqual(panel.families['lap'].currentText(), 'Gone Font (missing)')
+        panel.set_fonts({'Alpha Sans': 'alpha.ttf', 'Beta Mono': 'beta.otf'}, '')
+        self.assertEqual(panel.families['lap'].currentText(), 'Gone Font (missing)')  # new fonts, same pick
+
+    def test_the_global_font_and_all_global(self):
+        from PySide6.QtWidgets import QPushButton
+
+        panel = self.panel()
+        chosen, every = [], []
+        panel.global_family_changed.connect(chosen.append)
+        panel.all_global_family_requested.connect(lambda: every.append(True))
+        panel.global_family.setCurrentIndex(1)
+        self.assertEqual(chosen, ['Alpha Sans'])
+        buttons = [b for b in panel.findChildren(QPushButton) if b.text() == 'All global']
+        self.assertEqual(len(buttons), 2)  # one for the text size, one for the font
+        buttons[1].click()
+        self.assertEqual(every, [True])
+
+
 if __name__ == '__main__':
     unittest.main()
