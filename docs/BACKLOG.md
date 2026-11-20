@@ -121,10 +121,10 @@ live, the log says whether it reads; (4) a Spectating kind of event for the pres
 itself), to see. What is left: nothing planned; tune the parts from what the user sees.
 
 ## 10. TurboHUD's memory grows on Linux (found 2026-11-20)
-189 to 542 MB in 18 min of racing, never down; about 100 MB is the drawn-text caches (capped, as meant), about
-250 MB not yet explained (`experiments/README.md`, "TurboHUD's own memory on Linux"). Next: a session with
-`TURBOHUD_TRACE_MEMORY=1`, then fix what its `memory parts:` and `memory grew:` lines point at. Then the Mac
-and Windows in a long race.
+189 to 542 MB in 18 min of racing. Found: the drawn-text images (capped at 64 MB, as meant) and the text
+outlines, 512 kept at about 220 KB each (about 114 MB), no longer kept (`fix/memory-growth`). Left: Python's
+blocks rise slowly (under 1 MB a minute): a session with `TURBOHUD_TRACE_MEMORY=1` says where. Then the Mac and
+Windows in a long race.
 
 ## Nice to have (ideas, not planned)
 Ideas talked over and left for later; none is being worked on. Take one up only when the user asks.

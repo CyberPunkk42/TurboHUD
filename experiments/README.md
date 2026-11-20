@@ -768,6 +768,13 @@ generation 2). Fast at first, then slower and flat: more like caches filling tha
   also lists the places in the code where Python's memory grew most since the last summary (`memory grew:`,
   tracemalloc; slower). Which of the three grows says where to look: Python's blocks (objects kept), the heap
   in use (Qt's or Python's data), or freed but held (memory freed in pieces glibc keeps, more with threads).
+- A race with that line (Coco Jambo, about 20 cars, 3 minutes): 234, 381, 420, 448, 453, 463 MB; glibc's heap in
+  use grew with it (133 to 363 MB), freed but held stayed 3-8 MB (no fragmentation). The biggest step (+147 MB in
+  30 s) came as the text outline cache filled from 182 to 512. Measured: a text's stroked outline with round
+  joins is 4,600-7,400 curve pieces, about 220 KB, and 512 of them held about 114 MB, to fill text images that
+  are kept anyway. Outlines are no longer kept (`outline_path`): 512 names now take about 8 MB. Once every cache
+  was full the total levelled off (453, 463 MB). Python's blocks still rise slowly (6,000-8,000 every 30 s,
+  under 1 MB a minute): to trace.
 
 ## TSU's sun, for a compass with north from it (2026-11-20, Windows, the user in a session of 4 races)
 

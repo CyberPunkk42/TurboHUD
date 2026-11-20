@@ -4,6 +4,13 @@ Every finished change, newest first: what changed, why, how it was checked and w
 Each branch adds its dated entry at the top. Where things stand now: `RESUME.md`; what is open:
 `docs/BACKLOG.md`.
 
+- 2026-11-20: Text outlines no longer kept (`fix/memory-growth`, backlog item 10). In a race with the new
+  `memory parts:` line (Linux, about 20 cars) glibc's heap in use grew 133 to 363 MB, with nothing freed but held;
+  the biggest step came as the outline cache filled. A text's stroked outline with round joins is 4,600-7,400
+  curve pieces, about 220 KB, and 512 were kept (about 114 MB) only to fill text images, which are kept themselves.
+  `outline_path` no longer keeps them (512 names: 8 MB, not 114); an outline is stroked again only when its image
+  has left the image cache (about 0.6 ms). Tests: outlines the same each time but not kept; all tests pass but the
+  two that fail on this Linux PC before too. Not yet seen in a race.
 - 2026-11-20: Where TurboHUD's memory goes, in the log (`fix/memory-growth`, backlog item 10, asked for by the
   user after a session on Linux: 189 to 542 MB in 18 min). The 30 s summary's `memory:` line is followed by
   `memory parts:` (Python's blocks in use, glibc's heap in use and freed but held on Linux, `c_heap`; the drawn

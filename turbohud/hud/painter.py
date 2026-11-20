@@ -198,13 +198,13 @@ def outline_width(size):
 
 
 def outline_path(text, size):
-    """The dark outline round a line of text, as a shape to fill. Stroking the text
-    each time it is drawn took most of a frame with many texts (the lap times list);
-    filling a kept shape is about five times quicker."""
+    """The dark outline round a line of text, as a shape to fill. Not kept: it is filled once
+    into the text's image (text_image), which is kept, and a stroked outline with round joins is
+    large, about 220 KB of curve pieces for a name: 512 kept held about 114 MB, the most of the
+    memory TurboHUD grew by in a race on Linux (measured with the user on 2026-11-20)."""
     return _outline(text, size, font_family())
 
 
-@lru_cache(maxsize=512)
 def _outline(text, size, family):
     stroker = QPainterPathStroker()
     stroker.setWidth(outline_width(size))
@@ -223,7 +223,7 @@ def cached_images():
     """How much the text and glyph images hold, for the log's memory parts (core.memory)."""
     return (
         f'{_images_size / (1 << 20):.0f} MB in {len(_images)} texts, glyphs {_pieces_size / (1 << 20):.1f} MB '
-        f'in {len(_pieces)}, paths {_path.cache_info().currsize} and outlines {_outline.cache_info().currsize}'
+        f'in {len(_pieces)}, paths {_path.cache_info().currsize}'
     )
 
 
