@@ -753,6 +753,29 @@ is far cheaper than real Mac windows, so benchmarks without real windows looked 
 - The log's `race reads` line gives trips a read, ms a trip and how much of that is on the
   game's memory; `HUD frames` gives the overlay's side.
 
+## TurboHUD's own memory on Linux (2026-11-20, the user in a session of 5 races)
+
+The log's `memory:` line rose from 189 MB at the start to 542 MB after 18 minutes and never went down:
+205 to 469 MB in about 4 minutes of hotlapping on a first track, to 513 MB in a race with about 20 cars, flat
+at 513-514 MB on the next two tracks, then to 542 MB on the last. Garbage collections were few and quick (no
+generation 2). Fast at first, then slower and flat: more like caches filling than an endless leak.
+- The drawn text images (`hud/painter.py`, capped at 64 MB of pixels) and glyph images (16 MB): drawing
+  180,000 different lap times and gaps in three sizes offscreen raised the resident size by 97-99 MB, flat
+  after the first 30,000. So about 100 MB of the growth is these caches, as meant. About 250 MB is not
+  explained yet.
+- To find the rest, the 30 s summary has a second line, `memory parts:` (Python's blocks in use, glibc's heap
+  in use and freed but held, the drawn-text caches). With `TURBOHUD_TRACE_MEMORY=1` set before starting, it
+  also lists the places in the code where Python's memory grew most since the last summary (`memory grew:`,
+  tracemalloc; slower). Which of the three grows says where to look: Python's blocks (objects kept), the heap
+  in use (Qt's or Python's data), or freed but held (memory freed in pieces glibc keeps, more with threads).
+- A race with that line (Coco Jambo, about 20 cars, 3 minutes): 234, 381, 420, 448, 453, 463 MB; glibc's heap in
+  use grew with it (133 to 363 MB), freed but held stayed 3-8 MB (no fragmentation). The biggest step (+147 MB in
+  30 s) came as the text outline cache filled from 182 to 512. Measured: a text's stroked outline with round
+  joins is 4,600-7,400 curve pieces, about 220 KB, and 512 of them held about 114 MB, to fill text images that
+  are kept anyway. Outlines are no longer kept (`outline_path`): 512 names now take about 8 MB. Once every cache
+  was full the total levelled off (453, 463 MB). Python's blocks still rise slowly (6,000-8,000 every 30 s,
+  under 1 MB a minute): to trace.
+
 ## TSU's sun, for a compass with north from it (2026-11-20, Windows, the user in a session of 4 races)
 
 Asked for by the user: could the compass take north from the game's sun? TSU's metadata (read only) has

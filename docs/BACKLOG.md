@@ -120,6 +120,12 @@ banner while spectating, from the camera TSU's cockpit view is read from (`spect
 live, the log says whether it reads; (4) a Spectating kind of event for the presets (Layouts > Load by
 itself), to see. What is left: nothing planned; tune the parts from what the user sees.
 
+## 10. TurboHUD's memory grows on Linux (found 2026-11-20)
+189 to 542 MB in 18 min of racing. Found: the drawn-text images (capped at 64 MB, as meant) and the text
+outlines, 512 kept at about 220 KB each (about 114 MB), no longer kept: a race now levels off near 300 MB. Left: Python's
+blocks rise slowly (under 1 MB a minute): a session with `TURBOHUD_TRACE_MEMORY=1` says where. Then the Mac and
+Windows in a long race.
+
 ## Nice to have (ideas, not planned)
 Ideas talked over and left for later; none is being worked on. Take one up only when the user asks.
 - **Offered earlier, not taken up:** the Mac's one-window canvas only as large as its sections; the

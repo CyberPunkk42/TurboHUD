@@ -33,11 +33,13 @@ class TextPathTests(unittest.TestCase):
 
         self.assertIs(text_path('0:44', 40), text_path('0:44', 40))
 
-    def test_outlines_are_kept_and_go_round_the_text(self):
+    def test_outlines_go_round_the_text_and_are_not_kept(self):
+        # About 220 KB each: 512 kept held about 114 MB in a race (2026-11-20). Their images are kept.
         from turbohud.hud.painter import outline_path, text_path
 
         outline = outline_path('0:44', 40)
-        self.assertIs(outline, outline_path('0:44', 40))
+        self.assertIsNot(outline, outline_path('0:44', 40))
+        self.assertEqual(outline, outline_path('0:44', 40))
         # The outline reaches a little beyond the letters on every side.
         self.assertTrue(outline.boundingRect().contains(text_path('0:44', 40).boundingRect()))
 
