@@ -635,4 +635,8 @@ nothing into the game's folders.
 
 When reporting a problem, say what you did and what you saw, and send `turbohud.log` right
 after it happened: it is replaced at the next start. The logs can hold player names and
-folder names: look through them first if you like.
+folder names: look through them first if you like. Every 30 seconds in a race the log says
+how much memory TurboHUD uses and where (`memory:` and `memory parts:`). If it keeps growing,
+start TurboHUD with `TURBOHUD_TRACE_MEMORY=1` set (on Linux and the Mac
+`TURBOHUD_TRACE_MEMORY=1 sh run_turbohud.sh`): the log then also names the places in TurboHUD
+whose memory grew (`memory grew:`). TurboHUD runs a little slower with it.

@@ -142,8 +142,8 @@ If TSU's bottle cannot be told apart from others, set `TURBOHUD_BOTTLE` to its n
 throttle and brake bars move in TSU's own steps (thirds) on the Mac, as the pad's
 triggers are read only on Linux. The reader's errors are in `bottle_reader.log`, next to
 `turbohud.log`. If the HUD lags or TSU stutters, `turbohud.log` shows how long the race
-reads took and when each search ran; it is replaced at the next start, so look before
-starting TurboHUD again.
+reads took, TurboHUD's own memory, and when each search ran; it is replaced at the next start,
+so look before starting TurboHUD again.
 
 ### Live race data on Windows
 Windows lets a program read another of the same user, so there is no launch option: TurboHUD
@@ -165,8 +165,9 @@ The full guide to every section, menu item, button and option is
   where their text sits, its size, line spacing and font (its **Text** tab; each section its own
   font, or the global one). Its **Layouts**
   window keeps five named presets, each with its own fonts (**Ctrl+Shift+1** to **5** load them), loads one by itself as a
-  recording, spectating, hotlapping, race or special event begins, and loads, shares or designs layouts per
-  screen size.
+  recording, spectating, hotlapping, race or special event begins (one you load yourself during an
+  event then stays for that kind of event until the session ends), and loads, shares or designs layouts
+  per screen size.
   **Lock** or Ctrl+Shift+L again ends it, and so does a race beginning.
 - **Settings…** sets the colours, the global font (your own `.ttf` or `.otf` files in
   `customization/fonts`), the size of all sections, the standings' columns, the

@@ -4,6 +4,9 @@ Every finished change, newest first: what changed, why, how it was checked and w
 Each branch adds its dated entry at the top. Where things stand now: `RESUME.md`; what is open:
 `docs/BACKLOG.md`.
 
+- 2026-11-20: The documents checked against today's changes (`docs/up-to-date`, asked for by the user). README.md:
+  a preset loaded by hand kept for the session, and the log's memory lines; USER_GUIDE.md: the memory lines and
+  TURBOHUD_TRACE_MEMORY=1 where it says how to report a problem; HOW_IT_WORKS: `memory.py` in the code map.
 - 2026-11-20: The compass hidden for now (`feature/compass-hidden`, asked for by the user: not for players yet, the
   implementation kept). `hud.COMPASS_AVAILABLE = False` leaves it out of RACE_SECTIONS (all of them are
   EVERY_RACE_SECTION), so it gets no window, no row in move mode's panel and none of its two options in the
