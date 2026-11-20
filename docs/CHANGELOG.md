@@ -4,6 +4,9 @@ Every finished change, newest first: what changed, why, how it was checked and w
 Each branch adds its dated entry at the top. Where things stand now: `RESUME.md`; what is open:
 `docs/BACKLOG.md`.
 
+- 2026-11-20: How to build TurboHUD, by example (`docs/building`, asked for by the user): a section in
+  `docs/HOW_IT_WORKS.md` with the steps and commands for Windows, macOS and Linux, from `tools/build_app.py`,
+  `get_rust.sh`, `get_mac_python.sh` and `build_linux.sh` (the Mac pinned-Python route marked not yet tried).
 - 2026-11-20: RESUME.md's list shortened (`docs/resume-shorter`, asked for by the user): 22 items to 8 short ones,
   what to try next on Linux; the checks on the Mac and Windows and the rare cases not yet seen went to backlog item
   14, each one's details staying in its changelog entry.
