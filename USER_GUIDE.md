@@ -131,8 +131,10 @@ place and the name always show; every other column can be turned off under **Set
   way (there the 19th car, slowed in the pits, has the fastest lap)
 - the last lap, or instead: **PIT** while in the pits, then the time from pit entry to pit
   exit with the time standing in the box in brackets; an orange **CUT** with the seconds
-  left while TSU slows that driver for a shortcut; an orange **JUMP** for a false start;
-  **DNF** for a car out of the race.
+  left while TSU slows that driver for a shortcut; an orange **JUMP** for a false start; in
+  orange too, **DNF** for a driver who retired (`/retire` in TSU's chat), **DSQ** for one TSU
+  disqualified, and **AFK** for one standing or crawling for over a minute outside the pits
+  (until they drive on). DNF and DSQ are TSU's own marks on the car, not a guess.
 A heading row names the columns (**Driver**, **Ovr**, **Gap**, **Best**, **Last**). Your own
 row is in the highlight colour. With more than 20 drivers it shows the leader and the
 drivers around you. Every column keeps room for its widest entry, so a pit stop, a penalty
@@ -218,7 +220,8 @@ flag, the name (up to 18 letters), **PIT** with its timers while in the pits (th
 gives up letters to them and ends in "…"), the clan tag (in a race with classes: the class
 and the place in it, `GT3 P7`, in the class's colour), the tire compound, and the live gap to
 you (or `+1 L` for a lap). A name in orange is a lap or more ahead of you in the race (let it
-by), in blue a lap or more behind. **DNF** marks a car out of the race. Spectating, it shows
+by), in blue a lap or more behind. **DNF**, **DSQ** and **AFK** show in the gap's place, as in
+the standings. Spectating, it shows
 the gaps to the leader. In the layouts TurboHUD comes with, its text is as large as the
 standings' or a little smaller (never below 10 px); to make it larger in your own layout, set
 its **Size px** in move mode, or drag a corner of it.

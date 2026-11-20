@@ -153,7 +153,7 @@ class _Retired:
     """Stands in for race.Retirements: one car out of the race."""
 
     def update(self, _state):
-        return frozenset({NAMES[RETIRED]})
+        return {NAMES[RETIRED]: 'DNF'}  # as race.Retirements: name -> what the lists show
 
 
 def _flag(country):
