@@ -1397,6 +1397,28 @@ class WideTextTests(unittest.TestCase):
         self.assertLess(smaller, 1.0)
         self.assertLessEqual(hud.content_size(rows, smaller, size_measure)[0], wide // 2 + 2)
 
+    def test_many_laps_of_fuel_or_tires_keep_the_text_size(self):
+        # Reported by the user on 2026-11-20: tires lasting ~100.0 laps drew smaller than the others.
+        sections = {s.name: s for s in hud.RACE_SECTIONS}
+        widest = {
+            'fuel': [hud.Row('Fuel 100.0%', 'medium', tail=race._laps_text(99.96) + '  +9.99%')],
+            'tires': [hud.Row('Tires 100%' + race._laps_text(9999.4), 'medium')],
+            'fuelfinish': [hud.Row(f'Finish {race.laps_number(-9999.4, sign=True)} laps', 'medium')],
+        }
+        for name, rows in widest.items():
+            for font in (13, 22, 41):
+                with self.subTest(name=name, font=font):
+                    width = hud.text_box(sections[name], (0, 0, 0, 0), font, size_measure, ink)[2]
+                    scale = hud.font_scale(font)
+                    self.assertEqual(hud.fitting_scale(rows, scale, width, size_measure), scale)
+
+    def test_laps_with_one_decimal_then_whole(self):
+        self.assertEqual(race.laps_number(12.34), '12.3')
+        self.assertEqual(race.laps_number(99.96), '100.0')
+        self.assertEqual(race.laps_number(123.4), '123')
+        self.assertEqual(race.laps_number(2.5, sign=True), '+2.5')
+        self.assertEqual(race.laps_number(-150.2, sign=True), '-150')
+
     def test_room_for_the_pedal_bars_too(self):
         rows = [hud.Row('000 km/h', 'medium')]
         wide = hud.content_size(rows, 1.0, size_measure)[0]

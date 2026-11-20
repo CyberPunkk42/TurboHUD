@@ -4,6 +4,13 @@ Every finished change, newest first: what changed, why, how it was checked and w
 Each branch adds its dated entry at the top. Where things stand now: `RESUME.md`; what is open:
 `docs/BACKLOG.md`.
 
+- 2026-11-20: Fuel, Tire wear and Fuel to finish keep their text size with many laps (`fix/wide-laps-same-size`,
+  reported by the user: the four car sections could not be made to look the same size). A live text wider than
+  the section's sample is drawn smaller to fit its box, and the samples had room for `~10.0 laps`, so tires
+  lasting `~100.0 laps` (or a big fuel margin) drew smaller than the rest. The samples now have room for `100.0`
+  (`hud.WIDE_LAPS`) and from 100 laps on the count is whole (`race.laps_number`), so up to 9999 laps the text
+  keeps its size; boxes are a digit wider. USER_GUIDE says so. Tests: the widest texts fit at three text sizes,
+  the lap formats. Not yet seen in the app.
 - 2026-11-20: How to build TurboHUD, by example (`docs/building`, asked for by the user): a section in
   `docs/HOW_IT_WORKS.md` with the steps and commands for Windows, macOS and Linux, from `tools/build_app.py`,
   `get_rust.sh`, `get_mac_python.sh` and `build_linux.sh` (the Mac pinned-Python route marked not yet tried).

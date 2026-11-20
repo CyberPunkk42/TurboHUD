@@ -3255,8 +3255,15 @@ def times_row(state):
     )
 
 
+def laps_number(laps, sign=False):
+    """`laps` with one decimal, or whole from 100 on: the sections' samples have room for '100.0'
+    (hud.WIDE_LAPS), so up to 9999 laps the text is never wider than its box and drawn smaller
+    (reported by the user on 2026-11-20: a tire's ~100.0 laps made it smaller than the others)."""
+    return f'{laps:{"+" if sign else ""}.{1 if abs(laps) < 100 else 0}f}'
+
+
 def _laps_text(laps):
-    return f'  ~{laps:.1f} laps' if laps is not None else ''
+    return f'  ~{laps_number(laps)} laps' if laps is not None else ''
 
 
 def fuel_margin(car, laps_to_go):
@@ -3345,7 +3352,11 @@ def car_sections(car, laps_to_go=None, speed_unit='kmh'):
             sections['fuelfinish'] = [Row('Finish -', 'medium')]
         else:
             sections['fuelfinish'] = [
-                Row(f'Finish {margin:+.1f} laps', 'medium', 'ahead' if margin >= 0 else 'behind')
+                Row(
+                    f'Finish {laps_number(margin, sign=True)} laps',
+                    'medium',
+                    'ahead' if margin >= 0 else 'behind',
+                )
             ]
     levels = {}
     if car.fuel_left is not None:

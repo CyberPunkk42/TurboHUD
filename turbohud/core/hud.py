@@ -492,6 +492,8 @@ def text_can_centre(section):
     return not any(row.right or row.middle or row.flag for row in rows)
 
 
+# The widest lap count the fuel and tire texts show (race.laps_number): one decimal up to 99.9, then whole.
+WIDE_LAPS = '100.0'
 SAMPLE_FASTEST_COLOR = '#c77dff'  # race.SESSION_BEST_COLOR (race imports this module): the fastest lap
 
 EVERY_RACE_SECTION = (
@@ -528,20 +530,20 @@ EVERY_RACE_SECTION = (
     Section(
         'fuel',
         'Fuel',
-        ((Row('Fuel 100.0%', 'medium', tail='  ~10.0 laps  +0.00%'),),),
+        ((Row('Fuel 100.0%', 'medium', tail=f'  ~{WIDE_LAPS} laps  +0.00%'),),),
         level=True,
         tip='Fuel left, how many laps it lasts, and how much you saved or burnt more than usual this lap',
     ),
     Section(
         'fuelfinish',
         'Fuel to finish',
-        ((Row('Finish +00.0 laps', 'medium'),),),
+        ((Row(f'Finish +{WIDE_LAPS} laps', 'medium'),),),
         tip='Laps of fuel to spare (green) or missing (red) at the finish: red means pit for fuel',
     ),
     Section(
         'tires',
         'Tire wear',
-        ((Row('Tires 100%  ~10.0 laps', 'medium'),),),
+        ((Row(f'Tires 100%  ~{WIDE_LAPS} laps', 'medium'),),),
         level=True,
         tip='Tire life left and the laps it lasts; only in events with tire wear',
     ),
