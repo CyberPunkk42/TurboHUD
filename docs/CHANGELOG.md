@@ -4,6 +4,12 @@ Every finished change, newest first: what changed, why, how it was checked and w
 Each branch adds its dated entry at the top. Where things stand now: `RESUME.md`; what is open:
 `docs/BACKLOG.md`.
 
+- 2026-11-20: Confirmed by the user in the running app on Windows: the compass (`feature/compass`); DNF after
+  /retire, DSQ and AFK, in the pits too (`fix/dnf-only-retired`, `fix/afk-in-pits`); the time left standing on
+  the grid and counting from the lights going out (`fix/time-left-from-lights-out`: lap 1 begins at lights out,
+  as the code read TSU); the race leader banner in one grey with 0.67 s fades (`fix/leader-banner-plain-grey`)
+  and the panel's General and Text tabs (`feature/panel-text-tab`). Taken off RESUME.md's list; the tabs on the
+  Mac and Linux and the rest of the banner's list stay there.
 - 2026-11-20: A compass (`feature/compass`, asked for by the user, the turning dial and "047° NE" chosen by them):
   a new drawing section under Race. TSU has no north, so north is up on the track map (+z), which never turns a
   track (`map_transform`); the heading is the local car's `forward` (else its velocity) in whole degrees clockwise
