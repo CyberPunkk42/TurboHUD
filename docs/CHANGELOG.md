@@ -4,6 +4,11 @@ Every finished change, newest first: what changed, why, how it was checked and w
 Each branch adds its dated entry at the top. Where things stand now: `RESUME.md`; what is open:
 `docs/BACKLOG.md`.
 
+- 2026-11-20: Every shipped layout now the user's own design (`chore/ship-all-designs`, asked for by the user): their
+  new 3840x2160 design (saved on the design screen at 02:28) replaces the one fitted from 5120x1440; the five
+  other sizes and the starting presets were theirs already (no change). Made with `tools/make_layouts.py`
+  (`--designed` for all five other sizes). In it the Watched driver banner, off-centre, overlaps the delta;
+  kept as designed. Tests pass unchanged.
 - 2026-11-20: The user's own designs shipped for four sizes (`chore/ship-new-presets`, asked for by the user): the
   layouts they made on the design screen for 1920x1080, 2294x1490, 2560x1440 and 2560x1600 are now the shipped
   ones for those sizes, as designed; 3840x2160 stays fitted from their 5120x1440 (their own file for it is from
