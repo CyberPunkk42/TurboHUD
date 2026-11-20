@@ -28,6 +28,10 @@ Kept short: the state now and what to do next. Every change, with how it was che
   The repository is kept in step with a private GitHub repository.
 
 ## To try next (most recent first)
+0. **TurboHUD's memory on Linux** (`fix/memory-growth`, backlog item 10): it grew 189 to 542 MB in 18 min of
+   racing; about 100 MB is the drawn-text caches, as meant. Race a few tracks with TurboHUD started as
+   `TURBOHUD_TRACE_MEMORY=1 sh run_turbohud.sh`, then send the log: its `memory parts:` and `memory grew:` lines
+   say where the rest goes.
 1. **The compass's north from the sun** (confirmed on 5 tracks, 2026-11-20): still to see, **Compass north from
    the sun** turned off in a race: north up on the map, no small sun.
 2. **Move mode on Hyprland** (`fix/place-label-hyprland-drag`): sections drag again, with their place label
@@ -80,7 +84,7 @@ Kept short: the state now and what to do next. Every change, with how it was che
    right, on by default there.
 17. **The place label in move mode** (`X  Y  width×height`): on the Mac and Hyprland; the designed
    size's numbers on the design screen; none after a preset, Undo or Redo.
-18. **TurboHUD's own memory** in the log: on Linux, and in a long race on each system (does it grow?).
+18. **TurboHUD's own memory** on the Mac and Windows in a long race (does it grow?). On Linux: see item 1.
 19. **One window on Linux** (backlog item 1c): the window count probe over TSU on Hyprland.
 20. **The tester** (backlog item 0): his stutter times and a try at 10 reads a second.
 21. **Not yet seen**: a Single Player event and Custom races on the Mac and Linux; a replay after a race

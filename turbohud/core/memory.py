@@ -9,11 +9,16 @@ microsecond, once every 30 s: nothing the HUD would notice. None where it cannot
 
 import ctypes
 import logging
+import os
 import sys
+import tracemalloc
 
 log = logging.getLogger(__name__)
 
 MB = 1024 * 1024
+TRACE_VARIABLE = 'TURBOHUD_TRACE_MEMORY'  # set to 1: the log says where Python's memory grew (slower)
+TRACE_SITES = 10  # places in the code shown in each such summary
+TRACE_LEAST = 50 * 1024  # bytes: a place that grew less is left out
 
 
 class _TaskVmInfo(ctypes.Structure):
@@ -107,13 +112,55 @@ def own_memory(platform=sys.platform):
     return None
 
 
+class _MallInfo2(ctypes.Structure):
+    """glibc's struct mallinfo2 (malloc.h, glibc 2.33 and later), all in bytes."""
+
+    _fields_ = [
+        (name, ctypes.c_size_t)
+        for name in ('arena', 'ordblks', 'smblks', 'hblks', 'hblkhd', 'usmblks', 'fsmblks')
+        + ('uordblks', 'fordblks', 'keepcost')
+    ]
+
+
+def c_heap(platform=sys.platform):
+    """(in use, held free, in large blocks of their own) bytes of the C heap (glibc's malloc, which
+    Python, Qt and their threads use) on Linux, or None. Much held free is memory freed but kept by
+    malloc in pieces (fragmentation, more with threads): the resident size then stays high though
+    TurboHUD holds less (looked into with the user on 2026-11-20: +350 MB in 18 min of racing)."""
+    if not platform.startswith('linux'):
+        return None
+    try:
+        call = ctypes.CDLL(None).mallinfo2
+    except (OSError, AttributeError):
+        return None
+    call.restype = _MallInfo2
+    info = call()
+    return info.uordblks + info.hblkhd, info.fordblks, info.hblkhd
+
+
 class MemoryWatch:
-    """TurboHUD's memory in one log line on each flush (the 30 s summary), with the most seen."""
+    """TurboHUD's memory in one log line on each flush (the 30 s summary), with the most seen.
+
+    With `parts` added (add_part: a name and a callable giving a text, or None to leave it out) a
+    second line says where it is; with tracing on (TRACE_VARIABLE, or trace()) the places in the
+    code where Python's memory grew most since the last flush, a line each."""
 
     def __init__(self, read=own_memory, log_line=None):
         self._read = read
         self._log_line = log_line or log.info
         self.most = 0
+        self.parts = []  # (name, callable)
+        self._snapshot = None  # the last trace's tracemalloc snapshot, while tracing
+
+    def add_part(self, name, describe):
+        self.parts.append((name, describe))
+
+    def trace(self):
+        """Follow where Python allocates from now on (tracemalloc: slower, for a look into growth)."""
+        if not tracemalloc.is_tracing():
+            tracemalloc.start()
+        self._snapshot = tracemalloc.take_snapshot()
+        self._log_line('memory: tracing where Python allocates (%s)', TRACE_VARIABLE)
 
     def flush(self):
         size = self._read()
@@ -121,9 +168,75 @@ class MemoryWatch:
             return
         self.most = max(self.most, size)
         self._log_line('memory: TurboHUD %.0f MB (most so far %.0f MB)', size / MB, self.most / MB)
+        shown = []
+        for name, describe in self.parts:
+            try:
+                text = describe()
+            except (
+                OSError,
+                ValueError,
+                TypeError,
+                AttributeError,
+                RuntimeError,
+            ) as error:  # never stops the HUD
+                text = f'not read ({error})'
+            if text is not None:
+                shown.append(f'{name} {text}')
+        if shown:
+            self._log_line('memory parts: %s', '; '.join(shown))
+        if self._snapshot is not None:
+            self._log_growth()
+
+    def _log_growth(self):
+        snapshot = tracemalloc.take_snapshot().filter_traces(
+            (tracemalloc.Filter(False, tracemalloc.__file__),)
+        )
+        grown = [d for d in snapshot.compare_to(self._snapshot, 'lineno') if d.size_diff >= TRACE_LEAST][
+            :TRACE_SITES
+        ]
+        traced, _peak = tracemalloc.get_traced_memory()
+        self._log_line('memory traced: Python %.1f MB in all', traced / MB)
+        for diff in grown:
+            frame = diff.traceback[0]
+            self._log_line(
+                'memory grew: %+.2f MB (%+d blocks), %.2f MB now, at %s:%d',
+                diff.size_diff / MB,
+                diff.count_diff,
+                diff.size / MB,
+                _short(frame.filename),
+                frame.lineno,
+            )
+        self._snapshot = snapshot
+
+
+def _short(filename):
+    """A file's path from its package on (turbohud/..., or after site-packages), not the whole path, which
+    would name the user's folders in the log."""
+    parts = filename.replace('\\', '/').split('/')
+    for anchor in ('turbohud', 'site-packages', 'lib'):
+        if anchor in parts:
+            return '/'.join(parts[parts.index(anchor) + (anchor != 'turbohud') :])
+    return parts[-1]
+
+
+def python_objects():
+    """Python's memory blocks in use, a count that grows where Python objects pile up."""
+    return f'{sys.getallocatedblocks():,} blocks'
+
+
+def c_heap_text():
+    heap = c_heap()
+    if heap is None:
+        return None
+    used, free, large = heap
+    return f'{used / MB:.0f} MB in use ({large / MB:.0f} MB of it in large blocks), {free / MB:.0f} MB freed but held'
+
+
+def tracing_asked(environ=None):
+    return (os.environ if environ is None else environ).get(TRACE_VARIABLE, '') not in ('', '0')
 
 
 watch = MemoryWatch()
 
 
-__all__ = ['MemoryWatch', 'own_memory', 'watch']
+__all__ = ['MemoryWatch', 'c_heap', 'own_memory', 'python_objects', 'tracing_asked', 'watch']

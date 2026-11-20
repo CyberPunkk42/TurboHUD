@@ -753,6 +753,22 @@ is far cheaper than real Mac windows, so benchmarks without real windows looked 
 - The log's `race reads` line gives trips a read, ms a trip and how much of that is on the
   game's memory; `HUD frames` gives the overlay's side.
 
+## TurboHUD's own memory on Linux (2026-11-20, the user in a session of 5 races)
+
+The log's `memory:` line rose from 189 MB at the start to 542 MB after 18 minutes and never went down:
+205 to 469 MB in about 4 minutes of hotlapping on a first track, to 513 MB in a race with about 20 cars, flat
+at 513-514 MB on the next two tracks, then to 542 MB on the last. Garbage collections were few and quick (no
+generation 2). Fast at first, then slower and flat: more like caches filling than an endless leak.
+- The drawn text images (`hud/painter.py`, capped at 64 MB of pixels) and glyph images (16 MB): drawing
+  180,000 different lap times and gaps in three sizes offscreen raised the resident size by 97-99 MB, flat
+  after the first 30,000. So about 100 MB of the growth is these caches, as meant. About 250 MB is not
+  explained yet.
+- To find the rest, the 30 s summary has a second line, `memory parts:` (Python's blocks in use, glibc's heap
+  in use and freed but held, the drawn-text caches). With `TURBOHUD_TRACE_MEMORY=1` set before starting, it
+  also lists the places in the code where Python's memory grew most since the last summary (`memory grew:`,
+  tracemalloc; slower). Which of the three grows says where to look: Python's blocks (objects kept), the heap
+  in use (Qt's or Python's data), or freed but held (memory freed in pieces glibc keeps, more with threads).
+
 ## TSU's sun, for a compass with north from it (2026-11-20, Windows, the user in a session of 4 races)
 
 Asked for by the user: could the compass take north from the game's sun? TSU's metadata (read only) has

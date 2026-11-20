@@ -4,6 +4,15 @@ Every finished change, newest first: what changed, why, how it was checked and w
 Each branch adds its dated entry at the top. Where things stand now: `RESUME.md`; what is open:
 `docs/BACKLOG.md`.
 
+- 2026-11-20: Where TurboHUD's memory goes, in the log (`fix/memory-growth`, backlog item 10, asked for by the
+  user after a session on Linux: 189 to 542 MB in 18 min). The 30 s summary's `memory:` line is followed by
+  `memory parts:` (Python's blocks in use, glibc's heap in use and freed but held on Linux, `c_heap`; the drawn
+  text and glyph caches, `cached_images`). Started with `TURBOHUD_TRACE_MEMORY=1`, it also lists where Python's
+  memory grew most since the last summary (`memory grew:`, tracemalloc; slower; file paths from their package
+  on, so no folder names). Measured offscreen: the drawn-text caches account for about 100 MB, flat once full;
+  the rest is to find with a traced session (`experiments/README.md`). Tests: the parts line, a part that cannot
+  be read, tracing naming the place that grew, only when asked, the short paths, the heap on Linux; all tests
+  pass but the two that fail on this Linux PC before too; a 6 s start traced logged the lines.
 - 2026-11-20: Confirmed by the user in races on Linux: the compass's north from the track's sun
   (`feature/compass-north-from-sun`). In 5 races (Road Atlanta, Coco Jambo, Giza, Abu Dhabi, Sebring; mornings
   and afternoons, the default sun and suns turned by a track's maker) the sun or the car's shadow was where the

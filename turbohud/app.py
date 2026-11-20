@@ -524,7 +524,14 @@ def run(args, folder):
         text_box,
     )
     from turbohud.core.hud import players_section as nearby_section
-    from turbohud.hud.painter import load_font_files, set_family, text_ink, text_width, use_game_flags
+    from turbohud.hud.painter import (
+        cached_images,
+        load_font_files,
+        set_family,
+        text_ink,
+        text_width,
+        use_game_flags,
+    )
     from turbohud.overlay import (
         HOTKEY_LOCK,
         HOTKEY_LOCK_BACKUP,
@@ -2419,6 +2426,12 @@ def run(args, folder):
         stalls.watch.flush()
         memory.watch.flush()
 
+    # Where its memory is (looked into with the user on 2026-11-20: +350 MB in 18 min of racing on Linux).
+    memory.watch.add_part('Python objects', memory.python_objects)
+    memory.watch.add_part('C heap', memory.c_heap_text)
+    memory.watch.add_part('drawn texts', cached_images)
+    if memory.tracing_asked():
+        memory.watch.trace()
     memory.watch.flush()  # once at the start, so a log without a race has it too
     frames = FrameTimes(
         time.monotonic,

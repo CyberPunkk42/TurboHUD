@@ -219,6 +219,14 @@ _images = OrderedDict()
 _images_size = 0
 
 
+def cached_images():
+    """How much the text and glyph images hold, for the log's memory parts (core.memory)."""
+    return (
+        f'{_images_size / (1 << 20):.0f} MB in {len(_images)} texts, glyphs {_pieces_size / (1 << 20):.1f} MB '
+        f'in {len(_pieces)}, paths {_path.cache_info().currsize} and outlines {_outline.cache_info().currsize}'
+    )
+
+
 def text_image(text, size, color, outline, ratio):
     """(image, left, top) of a line of outlined text, for `ratio` device pixels to a pixel;
     `left` and `top` are from the text's start on its baseline to the image's corner.
