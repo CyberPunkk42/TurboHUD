@@ -4,6 +4,13 @@ Every finished change, newest first: what changed, why, how it was checked and w
 Each branch adds its dated entry at the top. Where things stand now: `RESUME.md`; what is open:
 `docs/BACKLOG.md`.
 
+- 2026-11-20: The design screen on Hyprland (`fix/design-screen-hyprland`, reported by the user): its yellow frame
+  opened at Qt's 640×480 in the screen's corner, and its sections went back to where they had been, then were
+  pulled into the frame one by one (`back in the frame` in the log). TurboHUD's moves on Hyprland went through
+  Hyprland only, so Qt kept the old place: a window not yet known to Hyprland (the frame, opened the first time)
+  was not moved at all, and a window brought in front again was placed where Qt had it. `Native.move_window` now
+  tells Qt the place too. Tests: a move before Hyprland knows the window, then brought in front: placed at the new
+  place; a move through Hyprland keeps Qt's place in step. Not yet seen by hand.
 - 2026-11-20: Move mode and TurboHUD's windows on Hyprland (`fix/place-label-hyprland-drag`, reported by the user
   on Omarchy). (1) A section could not be dragged: at the press its place label opened as a new window, at Qt's
   default 640×480 in the screen's corner (the log), and a window opening there takes the focus, which ended the

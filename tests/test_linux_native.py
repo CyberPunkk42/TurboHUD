@@ -217,6 +217,29 @@ class LinuxNativeTests(unittest.TestCase):
         native.to_front(widget)
         self.assertEqual(fronts, ['0xlabel'])
 
+    def test_a_move_tells_qt_too_so_a_raise_keeps_the_new_place(self):
+        # The design screen: its frame opened at 640×480 in the corner, and its sections went back
+        # to their old places as they were brought in front (reported by the user on 2026-11-20).
+        from PySide6.QtWidgets import QWidget
+
+        hypr = FakeHypr()
+        placed = []
+        hypr.own_window = lambda pid, title: '0xsection'
+        hypr.place = lambda address, *place, focusable=False: placed.append(place) or True
+        native = self.native(hypr)
+        widget = QWidget()
+        self.addCleanup(widget.close)
+        widget.setGeometry(10, 10, 100, 50)
+        native.move_window(widget, (700, 300, 200, 80), settle=True)  # not known to Hyprland yet
+        self.assertEqual(widget.geometry().getRect(), (700, 300, 200, 80))
+        native.raise_window(widget)
+        while native.waiting:
+            native._place_next()
+        self.assertEqual(placed[-1], (700, 300, 200, 80))
+        native.move_window(widget, (720, 310, 200, 80))  # known now: moved through Hyprland
+        self.assertEqual(hypr.moved, ('0xsection', 720, 310))
+        self.assertEqual(widget.geometry().getRect(), (720, 310, 200, 80))
+
     def test_hyprland_keeps_the_place_labels_open(self):
         self.assertTrue(self.native(FakeHypr()).keeps_labels_open)
         self.assertFalse(self.native(None).keeps_labels_open)
