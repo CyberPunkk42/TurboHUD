@@ -4,6 +4,14 @@ Every finished change, newest first: what changed, why, how it was checked and w
 Each branch adds its dated entry at the top. Where things stand now: `RESUME.md`; what is open:
 `docs/BACKLOG.md`.
 
+- 2026-11-20: The compass hidden for now (`feature/compass-hidden`, asked for by the user: not for players yet, the
+  implementation kept). `hud.COMPASS_AVAILABLE = False` leaves it out of RACE_SECTIONS (all of them are
+  EVERY_RACE_SECTION), so it gets no window, no row in move mode's panel and none of its two options in the
+  settings window or the icon's menu. Its places stay: `save` and `save_preset` keep the places of sections not
+  offered now, so preset 5's compass comes back with it. Its tooltip now says north is from the sun. Taken out of
+  README.md, QUICK_START.md and USER_GUIDE.md (their text is in commit 89cacf1, backlog item 13); HOW_IT_WORKS
+  marks it hidden. Tests: built but not offered, the drawing tests on the section itself, the lists of sections
+  without it. All tests pass but the two that fail on this Linux PC before too. Not yet seen in the app.
 - 2026-11-20: Ungroup all (`feature/ungroup-all`, asked for by the user): a button at the end of move mode's group
   row ("Same text size and width, group:") takes every section out of its group at once, one step for Undo
   (`ungroup_all` in `app.py`, `MovePanel.ungroup_all`); greyed out while no section is in a group. The guides say

@@ -1408,7 +1408,10 @@ class MovePanelPresetTests(unittest.TestCase):
         tinted = {
             s.name for s in RACE_SECTIONS if not s.drawing and not s.background
         }  # a background is its own
-        self.assertEqual(set(panel.tints), tinted | {'trackmap', 'compass'})  # the compass: its dark disc
+        offered = {s.name for s in RACE_SECTIONS}
+        self.assertEqual(
+            set(panel.tints), tinted | ({'trackmap', 'compass'} & offered)
+        )  # the compass: its disc
         panel.tints['trackmap'].setChecked(True)
         self.assertEqual(got.pop(), ('trackmap', True))
         panel.tints['fuel'].setChecked(True)
@@ -2287,7 +2290,7 @@ class CompassDrawingTests(unittest.TestCase):
         cls.app = QApplication.instance() or QApplication([])
 
     def window(self):
-        from turbohud.core.hud import RACE_SECTIONS
+        from turbohud.core.hud import EVERY_RACE_SECTION
         from turbohud.core.settings import Theme
         from turbohud.overlay.window import SectionWindow
 
@@ -2295,7 +2298,8 @@ class CompassDrawingTests(unittest.TestCase):
             def raise_window(self, window):
                 return 'test'
 
-        window = SectionWindow(Native(), Theme(), next(s for s in RACE_SECTIONS if s.name == 'compass'))
+        # Built, though not offered yet (hud.HIDDEN_SECTIONS): from every section.
+        window = SectionWindow(Native(), Theme(), next(s for s in EVERY_RACE_SECTION if s.name == 'compass'))
         self.addCleanup(window.close)
         window.resize(150, 176)
         window.set_locked(True)

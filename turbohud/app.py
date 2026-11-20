@@ -861,7 +861,10 @@ def run(args, folder):
         places = {}
         for name, window in windows.items():
             places[name] = section_place(window, window.placement())
-        settings = replace(settings, sections=places, backdrop=all_tinted())
+        kept = {
+            name: place for name, place in settings.sections.items() if name not in windows
+        }  # hidden ones
+        settings = replace(settings, sections={**kept, **places}, backdrop=all_tinted())
         write_settings()
 
     def section_place(window, box):
@@ -1816,7 +1819,14 @@ def run(args, folder):
         nonlocal settings, last_preset
         last_preset = number
         save()
-        presets = {**settings.presets, number: {name: settings.sections[name] for name in windows}}
+        # A section not offered now (hud.HIDDEN_SECTIONS) keeps its place in the preset.
+        kept = {
+            name: place for name, place in settings.presets.get(number, {}).items() if name not in windows
+        }
+        presets = {
+            **settings.presets,
+            number: {**kept, **{name: settings.sections[name] for name in windows}},
+        }
         fonts = {**settings.preset_fonts, number: settings.font_family}  # its global font with it
         settings = replace(settings, presets=presets, preset_fonts=fonts)
         write_settings()
