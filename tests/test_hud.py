@@ -603,6 +603,7 @@ class SectionTests(unittest.TestCase):
                 'deltabar',
                 'radar',
                 'trackmap',
+                'compass',
             ],
         )
         self.assertEqual(len(set(names)), len(names))
@@ -1058,7 +1059,8 @@ class CentreTests(unittest.TestCase):
 
     def test_only_the_drawings_have_centre_buttons(self):
         self.assertEqual(
-            {s.name for s in hud.RACE_SECTIONS if s.drawing}, {'blueflag', 'deltabar', 'radar', 'trackmap'}
+            {s.name for s in hud.RACE_SECTIONS if s.drawing},
+            {'blueflag', 'deltabar', 'radar', 'trackmap', 'compass'},
         )
 
 
@@ -1252,7 +1254,7 @@ class TextSizeTests(unittest.TestCase):
 
     def test_only_text_sections_have_a_text_size(self):
         drawn = {s.name for s in hud.RACE_SECTIONS if not hud.is_text_section(s)}
-        self.assertEqual(drawn, {'deltabar', 'trackmap', 'radar', 'blueflag'})
+        self.assertEqual(drawn, {'deltabar', 'trackmap', 'radar', 'blueflag', 'compass'})
 
 
 class ResizeEdgeTests(unittest.TestCase):

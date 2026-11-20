@@ -2710,6 +2710,9 @@ def race_sections(
         # It follows the cars all the same, so it comes back at once.
         if view is not None and not (radar_cockpit_only and state.cockpit is False):
             sections['radar'] = view
+        compass = compass_view(state.players)
+        if compass is not None:
+            sections['compass'] = compass  # in the section's own slot: a CompassView, not rows
         if track_map is not None and state.on_a_track:  # no map, nor a track learnt, in an arena
             shown = track_map.update(
                 state,
@@ -4644,6 +4647,46 @@ class Blip:
     class_color: str | None = (
         None  # a car of another class than the local one: its class's colour (radar_class_colors)
     )
+
+
+# The compass (asked for by the user on 2026-11-20): which way the car points. TSU has no north, so
+# north is up on the track map, which never turns the track (trackmap.map_transform: x to the right,
+# z up): 0° up the map (+z), 90° to its right (+x), 180° down, 270° to its left.
+COMPASS_POINTS = ('N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW')
+
+
+@dataclass(frozen=True)
+class CompassView:
+    """What the compass shows: the car's heading in whole degrees clockwise from north, 0 to 359."""
+
+    heading: int
+
+    @property
+    def text(self):
+        """The readout, such as '047° NE': the degrees, then the nearest of the eight points."""
+        return f'{self.heading:03d}° {COMPASS_POINTS[round(self.heading / 45) % 8]}'
+
+
+def heading_degrees(direction):
+    """Degrees clockwise from north (up on the track map, +z) of a ground direction (x, z),
+    0 to under 360; None for no direction."""
+    if direction is None:
+        return None
+    x, z = direction
+    if not (math.isfinite(x) and math.isfinite(z)) or (x == 0 and z == 0):
+        return None
+    return math.degrees(math.atan2(x, z)) % 360
+
+
+def compass_view(players):
+    """The compass for the local car ("you", or the driver a replay follows): the way its nose
+    points, else the way it moves; None where neither is known (spectating: no car of one's own).
+    Whole degrees, so a car going straight does not redraw it at every read."""
+    me = next((p for p in players if p.local), None)
+    if me is None:
+        return None
+    heading = heading_degrees(me.forward) if me.forward is not None else heading_degrees(me.velocity)
+    return None if heading is None else CompassView(round(heading) % 360)
 
 
 @dataclass(frozen=True)

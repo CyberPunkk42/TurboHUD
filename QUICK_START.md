@@ -1,7 +1,7 @@
 # TurboHUD - Quick Start
 
 TurboHUD is an overlay for Turbo Sliders Unlimited: lap times, standings, the cars around you,
-fuel, tires, a track map, a radar, flags and more, on top of the running game. It only reads
+fuel, tires, a track map, a radar, a compass, flags and more, on top of the running game. It only reads
 the game; it never changes it. Every part is explained in detail in `User Guide.txt`.
 
 ## 1. Install
@@ -86,6 +86,9 @@ Hover over a section's name in the move-mode panel for a short explanation.
   each with **Nearby cars: only the leader and the cars next to you** off), with the gap to each; orange a lap or more ahead (let them by), blue a lap or more behind.
 - **Track map**: the track learnt from where the cars drive, with you and the cars near you.
 - **Radar**: cars close to you, seen from above: red beside you, yellow closing in.
+- **Compass**: which way your car points, north being up on the track map: a dial that turns
+  under a red needle, and the degrees ("047° NE"); **Compass in colour-blind colours** makes the
+  needle blue.
 - **Blue flag**: a faster car about to lap you.
 - **Yellow flag**: an incident in your sector or the next, who and what.
 - **Penalties**: SHORTCUT with the seconds left, or JUMP START.

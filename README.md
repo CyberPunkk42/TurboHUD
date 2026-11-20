@@ -7,7 +7,7 @@ Fullscreen mode too.
 Early version. On Linux, with TSU started through TurboHUD's memory probe (see
 [Live lap times on Linux](#live-lap-times-on-linux)), the HUD shows the live race: lap
 times and the delta to your best lap, fuel, tires, health, the draft, speed with pedal
-bars, the nearby cars with gaps, yellow and blue flags, a radar, a track map, a banner
+bars, the nearby cars with gaps, yellow and blue flags, a radar, a track map, a compass, a banner
 for a new race leader and the winner, and, while watching, a battle warning and the watched
 driver's name (see
 [Use](#use)). It works offline, in hotlaps, in a Custom race, online (as a guest, as a host
@@ -158,7 +158,7 @@ The full guide to every section, menu item, button and option is
 [USER_GUIDE.md](USER_GUIDE.md) (in every download as `User Guide.txt`). In short:
 
 - The HUD is made of **sections** (race progress, delta, fuel, tire wear, nearby cars, standings, flags,
-  radar, track map and more), each in its own box. Locked, clicks go through them to the game.
+  radar, track map, compass and more), each in its own box. Locked, clicks go through them to the game.
 - **Ctrl+Shift+L** (or **Move mode** in the TurboHUD icon's menu; on Linux outside
   Hyprland `TurboHUD --toggle`) switches to **move mode**: drag, nudge and size the sections, and use
   the panel to show or hide them, group, centre and tint them (its **General** tab) and set
