@@ -112,6 +112,19 @@ class LayoutsWindowTests(unittest.TestCase):
         panel.show_preset_status('Preset 2 Race saved')
         self.assertEqual(panel.layouts.status.text(), '\u2713 Preset 2 Race saved')
 
+    def test_it_shows_the_preset_in_use_as_the_panel_does(self):
+        # Asked for by the user on 2026-11-21: the layouts window says which preset is in use too.
+        from turbohud.core.hud import RACE_SECTIONS
+        from turbohud.overlay.window import MovePanel
+
+        panel = MovePanel(FakeNative(), RACE_SECTIONS, True)
+        self.addCleanup(panel.close)
+        self.assertEqual(panel.layouts.current.text(), 'Preset: none')
+        panel.set_current_preset('Preset: 3 Race (changed)')
+        self.assertEqual(panel.layouts.current.text(), panel.current_preset.text())
+        self.assertEqual(panel.layouts.current.styleSheet(), panel.current_preset.styleSheet())
+        self.assertEqual(panel.layouts.current.toolTip(), panel.current_preset.toolTip())
+
     def test_names_set_elsewhere_say_nothing_back(self):
         window = self.window()
         got = []

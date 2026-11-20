@@ -82,6 +82,14 @@ class LayoutsWindow(QWidget):
         outer.addWidget(QLabel('<b>TurboHUD - Layouts</b>'))
 
         outer.addWidget(self._heading('Presets'))
+        # The preset in use, as move mode's panel shows it (asked for by the user on 2026-11-21):
+        # set_current_preset.
+        self.current = QLabel('Preset: none')
+        self.current.setStyleSheet(f'color: {STATUS_COLOUR}; font-weight: bold;')
+        self.current.setToolTip(
+            'The preset the layout is in now; (changed): moved on from the one loaded or saved last'
+        )
+        outer.addWidget(self.current)
         grid = QGridLayout()
         grid.setHorizontalSpacing(4)
         grid.setVerticalSpacing(3)
@@ -212,6 +220,7 @@ class LayoutsWindow(QWidget):
         outer.addLayout(row)
         self.set_designing(False)
         self._show_presets()
+        self.set_current_preset('Preset: none')
         self.adjustSize()
 
     @staticmethod
@@ -261,6 +270,10 @@ class LayoutsWindow(QWidget):
                 )
         for buttons in self.auto_buttons.values():
             buttons[OFF].setToolTip('No preset loads by itself for this mode')
+
+    def set_current_preset(self, text):
+        """Show the preset in use, `text` (settings.preset_shown), as move mode's panel does."""
+        self.current.setText(text)
 
     def set_presets_saved(self, numbers):
         self.saved = set(numbers)
