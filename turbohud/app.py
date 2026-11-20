@@ -215,14 +215,46 @@ def start_layout(settings, screen, layout, measure, ink, folder, shipped=None):
     from turbohud.core import presets
 
     sections = {section.name: section for section in layout}
+    first = not settings.sections  # a first start: the starting presets too, whichever layout
     own = presets.custom_for(screen[2:], folder) if folder is not None else None
     if own is not None and own[0] != settings.applied_preset:
         log.info('the layout for %dx%d from customization/display_presets', screen[2], screen[3])
         settings = with_layout(settings, presets.on_screen(own[1], screen[2:]), screen, sections)
-        return replace(settings, applied_preset=own[0])
-    if not settings.sections:
-        return first_start_layout(settings, screen, layout, measure, ink, shipped)
+        settings = replace(settings, applied_preset=own[0])
+    elif first:
+        settings = first_start_layout(settings, screen, layout, measure, ink, shipped)
+    if first:
+        settings = with_starting_presets(settings, screen, layout, measure, ink, shipped)
     return settings
+
+
+def with_starting_presets(settings, screen, layout, measure, ink, folder=None):
+    """The settings with TurboHUD's starting presets (presets.STARTING_FILE in `folder`,
+    assets/presets) fitted to `screen` (x, y, width, height), with their names and Load by itself
+    choices, where the player has no preset yet (asked for by the user on 2026-11-20). Each text
+    size is kept as the preset has it. Unchanged without the file."""
+    from turbohud.core import presets
+
+    if settings.presets:
+        return settings
+    found = presets.read_starting(Path(folder or asset_path('presets')) / presets.STARTING_FILE)
+    if found is None:
+        return settings
+    size, kept, names, auto = found
+    sections = {section.name: section for section in layout}
+    fitted = {}
+    for number, places in kept.items():
+        if tuple(size) != tuple(screen[2:]):
+            places = presets.fit_layout(places, size, screen[2:], sections, measure, ink)
+        places = presets.absolute(presets.on_screen(places, screen[2:]), screen)
+        fitted[number] = presets.kept_sections(places, sections)
+    log.info('first start: presets %s, made for %dx%d', ', '.join(map(str, sorted(fitted))), *size)
+    return replace(
+        settings,
+        presets=fitted,
+        preset_names={**names, **settings.preset_names},
+        auto_presets=settings.auto_presets or auto,
+    )
 
 
 def asset_path(name, bundle=None):

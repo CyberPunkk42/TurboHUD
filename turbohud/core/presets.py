@@ -189,7 +189,41 @@ def fit_layout(places, from_size, to_size, sections, measure, ink):
         x = round(min(max(map_x(place.x) + spare_x * share_x, 0), max(to_size[0] - width, 0)))
         y = round(min(max(map_y(place.y) + spare_y * share_y, 0), max(to_size[1] - height, 0)))
         result[name] = replace(place, x=x, y=y, width=width, height=height, font=font)
+    return readable_nearby(result, to_size, sections, measure, ink)
+
+
+def readable_nearby(places, size, sections, measure, ink):
+    """`places` with Nearby cars' text at least as large as the Standings' (a player found it too
+    small at 1920x1080 on 2026-11-15; kept for every fitted layout on 2026-11-20, as the user's own
+    layout has it smaller, which fitted down gave 8 px). Its box is made for the larger text and
+    grows upwards, its bottom edge kept (in the user's layout the lap times sit right below it at
+    the screen's bottom), and the sections stacked right above it in its column move up as much."""
+    nearby, standings, section = places.get('players'), places.get('laptimes'), sections.get('players')
+    if nearby is None or standings is None or section is None:
+        return places
+    if nearby.font is None or standings.font is None or nearby.font >= standings.font:
+        return places
+    box = (nearby.x, nearby.y, nearby.width, nearby.height)
+    _x, _y, width, height = text_box(section, box, standings.font, measure, ink, keep_width=False)
+    x = min(nearby.x, max(size[0] - width, 0))
+
+    def beside(place):
+        return place.visible and place.x < x + width and x < place.x + place.width
+
+    others = {name: place for name, place in places.items() if name != 'players'}
+    # Its bottom edge: where it was, or the top of the section right below it, whichever is higher.
+    below = [p.y for p in others.values() if beside(p) and p.y >= nearby.y + nearby.height / 2]
+    bottom = min([nearby.y + nearby.height, size[1], *below])
+    y = max(bottom - height, 0)
+    raised = max(nearby.y - y, 0)
+    result = {**places, 'players': replace(nearby, x=x, y=y, width=width, height=height, font=standings.font)}
+    for name, place in others.items():
+        if beside(place) and place.y < nearby.y <= place.y + place.height + STACKED:
+            result[name] = replace(place, y=max(place.y - raised, 0))  # stacked right above it
     return result
+
+
+STACKED = 4  # pixels a section may reach into the next below and still count as stacked on it
 
 
 def nearest(size, available):
@@ -201,6 +235,55 @@ def nearest(size, available):
         return tuple(size)
     shape = size[0] / size[1]
     return min(available, key=lambda s: (abs(s[0] / s[1] - shape), abs(s[1] - size[1])))
+
+
+# The starting presets (asked for by the user on 2026-11-20): the user's presets 1 to 5, with their
+# names and Load by itself choices, made for one screen (tools/make_layouts.py); a first start fits
+# them to the player's screen (app.with_starting_presets). In a folder of their own, so `shipped`
+# does not take the file for a layout.
+STARTING_FOLDER = 'starting'
+STARTING_FILE = f'{STARTING_FOLDER}/presets.json'
+
+
+def starting_data(kept, size, font_size, names, auto_presets):
+    """The starting presets file's data: `kept` {number: {name: SectionPlace}} on a screen of
+    `size` from its top left, each as a layout file has it (preset_data), with the presets' `names`
+    {number: name} and `auto_presets` {event mode: number}."""
+    return {
+        'format': FORMAT,
+        'screen': list(size),
+        'presets': {str(n): preset_data(kept[n], size, font_size)['sections'] for n in sorted(kept)},
+        'names': {str(n): name for n, name in sorted(names.items()) if n in kept},
+        'auto_presets': {mode: n for mode, n in auto_presets.items() if n in kept},
+    }
+
+
+def read_starting(path):
+    """(screen size, {number: {name: SectionPlace}}, {number: name}, {mode: number}) from the starting
+    presets file at `path` (starting_data); None where it is missing or broken. The names and choices
+    are read as the settings file reads them."""
+    from turbohud.core.settings import _auto_presets, _preset_names
+
+    try:
+        data = json.loads(Path(path).read_text(encoding='utf-8'))
+    except (OSError, ValueError):
+        return None
+    if not isinstance(data, dict) or not isinstance(data.get('presets'), dict):
+        return None
+    kept = {}
+    for number, sections in data['presets'].items():
+        found = read_preset(
+            {'format': data.get('format'), 'screen': data.get('screen'), 'sections': sections}
+        )
+        if found is None or not number.isdigit():
+            continue
+        kept[int(number)] = found[1]
+        size = found[0]
+    if not kept:
+        return None
+    auto = {mode: n for mode, n in _auto_presets(data.get('auto_presets')).items() if n in kept}
+    names = {n: name for n, name in _preset_names(data.get('names')).items() if n in kept}
+    return size, kept, names, auto
 
 
 def shipped(folder):

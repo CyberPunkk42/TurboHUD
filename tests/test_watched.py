@@ -189,6 +189,8 @@ class WatchedSectionTest(unittest.TestCase):
                 layout = json.loads(path.read_text(encoding='utf-8'))
                 places = layout['sections']
                 mine = places['watched']
+                if not mine['visible']:
+                    continue  # hidden in the user's layout (2026-11-20): its place is theirs
                 self.assertLessEqual(abs(mine['x'] + mine['width'] / 2 - layout['screen'][0] / 2), 1)
                 for name, other in places.items():
                     if name == 'watched':

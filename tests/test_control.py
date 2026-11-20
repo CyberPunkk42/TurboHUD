@@ -347,6 +347,59 @@ class FirstStartLayoutTests(unittest.TestCase):
         self.assertEqual(after, before)
 
 
+class StartingPresetsTests(unittest.TestCase):
+    """A first start also gets TurboHUD's starting presets, the user's five, fitted to the screen,
+    with their names and Load by itself choices (asked for by the user on 2026-11-20)."""
+
+    measure = staticmethod(FirstStartLayoutTests.measure)
+    ink = staticmethod(FirstStartLayoutTests.ink)
+
+    def start(self, before, screen=(0, 0, 1920, 1080)):
+        return app.with_starting_presets(before, screen, hud.RACE_SECTIONS, self.measure, self.ink)
+
+    def test_the_shipped_file_has_five_named_presets_and_their_choices(self):
+        size, kept, names, auto = presets.read_starting(SHIPPED / presets.STARTING_FILE)
+        self.assertEqual(tuple(size), (5120, 1440))
+        self.assertEqual(sorted(kept), [1, 2, 3, 4, 5])
+        self.assertEqual(sorted(names), [1, 2, 3, 4, 5])
+        self.assertEqual(auto.get('race'), 4)
+        known = {s.name for s in hud.RACE_SECTIONS}
+        for places in kept.values():
+            self.assertTrue(set(places) <= known)
+
+    def test_fitted_to_the_screen_on_it(self):
+        for screen in ((0, 0, 1920, 1080), (1920, 0, 2560, 1440), (0, 0, 5120, 1440)):
+            with self.subTest(screen=screen):
+                started = self.start(settings.Settings(), screen)
+                self.assertEqual(sorted(started.presets), [1, 2, 3, 4, 5])
+                self.assertEqual(started.auto_presets.get('race'), 4)
+                for places in started.presets.values():
+                    for place in places.values():
+                        self.assertGreaterEqual(place.x, screen[0])
+                        self.assertLessEqual(place.x + place.width, screen[0] + screen[2])
+                        self.assertLessEqual(place.y + place.height, screen[1] + screen[3])
+
+    def test_the_standings_columns_come_with_them(self):
+        _size, kept, _names, _auto = presets.read_starting(SHIPPED / presets.STARTING_FILE)
+        started = self.start(settings.Settings())
+        for number, places in kept.items():
+            self.assertEqual(started.presets[number]['laptimes'].columns, places['laptimes'].columns)
+
+    def test_a_players_own_presets_and_choices_stay(self):
+        own = settings.Settings(presets={2: {'lap': settings.SectionPlace(1, 2, 300, 40)}})
+        self.assertEqual(self.start(own), own)
+        chosen = settings.Settings(auto_presets={'race': 1})
+        self.assertEqual(self.start(chosen).auto_presets, {'race': 1})
+
+    def test_without_the_file_nothing_changes(self):
+        before = settings.Settings()
+        empty = Path(tempfile.mkdtemp())
+        after = app.with_starting_presets(
+            before, (0, 0, 1920, 1080), hud.RACE_SECTIONS, self.measure, self.ink, empty
+        )
+        self.assertEqual(after, before)
+
+
 class StartLayoutTests(unittest.TestCase):
     """A layout in customization/display_presets for the screen's size is taken at a start, once
     each time it is new or changed (asked for by the user on 2026-11-13)."""
@@ -370,6 +423,14 @@ class StartLayoutTests(unittest.TestCase):
         moved = replace(first, sections={**first.sections, 'speed': replace(first.sections['speed'], x=5)})
         self.assertEqual(self.start(moved), moved)  # moving sections afterwards sticks
 
+    def test_a_first_start_with_ones_own_file_gets_the_starting_presets_too(self):
+        presets.save_file(self.folder / '1920x1080.json', self.own, (1920, 1080), 13)
+        first = self.start(settings.Settings())
+        self.assertEqual(first.sections['speed'].x, 100)  # one's own layout
+        self.assertEqual(sorted(first.presets), [1, 2, 3, 4, 5])
+        again = self.start(replace(first, presets={}))  # not a first start: none added
+        self.assertEqual(again.presets, {})
+
     def test_changed_file_taken_again(self):
         presets.save_file(self.folder / '1920x1080.json', self.own, (1920, 1080), 13)
         first = self.start(settings.Settings())
@@ -377,12 +438,16 @@ class StartLayoutTests(unittest.TestCase):
         presets.save_file(self.folder / '1920x1080.json', changed, (1920, 1080), 13)
         self.assertEqual(self.start(first).sections['speed'].x, 600)
 
-    def test_other_size_not_taken(self):
-        presets.save_file(self.folder / '2560x1440.json', self.own, (2560, 1440), 13)
-        shipped = app.first_start_layout(
+    def shipped(self):
+        """A first start's settings: the screen's layout and the starting presets."""
+        laid = app.first_start_layout(
             settings.Settings(), self.screen, hud.RACE_SECTIONS, self.measure, self.ink
         )
-        self.assertEqual(self.start(settings.Settings()), shipped)
+        return app.with_starting_presets(laid, self.screen, hud.RACE_SECTIONS, self.measure, self.ink)
+
+    def test_other_size_not_taken(self):
+        presets.save_file(self.folder / '2560x1440.json', self.own, (2560, 1440), 13)
+        self.assertEqual(self.start(settings.Settings()), self.shipped())
 
     def test_default_files_never_replace_placed_sections(self):
         presets.default_files(self.folder, SHIPPED)  # as at every start (2026-11-15)
@@ -391,9 +456,7 @@ class StartLayoutTests(unittest.TestCase):
 
     def test_first_start_with_default_files_takes_the_one_for_the_screen(self):
         presets.default_files(self.folder, SHIPPED)
-        shipped = app.first_start_layout(
-            settings.Settings(), self.screen, hud.RACE_SECTIONS, self.measure, self.ink
-        )
+        shipped = self.shipped()
         made = presets.load_file(self.folder / '1920x1080 (TurboHUD default).json')[1]
         first = self.start(settings.Settings())
         self.assertEqual(first, shipped)
