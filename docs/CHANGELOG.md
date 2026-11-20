@@ -4,6 +4,8 @@ Every finished change, newest first: what changed, why, how it was checked and w
 Each branch adds its dated entry at the top. Where things stand now: `RESUME.md`; what is open:
 `docs/BACKLOG.md`.
 
+- 2026-11-20: Confirmed by the user in the running app on Windows: move mode's place label beside the section
+  (`feature/place-label-outside`). Hyprland and the Mac are still to see (RESUME.md).
 - 2026-11-20: Move mode's place label beside the section, not over it (`feature/place-label-outside`, asked for
   by the user: on a small screen it covered a small section, hiding what it showed as it was sized). The label
   is now a small window of its own (`PlaceLabel` in `overlay/window.py`, see-through and click-through), just
