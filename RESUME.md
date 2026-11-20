@@ -27,9 +27,8 @@ Kept short: the state now and what to do next. Every change, with how it was che
   The repository is kept in step with a private GitHub repository.
 
 ## To try next (most recent first)
-1. **The place label beside the section** (`feature/place-label-outside`): in move mode, drag and size a small
-   section: its `X  Y  width×height` should sit just above it (below it at the top of the screen), never over
-   it. On Hyprland and the Mac too: does the label's own window follow smoothly, and stay above the sections?
+1. **The place label beside the section** (`feature/place-label-outside`; works on Windows, confirmed): on
+   Hyprland and the Mac, does the label's own window follow a drag smoothly, and stay above the sections?
 2. **The panel's General and Text tabs** (`feature/panel-text-tab`): in move mode, switch tabs: the rows
    stay put, a Show tick changes in both, the 🏁 is in Text. How the tabs look over TSU on each system.
 3. **A font per section and per preset** (`feature/fonts-per-preset-and-section`): in move mode, give two or
