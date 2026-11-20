@@ -182,6 +182,15 @@ class GroupMoveTests(unittest.TestCase):
         self.assertTrue(hyprland.Hyprland(fake).move('0xaaa', 70, 80))
         self.assertEqual(fake.dispatched()[-1], 'movewindowpixel exact 70 80,address:0xaaa')
 
+    def test_to_front_only_for_that_window(self):
+        for lua, expected in (
+            (True, "hl.dsp.window.alter_zorder({ mode = 'top', window = 'address:0xaaa' })"),
+            (False, 'alterzorder top,address:0xaaa'),
+        ):
+            fake = FakeHyprctl(lua=lua)
+            self.assertTrue(hyprland.Hyprland(fake).to_front('0xaaa'))
+            self.assertEqual(fake.dispatched()[-1], expected)
+
 
 class FakeKeymap:
     """Hyprland's live keymap behind hyprctl: binds, eval of hl.bind / hl.unbind (Lua) or
