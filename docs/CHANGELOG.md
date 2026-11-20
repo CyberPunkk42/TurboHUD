@@ -4,6 +4,21 @@ Every finished change, newest first: what changed, why, how it was checked and w
 Each branch adds its dated entry at the top. Where things stand now: `RESUME.md`; what is open:
 `docs/BACKLOG.md`.
 
+- 2026-11-20: TSU's sun understood (`chore/log-sun`): in a session of 4 races the user reported where the sun
+  and shadows were at known headings, against the log's `sun:` lines. TSU's sun rises opposite
+  `LocationProperties.sunDirection`, passes nearly overhead around midday and sets at it, so `sunDirection` is west
+  and north is it + 90° on every track (Abu Dhabi, Laguna Seca, Sebring and Coco Jumbo, the last predicted before
+  looking). Written up in `experiments/README.md` ("TSU's sun"); the compass's north from it is backlog item 9,
+  the choice left to the user (recommended: from the sun by default, or up on the map).
+- 2026-11-20: The track's sun in the log (`chore/log-sun`, asked for by the user: could the compass take north
+  from the game's sun?). Found in the game's metadata: `TS.LocationProperties.sunDirection` (one number, 0 by
+  default) and `time` (10.0 by default, the time of day?), reached as `EventState.m_level.m_nature
+  .m_locationProperties`. Logged once an event with the level's base location (`LevelProperties.location`):
+  `sun: track '...', location N, sunDirection X, time Y` (`_log_sun`); nothing shown changes. Its unit and which
+  way it turns are not known yet: with where the sun is in the game on a few tracks, the log says. Found on the
+  way: the once-an-event reads of the track's name, hotlapping and the shortcut penalty time compared the event's
+  address with `is not`, a new int at every read, so they were read at every read; now by value. Tests: the line
+  once an event, a level without its nature; all tests pass, a 6 s start logged no error.
 - 2026-11-20: Confirmed by the user in the running app on Windows: the compass (`feature/compass`); DNF after
   /retire, DSQ and AFK, in the pits too (`fix/dnf-only-retired`, `fix/afk-in-pits`); the time left standing on
   the grid and counting from the lights going out (`fix/time-left-from-lights-out`: lap 1 begins at lights out,

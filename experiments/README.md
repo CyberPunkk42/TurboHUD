@@ -752,3 +752,27 @@ is far cheaper than real Mac windows, so benchmarks without real windows looked 
   `run_turbohud.sh --quit` and read `app.prof`. It showed 122 of 207 s in `QPainter.fillPath`.
 - The log's `race reads` line gives trips a read, ms a trip and how much of that is on the
   game's memory; `HUD frames` gives the overlay's side.
+
+## TSU's sun, for a compass with north from it (2026-11-20, Windows, the user in a session of 4 races)
+
+Asked for by the user: could the compass take north from the game's sun? TSU's metadata (read only) has
+`TS.LocationProperties.sunDirection` (one number, 0 by default) and `time` (10.0 by default), reached as
+`EventState.m_level.m_nature.m_locationProperties`; TurboHUD logs them once an event (`sun: track ...`,
+`chore/log-sun`). `LevelProperties.location` is no plain number or string (not read; not needed). The user drove
+and reported the compass's heading (degrees clockwise from up on the track map) and where the sun or the car's
+shadow was, read against the log:
+
+| Track | `time` | `sunDirection` | Sun seen at (heading, what was seen) |
+|---|---|---|---|
+| Abu Dhabi GP v1.03 | 16.95 | 107.7 | ~110-130° (141°: ahead, slightly left; low, seen from the cockpit) |
+| WT Raceway Laguna Seca v1.0 | 15 | 300 | ~300° (181°: right; 308°: dead ahead; high) |
+| Sebring International Raceway | 10 | 75 | ~235-270° (0°: shadow to the south-east; 260° and 270°: shadow straight behind; 165°: shadow left, a little back; high, shadow nearly under the car) |
+| Coco Jambo Club Layout v1.2 | 15.8 | 0 | ~0° (98°: sun left, slightly back, shadow right and long), predicted before looking |
+
+What it means: TSU's sun crosses the sky in a straight line, rising opposite `sunDirection`, passing nearly
+overhead around midday and setting at `sunDirection`. In the afternoon (15, 15.8, 16.95) it stands on the
+`sunDirection` side, lower the later; in the morning (Sebring at 10) on the opposite side, already high. So
+`sunDirection` is west, in the compass's own degrees (clockwise from up on the map, +z), on every track, and
+**north is `sunDirection` + 90°**. Its height follows `time` (not modelled; a compass needs only the side).
+Sebring alone looked wrong until the model took the morning into account; Coco Jumbo was predicted before the
+user looked and matched. A track left at the default 0 has its sun all the same (Coco Jumbo).
