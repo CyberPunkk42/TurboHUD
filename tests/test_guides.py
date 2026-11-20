@@ -123,7 +123,7 @@ class UserGuideWindowTests(GuideTestCase):
         panel = MovePanel(self.Native(), RACE_SECTIONS, True)
         self.addCleanup(panel.layouts.close)
         names = self.names(panel, help_lines(True))
-        for expected in ('layouts...', 'redo', 'size px', 'lines %'):
+        for expected in ('layouts', 'redo', 'size px', 'lines %'):
             self.assertIn(expected, names)  # the panel is read as meant
         self.assertMentions(USER_GUIDE, names)
 
@@ -147,7 +147,7 @@ class UserGuideWindowTests(GuideTestCase):
 
         window = SettingsWindow(self.Native(), window_flags(), Theme(), reads_per_second=20)
         names = self.names(window)
-        self.assertIn('car classes...', names)
+        self.assertIn('car classes', names)
         self.assertMentions(USER_GUIDE, names)
 
 

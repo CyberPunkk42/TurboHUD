@@ -53,6 +53,11 @@ CAMERA_CHOICES = (
     (False, 'Every camera', 'Also in the views from behind and outside the car (third person)'),
 )
 COLUMNS_PER_ROW = 4  # the standings' column switches in a row
+# Options that do something only with another on (reported by the user on 2026-11-20: Class and
+# Overall looked the same as Classes in the standings): greyed out, their tick kept, while it is off.
+NEEDS = {'column_class': 'classes', 'column_overall': 'classes'}
+NEEDS_TIP = 'Only in a race with classes: turn on Classes in the standings'
+UNUSABLE = '#5d7799'  # a greyed-out option's name: the move-mode panel's faint blue (PANEL_EMPTY)
 SYSTEM_FONT = 'System font'  # the font choice for the system's own font
 HEADING = '#9fb8d8'  # the headings, as in the move-mode panel
 SIZE_STEP = 1.1  # Bigger: 10 % larger; Smaller: the same back
@@ -117,7 +122,7 @@ class SettingsWindow(QWidget):
     radar_seconds_changed = Signal(float)
     reads_changed = Signal(int)
     option_changed = Signal(str, bool)  # an option's key (see `options`), on or off
-    about_requested = Signal()  # About...: the app's name and version
+    about_requested = Signal()  # About: the app's name and version
     font_chosen = Signal(str)  # a font family from customization/fonts, '' for the system's
     fonts_folder_requested = Signal()  # Fonts folder...: open customization/fonts
     add_font_requested = Signal()  # Add font...: pick a font file, copied into customization/fonts
@@ -223,6 +228,7 @@ class SettingsWindow(QWidget):
                     grid.addWidget(self._box(key, *listed[key]), row, place + 1)
                 grid.setColumnStretch(COLUMNS_PER_ROW + 1, 1)
                 left.addLayout(grid)
+            self._follow_needs()
         if any(key in listed for key in GROUPS['sections']):
             left.addWidget(self._heading('Sections'))
             self._boxes(left, listed, GROUPS['sections'])
@@ -263,10 +269,11 @@ class SettingsWindow(QWidget):
         reset, close = QPushButton('Reset colours'), QPushButton('Close')
         reset.clicked.connect(self.reset)
         close.clicked.connect(self.close_window)
-        classes = QPushButton('Car classes...')
+        # Without the three dots (asked for by the user on 2026-11-20), as the move-mode panel's buttons.
+        classes = QPushButton('Car classes')
         classes.setToolTip('Every car class a clan tag can name, in its colour')
         classes.clicked.connect(self.open_class_sheet)
-        about = QPushButton('About...')
+        about = QPushButton('About')
         about.setToolTip("TurboHUD's name and version")
         about.clicked.connect(self.about_requested)
         row.addWidget(reset)
@@ -305,12 +312,24 @@ class SettingsWindow(QWidget):
 
     def _box(self, key, label, on, tip):
         box = QCheckBox(label)
-        box.setStyleSheet('QCheckBox { color: white; }')
+        box.setStyleSheet(f'QCheckBox {{ color: white; }} QCheckBox:disabled {{ color: {UNUSABLE}; }}')
         box.setChecked(on)
         box.setToolTip(tip)
+        box.setProperty('tip', tip)  # its own tooltip, back once what it needs is on (_follow_needs)
         box.toggled.connect(lambda checked, k=key: self.option_changed.emit(k, checked))
+        box.toggled.connect(lambda _checked: self._follow_needs())
         self.options[key] = box
         return box
+
+    def _follow_needs(self):
+        """Grey out each option whose NEEDS is off (keeping its tick), with NEEDS_TIP as its tooltip."""
+        for key, needed in NEEDS.items():
+            box, other = self.options.get(key), self.options.get(needed)
+            if box is None or other is None:
+                continue
+            usable = other.isChecked()
+            box.setEnabled(usable)
+            box.setToolTip(box.property('tip') if usable else NEEDS_TIP)
 
     def _boxes(self, layout, listed, keys):
         for key in keys:
@@ -381,6 +400,7 @@ class SettingsWindow(QWidget):
             box.blockSignals(True)
             box.setChecked(on)
             box.blockSignals(False)
+            self._follow_needs()  # its signals were held: the options that need it follow here
 
     def choose(self, field, color):
         self.theme = replace(self.theme, **{field: color})

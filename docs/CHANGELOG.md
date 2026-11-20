@@ -4,6 +4,15 @@ Every finished change, newest first: what changed, why, how it was checked and w
 Each branch adds its dated entry at the top. Where things stand now: `RESUME.md`; what is open:
 `docs/BACKLOG.md`.
 
+- 2026-11-20: The class columns clearer, and buttons without three dots (`fix/class-columns-clearer`, reported by
+  the user: Settings > Standings' "Class" read as the same switch as "Classes in the standings"). The columns are
+  named for what they show, **Class code** and **Overall place**, and are greyed out (their tick kept, the
+  tooltip saying they need classes) while **Classes in the standings** is off, also when it is turned off from
+  the icon's menu (`NEEDS` in `settings_window.py`). Asked for by the user at the same time: the buttons **Car
+  classes**, **About** (settings window), **Layouts** and **Settings** (move-mode panel) without "..."; the icon's
+  menu keeps its "…" (menu items that open a window). The guides say both. Tests: greyed out and back with their
+  ticks and tooltips, turned off from elsewhere, the new names; the guide tests with the new button names. Looked
+  at in an image of the settings window.
 - 2026-11-20: Move mode's panel in two tabs (`feature/panel-text-tab`, asked for by the user): **General** (Show,
   Group, Centre, Tint) and **Text** (Show, Mid text with the Race leader's 🏁, Size px, Lines %, Font), each with
   every section in the same rows and order, so all of them stay in view; the Show ticks are the same in both

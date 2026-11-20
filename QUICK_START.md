@@ -30,7 +30,7 @@ it goes.
 - Nothing showing? Rest the pointer on the icon: it says what TurboHUD is waiting for.
 - The first start lays out the HUD for your screen and fills the five presets (Recording,
   Spectator/RD, Practice/Hotlapping, Race, Special Event), each loading by itself for its kind
-  of event: see **Layouts…** in move mode to change them.
+  of event: see **Layouts** in move mode to change them.
 
 ## 3. Place your HUD (move mode)
 
@@ -41,7 +41,7 @@ it goes.
 3. The panel shows or hides each section; its **General** tab groups, centres and tints them, its
    **Text** tab sets their text in the middle, text size, line spacing and **Font** (its own, or
    **global**: the **Global font** changes every such section at once). It has **Undo**
-   and **Redo**, and says which preset the layout is in (**Preset: 3 Race**). Its **Layouts…** window
+   and **Redo**, and says which preset the layout is in (**Preset: 3 Race**). Its **Layouts** window
    keeps five named layouts, each with its own fonts (**Save** / **Load** presets 1 to 5), can load one by itself as a recording,
    spectating, hotlapping, race or special event begins (and starts in the Race one), and has
    **Load screen default**, **Export…**, **Import…** and **Design for** for layout files per screen
@@ -56,8 +56,8 @@ on global (your own
 **Add font...** picks a `.ttf` or `.otf` file and uses it at once; **Fonts folder...** opens `customization/fonts`), km/h or mph, a tint behind
 the sections, which standings columns show, the radar (cockpit cameras or every camera, its
 slipstream cones, how soon it shows), the yellow and blue flags, how often the race is read,
-and the on/off options also under **Options** in the icon's menu. **Car classes...** lists the
-class codes you can put in your clan tag; **About...** shows your version.
+and the on/off options also under **Options** in the icon's menu. **Car classes** lists the
+class codes you can put in your clan tag; **About** shows your version.
 
 ## 5. What each section shows
 

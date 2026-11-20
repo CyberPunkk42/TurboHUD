@@ -235,7 +235,7 @@ class LayoutsWindowTests(unittest.TestCase):
         self.addCleanup(panel.close)
         self.addCleanup(panel.layouts.close)
         texts = {b.text() for b in panel.findChildren(QPushButton)}
-        self.assertIn('Layouts…', texts)
+        self.assertIn('Layouts', texts)
         self.assertFalse(texts & {'Save', 'Load', 'Delete', 'Design', 'Export…'})
 
 
