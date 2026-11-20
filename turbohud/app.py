@@ -88,6 +88,7 @@ log = logging.getLogger('turbohud')
 
 NARROWER = ('laptimes', 'players')  # the boxes layout 7 makes narrower
 COMPASS_COLOURBLIND_LABEL = 'Compass in colour-blind colours'  # the option, in the settings and the menu
+COMPASS_SUN_LABEL = 'Compass north from the sun'  # the option, in the settings and the menu
 # The banners that fade in and out (overlay.window): section name -> the key of what it shows (race_sections).
 BANNERS = {'leader': 'banner', 'battle': 'battlebanner', 'watched': 'watchedbanner'}
 
@@ -667,6 +668,7 @@ def run(args, folder):
                 lead_changes if following else None,
                 battles if watching_battles else None,
                 watched_driver if naming_watched else None,
+                compass_sun=settings.compass_sun,
             )
             if not settings.yellow_flags:
                 yellow_flags.reset()  # turned on again, it starts afresh
@@ -826,6 +828,7 @@ def run(args, folder):
         window.backdrop = saved.tint if saved else default_tint(window.section, settings.backdrop)
         window.radar_cone = settings.radar_cone
         window.compass_colourblind = settings.compass_colourblind
+        window.compass_sun = settings.compass_sun
         window.sector_bars = settings.sector_bars
         window.screens = screens  # move mode shows its place counted on the screen it is on
         window.show_on_top()
@@ -1091,6 +1094,14 @@ def run(args, folder):
                     "The compass's needle and N in blue, told apart with colour blindness, not red",
                 )
             )
+            listed.append(
+                (
+                    'compass_sun',
+                    COMPASS_SUN_LABEL,
+                    settings.compass_sun,
+                    "North where the track's sun says (it sets in the west); off: up on the track map",
+                )
+            )
         if any(section.sectors for section in layout):
             listed.append(
                 (
@@ -1287,6 +1298,19 @@ def run(args, folder):
                 window.update()
         save()
         log.info('compass in colour-blind colours %s', 'on' if on else 'off')
+
+    def set_compass_sun(on):
+        """The compass's north from the track's sun, or up on the track map (at the next read)."""
+        nonlocal settings
+        settings = replace(settings, compass_sun=on)
+        compass_sun_action.setChecked(on)
+        show_option('compass_sun', on)
+        for window in windows.values():
+            window.compass_sun = on  # move mode's sample
+            if window.section.drawing == 'compass':
+                window.update()
+        save()
+        log.info('compass north %s', 'from the sun' if on else 'up on the track map')
 
     def set_map_others(others):
         nonlocal settings
@@ -1506,6 +1530,7 @@ def run(args, folder):
                 'radar_cockpit_only': set_radar_cockpit_only,
                 'map_others': set_map_others,
                 'compass_colourblind': set_compass_colourblind,
+                'compass_sun': set_compass_sun,
                 'nearby_short': set_nearby_short,
                 'sector_bars': set_sector_bars,
                 'yellow_flags': set_yellow_flags,
@@ -2234,8 +2259,12 @@ def run(args, folder):
     compass_colourblind_action = QAction(COMPASS_COLOURBLIND_LABEL, menu, checkable=True)
     compass_colourblind_action.setChecked(settings.compass_colourblind)
     compass_colourblind_action.triggered.connect(lambda checked: set_compass_colourblind(checked))
+    compass_sun_action = QAction(COMPASS_SUN_LABEL, menu, checkable=True)
+    compass_sun_action.setChecked(settings.compass_sun)
+    compass_sun_action.triggered.connect(lambda checked: set_compass_sun(checked))
     if any(section.drawing == 'compass' for section in layout):
         options_menu.addAction(compass_colourblind_action)
+        options_menu.addAction(compass_sun_action)
     relearn_action = QAction('Relearn this track\'s map', menu)
     relearn_action.setToolTip('Forget the map of the track being raced; the next clean lap draws it again')
     relearn_action.triggered.connect(lambda: relearn_track())

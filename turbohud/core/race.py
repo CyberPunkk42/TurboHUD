@@ -99,6 +99,8 @@ class LapState:
     shortcut_seconds: float = 0.0  # how long TSU slows a car for a shortcut here (0: not known, or off)
     compounds: int | None = None  # the event's tire compounds (tireCompoundCount); None: not read
     track: str = ''  # the track's name (EventState.m_level.m_properties.name); '' where not read
+    # The track's sun: where it sets, in degrees clockwise from up on the map (_read_sun); None: not read.
+    sun_direction: float | None = None
     replay: bool = False  # a replay plays: "you" is the driver its camera follows
     paused: bool = False  # the replay stands paused: the HUD stays though the clock stands
     hotlapping: bool = False  # a hotlapping event (how qualifying is run): ranked by best lap, not race order
@@ -692,6 +694,7 @@ class LapReader:
         self._compounds_for, self._compounds = None, None  # see _read_compounds
         self._tire_limits = tire_limits((None,) * MAX_COMPOUNDS)  # see _read_compounds
         self._track_for, self._track = None, ''  # see _track_name
+        self._sun = None  # the track's sunDirection (_read_sun), read with its name
         self._hotlapping_for, self._hotlapping = None, False  # see _hotlapping_event
         self._camera_logged = 'unread'  # the camera view last logged (cockpit_camera)
         self._spectated_logged = 'unread'  # the spectator camera's driver last logged (spectated_driver)
@@ -1405,6 +1408,7 @@ class LapReader:
             shortcut_seconds=self._shortcut_seconds(state_object),
             compounds=self._compounds,
             track=self._track_name(state_object),
+            sun_direction=self._sun,  # read with the track's name, just before
             hotlapping=self._hotlapping_event(state_object),
             cockpit=self.cockpit_camera(),
         )
@@ -1422,24 +1426,23 @@ class LapReader:
         .name, found in the game's metadata on 2026-11-12. Read once an event; '' where missing."""
         # By value: the state's address is a new int at each read (`is not` read it again every time).
         if self._track_for != state:
-            self._track_for, self._track = state, ''
+            self._track_for, self._track, self._sun = state, '', None
             try:
                 level = self._ref('state', state, 'm_level')
                 properties = self._ref('level', level, 'm_properties')
                 where = properties + self._offset('level properties', properties, 'name')
                 self._track = self._string(self.il.memory.u64(where))
-                self._log_sun(level, properties)
+                self._sun = self._read_sun(level, properties)
             except (NotFound, OSError):
                 pass
         return self._track
 
-    def _log_sun(self, level, properties):
-        """Log the track's sun once an event, to learn what it holds before the compass may take its
-        north from it (asked for by the user on 2026-11-20): TS.Level .m_nature (TS.Nature)
-        .m_locationProperties (TS.LocationProperties) .sunDirection (one number, 0 by default) and
-        .time (10.0 by default: the time of day?), found in the game's metadata, and the level's
-        base location (TS.LevelProperties.location). What each means is not known yet: with where the
-        sun is in the game, the log says it."""
+    def _read_sun(self, level, properties):
+        """The track's sunDirection, once an event, logged with its time of day; None where not read.
+        TS.Level .m_nature (TS.Nature) .m_locationProperties (TS.LocationProperties) .sunDirection
+        (0 by default) and .time (10.0 by default), found in the game's metadata. TSU's sun sets at
+        sunDirection, in the compass's degrees (clockwise from up on the map): it is west, and north
+        is it + 90° (experiments/README.md, "TSU's sun"; the compass's north since 2026-11-20)."""
         values = {}
         try:
             nature = self._ref('level', level, 'm_nature')
@@ -1451,7 +1454,7 @@ class LapReader:
                     values[name] = f'not read ({error})'
         except (NotFound, OSError) as error:
             log.info('sun: not read (%s)', error)
-            return
+            return None
         try:
             base = f'{self._number("level properties", properties, "location"):g}'
         except (NotFound, OSError):
@@ -1467,6 +1470,10 @@ class LapReader:
             values['sunDirection'],
             values['time'],
         )
+        try:
+            return float(values['sunDirection'])
+        except ValueError:  # 'not read (...)'
+            return None
 
     def cockpit_camera(self):
         """Whether the race camera now sits at the driver, the view of the first person (asked
@@ -1570,6 +1577,7 @@ class LapReader:
             spectating=True,
             compounds=self._compounds,
             track=self._track_name(state),
+            sun_direction=self._sun,  # read with the track's name, just before
             on_a_track=self._on_a_track(),
             hotlapping=self._hotlapping_event(state),
             followed=self.spectated_driver(state, players),
@@ -2617,6 +2625,7 @@ def race_sections(
     battles=None,
     watched=None,
     fastest_name=False,
+    compass_sun=False,
 ):
     """{section name: rows} for a live-reader snapshot (see core.hud.RACE_SECTIONS); a
     section with nothing to show has no rows. Nothing before the grid: in the menus, the
@@ -2635,7 +2644,8 @@ def race_sections(
     watching (a replay, or spectating), under 'battle' and its Battle under 'battlebanner';
     `watched` (a core.watched.WatchedDriver) the watched driver's banner while watching, under
     'watched' and its Watched under 'watchedbanner'. `fastest_name`: the standings name the fastest
-    lap's holder in purple without the Best column as while watching (move mode's preview)."""
+    lap's holder in purple without the Best column as while watching (move mode's preview).
+    `compass_sun`: the compass's north from the track's sun (sun_north), else up on the map."""
     if not on_grid(snapshot, now):
         return {}
     state = snapshot.state
@@ -2747,7 +2757,7 @@ def race_sections(
         # It follows the cars all the same, so it comes back at once.
         if view is not None and not (radar_cockpit_only and state.cockpit is False):
             sections['radar'] = view
-        compass = compass_view(state.players)
+        compass = compass_view(state.players, sun_north(state.sun_direction) if compass_sun else None)
         if compass is not None:
             sections['compass'] = compass  # in the section's own slot: a CompassView, not rows
         if track_map is not None and state.on_a_track:  # no map, nor a track learnt, in an arena
@@ -4686,9 +4696,10 @@ class Blip:
     )
 
 
-# The compass (asked for by the user on 2026-11-20): which way the car points. TSU has no north, so
-# north is up on the track map, which never turns the track (trackmap.map_transform: x to the right,
-# z up): 0° up the map (+z), 90° to its right (+x), 180° down, 270° to its left.
+# The compass (asked for by the user on 2026-11-20): which way the car points. TSU has no north of its
+# own; headings are first taken from up on the track map, which never turns the track
+# (trackmap.map_transform: x to the right, z up): 0° up the map (+z), 90° to its right (+x), 180° down,
+# 270° to its left. North is then where the track's sun says (sun_north), else up on the map.
 COMPASS_POINTS = ('N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW')
 
 
@@ -4697,6 +4708,7 @@ class CompassView:
     """What the compass shows: the car's heading in whole degrees clockwise from north, 0 to 359."""
 
     heading: int
+    sun: bool = False  # north from the track's sun (sun_north), not up on the map
 
     @property
     def text(self):
@@ -4715,15 +4727,26 @@ def heading_degrees(direction):
     return math.degrees(math.atan2(x, z)) % 360
 
 
-def compass_view(players):
+def sun_north(sun_direction):
+    """North in degrees clockwise from up on the map, from the track's sunDirection: TSU's sun sets
+    there, so it is west and north is 90° on from it (found on 4 tracks on 2026-11-20); None for none."""
+    if sun_direction is None or not math.isfinite(sun_direction):
+        return None
+    return (sun_direction + 90) % 360
+
+
+def compass_view(players, north=None):
     """The compass for the local car ("you", or the driver a replay follows): the way its nose
     points, else the way it moves; None where neither is known (spectating: no car of one's own).
+    `north`: where north is, in degrees from up on the map (sun_north); None: up on the map.
     Whole degrees, so a car going straight does not redraw it at every read."""
     me = next((p for p in players if p.local), None)
     if me is None:
         return None
     heading = heading_degrees(me.forward) if me.forward is not None else heading_degrees(me.velocity)
-    return None if heading is None else CompassView(round(heading) % 360)
+    if heading is None:
+        return None
+    return CompassView(round(heading - (north or 0.0)) % 360, sun=north is not None)
 
 
 @dataclass(frozen=True)

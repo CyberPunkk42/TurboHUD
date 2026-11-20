@@ -221,6 +221,8 @@ COMPASS_COLOURBLIND = '#56b4e9'
 COMPASS_LINE = (255, 255, 255, 200)  # the thin line through the dial: white, apart from the needle
 COMPASS_TICK = 10  # a mark every this many degrees, a longer one every 30
 COMPASS_LETTER = 0.26  # N, E, S and W: their text size, as a share of the dial's radius
+COMPASS_SUN = '#ffc83d'  # the small sun by the readout while north comes from the track's sun
+COMPASS_SUN_SIZE = 0.9  # that sun across, rays included, as a share of the readout's text size
 COMPASS_ARROW = 0.22  # the car's arrow in the middle: its length up from the middle, as a share of the radius
 MAP_BACK = (10, 14, 22, 110)  # behind the track map, RGBA
 MAP_ROAD = (205, 212, 224, 210)
@@ -385,6 +387,7 @@ class SectionWindow(QWidget):
         self.compass_colourblind = (
             False  # the compass's needle and N in COMPASS_COLOURBLIND, not red (an option)
         )
+        self.compass_sun = True  # the compass's north from the track's sun (an option): its sample shows it
         self.sector_bars = True  # a section with sector bars shows them (an option)
         # A text section's text size in pixels (core.hud.font_scale): the app sets it, and its box
         # follows (text_box). None: the box sets the size, as before text sizes.
@@ -1001,6 +1004,23 @@ class SectionWindow(QWidget):
             painter.drawRect(rect)
         painter.restore()
 
+    @staticmethod
+    def _paint_sun(painter, centre, across):
+        """The compass's small sun, `across` wide with its rays: a disc and eight rays, in COMPASS_SUN."""
+        reach = across / 2
+        colour = QColor(COMPASS_SUN)
+        painter.setPen(QPen(colour, max(1.0, across / 10), Qt.SolidLine, Qt.RoundCap))
+        for ray in range(8):
+            angle = math.radians(ray * 45)
+            dx, dy = math.sin(angle), -math.cos(angle)
+            painter.drawLine(
+                QPointF(centre.x() + dx * reach * 0.62, centre.y() + dy * reach * 0.62),
+                QPointF(centre.x() + dx * reach, centre.y() + dy * reach),
+            )
+        painter.setPen(Qt.NoPen)
+        painter.setBrush(colour)
+        painter.drawEllipse(centre, reach * 0.42, reach * 0.42)
+
     def _paint_compass(self, painter):
         """The compass (asked for by the user on 2026-11-20): a dial that turns as the car does, under
         an arrow and a thin line that stay pointing up, the car's way; where the line crosses the
@@ -1008,7 +1028,7 @@ class SectionWindow(QWidget):
         mode a sample, with a border."""
         view = self.rows if isinstance(self.rows, CompassView) else None
         if view is None and not self.locked:
-            view = COMPASS_SAMPLE
+            view = replace(COMPASS_SAMPLE, sun=self.compass_sun)
         if view is None:
             return
         layout = compass_layout(self.width(), self.height())
@@ -1019,17 +1039,20 @@ class SectionWindow(QWidget):
         outline = QColor(self.theme.outline_color[:7])
         text = view.text
         size = layout.text_size
-        outlined_text(
-            painter,
-            (self.width() - text_advance(text, size)) / 2,
-            layout.text_baseline,
-            text,
-            size,
-            QColor(self.theme.text_color),
-            outline,
-        )
-        centre, radius = QPointF(*layout.centre), layout.radius
+        advance = text_advance(text, size)
+        # North from the track's sun: a small sun after the degrees, the two centred together.
+        sun = size * COMPASS_SUN_SIZE if view.sun else 0.0
+        gap = size * 0.3 if view.sun else 0.0
+        left = (self.width() - advance - gap - sun) / 2
+        outlined_text(painter, left, layout.text_baseline, text, size, QColor(self.theme.text_color), outline)
         painter.setRenderHint(QPainter.Antialiasing)
+        if view.sun:
+            self._paint_sun(
+                painter,
+                QPointF(left + advance + gap + sun / 2, layout.text_baseline - cap_height(size) / 2),
+                sun,
+            )
+        centre, radius = QPointF(*layout.centre), layout.radius
         if self.backdrop:  # its tint: a dark disc behind the dial
             painter.setPen(Qt.NoPen)
             painter.setBrush(QColor(*COMPASS_BACK))
