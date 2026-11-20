@@ -776,3 +776,19 @@ overhead around midday and setting at `sunDirection`. In the afternoon (15, 15.8
 **north is `sunDirection` + 90°**. Its height follows `time` (not modelled; a compass needs only the side).
 Sebring alone looked wrong until the model took the morning into account; Coco Jumbo was predicted before the
 user looked and matched. A track left at the default 0 has its sun all the same (Coco Jumbo).
+
+Checked with the compass taking north from the sun (`feature/compass-north-from-sun`; 2026-11-20, Linux, the
+user in a session of 5 races of 2 laps). Headings are now the compass's own, from north; the sun's bearing is
+worked out from what was seen, to about ±20°:
+
+| Track | `time` | `sunDirection` | Heading, what was seen | Sun at | Expected |
+|---|---|---|---|---|---|
+| MR Road Atlanta (PLM '26) R v3 | 10 | 0 | 109° E: shadow straight behind (337° NW also read) | ~109° | east (morning) |
+| Coco Jambo Club Layout v1.2 | 15.8 | 0 | 157° SE: shadow to the left | ~247° | west (afternoon) |
+| Giza International Circuit V1.01 | 16.6 | 352 | 263°: sun ahead, slightly right | ~270-280° | west |
+| Abu Dhabi GP v1.03 | 16.95 | 107.7 | 303°: sun ahead, slightly left | ~280-290° | west |
+| Sebring International Raceway | 10 | 75 | 285°: sun behind | ~105° | east (morning) |
+
+All five match: the afternoon sun in the west, the morning sun in the east, on tracks with the default sun and
+with one turned by the track's maker (Giza, Abu Dhabi). Around midday the sun stands a little to the south
+(~247° and ~109° at 15.8 and 10), as on a real track in the northern hemisphere.

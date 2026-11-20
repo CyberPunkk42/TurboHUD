@@ -4,6 +4,11 @@ Every finished change, newest first: what changed, why, how it was checked and w
 Each branch adds its dated entry at the top. Where things stand now: `RESUME.md`; what is open:
 `docs/BACKLOG.md`.
 
+- 2026-11-20: Confirmed by the user in races on Linux: the compass's north from the track's sun
+  (`feature/compass-north-from-sun`). In 5 races (Road Atlanta, Coco Jambo, Giza, Abu Dhabi, Sebring; mornings
+  and afternoons, the default sun and suns turned by a track's maker) the sun or the car's shadow was where the
+  compass said, to about ±20°; no error in the log. Written up in `experiments/README.md` ("TSU's sun"); taken
+  off RESUME.md's list. The option turned off in a race is still to see.
 - 2026-11-20: The compass's north from the track's sun (`feature/compass-north-from-sun`, backlog item 9, the
   recommendation the user chose). TSU's sun sets at `LocationProperties.sunDirection` (found in a session of 4
   races: `experiments/README.md`, "TSU's sun"), so north is it + 90° (`sun_north` in `race.py`). The reader keeps

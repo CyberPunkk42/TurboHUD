@@ -28,9 +28,8 @@ Kept short: the state now and what to do next. Every change, with how it was che
   The repository is kept in step with a private GitHub repository.
 
 ## To try next (most recent first)
-1. **The compass's north from the sun** (`feature/compass-north-from-sun`): on a few tracks, does N match the
-   sun and the shadows (the sun sets in the west), with the small sun by the degrees? **Compass north from the
-   sun** off: north up on the map, no small sun. A track whose sun is not read: up on the map, no small sun.
+1. **The compass's north from the sun** (confirmed on 5 tracks, 2026-11-20): still to see, **Compass north from
+   the sun** turned off in a race: north up on the map, no small sun.
 2. **Move mode on Hyprland** (`fix/place-label-hyprland-drag`): sections drag again, with their place label
    above them following the drag; the settings and layouts windows open at their size (no large view first) and
    the mouse stays where it is; move mode's panel comes at once, the sections after it. On the Mac: does the label follow a drag smoothly and stay above the sections?
