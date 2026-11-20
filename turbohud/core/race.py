@@ -53,6 +53,7 @@ from turbohud.core.watched import WATCHING
 log = logging.getLogger(__name__)
 
 UNITS_PER_SECOND = 10_000
+MINUTE = 60 * UNITS_PER_SECOND
 # EventState.times: ticks, time, ..., time limit (int32 each).
 TICKS_PER_SECOND = 50  # TSU's physics ticks (measured 2026-11-11: 50 a second of the race clock)
 SHORTCUT_NO_LIMIT = 1e30  # a speed cap above this is TSU's 'no limit' (the largest float)
@@ -255,8 +256,30 @@ class LapState:
         return max(min(options), 0.0) if options else None
 
     @property
+    def before_lights_out(self):
+        """Whether a race the player drives stands on the grid, its lights not out: lap 1 has not
+        begun on the race clock (TSU starts the first lap as the lights go out). Not in hotlapping, an
+        arena event, a replay or spectating, which have no lights to wait for or no first lap of the
+        player's own."""
+        if self.hotlapping or not self.on_a_track or self.replay or self.spectating:
+            return False
+        return not self.lap_starts or self.clock < self.lap_starts[0]
+
+    @property
     def time_left(self):
-        return self.time_limit - self.clock if self.time_limit > 0 else None
+        """The time left of a timed race, 0.1 ms; None without a time limit. TSU's race clock runs
+        from the grid, and its time limit counts the lights too: the time left counted down through
+        them, ending on the race's length (10:00) as the lights went out, so it told when they would,
+        also with 5 lights, which go out at random (reported by the user on 2026-11-20). Until the
+        lights are out (before_lights_out) it stands at the race's length in whole minutes, the
+        lights left out; None for a race under a minute, which has no whole one."""
+        if self.time_limit <= 0:
+            return None
+        left = self.time_limit - self.clock
+        if self.before_lights_out:
+            whole = left // MINUTE * MINUTE
+            return whole if whole > 0 else None
+        return left
 
     @property
     def lap_number(self):
@@ -265,6 +288,31 @@ class LapState:
             if self.laps_to_finish
             else self.laps_completed + 1
         )
+
+
+def lights_out_seen(state, waiting):
+    """Whether `state`'s race still waits for its lights (LapState.before_lights_out), logging once
+    the read the lights are seen going out after `waiting` (the last read's answer; None: no read
+    yet), with the race clock, when lap 1 began and the time left: the time left counts from there
+    (time_left), which the log shows as it was in the race."""
+    now = state.before_lights_out
+    if waiting and not now:
+        began = state.lap_starts[0] / UNITS_PER_SECOND if state.lap_starts else None
+        left = state.time_left
+        log.info(
+            'race: lights out, race clock %.2f s, lap 1 began at %s s; %s',
+            state.clock / UNITS_PER_SECOND,
+            f'{began:.2f}' if began is not None else '?',
+            f'{left / UNITS_PER_SECOND:.2f} s left' if left is not None else 'no time limit',
+        )
+    elif waiting is None and now and state.time_limit > 0:
+        log.info(
+            'race: on the grid, race clock %.2f s, time limit %.2f s: shown as %s until the lights are out',
+            state.clock / UNITS_PER_SECOND,
+            state.time_limit / UNITS_PER_SECOND,
+            clock(state.time_left // UNITS_PER_SECOND) if state.time_left else 'no time',
+        )
+    return now
 
 
 def _segment_distance(gate, point):
@@ -1289,6 +1337,7 @@ class LapReader:
             self._fuel_history, self._wear_history, self._fuel_marks, self._types = {}, {}, {}, {}
             self._player = None
             self._kept_slow, self._full = {}, True
+            self._lights = None  # whether the lights were still on at the last read (lights_out_seen)
             self.event_type = self._event_type()
         if self._replay is not None:
             if self._player != self._followed:
@@ -1362,6 +1411,7 @@ class LapReader:
         if state.car is not None and state.car.draft is not None:
             share = self._count_draft(state)
             state = dataclasses.replace(state, car=dataclasses.replace(state.car, draft_last_lap=share))
+        self._lights = lights_out_seen(state, self._lights)
         return state
 
     def _track_name(self, state):

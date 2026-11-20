@@ -84,7 +84,9 @@ outline colours can be changed in the settings.
 ### Timing
 
 **Race progress**
-Your lap ("Lap 2/13") and, in a timed race, the time left. For a few seconds after the
+Your lap ("Lap 2/13") and, in a timed race, the time left. On the grid it stands at the race's
+length (such as 10:00) and counts down only once the lights are out, so it never tells when they
+will go out (with 5 lights TSU puts them out at random). For a few seconds after the
 leader starts a new lap that you are not on yet, "Leader 4" fades in at its end, and
 "Final lap" when the leader starts the last one. Before a race it may say what TurboHUD
 is waiting for. Spectating, it says "Spectating" with the leader's lap.

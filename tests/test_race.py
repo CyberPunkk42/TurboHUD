@@ -606,6 +606,57 @@ class LapStateTests(unittest.TestCase):
         self.assertEqual(state.current_lap, 2_000_000 - 1_785_545)
         self.assertEqual(state.time_left, 10_610_000)
 
+    # Reported by the user on 2026-11-20: counting down through the lights, the time left told when they
+    # would go out (TSU's limit counts them: 10:00 came as they went out, also with 5 lights at random).
+
+    def grid(self, clock, lap_starts=(), **options):
+        """A 10-minute race whose limit counts 7 s of lights, the race clock at `clock` seconds."""
+        seconds = race.UNITS_PER_SECOND
+        options.setdefault('time_limit', 607 * seconds)
+        return race.LapState(
+            clock=round(clock * seconds),
+            laps_completed=0,
+            laps_to_finish=0,
+            lap_starts=[round(start * seconds) for start in lap_starts],
+            **options,
+        )
+
+    def test_on_the_grid_the_time_left_stands_at_the_races_length(self):
+        for clock in (0.0, 1.0, 3.5, 6.9):
+            state = self.grid(clock)
+            self.assertTrue(state.before_lights_out)
+            self.assertEqual(state.time_left, 600 * race.UNITS_PER_SECOND)  # 10:00, not 10:07 to 10:00
+
+    def test_from_lights_out_it_counts_down(self):
+        state = self.grid(7.0, lap_starts=[7.0])
+        self.assertFalse(state.before_lights_out)
+        self.assertEqual(state.time_left, 600 * race.UNITS_PER_SECOND)
+        self.assertEqual(self.grid(67.0, lap_starts=[7.0]).time_left, 540 * race.UNITS_PER_SECOND)
+
+    def test_lap_one_started_after_this_read_is_still_the_grid(self):
+        self.assertTrue(self.grid(6.0, lap_starts=[7.0]).before_lights_out)
+
+    def test_a_race_under_a_minute_shows_no_time_on_the_grid(self):
+        self.assertIsNone(self.grid(1.0, time_limit=45 * race.UNITS_PER_SECOND).time_left)
+
+    def test_no_lights_to_hide_without_a_race_of_ones_own(self):
+        # Hotlapping counts from the start (no lights, lap 1 begins at the line); an arena has no laps;
+        # a replay or a spectator has no start to guess.
+        for options in ({'hotlapping': True}, {'on_a_track': False}, {'replay': True}, {'spectating': True}):
+            state = self.grid(3.0, **options)
+            self.assertFalse(state.before_lights_out, options)
+            self.assertEqual(state.time_left, 604 * race.UNITS_PER_SECOND, options)
+
+    def test_the_lights_going_out_is_logged_once(self):
+        with self.assertLogs('turbohud.core.race', level='INFO') as logged:
+            waiting = race.lights_out_seen(self.grid(1.0), None)
+            waiting = race.lights_out_seen(self.grid(2.0), waiting)
+            waiting = race.lights_out_seen(self.grid(7.1, lap_starts=[7.0]), waiting)
+            race.lights_out_seen(self.grid(8.0, lap_starts=[7.0]), waiting)
+        self.assertEqual(len(logged.output), 2)
+        self.assertIn('on the grid, race clock 1.00 s, time limit 607.00 s: shown as 10:00', logged.output[0])
+        self.assertIn('lights out, race clock 7.10 s, lap 1 began at 7.00 s; 599.90 s left', logged.output[1])
+
     def test_before_the_first_lap_is_done(self):
         state = race.LapState(
             clock=50_000, time_limit=0, laps_completed=0, laps_to_finish=13, lap_starts=[10_000]
@@ -2414,7 +2465,8 @@ class RowsTests(unittest.TestCase):
             clock=2_800, time_limit=12_660_000, laps_completed=0, laps_to_finish=13, lap_starts=[]
         )
         sections = race.race_sections(racing(grid), 0)
-        self.assertEqual(sections['lap'][0].text, 'Lap 1/13  -  21:06 left')
+        # 21 minutes and the lights' 6 s: on the grid the race's length, the lights left out (2026-11-20).
+        self.assertEqual(sections['lap'][0].text, 'Lap 1/13  -  21:00 left')
         self.assertEqual(sections['current'][0].text, '-:--.-')
 
     def test_a_standing_clock_hides_the_hud(self):
