@@ -762,6 +762,29 @@ class RedrawTests(unittest.TestCase):
         self.assertGreater(purple_pixels(True), 20)
         self.assertEqual(purple_pixels(False), 0)
 
+    def test_car_status_tint_ends_below_its_last_row(self):
+        from turbohud.core.hud import RACE_SECTIONS, Row, text_box
+        from turbohud.core.settings import Theme
+        from turbohud.hud.painter import text_ink, text_width
+        from turbohud.overlay.window import SectionWindow
+
+        class Native:
+            def raise_window(self, window):
+                return 'test'
+
+        section = next(s for s in RACE_SECTIONS if s.name == 'carstatus')
+        window = SectionWindow(Native(), Theme(), section)
+        self.addCleanup(window.close)
+        window.font = 16
+        window.backdrop = True
+        window.resize(*text_box(section, (0, 0, 0, 0), 16, text_width, text_ink)[2:])
+        window.set_locked(True)
+        window.show_content([Row('Health 60%', 'medium', level=(0.6, 'behind'))])
+        image = window.grab().toImage()
+        middle = image.width() // 2
+        self.assertGreater(image.pixelColor(middle, 4).alpha(), 0)  # tinted behind the row
+        self.assertEqual(image.pixelColor(middle, image.height() - 4).alpha(), 0)  # see-through below
+
     def test_car_status_draws_a_bar_under_each_row_that_has_one(self):
         from turbohud.core.hud import RACE_SECTIONS, Row, text_box
         from turbohud.core.settings import Theme

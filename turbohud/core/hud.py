@@ -453,6 +453,8 @@ class Section:
     # Banner's opacity), and the race's winner has a checkered flag at its right end.
     banner: bool = False
     end: float = 0.0  # room at the right end of the box, after its text, as a share of its height
+    # Its tint ends just below the last row shown, where it shows fewer rows than its sample (Car status).
+    tint_to_rows: bool = False
 
 
 # The race winner's banner picture, given by the user on 2026-11-17 (assets/resources): 2128 x 252, transparent
@@ -574,6 +576,7 @@ EVERY_RACE_SECTION = (
                 Row(f'Finish +{WIDE_LAPS} laps', 'medium'),
             ),
         ),
+        tint_to_rows=True,
         tip='Health, tire wear, fuel and fuel to finish in one box, each with its bar; only the rows the event has',
     ),
     Section(
@@ -1047,6 +1050,21 @@ def fitted_scale(section, height, scale, ink, width=None, rows=(), measure=None)
             break
         scale *= FIT_STEP
     return scale
+
+
+def tint_height(section, rows, height, scale, ink):
+    """How far down from the top of a box `height` tall the tint goes behind `rows` drawn at `scale`:
+    for a section whose tint follows its rows (Section.tint_to_rows: Car status, asked for by the user
+    on 2026-11-20), just below the last row where it shows fewer rows than its sample, so the empty
+    room below is see-through; else the whole box."""
+    if not section.tint_to_rows or not rows or len(rows) >= len(section.samples[0]):
+        return height
+    _top, bottom = ink_span(replace(section, samples=(tuple(rows),)), scale, ink)
+    if rows[-1].level:  # down to the bottom of its bar
+        sizes = Sizes.for_scale(scale, section.spacing)
+        bottom = max(bottom, hud_lines(rows, scale, section.spacing)[-1].baseline + sizes.under)
+    pad = max(1, round(TIGHT_PAD * scale))
+    return min(height, round(content_shift(section, height, scale, ink) + bottom + pad))
 
 
 def content_shift(section, height, scale, ink):

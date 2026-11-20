@@ -8,8 +8,9 @@ Each branch adds its dated entry at the top. Where things stand now: `RESUME.md`
   usually sit together and could not be made the same size). A new text section with Health, Tires, Fuel and
   Fuel to finish (the user's order), one row each at one text size, a level bar right under each of the first
   three (`Row.level`: `_content` leaves room for it, `hud.row_bars` places it where a section's own bar goes,
-  `SectionWindow` draws it). Only the rows the event has, from the top (`race.car_status_rows`). The four
-  separate sections stay; Car status is off where no layout says (`hud.OFF_AT_FIRST`), placed at the Fuel
+  `SectionWindow` draws it). Only the rows the event has, from the top (`race.car_status_rows`), the tint ending
+  just below the last row shown so the empty room is see-through (`Section.tint_to_rows`, `hud.tint_height`; the
+  box keeps its size, the user's choice). The four separate sections stay; Car status is off where no layout says (`hud.OFF_AT_FIRST`), placed at the Fuel
   section's spot (`app.in_fuels_place`, first start and existing layouts), and a preset saved without it hides
   it (`hud.off_where_left_out`), so it is not shown beside the four. Built on `fix/wide-laps-same-size`. Guides,
   README and HOW_IT_WORKS say so. Tests: the order and bars, only the rows there, the room and place of a bar,

@@ -1575,3 +1575,22 @@ class CarStatusTests(unittest.TestCase):
         self.assertEqual(
             hud.off_where_left_out({}, {'carstatus': shown}), {}
         )  # an empty preset loads nothing
+
+    def test_the_tint_ends_below_the_last_row_shown(self):
+        font = 16
+        scale = hud.font_scale(font)
+        height = hud.text_box(self.SECTION, (0, 0, 0, 0), font, size_measure, ink)[3]
+        full = list(self.SECTION.samples[0])
+        self.assertEqual(hud.tint_height(self.SECTION, full, height, scale, ink), height)
+        health = [hud.Row('Health 60%', 'medium', level=(0.6, 'behind'))]
+        one = hud.tint_height(self.SECTION, health, height, scale, ink)
+        two = hud.tint_height(
+            self.SECTION, [*health, hud.Row('Tires 80%', 'medium', level=(0.8, 'ahead'))], height, scale, ink
+        )
+        self.assertLess(one, two)
+        self.assertLess(two, height)
+        bar = hud.row_bars(hud.hud_lines(health, scale), 300, scale)[0]
+        shift = hud.content_shift(self.SECTION, height, scale, ink)
+        self.assertGreater(one, shift + bar.y + bar.height)  # its bar is inside the tint
+        fuel = next(s for s in hud.RACE_SECTIONS if s.name == 'fuel')
+        self.assertEqual(hud.tint_height(fuel, [], 50, scale, ink), 50)  # other sections: the whole box

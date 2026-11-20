@@ -37,7 +37,7 @@ Kept short: the state now and what to do next. Every change, with how it was che
 Details of each: its entry in `docs/CHANGELOG.md`. Checks on the Mac and Windows, and rare cases not yet seen:
 backlog item 14.
 1. **Car status**: tick it in move mode (untick the four it stands for): Health, Tires, Fuel, Finish in one
-   box with a bar under each of the first three, only the rows the event has. The four separate ones at one
+   box with a bar under each of the first three, only the rows the event has, the tint ending below the last. The four separate ones at one
    text size look the same too, also with ~100 laps of tires (shown whole from 100 on).
 2. **Ungroup all**: in move mode, the button at the end of the group row ungroups every section; Undo brings
    the groups back.
