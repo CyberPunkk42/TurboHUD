@@ -70,12 +70,17 @@ LAP_COLUMN_OPTIONS = (
     ),
     ('best', 'Best', "Each driver's best lap"),
     ('current', 'Last', "Each driver's last lap, or CUT or PIT"),
+    # Named for what they show, not "Class" and "Overall": read beside "Classes in the standings" they
+    # seemed the same switch (reported by the user on 2026-11-20).
     (
         'class',
-        'Class',
-        "In a race with classes, each driver's class after the name; off, the class lines still divide the list",
+        'Class code',
+        (
+            "In a race with classes, each driver's class code (GT3) after the name; off, the class lines"
+            ' still divide the list'
+        ),
     ),
-    ('overall', 'Overall', 'In a race with classes, each driver\'s place in the whole race (P7)'),
+    ('overall', 'Overall place', "In a race with classes, each driver's place in the whole race (P7)"),
 )
 log = logging.getLogger('turbohud')
 

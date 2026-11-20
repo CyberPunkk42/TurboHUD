@@ -1977,7 +1977,7 @@ class MovePanel(QWidget):
             self.relearn.setEnabled(False)
             self.relearn.clicked.connect(self.relearn_requested)
             row.addWidget(self.relearn)
-        layouts = QPushButton('Layouts…')
+        layouts = QPushButton('Layouts')  # no three dots (asked for by the user on 2026-11-20)
         layouts.setToolTip(
             'The presets and their names, which loads for each kind of event, layout files, Design'
         )
@@ -1991,7 +1991,7 @@ class MovePanel(QWidget):
             'The preset the layout is in now; (changed): moved on from the one loaded or saved last'
         )
         lock = QPushButton('Lock')
-        settings = QPushButton('Settings…')
+        settings = QPushButton('Settings')
         settings.setToolTip('Colours, sizes, warning times and the options for the whole HUD')
         quit_ = QPushButton('Quit TurboHUD')
         lock.clicked.connect(self.lock_requested)

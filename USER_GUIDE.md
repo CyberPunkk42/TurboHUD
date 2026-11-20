@@ -145,12 +145,12 @@ which has none, the country code).
 (`[GT3]`, `[LMP]`, `[LMP2]` ...). With two or more classes in a race, the standings come by
 class, each below a thin line with its name in the class's colour, numbered within the
 class, with the class's fastest lap in purple, each driver's class after the name and the
-overall place (`P7`) in an **Ovr** column. The **Class** and **Overall** columns can be turned
-off under **Settings…**; the class lines still divide the list. A driver without a class tag
+overall place (`P7`) in an **Ovr** column. The **Class code** and **Overall place** columns can be
+turned off under **Settings…**; the class lines still divide the list. A driver without a class tag
 (or with a team's tag) gets the class most tagged drivers in the same car have; drivers in a
 car no one tagged come last under **Other**. Classes need two different cars: when everyone
 drives the same car, the tags name no classes.
-**Settings… > Car classes...** lists every class a tag can name, in its colour. The tags
+**Settings… > Car classes** lists every class a tag can name, in its colour. The tags
 that count are in `settings.json` as `class_tags` (change it while TurboHUD is closed).
 
 ### Car
@@ -406,7 +406,7 @@ section, the same sections in the same order, under the headings Timing, Car, Ra
 - **Global font**: the font of every section whose **Font** is global, the same as Settings >
   Look > Font: change it here to change them all at once. **All global** beside it sets every
   text section back to the global font. Both are a step for **Undo**.
-- **Layouts…** opens the layouts window beside the panel: the presets, which preset loads
+- **Layouts** opens the layouts window beside the panel: the presets, which preset loads
   for each kind of event, layout files and the design screen (see below).
 - The line above the buttons, in electric blue, says which preset the layout is in now, such as **Preset: 3 Race**:
   the one whose sections are all where they are now (loaded, saved, or put back by Undo).
@@ -416,12 +416,12 @@ section, the same sections in the same order, under the headings Timing, Car, Ra
   centring, matching, fonts, presets); a drag or a run of nudges is one change. **Redo** goes
   forward again. Colours and options are not in it, and it starts afresh at each start.
 - **Relearn map**: the same as **Relearn this track's map** in the icon's menu.
-- **Lock** ends move mode. **Settings…** opens the settings window. **Quit TurboHUD** quits.
+- **Lock** ends move mode. **Settings** opens the settings window. **Quit TurboHUD** quits.
 
 Move mode ends with Ctrl+Shift+L, **Lock**, or when a race begins; a click on the game does
 not end it. Your layout is saved as you change it.
 
-**The layouts window** (**Layouts…** in the panel; it closes with **Close**, and when move
+**The layouts window** (**Layouts** in the panel; it closes with **Close**, and when move
 mode ends):
 - **Presets** (1 to 5): each has a **Name** box: call it what it is for, such as Race,
   Hotlapping, Practice or Recordings (up to 24 letters). **Enter** (or clicking elsewhere) keeps
@@ -502,7 +502,7 @@ that font as their own, so the layout looks as it was made, and your global font
 
 ## 6. The settings window
 
-Open it with **Settings…** in the icon's menu or in the move-mode panel.
+Open it with **Settings…** in the icon's menu or **Settings** in the move-mode panel.
 
 The window has two columns, under headings. The on/off options are the same as under
 **Options** in the icon's menu (section 2).
@@ -529,9 +529,13 @@ The window has two columns, under headings. The on/off options are the same as u
 **Standings**
 - **Classes in the standings** and **Clan tags in the standings**.
 - **Columns:** **Flag**, **Lap** (the lap each driver is on), **Tire**, **Gap** (to the
-  leader), **Best**, **Last** (the last lap), **Class** and **Overall** (in a race with
+  leader), **Best**, **Last** (the last lap), **Class code** and **Overall place** (in a race with
   classes): which columns the standings show. The place and the name always show. Each
-  column left out makes the box narrower. A preset keeps the columns shown when it was saved and
+  column left out makes the box narrower. **Class code** and **Overall place** are greyed out
+  while **Classes in the standings** is off, as they show only in a race grouped by class; they
+  keep their tick for when it is on again. **Classes in the standings** is what groups the race
+  by class; **Class code** only shows each driver's class after the name, the class lines
+  dividing the list either way. A preset keeps the columns shown when it was saved and
   loads them again (see the layouts window), as do layout files (**Export…**, **Import…**).
 
 **Sections**
@@ -556,8 +560,8 @@ The window has two columns, under headings. The on/off options are the same as u
   track map move less smoothly, and a track first learnt at 5 gets a coarser line.
 
 At the bottom:
-- **Car classes...**: every car class a clan tag can name, by category in its colour.
-- **About...**: the name and the version. **Close** closes the window.
+- **Car classes**: every car class a clan tag can name, by category in its colour.
+- **About**: the name and the version. **Close** closes the window.
 
 
 ## 7. Keyboard shortcuts and commands

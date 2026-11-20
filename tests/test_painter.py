@@ -1440,9 +1440,9 @@ class MovePanelPresetTests(unittest.TestCase):
             'None',
             'Undo',
             'Relearn map',
-            'Layouts…',
+            'Layouts',
             'Lock',
-            'Settings…',
+            'Settings',
             'Quit TurboHUD',
         )
         buttons = [b for b in panel.findChildren(QPushButton) if b.text() in words]

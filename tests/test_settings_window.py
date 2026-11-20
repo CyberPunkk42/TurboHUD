@@ -54,6 +54,45 @@ class SettingsWindowTests(unittest.TestCase):
         self.assertFalse(window.options['sector_bars'].isChecked())
         window.set_option('radar_cone', True)  # not listed: nothing happens
 
+    # Reported by the user on 2026-11-20: "Class" read as the same switch as "Classes in the standings".
+    CLASS_OPTIONS = (
+        ('classes', 'Classes in the standings', False, 'tip'),
+        ('column_flag', 'Flag', True, 'flag tip'),
+        ('column_class', 'Class code', True, 'class tip'),
+        ('column_overall', 'Overall place', False, 'overall tip'),
+    )
+
+    def test_the_class_columns_are_greyed_out_without_classes_keeping_their_ticks(self):
+        from turbohud.overlay.settings_window import NEEDS_TIP
+
+        window = self.window(options=self.CLASS_OPTIONS)
+        for key in ('column_class', 'column_overall'):
+            self.assertFalse(window.options[key].isEnabled())
+            self.assertEqual(window.options[key].toolTip(), NEEDS_TIP)
+        self.assertTrue(window.options['column_class'].isChecked())  # kept for when classes come on
+        self.assertTrue(window.options['column_flag'].isEnabled())  # needs nothing
+        window.options['classes'].click()
+        self.assertTrue(window.options['column_class'].isEnabled())
+        self.assertEqual(window.options['column_class'].toolTip(), 'class tip')
+        self.assertTrue(window.options['column_class'].isChecked())
+
+    def test_classes_turned_off_elsewhere_greys_them_out_too(self):
+        options = (('classes', 'Classes in the standings', True, 'tip'), *self.CLASS_OPTIONS[1:])
+        window = self.window(options=options)
+        self.assertTrue(window.options['column_overall'].isEnabled())
+        got = []
+        window.option_changed.connect(lambda *change: got.append(change))
+        window.set_option('classes', False)  # from the icon's menu
+        self.assertFalse(window.options['column_overall'].isEnabled())
+        self.assertEqual(got, [])
+
+    def test_the_class_columns_say_what_they_show(self):
+        sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+        from turbohud.app import LAP_COLUMN_OPTIONS
+
+        labels = {column: label for column, label, _tip in LAP_COLUMN_OPTIONS}
+        self.assertEqual((labels['class'], labels['overall']), ('Class code', 'Overall place'))
+
     def test_the_radar_cameras_are_a_choice_of_two(self):
         # Asked for by the user on 2026-11-15: the radar in third person too, not only "CAM 5".
         options = (('radar_cockpit_only', 'Radar in every camera', True, 'tip'),)
@@ -100,7 +139,7 @@ class SettingsWindowTests(unittest.TestCase):
         from turbohud.core.class_registry import CLASSES
 
         window = self.window()
-        button = next(b for b in window.findChildren(QPushButton) if b.text() == 'Car classes...')
+        button = next(b for b in window.findChildren(QPushButton) if b.text() == 'Car classes')
         button.click()
         sheet = window.class_sheet
         self.assertTrue(sheet.isVisible())
@@ -118,7 +157,7 @@ class SettingsWindowTests(unittest.TestCase):
         window = self.window()
         got = []
         window.about_requested.connect(lambda: got.append(True))
-        next(b for b in window.findChildren(QPushButton) if b.text() == 'About...').click()
+        next(b for b in window.findChildren(QPushButton) if b.text() == 'About').click()
         self.assertEqual(got, [True])
 
     def test_without_options_there_are_none(self):
