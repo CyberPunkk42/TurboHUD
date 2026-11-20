@@ -1420,16 +1420,53 @@ class LapReader:
     def _track_name(self, state):
         """The track's name: EventState.m_level (TS.Level) .m_properties (TS.LevelProperties)
         .name, found in the game's metadata on 2026-11-12. Read once an event; '' where missing."""
-        if self._track_for is not state:
+        # By value: the state's address is a new int at each read (`is not` read it again every time).
+        if self._track_for != state:
             self._track_for, self._track = state, ''
             try:
                 level = self._ref('state', state, 'm_level')
                 properties = self._ref('level', level, 'm_properties')
                 where = properties + self._offset('level properties', properties, 'name')
                 self._track = self._string(self.il.memory.u64(where))
+                self._log_sun(level, properties)
             except (NotFound, OSError):
                 pass
         return self._track
+
+    def _log_sun(self, level, properties):
+        """Log the track's sun once an event, to learn what it holds before the compass may take its
+        north from it (asked for by the user on 2026-11-20): TS.Level .m_nature (TS.Nature)
+        .m_locationProperties (TS.LocationProperties) .sunDirection (one number, 0 by default) and
+        .time (10.0 by default: the time of day?), found in the game's metadata, and the level's
+        base location (TS.LevelProperties.location). What each means is not known yet: with where the
+        sun is in the game, the log says it."""
+        values = {}
+        try:
+            nature = self._ref('level', level, 'm_nature')
+            location = self._ref('nature', nature, 'm_locationProperties')
+            for name in ('sunDirection', 'time'):
+                try:
+                    values[name] = f'{self._number("location properties", location, name):g}'
+                except (NotFound, OSError) as error:
+                    values[name] = f'not read ({error})'
+        except (NotFound, OSError) as error:
+            log.info('sun: not read (%s)', error)
+            return
+        try:
+            base = f'{self._number("level properties", properties, "location"):g}'
+        except (NotFound, OSError):
+            try:
+                where = properties + self._offset('level properties', properties, 'location')
+                base = repr(self._string(self.il.memory.u64(where)))
+            except (NotFound, OSError) as error:
+                base = f'not read ({error})'
+        log.info(
+            'sun: track %r, location %s, sunDirection %s, time %s',
+            self._track,
+            base,
+            values['sunDirection'],
+            values['time'],
+        )
 
     def cockpit_camera(self):
         """Whether the race camera now sits at the driver, the view of the first person (asked
@@ -1461,7 +1498,7 @@ class LapReader:
         player list and lap times kept race order in qualifying): EventState.m_eventStats
         (TS.EventStats) .raceStats (TS.RaceStats) .m_hotlappingOnCircuit, 1 in a hotlapping
         replay on the user's PC (2026-11-13). Read once an event; False where missing."""
-        if self._hotlapping_for is not state:
+        if self._hotlapping_for != state:  # by value: a new int at each read
             self._hotlapping_for, self._hotlapping = state, False
             try:
                 stats = self._ref('state', state, 'm_eventStats')
@@ -1476,7 +1513,7 @@ class LapReader:
         """How long TSU slows a car for a shortcut in this event: EventState's
         ShortcutSlowdownUpdater.m_slowdownTicks (150 on the user's track, 2026-11-11), in
         seconds at TICKS_PER_SECOND. Read once an event; 0.0 where it is missing."""
-        if self._shortcut_for is not state:
+        if self._shortcut_for != state:  # by value: a new int at each read
             self._shortcut_for, self._shortcut_length = state, 0.0
             try:
                 updater = self._ref('state', state, 'shortcutSlowdownUpdater')

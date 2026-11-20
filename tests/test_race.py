@@ -147,6 +147,7 @@ def build(
     camera=None,
     gear=None,
     reversing=False,
+    sun=None,
 ):
     """A fake race; `car` is the car's (x, z) and `gates` the checkpoint lines, both
     optional like in a game without them."""
@@ -277,8 +278,19 @@ def build(
         g.q(stats + 0x30, race_stats)
         g.q(state + 0x90, stats)
     if track is not None:  # the track's name: EventState.m_level.m_properties.name
-        level = g.alloc_obj(g.klass('TS', 'Level', [('m_properties', 0x10, False)]))
-        level_properties = g.alloc_obj(g.klass('TS', 'LevelProperties', [('name', 0x18, False)]))
+        level_fields = [('m_properties', 0x10, False)] + ([('m_nature', 0x18, False)] if sun else [])
+        level = g.alloc_obj(g.klass('TS', 'Level', level_fields))
+        properties_fields = [('name', 0x18, False)] + ([('location', 0x20, False, 0x08)] if sun else [])
+        level_properties = g.alloc_obj(g.klass('TS', 'LevelProperties', properties_fields))
+        if sun:  # (sunDirection, time, location): Level.m_nature.m_locationProperties, a level's location
+            direction, hour, base = sun
+            nature = g.alloc_obj(g.klass('TS', 'Nature', [('m_locationProperties', 0x10, False)]))
+            fields = [('sunDirection', 0x10, False, 0x0C), ('time', 0x14, False, 0x0C)]
+            location = g.alloc_obj(g.klass('TS', 'LocationProperties', fields))
+            g.put(location + 0x10, struct.pack('<2f', direction, hour))
+            g.q(nature + 0x10, location)
+            g.q(level + 0x18, nature)
+            g.put(level_properties + 0x20, struct.pack('<i', base))
         text = g.alloc_obj(0, 0x14 + 2 * len(track) + 2)
         g.put(text + 0x10, struct.pack('<i', len(track)) + track.encode('utf-16-le'))
         g.q(level_properties + 0x18, text)
@@ -2055,6 +2067,32 @@ class CarTests(unittest.TestCase):
 
         self.assertEqual(read('Spa (WET)'), 'Spa (WET)')
         self.assertEqual(read(None), '')  # not there: no name, the race still read
+
+    def test_reader_logs_the_tracks_sun_once_an_event(self):
+        # Asked for by the user on 2026-11-20: what TSU's sun holds, before the compass may take north from it.
+        def read(**sun):
+            reader = build(
+                [10_000],
+                laps_completed=0,
+                clock=20_000,
+                limit=0,
+                name='A',
+                car=(1.0, 2.0),
+                track='Spa',
+                **sun,
+            )
+            with self.assertLogs('turbohud.core.race', level='INFO') as logged:
+                reader.read()
+                reader.read()  # the same event: not again
+            return [line for line in logged.output if 'sun:' in line]
+
+        self.assertEqual(
+            read(sun=(135.5, 17.25, 3)),
+            ["INFO:turbohud.core.race:sun: track 'Spa', location 3, sunDirection 135.5, time 17.25"],
+        )
+        lines = read()  # a level without its nature: said so, and the race still read
+        self.assertEqual(len(lines), 1)
+        self.assertIn('sun: not read', lines[0])
 
     def test_reader_reads_each_cars_position_for_the_radar(self):
         reader = build(
