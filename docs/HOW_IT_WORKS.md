@@ -301,7 +301,7 @@ When Steam stops the game, the probe passes the stop on and ends with it.
 | Program | RAM | CPU |
 |---|---|---|
 | TSU (for comparison) | about 2 GB | about 46 % of one core |
-| TurboHUD | about 180 MB | about 4 % of one core |
+| TurboHUD | about 180 MB at the start; 300-360 MB in a race of 20 cars once its text caches are full (2026-11-20) | about 4 % of one core |
 | Probe, between questions | small (a Python program) | 0 % |
 | Probe, during an online-race search | + 16 MB, kept for the next search | one core for about 1.5 to 2 s |
 
@@ -321,7 +321,8 @@ macOS `~/Library/Application Support/TurboHUD`, Windows `%APPDATA%\TurboHUD`):
 - `tracks/`: the track map's learnt tracks, one small file per track (the line it
   draws, and the start line), named from the track's checkpoint lines
 - `turbohud.log`: what TurboHUD did in this run (replaced at each start), with numbers to
-  go by if the HUD lags: every 30 s in a race how long its reads took, and when each
+  go by if the HUD lags: every 30 s in a race how long its reads took, TurboHUD's memory and where it
+  is (`memory parts:`; with `TURBOHUD_TRACE_MEMORY=1` also where Python's grew), and when each
   search for an online race ran and what it found. No names or IDs of players.
 - `memory_probe.log` (Linux): written by the probe: the game it found, errors
 - `bottle_reader.log` (macOS): the reader's errors

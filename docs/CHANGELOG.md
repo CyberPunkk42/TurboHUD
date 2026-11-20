@@ -4,6 +4,11 @@ Every finished change, newest first: what changed, why, how it was checked and w
 Each branch adds its dated entry at the top. Where things stand now: `RESUME.md`; what is open:
 `docs/BACKLOG.md`.
 
+- 2026-11-20: The documents brought up to date (`docs/sweep-2026-11-20`, asked for by the user). RESUME.md: today's
+  state, the to-try list numbered again with what was merged today on top (the Race preset at start seen on Linux),
+  the two tests that fail on the Linux PC before any change. The backlog: a preset loading slowly on Hyprland (item
+  11) and reads ten times slower with many cars (item 12), both from today's log; the `sun:` line's location under
+  Nice to have. HOW_IT_WORKS: TurboHUD's memory in a race and the log's memory lines.
 - 2026-11-20: A preset loaded by hand remembered for the session (`feature/session-presets`, asked for by the user,
   who loaded preset 5 by hand at every event, as only it had the compass). Load by itself's preset for each kind of
   event (race, hotlapping, recording, spectating, special) loads as before; a preset loaded by hand during an event
