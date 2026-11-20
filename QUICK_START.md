@@ -28,6 +28,9 @@ it goes.
 - Start TSU, before or after TurboHUD. The race sections appear when the cars stand on the
   grid; online and in replays, finding the race takes up to about 10 seconds.
 - Nothing showing? Rest the pointer on the icon: it says what TurboHUD is waiting for.
+- The first start lays out the HUD for your screen and fills the five presets (Recording,
+  Spectator/RD, Practice/Hotlapping, Race, Special Event), each loading by itself for its kind
+  of event: see **Layouts…** in move mode to change them.
 
 ## 3. Place your HUD (move mode)
 

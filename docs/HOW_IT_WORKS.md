@@ -330,7 +330,11 @@ where that one cannot be written to): layout files with places and sizes only. T
 layouts per screen size are there too, as `<width>x<height> (TurboHUD default).json`: in the
 Windows and Linux downloads, and written again from the ones inside the app at each start where
 missing or older. A first start takes the one for the main screen; they never replace sections
-already placed, nor a layout file of the player's own.
+already placed, nor a layout file of the player's own. A first start also takes the starting presets
+(`assets/presets/starting/presets.json`: the user's five, with names and Load by itself choices),
+fitted to the screen (`app.with_starting_presets`), where the player has none. Both are made with
+`tools/make_layouts.py LAYOUT.json [SETTINGS.json]` from a layout the user exported and their
+settings; fitting keeps Nearby cars' text at least the Standings' (`presets.readable_nearby`).
 
 It writes nothing into the game's folders and changes nothing in the system.
 
@@ -488,6 +492,7 @@ experiments/            the probes that settled the design; tsu_memory_probe.py 
 reader/                 the reader in Rust (a Windows program, no dependencies): in the
                         bottle on macOS, beside TSU on Windows; answers as bottle_reader.py does
 tools/build_app.py      PyInstaller build, archive and smoke test for this system
+tools/make_layouts.py   the shipped layouts and starting presets from the user's own
 tools/build_linux.sh    the Linux build in an Ubuntu 22.04 container
 tools/get_rust.sh       Rust and llvm-mingw into .buildtools (pinned), then builds the Rust reader
 tools/get_mac_python.sh a pinned Python for the Mac build, for older macOS versions too

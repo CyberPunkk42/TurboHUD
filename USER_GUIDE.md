@@ -451,14 +451,20 @@ mode ends):
 ## 5. Layouts for every screen size
 
 TurboHUD comes with layouts for 1920x1080, 2294x1490 (a Mac's), 2560x1440, 2560x1600, 3840x2160 and
-5120x1440, all made from one layout for 5120x1440 and fitted to each size.
+5120x1440, all made from one layout for 5120x1440 and fitted to each size. Fitted to a smaller
+screen, the **Nearby cars** text is never smaller than the **Standings**' text.
 They are in the **`customization/display_presets`** folder beside TurboHUD: beside
 `TurboHUD.exe` on Windows, beside the `TurboHUD` program on Linux; on the Mac, and wherever
 that folder cannot be written to, in TurboHUD's settings folder (section 8). They are named
 like `2560x1440 (TurboHUD default).json`.
 
 - **First start.** When your main screen has one of those sizes, TurboHUD lays out the HUD as
-  that layout has it; for another size it takes the nearest one, fitted to your screen.
+  that layout has it; for another size it takes the nearest one, fitted to your screen. It also
+  fills the five presets with ready-made ones, fitted to your screen: **1 Recording**,
+  **2 Spectator/RD**, **3 Practice/Hotlapping**, **4 Race** and **5 Special Event**, each with
+  its own Standings columns, and chooses them under **Load by itself** for those kinds of event
+  (Race also being the layout TurboHUD starts in). Save over any of them, rename them or set
+  **Load by itself** to **Off**: presets and choices of your own are never replaced.
 - **Your own layout always wins.** Once you have placed sections, TurboHUD's layouts never
   move them again, also not after an update. A layout file of your own for your screen's
   size in that folder (any name without "(TurboHUD default)") is taken instead of

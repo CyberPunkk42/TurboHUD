@@ -55,6 +55,47 @@ class FileTests(unittest.TestCase):
         self.assertEqual(read['laptimes'].columns, ('lap', 'best'))
         self.assertIsNone(read['lap'].columns)
 
+    def test_nearby_cars_raised_to_the_standings_size_between_its_neighbours(self):
+        sections = SECTIONS
+        places = {
+            'laptimes': place(0, 0, 400, 600, font=14),
+            'delta': place(500, 800, 200, 30, font=14),  # stacked right above it
+            'players': place(500, 830, 260, 90, font=8),
+            'times': place(500, 920, 260, 30, font=14),  # right below it
+            'radar': place(1500, 100, 200, 200),  # elsewhere
+        }
+        raised = presets.readable_nearby(
+            places, (1920, 1080), sections, lambda t, s: len(t) * s * 0.6, lambda t, s: (0, s)
+        )
+        nearby = raised['players']
+        self.assertEqual(nearby.font, 14)
+        self.assertLessEqual(nearby.y + nearby.height, 920)  # never into the row below
+        self.assertLessEqual(raised['delta'].y + raised['delta'].height, nearby.y + presets.STACKED)
+        self.assertEqual(raised['radar'], places['radar'])
+        self.assertEqual(raised['times'], places['times'])
+
+    def test_nearby_cars_already_large_enough_stays(self):
+        places = {'laptimes': place(0, 0, 400, 600, font=14), 'players': place(500, 830, 260, 90, font=16)}
+        self.assertEqual(presets.readable_nearby(places, (1920, 1080), {}, None, None), places)
+
+    def test_starting_presets_file_round_trip(self):
+        kept = {
+            1: {'laptimes': place(10, 20, 400, 300, font=20, columns=('flag',))},
+            4: {'lap': place(5, 5, 300, 40, font=30)},
+        }
+        data = presets.starting_data(
+            kept, (5120, 1440), 18, {1: 'Recording', 4: 'Race', 3: 'Gone'}, {'race': 4, 'special': 5}
+        )
+        path = Path(tempfile.mkdtemp()) / 'presets.json'
+        path.write_text(json.dumps(data), encoding='utf-8')
+        size, read, names, auto = presets.read_starting(path)
+        self.assertEqual((tuple(size), sorted(read)), ((5120, 1440), [1, 4]))
+        self.assertEqual(read[1]['laptimes'].columns, ('flag',))
+        self.assertEqual(names, {1: 'Recording', 4: 'Race'})  # only for presets it has
+        self.assertEqual(auto, {'race': 4})
+        path.write_text('{"presets": 3}', encoding='utf-8')
+        self.assertIsNone(presets.read_starting(path))
+
     def test_what_is_not_a_preset_is_refused(self):
         self.assertIsNone(presets.read_preset({'format': 99, 'screen': [1920, 1080], 'sections': {}}))
         self.assertIsNone(presets.read_preset({'format': 1, 'screen': [0, 1080], 'sections': {'lap': {}}}))
@@ -72,7 +113,10 @@ class FileTests(unittest.TestCase):
 
     def test_nearby_cars_reads_as_well_as_the_standings(self):
         # A player found Nearby cars' text too small (2026-11-15): 8 px at 1920x1080, Standings 10.
+        # Every layout fitted from the user's (5120x1440, where they have it smaller as they like it).
         for size in presets.SCREENS:
+            if size == (5120, 1440):
+                continue
             with self.subTest(size=size):
                 sections = json.loads((FOLDER / presets.file_name(size)).read_text(encoding='utf-8'))[
                     'sections'
@@ -111,6 +155,7 @@ class FileTests(unittest.TestCase):
                             'tint',
                             'font',
                             'spacing',
+                            'columns',  # the Standings' (2026-11-20)
                         }
                     )
 

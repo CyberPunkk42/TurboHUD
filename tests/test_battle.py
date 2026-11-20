@@ -315,6 +315,8 @@ class BattleSectionTest(unittest.TestCase):
             with self.subTest(path.name):
                 places = json.loads(path.read_text(encoding='utf-8'))['sections']
                 mine, leader = places['battle'], places['leader']
+                if not mine['visible']:
+                    continue  # hidden in the user's layout (2026-11-20): its place is theirs
                 self.assertGreaterEqual(mine['y'], leader['y'] + leader['height'])
                 for name, other in places.items():
                     if name == 'battle':

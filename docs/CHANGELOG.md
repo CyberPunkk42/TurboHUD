@@ -4,6 +4,22 @@ Every finished change, newest first: what changed, why, how it was checked and w
 Each branch adds its dated entry at the top. Where things stand now: `RESUME.md`; what is open:
 `docs/BACKLOG.md`.
 
+- 2026-11-20: The user's layout and presets shipped (`feature/ship-user-layouts`, asked for by the user): the
+  shipped layouts (`assets/presets`) are made again from the user's updated 5120x1440 layout
+  (`customization/display_presets/5120x1440.json`, with its Standings columns), fitted to the five other sizes;
+  their five presets (names, places, Standings columns, Load by itself choices: recording 1, spectating 2,
+  hotlapping 3, race 4, special 5) are shipped as starting presets (`assets/presets/starting/presets.json`,
+  `presets.starting_data` / `read_starting`), which a first start fits to the player's screen
+  (`app.with_starting_presets`; never over a player's own presets or choices). Both come from a new tool,
+  `tools/make_layouts.py`, so they can be made again (CRLF, as before). Fitted down, the user's Nearby cars
+  (15 against the Standings' 20) gave 8 px at 1920x1080, which a player found too small on 2026-11-15: on the
+  user's choice, a fitted layout raises Nearby cars to the Standings' size (`presets.readable_nearby`), growing
+  it upwards between the sections stacked above it (moved up as much) and the lap times right below it. The
+  user's Battle and Watched driver banners are hidden and off-centre: the tests of their place now check only
+  shown banners, and the shipped files may carry `columns`. Overlaps left: 1 to 2 px where sections touch in the
+  user's layout. Tests: the starting file, fitted on three screens, columns kept, a player's own kept, without
+  the file, the round trip, Nearby raised between its neighbours; the 1920x1080 layout drawn as boxes. Not yet
+  seen: a first start on another screen size (try with a fresh settings folder).
 - 2026-11-20: The purple name in move mode's preview (`fix/preview-fastest-name`, reported by the user: still not
   purple after `feature/sample-fastest-lap`). Move mode shows the made-up Laguna Seca race (`core/preview.py`), a
   race the player drives, not the plain samples that change touched (those show only before the preview is
