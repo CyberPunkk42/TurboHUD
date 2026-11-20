@@ -30,6 +30,7 @@ from PySide6.QtWidgets import (
     QScrollArea,
     QSpinBox,
     QStyle,
+    QTabWidget,
     QVBoxLayout,
     QWidget,
 )
@@ -130,6 +131,9 @@ PANEL_COMBO_WIDTH = 56  # the move-mode panel's group lists: wide enough for '-'
 PANEL_SMALL_BUTTON = 32  # its one-character buttons (centre, match a group, delete a preset)
 PANEL_FONT_WIDTH = 96  # its font lists: a font's name, cut where longer (the list opens wider)
 PANEL_FONT_OPEN = 220  # an open font list: wide enough for most fonts' names in full
+PANEL_TABS_ROOM = 8  # room between the help text and the tabs
+PANEL_TAB_LINE, PANEL_TAB_GAP = 2, 4  # the line below the tabs, and the room between it and the rows
+PANEL_TAB_TEXT = '#0f1e37'  # the open tab's name: the panel's dark blue, on the border's light blue
 FONT_GLOBAL = 'global'  # a section's font list: the global font (FONT_GLOBAL_KEY its item's data)
 FONT_GLOBAL_KEY = '\x00global'  # not a font's name: Qt keeps no None as an item's data
 SYSTEM_FONT = 'System font'
@@ -1596,7 +1600,8 @@ class MovePanel(QWidget):
         column.addWidget(QLabel('<b>TurboHUD - Move Mode</b>'))
         for line in help_lines(shortcuts, commands, lock_key):
             column.addWidget(QLabel(line))
-        self.boxes = {}
+        self.boxes = {}  # the General tab's Show ticks
+        self.text_boxes = {}  # the Text tab's, always the same as the General tab's
         self.groups = {}
         self.centres = {}
         self.winner_preview = None  # the race leader banner's 🏁 switch, once its row is made
@@ -1605,63 +1610,63 @@ class MovePanel(QWidget):
         self.spacings = {}
         self.families = {}  # section name -> its font list
         self._fonts = ({}, '')  # the fonts offered and the global one (set_fonts)
-        grid = QGridLayout()
-        grid.setHorizontalSpacing(6)
-        grid.setVerticalSpacing(0)
-        grid.setContentsMargins(0, 0, 0, 0)  # in its own widget (rows_area): no extra room round it
-        show = QHBoxLayout()
-        show.setSpacing(4)
-        show.addWidget(self._heading('Show', 'Tick to show the section'))
-        for text, wanted, tip in (
-            ('All', True, 'Show every section (one step for Undo)'),
-            ('None', False, 'Hide every section (one step for Undo)'),
-        ):
-            button = QPushButton(text)
-            button.setMinimumWidth(PANEL_WORD_BUTTON)
-            button.setToolTip(tip)
-            button.clicked.connect(lambda _checked=False, w=wanted: self._set_all(w))
-            show.addWidget(button)
-        show.addStretch()
-        grid.addLayout(show, 0, 0)
-        for column_, span, text, tip in (
-            (1, 1, 'Group', 'Sections in the same group move together'),
-            (2, 2, 'Centre', 'Centre the section across (↔) or down (↕) the screen'),
-            (4, 1, 'Mid text', 'Put the text in the middle of the box, not at its left'),
-            (5, 1, 'Tint', 'A light tint behind the text while locked; on the track map, its dark square'),
+        # Two tabs with the same rows of sections (asked for by the user on 2026-11-20): General, with
+        # where each goes and how it looks, and Text, with its text size, line spacing and font. The
+        # rows of each scroll where the screen is too short for them all (fit_height).
+        general = self._rows_grid(
             (
-                6,
-                1,
-                'Size px',
-                'Its text size in pixels, or the global one; flags, tire rings and bars go with it',
+                (1, 1, 'Group', 'Sections in the same group move together'),
+                (2, 2, 'Centre', 'Centre the section across (↔) or down (↕) the screen'),
+                (
+                    4,
+                    1,
+                    'Tint',
+                    'A light tint behind the text while locked; on the track map, its dark square',
+                ),
             ),
-            (7, 1, 'Lines %', 'The room between its rows, in percent of the usual'),
-            (8, 1, 'Font', 'Its own font, or the global one (Global font, below)'),
-        ):
-            grid.addWidget(self._heading(text, tip), 0, column_, 1, span, Qt.AlignHCenter | Qt.AlignBottom)
-        row = 0
-        for heading, listed in panel_categories(sections):
-            if heading:
-                row += 1
-                label = self._heading(heading.upper(), '')
-                label.setContentsMargins(0, 3, 0, 0)
-                grid.addWidget(label, row, 0, 1, 9)
-            for section in listed:
-                row += 1
-                self._section_row(grid, row, section)
-        grid.setColumnStretch(9, 1)
-        # The rows scroll where the screen is too short for them all (fit_height).
-        self.rows = QWidget()
-        self.rows.setLayout(grid)
-        self.rows_area = QScrollArea()
-        self.rows_area.setWidget(self.rows)
-        self.rows_area.setWidgetResizable(True)
-        self.rows_area.setFrameShape(QFrame.NoFrame)
-        self.rows_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.rows_area.setStyleSheet(
-            'QScrollArea, QScrollArea > QWidget > QWidget { background: transparent; }'
+            sections,
+            self._section_row,
+            self.boxes,
         )
-        self.rows_area.viewport().setAutoFillBackground(False)
-        column.addWidget(self.rows_area)
+        text = self._rows_grid(
+            (
+                (1, 1, 'Mid text', 'Put the text in the middle of the box, not at its left'),
+                (
+                    2,
+                    1,
+                    'Size px',
+                    'Its text size in pixels, or the global one; flags, tire rings and bars go with it',
+                ),
+                (3, 1, 'Lines %', 'The room between its rows, in percent of the usual'),
+                (4, 1, 'Font', 'Its own font, or the global one (Global font, below)'),
+            ),
+            sections,
+            self._text_row,
+            self.text_boxes,
+        )
+        self.rows, self.rows_area = self._scrolling(general)
+        self.text_rows, self.text_area = self._scrolling(text)
+        self.tabs = QTabWidget()
+        self.tabs.tabBar().setDrawBase(False)  # the style's own line: the pane's (below) instead
+        self.tabs.addTab(self.rows_area, 'General')
+        self.tabs.addTab(self.text_area, 'Text')
+        self.tabs.setTabToolTip(0, 'Show, group, centre and tint each section')
+        self.tabs.setTabToolTip(1, 'Where the text sits, its size, line spacing and font, for each section')
+        # Tabs that read as tabs, apart from the help text above them (reported by the user on
+        # 2026-11-20: plain words, they were easy to miss): bold, boxed, the open one filled, on a line
+        # that joins it to its rows.
+        edge = f'rgb{BORDER}'
+        self.tabs.setStyleSheet(
+            f'QTabWidget::pane {{ border: none; border-top: {PANEL_TAB_LINE}px solid {edge};'
+            f' background: transparent; padding-top: {PANEL_TAB_GAP}px; }}'
+            f' QTabBar::tab {{ color: {PANEL_HEADING}; background: rgba(120, 170, 230, 35);'
+            f' border: 1px solid {edge}; border-bottom: none; border-top-left-radius: 5px;'
+            ' border-top-right-radius: 5px; padding: 5px 22px; margin-right: 4px; font-weight: bold; }'
+            f' QTabBar::tab:selected {{ color: {PANEL_TAB_TEXT}; background: {edge}; }}'
+            ' QTabBar::tab:!selected:hover { color: white; background: rgba(120, 170, 230, 80); }'
+        )
+        column.addSpacing(PANEL_TABS_ROOM)
+        column.addWidget(self.tabs)
         self._finish(column, sections)
         self.fit_height(None)
         # The presets, layout files and the design screen: a window of their own (asked for by the
@@ -1709,19 +1714,86 @@ class MovePanel(QWidget):
         return dot
 
     def _set_all(self, wanted):
-        """Select all / Deselect all: every tick box, and one request for the lot."""
-        for box in self.boxes.values():
+        """Select all / Deselect all: every tick box in both tabs, and one request for the lot."""
+        for box in (*self.boxes.values(), *self.text_boxes.values()):
             box.blockSignals(True)
             box.setChecked(wanted)
             box.blockSignals(False)
         self.all_wanted.emit(wanted)
 
-    def _section_row(self, grid, row, section):
+    def _rows_grid(self, headings, sections, make_row, boxes):
+        """A tab's grid: Show with All and None, then `headings` ((column, span, text, tip), ...)
+        over their columns, then a row per section under its kind (`make_row(grid, row,
+        section)`), each starting with its Show tick, kept in `boxes`."""
+        grid = QGridLayout()
+        grid.setHorizontalSpacing(6)
+        grid.setVerticalSpacing(0)
+        grid.setContentsMargins(0, 0, 0, 0)  # in its own widget (_scrolling): no extra room round it
+        show = QHBoxLayout()
+        show.setSpacing(4)
+        show.addWidget(self._heading('Show', 'Tick to show the section'))
+        for text, wanted, tip in (
+            ('All', True, 'Show every section (one step for Undo)'),
+            ('None', False, 'Hide every section (one step for Undo)'),
+        ):
+            button = QPushButton(text)
+            button.setMinimumWidth(PANEL_WORD_BUTTON)
+            button.setToolTip(tip)
+            button.clicked.connect(lambda _checked=False, w=wanted: self._set_all(w))
+            show.addWidget(button)
+        show.addStretch()
+        grid.addLayout(show, 0, 0)
+        last = max(column_ + span for column_, span, _text, _tip in headings)
+        for column_, span, text, tip in headings:
+            grid.addWidget(self._heading(text, tip), 0, column_, 1, span, Qt.AlignHCenter | Qt.AlignBottom)
+        row = 0
+        for heading, listed in panel_categories(sections):
+            if heading:
+                row += 1
+                label = self._heading(heading.upper(), '')
+                label.setContentsMargins(0, 3, 0, 0)
+                grid.addWidget(label, row, 0, 1, last)
+            for section in listed:
+                row += 1
+                grid.addWidget(self._show_box(section, boxes), row, 0)
+                make_row(grid, row, section)
+        grid.setColumnStretch(last, 1)
+        return grid
+
+    @staticmethod
+    def _scrolling(grid):
+        """(the rows, the area they scroll in) for a tab's `grid`."""
+        rows = QWidget()
+        rows.setLayout(grid)
+        area = QScrollArea()
+        area.setWidget(rows)
+        area.setWidgetResizable(True)
+        area.setFrameShape(QFrame.NoFrame)
+        area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        area.setStyleSheet('QScrollArea, QScrollArea > QWidget > QWidget { background: transparent; }')
+        area.viewport().setAutoFillBackground(False)
+        return rows, area
+
+    def _show_box(self, section, boxes):
+        """A section's Show tick in one tab, in `boxes`; ticked or not, the other tab's follows."""
         box = QCheckBox(section.label)
         box.setToolTip(section.tip or f'Show {section.label.lower()}')
-        box.toggled.connect(lambda checked, name=section.name: self.wanted_changed.emit(name, checked))
-        grid.addWidget(box, row, 0)
-        self.boxes[section.name] = box
+        box.toggled.connect(lambda checked, name=section.name: self._shown(name, checked))
+        boxes[section.name] = box
+        return box
+
+    def _shown(self, name, checked):
+        """A Show tick changed in one tab: the other tab's the same, and one request."""
+        for boxes in (self.boxes, self.text_boxes):
+            box = boxes.get(name)
+            if box is not None and box.isChecked() != checked:
+                box.blockSignals(True)
+                box.setChecked(checked)
+                box.blockSignals(False)
+        self.wanted_changed.emit(name, checked)
+
+    def _section_row(self, grid, row, section):
+        """The General tab's columns for `section`: its group, centring and tint."""
         group = QComboBox()
         group.addItems(['-', *GROUPS])
         group.setToolTip('Sections in the same group move together')
@@ -1748,13 +1820,28 @@ class MovePanel(QWidget):
                 )
             )
             grid.addWidget(button, row, column_)
+        if has_tint(section):
+            tint = QCheckBox()
+            tint.setToolTip(
+                'The dark square behind the track map'
+                if section.drawing
+                else 'A light tint behind the text of this section while locked'
+            )
+            tint.toggled.connect(lambda checked, name=section.name: self.tint_changed.emit(name, checked))
+            grid.addWidget(tint, row, 4, Qt.AlignHCenter)
+            self.tints[section.name] = tint
+        else:
+            grid.addWidget(self._empty(), row, 4, Qt.AlignHCenter)
+
+    def _text_row(self, grid, row, section):
+        """The Text tab's columns for `section`: its text in the middle, size, line spacing, font."""
         if text_can_centre(section):
             centre = QCheckBox()
             centre.setToolTip('Put the text in the middle of the box, not at its left')
             centre.toggled.connect(
                 lambda checked, name=section.name: self.text_centred_changed.emit(name, checked)
             )
-            grid.addWidget(centre, row, 4, Qt.AlignHCenter)
+            grid.addWidget(centre, row, 1, Qt.AlignHCenter)
             self.centres[section.name] = centre
         elif section.banner and section.end:
             # Its text is always in the middle, so this column has the switch between a new leader's
@@ -1764,22 +1851,10 @@ class MovePanel(QWidget):
             winner.setFixedWidth(PANEL_SMALL_BUTTON)
             winner.setToolTip("Show the race winner's banner here instead of a new leader's")
             winner.toggled.connect(self.winner_preview_changed)
-            grid.addWidget(winner, row, 4, Qt.AlignHCenter)
+            grid.addWidget(winner, row, 1, Qt.AlignHCenter)
             self.winner_preview = winner
         else:
-            grid.addWidget(self._empty(), row, 4, Qt.AlignHCenter)
-        if has_tint(section):
-            tint = QCheckBox()
-            tint.setToolTip(
-                'The dark square behind the track map'
-                if section.drawing
-                else 'A light tint behind the text of this section while locked'
-            )
-            tint.toggled.connect(lambda checked, name=section.name: self.tint_changed.emit(name, checked))
-            grid.addWidget(tint, row, 5, Qt.AlignHCenter)
-            self.tints[section.name] = tint
-        else:
-            grid.addWidget(self._empty(), row, 5, Qt.AlignHCenter)
+            grid.addWidget(self._empty(), row, 1, Qt.AlignHCenter)
         if is_text_section(section):
             size = self._size_box(f'The text size of {section.label.lower()}: its own, or the global one')
             size.setMinimum(FONT_SIZES[0] - 1)
@@ -1789,10 +1864,10 @@ class MovePanel(QWidget):
                     name, 0 if px < FONT_SIZES[0] else px
                 )
             )
-            grid.addWidget(size, row, 6)
+            grid.addWidget(size, row, 2)
             self.font_sizes[section.name] = size
         else:
-            grid.addWidget(self._empty(), row, 6, Qt.AlignHCenter)
+            grid.addWidget(self._empty(), row, 2, Qt.AlignHCenter)
         if is_text_section(section) and len(section.samples[0]) > 1:
             lines = QSpinBox()
             low, high, step = SPACINGS
@@ -1803,10 +1878,10 @@ class MovePanel(QWidget):
             lines.setFixedWidth(PANEL_LINES_WIDTH)
             lines.setToolTip(f'The room between the rows of {section.label.lower()}, in percent of the usual')
             lines.valueChanged.connect(lambda pct, name=section.name: self.spacing_changed.emit(name, pct))
-            grid.addWidget(lines, row, 7)
+            grid.addWidget(lines, row, 3)
             self.spacings[section.name] = lines
         else:
-            grid.addWidget(self._empty(), row, 7, Qt.AlignHCenter)
+            grid.addWidget(self._empty(), row, 3, Qt.AlignHCenter)
         if is_text_section(section):
             family = QComboBox()
             family.setFixedWidth(PANEL_FONT_WIDTH)
@@ -1818,10 +1893,10 @@ class MovePanel(QWidget):
                     name, family_of(box.itemData(index))
                 )
             )
-            grid.addWidget(family, row, 8)
+            grid.addWidget(family, row, 4)
             self.families[section.name] = family
         else:
-            grid.addWidget(self._empty(), row, 8, Qt.AlignHCenter)
+            grid.addWidget(self._empty(), row, 4, Qt.AlignHCenter)
 
     @staticmethod
     def _size_box(tip):
@@ -1933,17 +2008,26 @@ class MovePanel(QWidget):
         """Make the panel at most `available` px tall (a screen's usable height; None: no limit),
         with room to spare: the rows of sections scroll where they do not all fit, the rest of
         the panel (help, presets, Lock, Quit) always shown."""
-        full = self.rows.sizeHint().height()
-        self.rows_area.setFixedHeight(full)
+        # Both tabs as tall and as wide as the larger: switching tabs moves nothing below them.
+        areas = ((self.rows, self.rows_area), (self.text_rows, self.text_area))
+        full = max(rows.sizeHint().height() for rows, _area in areas)
+        # The tab bar, and the line below it with its room (the pane's style): the rows come after them.
+        tab_bar = self.tabs.tabBar().sizeHint().height() + PANEL_TAB_LINE + PANEL_TAB_GAP
+        for _rows, area in areas:
+            area.setFixedHeight(full)
+        self.tabs.setFixedHeight(full + tab_bar)  # the tabs follow their rows only when told
         rest = self.layout().sizeHint().height() - full
         room = full if available is None else available - 2 * PANEL_SCREEN_ROOM - rest
         shown = max(min(full, PANEL_LEAST_ROWS), min(full, room))
         scrolls = shown < full
-        self.rows_area.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn if scrolls else Qt.ScrollBarAlwaysOff)
         # The style's width: macOS gives its overlay scroll bar's hint as 0, and it then covered the
         # last column.
         bar = self.rows_area.style().pixelMetric(QStyle.PM_ScrollBarExtent) + 4 if scrolls else 0
-        self.rows_area.setFixedSize(self.rows.sizeHint().width() + bar, shown)
+        wide = max(rows.sizeHint().width() for rows, _area in areas) + bar
+        for _rows, area in areas:
+            area.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn if scrolls else Qt.ScrollBarAlwaysOff)
+            area.setFixedSize(wide, shown)
+        self.tabs.setFixedSize(wide, shown + tab_bar)
         self.adjustSize()
         self.resize(self.sizeHint())
 
@@ -1952,11 +2036,13 @@ class MovePanel(QWidget):
         return self.rows_area.verticalScrollBarPolicy() == Qt.ScrollBarAlwaysOn
 
     def set_wanted(self, name, wanted):
-        box = self.boxes.get(name)
-        if box is not None and box.isChecked() != wanted:
-            box.blockSignals(True)
-            box.setChecked(wanted)
-            box.blockSignals(False)
+        """Show whether a section shows, in both tabs, saying nothing back."""
+        for boxes in (self.boxes, self.text_boxes):
+            box = boxes.get(name)
+            if box is not None and box.isChecked() != wanted:
+                box.blockSignals(True)
+                box.setChecked(wanted)
+                box.blockSignals(False)
 
     def set_group(self, name, group):
         combo = self.groups.get(name)

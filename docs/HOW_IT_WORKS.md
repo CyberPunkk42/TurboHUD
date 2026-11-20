@@ -484,6 +484,7 @@ turbohud/
   overlay/
     window.py           the section windows (drawings: blue flag, delta bar, radar, track
                         map), the one-window canvas (Mac), the grid and the move-mode panel
+                        (its General and Text tabs over the same rows of sections)
     settings_window.py  colours, size, options, warning times, reads a second
     class_sheet.py      the list of car classes, opened from the settings
     windows.py          Win32: RegisterHotKey, focus hand-back

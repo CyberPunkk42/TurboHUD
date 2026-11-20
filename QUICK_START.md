@@ -38,8 +38,9 @@ it goes.
    and outside a race every section shows a made-up race at Laguna Seca, so you see it filled.
 2. Drag a section, or click it and nudge it with the arrow keys (Shift: 10 px). A corner sizes
    its text, an edge adds room. While it moves, a label shows its X and Y on its screen and its size.
-3. The panel shows or hides each section, sets its text size, line spacing and **Font** (its own,
-   or **global**: the **Global font** changes every such section at once), and has **Undo**
+3. The panel shows or hides each section; its **General** tab groups, centres and tints them, its
+   **Text** tab sets their text in the middle, text size, line spacing and **Font** (its own, or
+   **global**: the **Global font** changes every such section at once). It has **Undo**
    and **Redo**, and says which preset the layout is in (**Preset: 3 Race**). Its **Layouts…** window
    keeps five named layouts, each with its own fonts (**Save** / **Load** presets 1 to 5), can load one by itself as a recording,
    spectating, hotlapping, race or special event begins (and starts in the Race one), and has
@@ -89,7 +90,7 @@ Hover over a section's name in the move-mode panel for a short explanation.
 - **Penalties**: SHORTCUT with the seconds left, or JUMP START.
 - **Race leader**: a banner for 6 s, "New Race Leader - name" once another driver has kept the
   lead for 5 s (none for your own car), and "Race Winner - name" with a waving checkered flag as the winner finishes
-  (the panel's **🏁** shows the winner's in move mode).
+  (the **🏁** in the panel's **Text** tab shows the winner's in move mode).
 - **Battle**: only while watching a replay or spectating, a banner "Battle for P3 / Possible
   Overtake / name vs name" when a car closes in on the one ahead or sits right behind it, or
   "Group around name" for three cars or more within a second of each other; not in the opening lap.
