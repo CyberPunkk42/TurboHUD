@@ -49,8 +49,8 @@ Kept short: the state now and what to do next. Every change, with how it was che
    the camera follows player N` at each switch.
 7. **A replay found sooner** (`fix/replay-found-sooner`): on the Mac, open a replay with TurboHUD running; the
    log's `search: replay found, after N s` should say about 5 s, not 12 to 15, and the HUD come sooner. The
-   reader in `.buildtools` is rebuilt already; on the Windows PC rebuild it (`sh tools/get_rust.sh` in Git
-   Bash), or the log says `the reader searches for one value at a time` and it works as before.
+   reader in `.buildtools` is rebuilt on the Mac and the Windows PC (2026-11-20); a reader not rebuilt makes
+   the log say `the reader searches for one value at a time`, and it works as before.
 8. **The battle warning** (`feature/battle-warning`, the Race Director mode's first part): in a replay with
    close racing, and spectating online, "Battle for P<n> / Possible Overtake / name vs name" when a car
    closes within 1 s of the one ahead or sits within 0.4 s, or "Group around name" for 3 cars or more each
@@ -81,7 +81,8 @@ The Race Director mode (backlog item 8) has all its planned parts: what is left 
 
 ## Working notes
 - Tests: `.buildtools/venv/bin/python -B -m unittest discover -s tests` (macOS, Linux; Windows:
-  `py -3 -B -m unittest discover -s tests`), only while TurboHUD is closed. The Rust reader's:
+  `.buildtools\venv\Scripts\python.exe -B -m unittest discover -s tests`; not `py -3`, which has no
+  PySide6), only while TurboHUD is closed. The Rust reader's:
   `eval "$(sh tools/get_rust.sh --env)"`, then `cargo test --offline` in `reader/` (Windows:
   `cargo +1.99.1 test --offline --target x86_64-pc-windows-gnullvm`).
 - Lint and format: `.buildtools/ruff-venv/bin/ruff check .` and `ruff format --check .`.
