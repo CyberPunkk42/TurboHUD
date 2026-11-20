@@ -563,21 +563,21 @@ the colour choices, which are only here.
 
 ### Colours
 
-**Colour-blind colours**
+**Colour-blind friendly colours**
 - **Off** (the default: TurboHUD's own colours), **All sections** or **Chosen sections**. In
-  colour-blind colours, green turns sky blue, red orange, the fastest lap's purple reddish purple, and
+  colour-blind friendly colours, green turns sky blue, red orange, the fastest lap's purple reddish purple, and
   yellow and dark yellow change a little, so the colours that tell gaining from losing, full from low or
   the fastest from your own best stay apart with the common kinds of colour blindness. The bars, the
   delta, the sector bars, the radar and the track map's dots all follow. The **Blue flag** and the
   **Yellow flag** keep their colours whatever you choose.
-- With **Chosen sections**, tick the sections to draw in colour-blind colours (a tick for each section
+- With **Chosen sections**, tick the sections to draw in colour-blind friendly colours (a tick for each section
   but the two flags). The ticks are greyed out with **Off** or **All sections**, and kept for next time.
 
 **TSU Legacy colours**
 - **TSU Legacy colours**: the bars of **Car status**, **Fuel**, **Tire wear** and **Car health** in the
   colours of TSU's own HUD, each value in its own colour whatever is left: **Health** red, **Tires** teal,
   **Fuel** olive yellow (shown below the tick). Off: TurboHUD's green, yellow and red. Where a section
-  is also in colour-blind colours, those win.
+  is also in colour-blind friendly colours, those win.
 
 ### Sections
 

@@ -64,11 +64,11 @@ SYSTEM_FONT = 'System font'  # the font choice for the system's own font
 HEADING = '#9fb8d8'  # the headings, as in the move-mode panel
 SIZE_STEP = 1.1  # Bigger: 10 % larger; Smaller: the same back
 SECTIONS_PER_ROW = 3  # the Colours tab's section ticks in a row
-# Colour-blind colours: (Settings.colour_blind, button, tooltip)
+# Colour-blind friendly colours: (Settings.colour_blind, button, tooltip)
 COLOUR_BLIND_CHOICES = (
     ('off', 'Off', "TurboHUD's own colours (or TSU's Legacy colours where on)"),
-    ('all', 'All sections', 'Every section but the blue and yellow flags in colour-blind colours'),
-    ('chosen', 'Chosen sections', 'Only the sections ticked below in colour-blind colours'),
+    ('all', 'All sections', 'Every section but the blue and yellow flags in colour-blind friendly colours'),
+    ('chosen', 'Chosen sections', 'Only the sections ticked below in colour-blind friendly colours'),
 )
 COLOUR_BLIND_NOTE = (
     'Green turns sky blue, red orange, purple reddish purple: told apart with the common kinds of colour'
@@ -146,7 +146,7 @@ class SettingsWindow(QWidget):
     radar_seconds_changed = Signal(float)
     reads_changed = Signal(int)
     option_changed = Signal(str, bool)  # an option's key (see `options`), on or off
-    # Colour-blind colours: 'off', 'all' or 'chosen' (hud.COLOUR_BLIND_MODES), and the sections chosen.
+    # Colour-blind friendly colours: 'off', 'all' or 'chosen' (hud.COLOUR_BLIND_MODES), and the sections chosen.
     colour_blind_changed = Signal(str, tuple)
     about_requested = Signal()  # About: the app's name and version
     font_chosen = Signal(str)  # a font family from customization/fonts, '' for the system's
@@ -169,7 +169,7 @@ class SettingsWindow(QWidget):
     ):
         """`options` are tick boxes for the whole HUD: (key, label, on, tooltip) each; a
         change says its key through option_changed. `colours`: (mode, chosen sections, [(name, label)
-        of each section that can have colour-blind colours]) for the Colours tab, or None."""
+        of each section that can have colour-blind friendly colours]) for the Colours tab, or None."""
         super().__init__(None, flags)
         self.native = native
         self.flags = flags
@@ -247,7 +247,9 @@ class SettingsWindow(QWidget):
         self.colour_boxes = {}
         self.colour_buttons = {}
         if colours is not None or any(key in listed for key in GROUPS['colours']):
-            tab = self._tab('Colours', 'Colour-blind colours, and TSU\'s Legacy colours for the car sections')
+            tab = self._tab(
+                'Colours', 'Colour-blind friendly colours, and TSU\'s Legacy colours for the car sections'
+            )
             if colours is not None:
                 self._colour_blind(tab, *colours)
             if any(key in listed for key in GROUPS['colours']):
@@ -360,9 +362,9 @@ class SettingsWindow(QWidget):
         return row
 
     def _colour_blind(self, column, mode, chosen, sections):
-        """Colour-blind colours as Off, All sections or Chosen sections, with a tick for each section
+        """Colour-blind friendly colours as Off, All sections or Chosen sections, with a tick for each section
         (asked for by the user on 2026-11-21: for all of them or for the ones chosen)."""
-        column.addWidget(self._heading('Colour-blind colours'))
+        column.addWidget(self._heading('Colour-blind friendly colours'))
         group = QButtonGroup(self)
         buttons = []
         for key, text, about in COLOUR_BLIND_CHOICES:
@@ -386,7 +388,7 @@ class SettingsWindow(QWidget):
             box = QCheckBox(label)
             box.setStyleSheet(f'QCheckBox {{ color: white; }} QCheckBox:disabled {{ color: {UNUSABLE}; }}')
             box.setChecked(name in chosen)
-            box.setToolTip(f'{label} in colour-blind colours (with Chosen sections)')
+            box.setToolTip(f'{label} in colour-blind friendly colours (with Chosen sections)')
             box.toggled.connect(lambda _checked: self._colour_blind_picked())
             row, place = divmod(index, SECTIONS_PER_ROW)
             grid.addWidget(box, row, place)

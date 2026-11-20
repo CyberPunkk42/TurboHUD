@@ -1153,7 +1153,7 @@ def run(args, folder):
                     settings.legacy_colours,
                     (
                         "The bars of Car status, Fuel, Tire wear and Car health in the colours of TSU's own HUD:"
-                        ' health red, tires teal, fuel olive yellow; colour-blind colours win where chosen'
+                        ' health red, tires teal, fuel olive yellow; colour-blind friendly colours win where chosen'
                     ),
                 )
             )
@@ -1353,13 +1353,13 @@ def run(args, folder):
                 window.update()
 
     def set_colour_blind(mode, chosen):
-        """Colour-blind colours off, for every section or for those `chosen` (the settings window)."""
+        """Colour-blind friendly colours off, for every section or for those `chosen` (the settings window)."""
         nonlocal settings
         settings = replace(settings, colour_blind=mode, colour_blind_sections=tuple(chosen))
         show_colours()
         save()
         log.info(
-            'colour-blind colours: %s%s',
+            'colour-blind friendly colours: %s%s',
             mode,
             f' ({", ".join(chosen) or "none"})' if mode == 'chosen' else '',
         )

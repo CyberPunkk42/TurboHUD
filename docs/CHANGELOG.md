@@ -5,7 +5,7 @@ Each branch adds its dated entry at the top. Where things stand now: `RESUME.md`
 `docs/BACKLOG.md`.
 
 - 2026-11-21: Colour-blind and TSU Legacy colours, and the settings window in tabs (`feature/colour-options`,
-  asked for by the user). Colour-blind colours: Off, All sections or Chosen sections (a tick for each), never
+  asked for by the user). Colour-blind friendly colours (the user's name for them): Off, All sections or Chosen sections (a tick for each), never
   the blue and yellow flags (`hud.colour_blind_for`). Each section draws in its colour map (`hud.COLOUR_BLIND`,
   the Okabe-Ito palette: green to sky blue, red to orange, purple to reddish purple, the two yellows) through
   `painter.colours` and `shaded`: text, level and pedal bars, the delta bar, sector bars, the radar, the track

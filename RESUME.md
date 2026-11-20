@@ -25,7 +25,7 @@ Kept short: the state now and what to do next. Every change, with how it was che
   loaded by hand kept for the session), shipped layouts per screen size and five starting presets (all the
   user's own designs), Export and Import, the design screen, one's own fonts (a global one, and per section
   and per preset), move mode's panel in General and Text tabs.
-- **Colours**: colour-blind colours (Okabe-Ito) for every section or those chosen, never the flags; TSU's
+- **Colours**: colour-blind friendly colours (Okabe-Ito) for every section or those chosen, never the flags; TSU's
   Legacy colours for the car sections' bars; the settings window in tabs Look, Colours, Sections, Race.
 - **Today (2026-11-20, Linux)**: move mode, the design screen and TurboHUD's windows fixed on Hyprland; the
   compass's north from the track's sun (then hidden for now); text outlines no longer kept (a race levels off
@@ -38,7 +38,7 @@ Kept short: the state now and what to do next. Every change, with how it was che
 ## To try next (most recent first)
 Details of each: its entry in `docs/CHANGELOG.md`. Checks on the Mac and Windows, and rare cases not yet seen:
 backlog item 14.
-1. **Colours** (2026-11-21): Settings > Colours: colour-blind colours for All sections, then Chosen; are
+1. **Colours** (2026-11-21): Settings > Colours: colour-blind friendly colours for All sections, then Chosen; are
    the colours told apart over TSU? TSU Legacy colours: the car sections' bars as dark as in TSU's HUD?
 2. **Car status**: tick it in move mode (untick the four it stands for): Health, Tires, Fuel, Finish in one
    box with a bar under each of the first three, only the rows the event has, the tint ending below the last. The four separate ones at one

@@ -52,7 +52,7 @@ it goes.
 
 ## 4. Settings
 
-Icon menu, **Settings...**, in four tabs (**Look**, **Colours**, **Sections**, **Race**): colours, **Colour-blind colours**
+Icon menu, **Settings...**, in four tabs (**Look**, **Colours**, **Sections**, **Race**): colours, **Colour-blind friendly colours**
 (**Off**, **All sections** or **Chosen sections**; never the blue and yellow flags) and **TSU Legacy colours** for
 the car sections' bars, all sections bigger or smaller, the **Font** of every section
 on global (your own
