@@ -4,6 +4,12 @@ Every finished change, newest first: what changed, why, how it was checked and w
 Each branch adds its dated entry at the top. Where things stand now: `RESUME.md`; what is open:
 `docs/BACKLOG.md`.
 
+- 2026-11-21: Screenshots of the user's presets (`docs/preset-screenshots`, asked for by the user):
+  `docs/screenshots/presets/`, each of the five (Recording, Spectator/RD, Practice/Hotlapping, Race, Special Event)
+  drawn as the whole 5120x1440 screen, at half size, with move mode's preview race: each section in the preset's
+  place, size, text size, font and tint, the banners as they show when they come up. The Race preset also in
+  colour-blind friendly and in Legacy colours. Drawn by TurboHUD's own code over a plain track-coloured
+  background; each section with its own tint (One tint for each group not drawn). README links them.
 - 2026-11-21: The documents checked against the app as it is, and screenshots (`docs/current-state`, asked for by
   the user). RESUME: the current state of 2026-11-21 (Car status, the colours, the settings tabs, the preset in
   use in the layouts window). HOW_IT_WORKS: the code map's settings window, painter and `layouts_window.py`.

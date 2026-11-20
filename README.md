@@ -157,7 +157,8 @@ starts its small read-only reader (`turbohud-reader.exe`, in the download) besid
 The full guide to every section, menu item, button and option is
 [USER_GUIDE.md](USER_GUIDE.md) (in every download as `User Guide.txt`). Pictures of every section, with move
 mode's preview race, and of each window and tab are in [docs/screenshots](docs/screenshots) (`sections/`,
-`windows/`). In short:
+`windows/`, and `presets/`: five presets, Recording, Spectator/RD, Practice/Hotlapping, Race and Special Event, on a
+5120x1440 screen, the Race one also in colour-blind friendly and Legacy colours). In short:
 
 - The HUD is made of **sections** (race progress, delta, fuel, tire wear, car status, nearby cars, standings, flags,
   radar, track map and more), each in its own box. Locked, clicks go through them to the game.
