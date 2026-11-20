@@ -4,6 +4,14 @@ Every finished change, newest first: what changed, why, how it was checked and w
 Each branch adds its dated entry at the top. Where things stand now: `RESUME.md`; what is open:
 `docs/BACKLOG.md`.
 
+- 2026-11-20: Sections stay in the design screen's frame (`fix/design-sections-in-frame`, asked for by the user):
+  a section dragged or sized out of the frame goes back in once it stands still (two looks of move mode, 0.2 s
+  apart, the same: the desktop moves a dragged window, so the drag itself is never fought), a group as one by the
+  same amount so it keeps its shape (`hud.back_in_frame`, `hud.inside`; not while one of the group is dragged or
+  was just moved by TurboHUD); the arrow keys stop at the frame's edge; Centre centres in the frame, not on the
+  screen. The move-mode panel, the Layouts and Settings windows are not sections and go anywhere. Logged
+  `design screen: back in the frame: ...`. Tests: a box moved the least, a group as one, a section alone, not
+  while one of its group is dragged. Not yet tried on the design screen by hand.
 - 2026-11-20: The user's layout and presets shipped (`feature/ship-user-layouts`, asked for by the user): the
   shipped layouts (`assets/presets`) are made again from the user's updated 5120x1440 layout
   (`customization/display_presets/5120x1440.json`, with its Standings columns), fitted to the five other sizes;

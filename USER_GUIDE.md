@@ -445,7 +445,10 @@ mode ends):
 - **Design**: **Design for:** picks a screen size, this screen's first, marked "(this
   screen)". **Design** shows that size as a frame on your screen, to scale, with its layout
   inside to arrange; **Save design…** saves it at full size as a file for that size, and
-  **Cancel** brings your own layout back.
+  **Cancel** brings your own layout back. The sections stay in the frame: one dragged or sized
+  out of it goes back in as soon as you let go (a group as a whole, keeping its shape), the
+  arrow keys stop at its edge, and **Centre** centres in the frame. The panel and TurboHUD's
+  other windows can go anywhere.
 
 
 ## 5. Layouts for every screen size

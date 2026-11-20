@@ -229,6 +229,37 @@ class TintTests(unittest.TestCase):
         self.assertTrue(hud.default_tint(sections['fuel'], backdrop=True))
 
 
+class DesignFrameTests(unittest.TestCase):
+    """On the design screen the sections stay in its frame (asked for by the user on 2026-11-20)."""
+
+    FRAME = (100, 50, 800, 450)
+
+    def test_a_box_moved_the_least_into_the_frame(self):
+        self.assertEqual(hud.inside((50, 60, 100, 40), self.FRAME), (100, 60, 100, 40))  # out at the left
+        self.assertEqual(hud.inside((850, 480, 100, 40), self.FRAME), (800, 460, 100, 40))  # bottom right
+        self.assertEqual(hud.inside((300, 200, 100, 40), self.FRAME), (300, 200, 100, 40))  # in: stays
+        self.assertEqual(
+            hud.inside((300, 200, 900, 40), self.FRAME), (100, 200, 900, 40)
+        )  # wider: at the left
+
+    def test_a_group_goes_back_as_one(self):
+        boxes = {'lap': (850, 100, 100, 40), 'fuel': (950, 100, 100, 40), 'radar': (300, 300, 50, 50)}
+        groups = {'lap': 'A', 'fuel': 'A', 'radar': ''}
+        moves = hud.back_in_frame(boxes, groups, self.FRAME)
+        self.assertEqual(moves, {'lap': (700, 100, 100, 40), 'fuel': (800, 100, 100, 40)})  # its shape kept
+
+    def test_a_section_on_its_own_alone(self):
+        boxes = {'lap': (20, 100, 100, 40), 'fuel': (950, 100, 100, 40)}
+        moves = hud.back_in_frame(boxes, {}, self.FRAME)
+        self.assertEqual(moves, {'lap': (100, 100, 100, 40), 'fuel': (800, 100, 100, 40)})
+
+    def test_not_while_one_of_its_group_is_dragged(self):
+        boxes = {'lap': (850, 100, 100, 40), 'fuel': (950, 100, 100, 40), 'speed': (20, 100, 100, 40)}
+        groups = {'lap': 'A', 'fuel': 'A'}
+        moves = hud.back_in_frame(boxes, groups, self.FRAME, movable=lambda name: name != 'fuel')
+        self.assertEqual(moves, {'speed': (100, 100, 100, 40)})
+
+
 class GridScreenTests(unittest.TestCase):
     WIDE, ABOVE = (0, 0, 5120, 1440), (1280, -1440, 2560, 1440)
 
