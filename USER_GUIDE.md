@@ -76,8 +76,8 @@ the Mac and Linux it also switches the running one to move mode.
 
 ## 3. The sections
 
-In move mode the panel lists the sections under four headings: **Timing**, **Car**,
-**Race** and **Other**. Hover over a section's name in the panel, or over the section itself in
+In move mode the panel lists the sections under four headings, in both its tabs (section 4):
+**Timing**, **Car**, **Race** and **Other**. Hover over a section's name in the panel, or over the section itself in
 move mode, for a line on what it shows. The colours below are the default ones; the text, highlight and
 outline colours can be changed in the settings.
 

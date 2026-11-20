@@ -21,7 +21,7 @@ Kept short: the state now and what to do next. Every change, with how it was che
 - **Layout**: tight boxes, groups that move and size together, Centre, Undo and Redo, text sizes per
   section, a grid, five named presets (Ctrl+Shift+1 to 5) and a preset per kind of event, shipped
   layouts per screen size and five starting presets (all the user's own designs), Export and Import, the design screen, one's own fonts
-  (a global one, and per section and per preset).
+  (a global one, and per section and per preset), move mode's panel in General and Text tabs.
 - **Builds**: `tools/build_app.py` (PyInstaller) on each system: a Windows ZIP and a Mac disk image with
   the Rust reader, and a Linux `.tar.gz` built in Ubuntu 22.04 (`sh tools/build_linux.sh <version>`).
   The repository is kept in step with a private GitHub repository.
