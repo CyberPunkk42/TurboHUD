@@ -366,9 +366,12 @@ from its name while they show, and no name ever runs into the next column.
   a side dragged further in springs back. The standings are always exactly as wide as their
   columns. Rest the pointer on a section to see its name and what it shows.
 - **Where it is**: while you move, size or nudge a section, and when you click it, a small
-  label at its top left shows its place and size, for example **X 1580  Y 1110  506×270**:
+  label just above it shows its place and size, for example **X 1580  Y 1110  506×270**:
   X and Y count in pixels from the top-left corner of the screen it is on, then its width ×
-  height. It goes 2 seconds after the last move, and never shows while locked. On the design
+  height. It sits outside the section, so you still see the section's content as you size it;
+  at the very top of the screen it goes below the section instead (only a section as tall as
+  the screen has it over its top-left corner). It goes 2 seconds after the last move, and never
+  shows while locked. On the design
   screen it gives the place and size on the screen size you design for, as **Save design**
   writes them. Sections TurboHUD moves itself (a preset, **Undo**, **Redo**, the design
   screen opening or closing) show no label.

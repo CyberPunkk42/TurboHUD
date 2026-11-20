@@ -1852,16 +1852,50 @@ class PlaceLabelTests(unittest.TestCase):
         window.resize(320, 60)
         self.assertEqual(window.place_label, 'X 80  Y 300  320×60')
 
-    def test_it_is_drawn_and_goes_after_a_moment(self):
+    def test_it_shows_above_the_section_not_over_it_and_goes_after_a_moment(self):
+        # Asked for by the user on 2026-11-20: over a small section it hid what the section shows.
+        from turbohud.core.hud import PLACE_LABEL_GAP
+
         window = self.window()
         window.set_locked(False)
         window.move(150, 100)
-        image = window.grab().toImage()
-        mark = image.pixelColor(8, 8)
-        self.assertGreater(mark.alpha(), 150)  # the label's dark box at the top left
+        label = window.label_window
+        self.assertTrue(label.isVisible())
+        self.assertEqual(label.text, 'X 150  Y 100  300×60')
+        self.assertEqual(label.x(), 150)
+        self.assertEqual(label.y() + label.height() + PLACE_LABEL_GAP, 100)  # just above it
         self.assertTrue(window._place_timer.isActive())
         window.hide_place()  # as the timer does
         self.assertEqual(window.place_label, '')
+        self.assertFalse(label.isVisible())
+
+    def test_at_the_top_of_the_screen_it_shows_below_the_section(self):
+        from turbohud.core.hud import PLACE_LABEL_GAP
+
+        window = self.window()
+        window.set_locked(False)
+        window.move(150, 0)
+        self.assertEqual(window.label_window.y(), 60 + PLACE_LABEL_GAP)
+
+    def test_hidden_or_locked_the_label_goes(self):
+        window = self.window()
+        window.set_locked(False)
+        window.move(150, 100)
+        window.set_wanted(False)
+        self.assertFalse(window.label_window.isVisible())
+        window.set_wanted(True)
+        window.move(160, 100)
+        window.set_locked(True)
+        self.assertFalse(window.label_window.isVisible())
+
+    def test_where_the_desktop_moves_windows_it_moves_the_label_too(self):
+        moved = []
+        window = self.window(move_window=lambda self, widget, place, settle: moved.append((place, settle)))
+        window.set_locked(False)
+        window.show_place((500, 400, 300, 60))
+        place, settle = moved[-1]
+        self.assertEqual(place[:2], (500, 400 - place[3] - 4))
+        self.assertFalse(settle)  # it follows a drag: no settling at each move
 
     def test_never_while_locked(self):
         window = self.window()
