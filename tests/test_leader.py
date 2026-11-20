@@ -36,6 +36,19 @@ class OpacityTest(unittest.TestCase):
         self.assertIsNone(banner_opacity(6.01))
         self.assertIsNone(banner_opacity(None))
 
+    def test_the_race_leader_banner_fades_in_and_out_in_two_thirds_of_a_second(self):
+        # Asked for by the user on 2026-11-20; the Battle and Watched banners keep their second.
+        from turbohud.core.battle import Battles
+        from turbohud.core.leader import BANNER_FADE, LEADER_FADE
+        from turbohud.core.watched import WatchedDriver
+
+        self.assertEqual(LEADER_FADE, 0.67)
+        self.assertEqual(LeadChanges().fade, LEADER_FADE)
+        self.assertAlmostEqual(banner_opacity(0.335, fade=LEADER_FADE), 0.5)
+        self.assertEqual(banner_opacity(0.67, fade=LEADER_FADE), 1.0)
+        self.assertAlmostEqual(banner_opacity(6.0 - 0.335, fade=LEADER_FADE), 0.5)
+        self.assertEqual((Battles().fade, WatchedDriver().fade), (BANNER_FADE, BANNER_FADE))
+
     def test_the_titles(self):
         self.assertEqual(Banner('A', False, 1.0).title, 'New Race Leader')
         self.assertEqual(Banner('A', True, 1.0).title, 'Race Winner')
@@ -263,7 +276,7 @@ class BannerDrawingTest(unittest.TestCase):
 
         cls.app = QApplication.instance() or QApplication([])
 
-    def window(self):
+    def window(self, name='leader'):
         from turbohud.core.hud import RACE_SECTIONS, text_box
         from turbohud.core.settings import Theme
         from turbohud.hud.painter import text_ink, text_width
@@ -273,7 +286,7 @@ class BannerDrawingTest(unittest.TestCase):
             def raise_window(self, window):
                 return 'test'
 
-        section = next(s for s in RACE_SECTIONS if s.name == 'leader')
+        section = next(s for s in RACE_SECTIONS if s.name == name)
         window = SectionWindow(Native(), Theme(), section)
         self.addCleanup(window.close)
         window.font = 26
@@ -394,13 +407,27 @@ class BannerDrawingTest(unittest.TestCase):
 
     def test_a_new_leader_has_none(self):
         window = self.window()
-        self.assertLess(max(self.flag_area(self.show(window, False))), 60)  # the black end only
+        light = self.flag_area(self.show(window, False))
+        self.assertLess(max(light) - min(light), 10)  # the banner's grey only: no white squares
 
-    def test_it_is_shaded_grey_to_black(self):
-        window = self.window()
-        image = self.show(window, False)
+    def test_it_is_one_grey_from_end_to_end(self):
+        # Asked for by the user on 2026-11-20: shaded grey to black, it looked broken as it faded.
+        from PySide6.QtGui import QColor
+
+        from turbohud.core.hud import LEADER_GREY
+
+        image = self.show(self.window(), False)
         y = 3  # above the text
-        left, right = image.pixelColor(4, y), image.pixelColor(image.width() - 4, y)
+        for x in (4, image.width() // 2, image.width() - 4):
+            self.assertEqual(image.pixelColor(x, y).rgb(), QColor(LEADER_GREY).rgb())
+
+    def test_the_battle_banner_stays_shaded_grey_to_black(self):
+        from turbohud.core.hud import BANNER_TEXT, Row
+
+        window = self.window('battle')
+        window.show_content([Row('Battle for P3', 'title', BANNER_TEXT, centred=True)], None, None)
+        image = window.grab().toImage()
+        left, right = image.pixelColor(4, 3), image.pixelColor(image.width() - 4, 3)
         self.assertGreater(left.lightness(), right.lightness() + 40)
 
     def test_the_whole_box_fades(self):

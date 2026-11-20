@@ -69,8 +69,9 @@ Kept short: the state now and what to do next. Every change, with how it was che
 12. **Tire wear as TSU counts it** (`fix/tire-wear-per-compound`): in an event with tire wear, TurboHUD's Tires
    percent should match TSU's own (it was 97 against 95); the log says `tires: ... worn out at ...` once an
    event. Try a softer and a harder compound if the event has more.
-13. **The race leader banner** (`fix/banner-fade-as-one`): it now fades in and out as one picture, its colours
-   as when it is full (they looked off while fading, reported on 2026-11-18). Also: "New Race Leader"
+13. **The race leader banner** (`fix/banner-fade-as-one`, `fix/leader-banner-plain-grey`): one grey now, not
+   shaded, fading in and out over 0.67 s as one picture: does it still look broken as it fades, and is the
+   shorter fade smooth enough at 10 reads a second (about 7 steps)? Also: "New Race Leader"
    about 5 s after a pass that holds (none for one undone, none at the start), "Race Winner" with your
    flag picture as the winner crosses the line; online too; how it reads over TSU. In move mode, the panel's 🏁 switches between the two; the text is in the middle.
 14. **The log's slow-frame lines**: at 10 reads a second only real hitches (150 ms and more).

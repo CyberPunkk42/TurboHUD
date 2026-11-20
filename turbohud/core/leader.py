@@ -1,7 +1,7 @@
 """The race leader banner (asked for by the user on 2026-11-16, as in Formula 1's TV graphics):
 "New Race Leader - <name>" when a new driver has led for LEAD_HOLD seconds, and "Race Winner -
 <name>" as soon as TSU has the winner finished. Each shows BANNER_SHOWN seconds in all, fading in
-and out over BANNER_FADE.
+and out over LEADER_FADE.
 
 It works only on the race order the standings already make (no read of the game of its own), and
 on the race clock, so a paused replay holds it where it is. The order at a race's start is the
@@ -14,7 +14,9 @@ from dataclasses import dataclass
 
 LEAD_HOLD = 5.0  # seconds a new leader must lead before the banner shows
 BANNER_SHOWN = 6.0  # seconds the banner shows in all, fades included
-BANNER_FADE = 1.0  # seconds of fading in, and of fading out at the end
+BANNER_FADE = 1.0  # seconds of fading in, and of fading out at the end (the Battle and Watched banners)
+# The race leader banner's own, shorter (asked for by the user on 2026-11-20).
+LEADER_FADE = 0.67
 NEW_LEADER = 'New Race Leader'
 WINNER = 'Race Winner'
 
@@ -53,7 +55,7 @@ class LeadChanges:
     """Follows the race leader from one read to the next and says when the banner shows
     (`update`). One for each run of TurboHUD: a race clock that goes back is a new race."""
 
-    def __init__(self, hold=LEAD_HOLD, shown=BANNER_SHOWN, fade=BANNER_FADE):
+    def __init__(self, hold=LEAD_HOLD, shown=BANNER_SHOWN, fade=LEADER_FADE):
         self.hold, self.shown, self.fade = hold, shown, fade
         self.reset()
 
