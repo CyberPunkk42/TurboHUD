@@ -4,6 +4,12 @@ Every finished change, newest first: what changed, why, how it was checked and w
 Each branch adds its dated entry at the top. Where things stand now: `RESUME.md`; what is open:
 `docs/BACKLOG.md`.
 
+- 2026-11-20: The radar steady in a pack (`fix/radar-positions-together`, reported by the user: in the opening
+  laps it zoomed in and out, as if it could not keep up). It zooms out at once to fit the cars that count, and came
+  back in a quarter of the way at each read (about half a second): with the cars around changing all the time, it
+  pumped. Now it comes in only after RADAR_ZOOM_HOLD (2 s) without needing its room, and then gently (8% a read,
+  about a second and a half); out stays at once. The user guide says so. Tests: held, then in step by step, out
+  at once; in a pack where a car counts and drops back every half second, no change of zoom. Not yet seen in a race.
 - 2026-11-20: Every car's position read together (`fix/radar-positions-together`, reported by the user: on Linux
   the proximity radar's cars jumped forward and back). Each car was read in turn, its position near the end of its
   turn, so in a race of 20 cars (reads of 33-41 ms) one car's position came up to a read's length after another's,

@@ -956,13 +956,36 @@ class WarningTimeTests(unittest.TestCase):
         radar = race.Radar()
         far = (14.0 + race.CAR_LENGTH / 2) * race.RADAR_ZOOM_ROOM
         self.assertAlmostEqual(radar.update([me(0.0), beside(0.0), behind(0.0)], 0.0).view, far)
-        # The car behind drops back out of reach: the radar comes in on the one beside, a step a read.
-        views = [radar.update([me(t), beside(t)], t).view for t in (i * 0.05 for i in range(1, 30))]
-        self.assertGreater(views[0], race.RADAR_ZOOM_LEAST + 3)
-        self.assertTrue(all(a > b for a, b in itertools.pairwise(views)))
+        # The car behind drops back out of reach: the radar holds its room for RADAR_ZOOM_HOLD, then
+        # comes in on the one beside, a step a read (it pumped in and out in a pack: 2026-11-20).
+        times = [i * 0.05 for i in range(1, 120)]
+        views = [radar.update([me(t), beside(t)], t).view for t in times]
+        held = [v for t, v in zip(times, views) if t < race.RADAR_ZOOM_HOLD]
+        coming = [v for t, v in zip(times, views) if t >= race.RADAR_ZOOM_HOLD]
+        self.assertTrue(all(abs(v - far) < 1e-9 for v in held))
+        self.assertTrue(all(a > b for a, b in itertools.pairwise(coming)))
+        self.assertLess(coming[20], race.RADAR_ZOOM_LEAST + 3)  # mostly in a second after
         self.assertAlmostEqual(views[-1], race.RADAR_ZOOM_LEAST, places=1)
-        t = 30 * 0.05
+        t = 120 * 0.05
         self.assertAlmostEqual(radar.update([me(t), beside(t), behind(t)], t).view, far)  # out at once
+
+    def test_in_a_pack_it_stays_out_instead_of_pumping(self):
+        def me(t):
+            return moving('Me', (0.0, 40.0 * t), (0.0, 40.0), local=True)
+
+        def behind(t):
+            return moving('Behind', (0.0, 40.0 * t - 14.0), (0.0, 40.0))
+
+        def beside(t):
+            return moving('Beside', (1.8, 40.0 * t), (0.0, 40.0))
+
+        radar = race.Radar()
+        views = []
+        for i in range(40):  # the car behind counts, then not, every half second
+            t = i * 0.05
+            cars = [me(t), beside(t)] + ([behind(t)] if (i // 10) % 2 == 0 else [])
+            views.append(radar.update(cars, t).view)
+        self.assertAlmostEqual(min(views), max(views))  # steady
 
 
 class RadarSteadyTests(unittest.TestCase):

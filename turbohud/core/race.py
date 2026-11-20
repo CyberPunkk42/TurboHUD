@@ -4699,7 +4699,12 @@ RADAR_VIEW_MAX = 24.0
 # far as the farthest of them needs, with this much room round them, but never closer than RADAR_ZOOM_LEAST.
 RADAR_ZOOM_ROOM = 1.5
 RADAR_ZOOM_LEAST = 10.0  # game units behind and ahead: 2.5 car lengths
-RADAR_ZOOM_EASE = 0.25  # share of the way in it goes per read; out at once, so no car leaves the edge
+# Zooming in: share of the way it goes per read, once it has not needed its room for RADAR_ZOOM_HOLD
+# seconds; out at once, so no car leaves the edge. In the opening laps the cars that count change all the
+# time, and coming in a quarter of the way a read (about half a second) made it pump in and out (reported
+# by the user on 2026-11-20): it now waits, then comes in over about a second and a half.
+RADAR_ZOOM_EASE = 0.08
+RADAR_ZOOM_HOLD = 2.0
 RADAR_MIN_SPEED = 3.0  # slower (standing on the grid): no radar, the direction is unknown
 HEADING_SPAN = 0.3  # seconds of movement a car's direction and speed are taken from (no game values)
 MAX_CARRY = 0.25  # seconds a car's position is carried on along its velocity since its last update
@@ -5004,6 +5009,7 @@ class Radar:
         self.opacity = 0.0
         self.counted_at = None  # read time a car last counted
         self.view = None  # how far it shows now (radar_zoom, eased); None: not shown
+        self.widest_at = None  # read time it last needed all the room it has (RADAR_ZOOM_HOLD)
 
     def _record(self, players, read_at):
         names = set()
@@ -5090,8 +5096,9 @@ class Radar:
             target = radar_zoom(blips, radar_view(speed, self.within))
             if self.view is None or target >= self.view:
                 self.view = target  # out at once: a car coming up stays on the radar
-            else:
-                self.view += (target - self.view) * RADAR_ZOOM_EASE
+                self.widest_at = read_at
+            elif self.widest_at is None or read_at - self.widest_at >= RADAR_ZOOM_HOLD:
+                self.view += (target - self.view) * RADAR_ZOOM_EASE  # in, gently, once it has settled
         if self.opacity <= 0:
             self.view = None
             return None
