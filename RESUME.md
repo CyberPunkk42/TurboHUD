@@ -25,6 +25,8 @@ Kept short: the state now and what to do next. Every change, with how it was che
   loaded by hand kept for the session), shipped layouts per screen size and five starting presets (all the
   user's own designs), Export and Import, the design screen, one's own fonts (a global one, and per section
   and per preset), move mode's panel in General and Text tabs.
+- **Colours**: colour-blind friendly colours (Okabe-Ito) for every section or those chosen, never the flags; TSU's
+  Legacy colours for the car sections' bars; the settings window in tabs Look, Colours, Sections, Race.
 - **Today (2026-11-20, Linux)**: move mode, the design screen and TurboHUD's windows fixed on Hyprland; the
   compass's north from the track's sun (then hidden for now); text outlines no longer kept (a race levels off
   near 300-360 MB, not 465-540) and the log's `memory parts:` line; the radar's cars read together and its zoom
@@ -36,24 +38,26 @@ Kept short: the state now and what to do next. Every change, with how it was che
 ## To try next (most recent first)
 Details of each: its entry in `docs/CHANGELOG.md`. Checks on the Mac and Windows, and rare cases not yet seen:
 backlog item 14.
-1. **Car status**: tick it in move mode (untick the four it stands for): Health, Tires, Fuel, Finish in one
+1. **Colours** (2026-11-21): Settings > Colours: colour-blind friendly colours for All sections, then Chosen; are
+   the colours told apart over TSU? TSU Legacy colours: the car sections' bars as dark as in TSU's HUD?
+2. **Car status**: tick it in move mode (untick the four it stands for): Health, Tires, Fuel, Finish in one
    box with a bar under each of the first three, only the rows the event has, the tint ending below the last. The four separate ones at one
    text size look the same too, also with ~100 laps of tires (shown whole from 100 on).
-2. **Ungroup all**: in move mode, the button at the end of the group row ungroups every section; Undo brings
+3. **Ungroup all**: in move mode, the button at the end of the group row ungroups every section; Undo brings
    the groups back.
-3. **A preset by hand kept for the session**: load 5 by hand in a race; later races start in 5, hotlapping
+4. **A preset by hand kept for the session**: load 5 by hand in a race; later races start in 5, hotlapping
    keeps its own; 5 s in TSU's menu ends the session (log: `preset 5 for every race this session`, `the session
    is over`).
-4. **TurboHUD's memory** (backlog item 10): a session started as `TURBOHUD_TRACE_MEMORY=1 sh run_turbohud.sh`;
+5. **TurboHUD's memory** (backlog item 10): a session started as `TURBOHUD_TRACE_MEMORY=1 sh run_turbohud.sh`;
    the `memory grew:` lines say where Python's slow rise is.
-5. **Watching (Race Director mode)**: in a replay and spectating online, the battle warning's moments and
+6. **Watching (Race Director mode)**: in a replay and spectating online, the battle warning's moments and
    groups, and the watched driver's banner at each camera switch (log: `the camera follows player N`).
-6. **Presets**: the panel's "Preset: 3 Race" right after a load on Hyprland (or "(changed)"?); the Recording
+7. **Presets**: the panel's "Preset: 3 Race" right after a load on Hyprland (or "(changed)"?); the Recording
    and Spectating presets loading by themselves.
-7. **A font per section and per preset**: their own fonts kept by presets and Undo; is the panel's Font column
+8. **A font per section and per preset**: their own fonts kept by presets and Undo; is the panel's Font column
    wide enough on Linux?
-8. **Banners**: none for your own car taking the lead; "Race Winner" with your flag picture at the finish.
-9. **Tire wear**: TurboHUD's Tires percent the same as TSU's (log: `tires: ... worn out at ...`).
+9. **Banners**: none for your own car taking the lead; "Race Winner" with your flag picture at the finish.
+10. **Tire wear**: TurboHUD's Tires percent the same as TSU's (log: `tires: ... worn out at ...`).
 
 The Race Director mode (backlog item 8) has all its planned parts: what is left is tuning from what you see.
 

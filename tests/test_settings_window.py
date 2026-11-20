@@ -122,9 +122,44 @@ class SettingsWindowTests(unittest.TestCase):
         )
         window = self.window(options=options, reads_per_second=10)
         headings = [label.text() for label in window.findChildren(QLabel) if '<small>' in label.text()]
-        for heading in ('LOOK', 'STANDINGS', 'RADAR', 'FLAGS', 'READING THE RACE', 'MORE'):
+        for heading in ('TEXT COLOURS', 'STANDINGS', 'RADAR', 'FLAGS', 'READING THE RACE', 'MORE'):
             self.assertTrue(any(heading in text for text in headings), heading)
+        tabs = [window.tabs.tabText(index) for index in range(window.tabs.count())]
+        self.assertEqual(tabs, ['Look', 'Sections', 'Race'])  # no Colours tab without its choices
         self.assertEqual(set(window.options), {key for key, *_rest in options})
+
+    def test_colour_blind_off_all_or_chosen_sections(self):
+        # Asked for by the user on 2026-11-21: for every section or the ones chosen.
+        sections = [('fuel', 'Fuel'), ('radar', 'Radar'), ('times', 'My laps')]
+        window = self.window(colours=('off', ('fuel',), sections))
+        got = []
+        window.colour_blind_changed.connect(lambda mode, chosen: got.append((mode, chosen)))
+        self.assertIn('Colours', [window.tabs.tabText(i) for i in range(window.tabs.count())])
+        self.assertNotIn('blueflag', window.colour_boxes)  # the app leaves the flags out
+        self.assertFalse(window.colour_boxes['fuel'].isEnabled())  # ticks only with Chosen sections
+        window.colour_buttons['all'].click()
+        self.assertEqual(got[-1], ('all', ('fuel',)))
+        window.colour_buttons['chosen'].click()
+        self.assertTrue(window.colour_boxes['radar'].isEnabled())
+        window.colour_boxes['radar'].setChecked(True)
+        self.assertEqual(got[-1], ('chosen', ('fuel', 'radar')))
+        window.colour_buttons['off'].click()
+        self.assertEqual(got[-1], ('off', ('fuel', 'radar')))  # the ticks kept for next time
+
+    def test_legacy_colours_in_the_colours_tab(self):
+        from PySide6.QtWidgets import QLabel
+
+        options = (('legacy_colours', 'TSU Legacy colours', False, 'tip'),)
+        window = self.window(options=options)
+        got = []
+        window.option_changed.connect(lambda key, on: got.append((key, on)))
+        window.options['legacy_colours'].setChecked(True)
+        self.assertEqual(got, [('legacy_colours', True)])
+        colours = window.tabs.widget(
+            [window.tabs.tabText(i) for i in range(window.tabs.count())].index('Colours')
+        )
+        names = [label.text() for label in colours.findChildren(QLabel)]
+        self.assertTrue({'Health', 'Tires', 'Fuel'} <= set(names))  # TSU's colours shown
 
     def test_it_stays_compact_with_every_option(self):
         options = [(f'k{n}', f'Option {n}', True, 'tip') for n in range(4)]

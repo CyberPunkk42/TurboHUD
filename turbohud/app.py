@@ -87,6 +87,7 @@ log = logging.getLogger('turbohud')
 
 
 NARROWER = ('laptimes', 'players')  # the boxes layout 7 makes narrower
+LEGACY_LABEL = 'TSU Legacy colours'  # the option, in the settings window's Colours tab
 COMPASS_COLOURBLIND_LABEL = 'Compass in colour-blind colours'  # the option, in the settings and the menu
 COMPASS_SUN_LABEL = 'Compass north from the sun'  # the option, in the settings and the menu
 # The banners that fade in and out (overlay.window): section name -> the key of what it shows (race_sections).
@@ -514,6 +515,8 @@ def run(args, folder):
     from turbohud.core.hud import (
         CLOCK_SECTIONS,
         FONT_SIZES,
+        LEGACY_SECTIONS,
+        NO_COLOUR_CHOICE,
         OFF_AT_FIRST,
         RACE_SECTIONS,
         FramePacer,
@@ -524,11 +527,13 @@ def run(args, folder):
         below,
         beside,
         centred,
+        colour_blind_for,
         drawing_place,
         first_launch,
         grid_screen,
         has_tint,
         inside,
+        legacy_for,
         local_time_rows,
         main_screen,
         nudge,
@@ -860,6 +865,9 @@ def run(args, folder):
         window.backdrop = saved.tint if saved else default_tint(window.section, settings.backdrop)
         window.radar_cone = settings.radar_cone
         window.compass_colourblind = settings.compass_colourblind
+        chosen = (settings.colour_blind, settings.colour_blind_sections)
+        window.colour_blind = colour_blind_for(name, *chosen)
+        window.legacy = legacy_for(name, *chosen, settings.legacy_colours)
         window.compass_sun = settings.compass_sun
         window.sector_bars = settings.sector_bars
         window.screens = screens  # move mode shows its place counted on the screen it is on
@@ -1137,6 +1145,18 @@ def run(args, folder):
                     "North where the track's sun says (it sets in the west); off: up on the track map",
                 )
             )
+        if any(section.name in LEGACY_SECTIONS for section in layout):
+            listed.append(
+                (
+                    'legacy_colours',
+                    LEGACY_LABEL,
+                    settings.legacy_colours,
+                    (
+                        "The bars of Car status, Fuel, Tire wear and Car health in the colours of TSU's own HUD:"
+                        ' health red, tires teal, fuel olive yellow; colour-blind friendly colours win where chosen'
+                    ),
+                )
+            )
         if any(section.sectors for section in layout):
             listed.append(
                 (
@@ -1320,6 +1340,38 @@ def run(args, folder):
         log.info(
             'nearby cars: %s', 'the leader and the cars next to you' if short else '3 ahead and 3 behind'
         )
+
+    def show_colours():
+        """Each section in the colours the settings choose for it (colour-blind, Legacy or TurboHUD's own,
+        asked for by the user on 2026-11-21), drawn again where that changed."""
+        for name, window in windows.items():
+            chosen = (settings.colour_blind, settings.colour_blind_sections)
+            blind = colour_blind_for(name, *chosen)
+            legacy = legacy_for(name, *chosen, settings.legacy_colours)
+            if (window.colour_blind, window.legacy) != (blind, legacy):
+                window.colour_blind, window.legacy = blind, legacy
+                window.update()
+
+    def set_colour_blind(mode, chosen):
+        """Colour-blind friendly colours off, for every section or for those `chosen` (the settings window)."""
+        nonlocal settings
+        settings = replace(settings, colour_blind=mode, colour_blind_sections=tuple(chosen))
+        show_colours()
+        save()
+        log.info(
+            'colour-blind friendly colours: %s%s',
+            mode,
+            f' ({", ".join(chosen) or "none"})' if mode == 'chosen' else '',
+        )
+
+    def set_legacy_colours(on):
+        """The car sections' bars in TSU's own colours, or TurboHUD's."""
+        nonlocal settings
+        settings = replace(settings, legacy_colours=on)
+        show_option('legacy_colours', on)
+        show_colours()
+        save()
+        log.info('legacy colours %s', 'on' if on else 'off')
 
     def set_compass_colourblind(on):
         """The compass's needle and N in the colour-blind blue, or red."""
@@ -1566,6 +1618,11 @@ def run(args, folder):
                 settings.radar_seconds,
                 settings.reads_per_second if live is not None else None,
                 options(),
+                colours=(
+                    settings.colour_blind,
+                    settings.colour_blind_sections,
+                    [(s.name, s.label) for s in layout if s.name not in NO_COLOUR_CHOICE],
+                ),
             )
             setters = {
                 'mph': set_mph,
@@ -1576,6 +1633,7 @@ def run(args, folder):
                 'radar_cockpit_only': set_radar_cockpit_only,
                 'map_others': set_map_others,
                 'compass_colourblind': set_compass_colourblind,
+                'legacy_colours': set_legacy_colours,
                 'compass_sun': set_compass_sun,
                 'nearby_short': set_nearby_short,
                 'sector_bars': set_sector_bars,
@@ -1587,6 +1645,7 @@ def run(args, folder):
             }
             settings_window.option_changed.connect(lambda key, on: setters[key](on))
             settings_window.reads_changed.connect(set_reads)
+            settings_window.colour_blind_changed.connect(set_colour_blind)
             settings_window.theme_changed.connect(set_theme)
             settings_window.blue_seconds_changed.connect(lambda seconds: set_seconds('blue_seconds', seconds))
             settings_window.radar_seconds_changed.connect(

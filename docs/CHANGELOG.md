@@ -4,6 +4,22 @@ Every finished change, newest first: what changed, why, how it was checked and w
 Each branch adds its dated entry at the top. Where things stand now: `RESUME.md`; what is open:
 `docs/BACKLOG.md`.
 
+- 2026-11-21: Colour-blind and TSU Legacy colours, and the settings window in tabs (`feature/colour-options`,
+  asked for by the user). Colour-blind friendly colours (the user's name for them): Off, All sections or Chosen sections (a tick for each), never
+  the blue and yellow flags (`hud.colour_blind_for`). Each section draws in its colour map (`hud.COLOUR_BLIND`,
+  the Okabe-Ito palette: green to sky blue, red to orange, purple to reddish purple, the two yellows) through
+  `painter.colours` and `shaded`: text, level and pedal bars, the delta bar, sector bars, the radar, the track
+  map's dots and the compass's needle. TSU Legacy colours: the bars of Car status, Fuel, Fuel to finish, Tire
+  wear and Car health in TSU's own HUD colours, each value in its colour whatever is left (`hud.LEGACY_BARS`:
+  health #783c37, tires #3a7878, fuel #807927, read from the user's screenshot of TSU's HUD; not in TSU's
+  files, an IL2CPP build that names no HUD colour); colour-blind colours win where both are on
+  (`hud.legacy_for`). Car status's rows say which value their bar shows. Settings: `colour_blind`,
+  `colour_blind_sections`, `legacy_colours`. The settings window in tabs Look (text colours, size and font,
+  the look options), Colours, Sections (standings, sections, radar, flags) and Race (reads a second, More),
+  styled as move mode's panel; Reset colours moved to the text colours. Also: a comment `ruff` had stuck to
+  `off_where_left_out`'s return put back. Guides and README say so. Tests: which sections get which colours,
+  the maps, the settings kept, the Colours tab's choices, a bar drawn green, sky blue and teal. Not yet seen
+  over TSU.
 - 2026-11-20: Car status (`feature/car-status`, asked for by the user: the four car sections in one box, as they
   usually sit together and could not be made the same size). A new text section with Health, Tires, Fuel and
   Fuel to finish (the user's order), one row each at one text size, a level bar right under each of the first

@@ -19,11 +19,12 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QPushButton,
+    QTabWidget,
     QVBoxLayout,
     QWidget,
 )
 
-from turbohud.core.hud import beside
+from turbohud.core.hud import LEGACY_BARS, beside
 from turbohud.core.settings import BLUE_SECONDS, RADAR_SECONDS, READS_PER_SECOND, Theme
 
 log = logging.getLogger(__name__)
@@ -41,6 +42,7 @@ COLOURS = (
 # Where each option goes: under its heading, in this order. Options not named here show under More.
 GROUPS = {
     'look': ('backdrop', 'group_tint', 'grid', 'mph'),
+    'colours': ('legacy_colours',),
     'standings': ('classes', 'clan_tags'),
     'sections': ('nearby_short', 'sector_bars', 'gear', 'map_others', 'compass_colourblind', 'compass_sun'),
     'radar': ('radar_cone',),
@@ -61,6 +63,28 @@ UNUSABLE = '#5d7799'  # a greyed-out option's name: the move-mode panel's faint 
 SYSTEM_FONT = 'System font'  # the font choice for the system's own font
 HEADING = '#9fb8d8'  # the headings, as in the move-mode panel
 SIZE_STEP = 1.1  # Bigger: 10 % larger; Smaller: the same back
+SECTIONS_PER_ROW = 3  # the Colours tab's section ticks in a row
+# Colour-blind friendly colours: (Settings.colour_blind, button, tooltip)
+COLOUR_BLIND_CHOICES = (
+    ('off', 'Off', "TurboHUD's own colours (or TSU's Legacy colours where on)"),
+    ('all', 'All sections', 'Every section but the blue and yellow flags in colour-blind friendly colours'),
+    ('chosen', 'Chosen sections', 'Only the sections ticked below in colour-blind friendly colours'),
+)
+COLOUR_BLIND_NOTE = (
+    'Green turns sky blue, red orange, purple reddish purple: told apart with the common kinds of colour'
+    ' blindness. The blue and yellow flags keep their colours.'
+)
+TAB_EDGE = 'rgb(120, 170, 230)'  # the window's border colour (paintEvent)
+# Tabs that read as tabs, as move mode's panel has them (window.MovePanel): bold, boxed, the open one filled.
+TAB_STYLE = (
+    f'QTabWidget::pane {{ border: none; border-top: 2px solid {TAB_EDGE}; background: transparent;'
+    ' padding-top: 4px; }'
+    f' QTabBar::tab {{ color: {HEADING}; background: rgba(120, 170, 230, 35); border: 1px solid {TAB_EDGE};'
+    ' border-bottom: none; border-top-left-radius: 5px; border-top-right-radius: 5px; padding: 5px 18px;'
+    ' margin-right: 4px; font-weight: bold; }'
+    f' QTabBar::tab:selected {{ color: #0f1e37; background: {TAB_EDGE}; }}'
+    ' QTabBar::tab:!selected:hover { color: white; background: rgba(120, 170, 230, 80); }'
+)
 SWATCH = 22  # pixels
 CHOSEN_RING = (120, 190, 255)
 # On the Mac a plain checkable button looks the same checked or not.
@@ -122,6 +146,8 @@ class SettingsWindow(QWidget):
     radar_seconds_changed = Signal(float)
     reads_changed = Signal(int)
     option_changed = Signal(str, bool)  # an option's key (see `options`), on or off
+    # Colour-blind friendly colours: 'off', 'all' or 'chosen' (hud.COLOUR_BLIND_MODES), and the sections chosen.
+    colour_blind_changed = Signal(str, tuple)
     about_requested = Signal()  # About: the app's name and version
     font_chosen = Signal(str)  # a font family from customization/fonts, '' for the system's
     fonts_folder_requested = Signal()  # Fonts folder...: open customization/fonts
@@ -131,10 +157,19 @@ class SettingsWindow(QWidget):
     focusable = True  # it takes clicks on its buttons
 
     def __init__(
-        self, native, flags, theme, blue_seconds=2.0, radar_seconds=0.5, reads_per_second=None, options=()
+        self,
+        native,
+        flags,
+        theme,
+        blue_seconds=2.0,
+        radar_seconds=0.5,
+        reads_per_second=None,
+        options=(),
+        colours=None,
     ):
         """`options` are tick boxes for the whole HUD: (key, label, on, tooltip) each; a
-        change says its key through option_changed."""
+        change says its key through option_changed. `colours`: (mode, chosen sections, [(name, label)
+        of each section that can have colour-blind friendly colours]) for the Colours tab, or None."""
         super().__init__(None, flags)
         self.native = native
         self.flags = flags
@@ -147,19 +182,18 @@ class SettingsWindow(QWidget):
         outer = QVBoxLayout(self)
         outer.setContentsMargins(14, 12, 14, 12)
         outer.addWidget(QLabel('<b>TurboHUD - Settings</b>'))
-        columns = QHBoxLayout()
-        columns.setSpacing(24)
-        left, right = QVBoxLayout(), QVBoxLayout()
-        for side in (left, right):
-            side.setSpacing(6)  # not the columns' gap, which a layout inside would take on
-        columns.addLayout(left)
-        columns.addLayout(right)
-        outer.addLayout(columns)
         listed = {key: (label, on, tip) for key, label, on, tip in options}
         self.options = {}
         self.camera_buttons = {}
+        # Tabs, as move mode's panel has (asked for by the user on 2026-11-21: a tidier window): each a
+        # column of headings, in the order a player looks for them.
+        self.tabs = QTabWidget()
+        self.tabs.tabBar().setDrawBase(False)
+        self.tabs.setStyleSheet(TAB_STYLE)
+        outer.addWidget(self.tabs)
 
-        left.addWidget(self._heading('Look'))
+        look = self._tab('Look', 'Text colours, size and font, and how the sections look')
+        look.addWidget(self._heading('Text colours'))
         grid = QGridLayout()
         self.swatches = {}
         for row, (label, field, colors) in enumerate(COLOURS):
@@ -174,50 +208,62 @@ class SettingsWindow(QWidget):
             line.addStretch()
             grid.addLayout(line, row, 1)
             self.swatches[field] = buttons
-        left.addLayout(grid)
-        size = QHBoxLayout()
-        size.addWidget(QLabel('All sections:'))
+        look.addLayout(grid)
+        reset = QPushButton('Reset colours')
+        reset.setToolTip('Text, highlight and outline back to TurboHUD\'s own')
+        reset.clicked.connect(self.reset)
+        look.addLayout(self._row(reset))
+        look.addWidget(self._heading('Size and font'))
         smaller, bigger = QPushButton('Smaller'), QPushButton('Bigger')
         smaller.clicked.connect(lambda: self.resize_requested.emit(1 / SIZE_STEP))
         bigger.clicked.connect(lambda: self.resize_requested.emit(SIZE_STEP))
-        size.addWidget(smaller)
-        size.addWidget(bigger)
-        size.addStretch()
-        left.addLayout(size)
+        look.addLayout(self._row(QLabel('All sections:'), smaller, bigger))
         # The player's own fonts (asked for by the user on 2026-11-16): those in customization/fonts.
-        font = QHBoxLayout()
-        font.addWidget(QLabel('Font:'))
         self.font_choice = QComboBox()
         self.font_choice.setToolTip(
             'The font of every section: one of yours from the fonts folder, or the system font'
         )
         self.font_choice.setSizeAdjustPolicy(QComboBox.AdjustToContents)
         self.font_choice.currentIndexChanged.connect(self._font_picked)
-        font.addWidget(self.font_choice)
         # Add font... opens a file window above TurboHUD's; the folder opens in the system's file
         # manager, beneath TurboHUD's windows, so that one first closes this window and leaves move
         # mode (reported by the user on 2026-11-17).
         add = QPushButton('Add font...')
         add.setToolTip('Choose a font file (.ttf, .otf): it is copied into the fonts folder and used at once')
         add.clicked.connect(self.add_font_requested)
-        font.addWidget(add)
         folder = QPushButton('Fonts folder...')
         folder.setToolTip(
             'Open the fonts folder, to add or delete font files; this window closes and move mode ends,'
             ' so the folder can be seen'
         )
         folder.clicked.connect(self.fonts_folder_requested)
-        font.addWidget(folder)
-        font.addStretch()
-        left.addLayout(font)
+        look.addLayout(self._row(QLabel('Font:'), self.font_choice, add, folder))
         self.set_fonts({}, '')
-        self._boxes(left, listed, GROUPS['look'])
+        if any(key in listed for key in GROUPS['look']):
+            look.addWidget(self._heading('Sections'))
+            self._boxes(look, listed, GROUPS['look'])
+        look.addStretch()
 
+        self.colour_boxes = {}
+        self.colour_buttons = {}
+        if colours is not None or any(key in listed for key in GROUPS['colours']):
+            tab = self._tab(
+                'Colours', 'Colour-blind friendly colours, and TSU\'s Legacy colours for the car sections'
+            )
+            if colours is not None:
+                self._colour_blind(tab, *colours)
+            if any(key in listed for key in GROUPS['colours']):
+                tab.addWidget(self._heading('TSU Legacy colours'))
+                self._boxes(tab, listed, GROUPS['colours'])
+                tab.addLayout(self._legacy_swatches())
+            tab.addStretch()
+
+        sections = self._tab('Sections', 'Standings, nearby cars, the radar, flags and the other sections')
         standings = [key for key in GROUPS['standings'] if key in listed]
         column_keys = [key for key in listed if key.startswith('column_')]
         if standings or column_keys:
-            left.addWidget(self._heading('Standings'))
-            self._boxes(left, listed, standings)
+            sections.addWidget(self._heading('Standings'))
+            self._boxes(sections, listed, standings)
             if column_keys:
                 # Rows of COLUMNS_PER_ROW, so the window keeps its width as columns are added.
                 grid = QGridLayout()
@@ -227,47 +273,39 @@ class SettingsWindow(QWidget):
                     row, place = divmod(index, COLUMNS_PER_ROW)
                     grid.addWidget(self._box(key, *listed[key]), row, place + 1)
                 grid.setColumnStretch(COLUMNS_PER_ROW + 1, 1)
-                left.addLayout(grid)
+                sections.addLayout(grid)
             self._follow_needs()
         if any(key in listed for key in GROUPS['sections']):
-            left.addWidget(self._heading('Sections'))
-            self._boxes(left, listed, GROUPS['sections'])
-        left.addStretch()
-
-        right.addWidget(self._heading('Radar'))
+            sections.addWidget(self._heading('Sections'))
+            self._boxes(sections, listed, GROUPS['sections'])
+        sections.addWidget(self._heading('Radar'))
         if 'radar_cockpit_only' in listed:
-            right.addLayout(self._camera_row(*listed['radar_cockpit_only']))
-        self._boxes(right, listed, GROUPS['radar'])
-        timing = QGridLayout()
+            sections.addLayout(self._camera_row(*listed['radar_cockpit_only']))
+        self._boxes(sections, listed, GROUPS['radar'])
         self.radar_seconds = self._seconds_box(radar_seconds, RADAR_SECONDS, self.radar_seconds_changed)
         self.radar_seconds.setToolTip('How far ahead of or behind you a car shows the radar')
-        timing.addWidget(QLabel('Shows a car within:'), 0, 0)
-        timing.addWidget(self.radar_seconds, 0, 1)
-        right.addLayout(timing)
-
-        right.addWidget(self._heading('Flags'))
-        self._boxes(right, listed, GROUPS['flags'])
-        blue = QGridLayout()
+        sections.addLayout(self._row(QLabel('Shows a car within:'), self.radar_seconds))
+        sections.addWidget(self._heading('Flags'))
+        self._boxes(sections, listed, GROUPS['flags'])
         self.blue_seconds = self._seconds_box(blue_seconds, BLUE_SECONDS, self.blue_seconds_changed)
         self.blue_seconds.setToolTip('How far behind you a car about to lap you shows the blue flag')
-        blue.addWidget(QLabel('Blue flag for a car within:'), 0, 0)
-        blue.addWidget(self.blue_seconds, 0, 1)
-        right.addLayout(blue)
+        sections.addLayout(self._row(QLabel('Blue flag for a car within:'), self.blue_seconds))
+        sections.addStretch()
 
-        # Anything not placed above (a new option) still shows, at the end.
+        # Anything not placed above (a new option) still shows, in the last tab.
         rest = [key for key in listed if key not in self.options and key != 'radar_cockpit_only']
-        if rest:
-            right.addWidget(self._heading('More'))
-            self._boxes(right, listed, rest)
-
         self.read_buttons = {}
-        if reads_per_second is not None:
-            right.addWidget(self._heading('Reading the race'))
-            right.addLayout(self._reads_row(reads_per_second))
-        right.addStretch()
+        if rest or reads_per_second is not None:
+            race = self._tab('Race', 'How often the race is read, and any other option')
+            if reads_per_second is not None:
+                race.addWidget(self._heading('Reading the race'))
+                race.addLayout(self._reads_row(reads_per_second))
+            if rest:
+                race.addWidget(self._heading('More'))
+                self._boxes(race, listed, rest)
+            race.addStretch()
         row = QHBoxLayout()
-        reset, close = QPushButton('Reset colours'), QPushButton('Close')
-        reset.clicked.connect(self.reset)
+        close = QPushButton('Close')
         close.clicked.connect(self.close_window)
         # Without the three dots (asked for by the user on 2026-11-20), as the move-mode panel's buttons.
         classes = QPushButton('Car classes')
@@ -276,7 +314,6 @@ class SettingsWindow(QWidget):
         about = QPushButton('About')
         about.setToolTip("TurboHUD's name and version")
         about.clicked.connect(self.about_requested)
-        row.addWidget(reset)
         row.addWidget(classes)
         row.addWidget(about)
         row.addStretch()
@@ -303,6 +340,89 @@ class SettingsWindow(QWidget):
         family = self.font_choice.itemData(index)
         if family is not None:
             self.font_chosen.emit(family)
+
+    def _tab(self, name, tip):
+        """A new tab named `name`: its column, to fill from the top."""
+        page = QWidget()
+        page.setStyleSheet('background: transparent;')
+        column = QVBoxLayout(page)
+        column.setContentsMargins(2, 0, 2, 0)
+        column.setSpacing(6)
+        self.tabs.addTab(page, name)
+        self.tabs.setTabToolTip(self.tabs.count() - 1, tip)
+        return column
+
+    @staticmethod
+    def _row(*widgets):
+        """`widgets` side by side from the left."""
+        row = QHBoxLayout()
+        for widget in widgets:
+            row.addWidget(widget)
+        row.addStretch()
+        return row
+
+    def _colour_blind(self, column, mode, chosen, sections):
+        """Colour-blind friendly colours as Off, All sections or Chosen sections, with a tick for each section
+        (asked for by the user on 2026-11-21: for all of them or for the ones chosen)."""
+        column.addWidget(self._heading('Colour-blind friendly colours'))
+        group = QButtonGroup(self)
+        buttons = []
+        for key, text, about in COLOUR_BLIND_CHOICES:
+            button = QPushButton(text)
+            button.setCheckable(True)
+            button.setChecked(key == mode)
+            button.setStyleSheet(READS_BUTTON)
+            button.setToolTip(about)
+            group.addButton(button)
+            button.clicked.connect(lambda _checked=False: self._colour_blind_picked())
+            self.colour_buttons[key] = button
+            buttons.append(button)
+        column.addLayout(self._row(*buttons))
+        note = QLabel(COLOUR_BLIND_NOTE)
+        note.setWordWrap(True)
+        note.setStyleSheet(f'color: {HEADING};')
+        column.addWidget(note)
+        grid = QGridLayout()
+        grid.setHorizontalSpacing(14)
+        for index, (name, label) in enumerate(sections):
+            box = QCheckBox(label)
+            box.setStyleSheet(f'QCheckBox {{ color: white; }} QCheckBox:disabled {{ color: {UNUSABLE}; }}')
+            box.setChecked(name in chosen)
+            box.setToolTip(f'{label} in colour-blind friendly colours (with Chosen sections)')
+            box.toggled.connect(lambda _checked: self._colour_blind_picked())
+            row, place = divmod(index, SECTIONS_PER_ROW)
+            grid.addWidget(box, row, place)
+            self.colour_boxes[name] = box
+        grid.setColumnStretch(SECTIONS_PER_ROW, 1)
+        column.addLayout(grid)
+        self._follow_colour_blind()
+
+    def colour_blind(self):
+        """(mode, chosen sections) as the Colours tab shows them."""
+        mode = next((key for key, button in self.colour_buttons.items() if button.isChecked()), 'off')
+        return mode, tuple(name for name, box in self.colour_boxes.items() if box.isChecked())
+
+    def _follow_colour_blind(self):
+        """The section ticks usable only with Chosen sections (their ticks kept)."""
+        chosen = self.colour_blind()[0] == 'chosen'
+        for box in self.colour_boxes.values():
+            box.setEnabled(chosen)
+
+    def _colour_blind_picked(self):
+        self._follow_colour_blind()
+        self.colour_blind_changed.emit(*self.colour_blind())
+
+    @staticmethod
+    def _legacy_swatches():
+        """TSU's colours, to see what Legacy colours draws: each value's name on its colour."""
+        row = QHBoxLayout()
+        for kind, colour in LEGACY_BARS.items():
+            label = QLabel(kind.capitalize())
+            label.setStyleSheet(f'background: {colour}; color: white; border-radius: 4px; padding: 2px 10px;')
+            label.setToolTip(f"TSU's {kind} colour, {colour}")
+            row.addWidget(label)
+        row.addStretch()
+        return row
 
     @staticmethod
     def _heading(text):

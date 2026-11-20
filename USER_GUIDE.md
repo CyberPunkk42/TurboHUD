@@ -532,13 +532,18 @@ that font as their own, so the layout looks as it was made, and your global font
 
 Open it with **Settings…** in the icon's menu or **Settings** in the move-mode panel.
 
-The window has two columns, under headings. The on/off options are the same as under
-**Options** in the icon's menu (section 2).
+The window has four tabs: **Look**, **Colours**, **Sections** and **Race**, each with its options under
+headings. The on/off options are the same as under **Options** in the icon's menu (section 2), but for
+the colour choices, which are only here.
 
-**Look**
+### Look
+
+**Text colours**
 - **Text**, **Highlight** and **Outline**: the colours of the text, of the highlighted
   parts (your own row, headings) and of the thin outline that keeps text readable over
   the game. **Reset colours** puts the defaults back.
+
+**Size and font**
 - **All sections:** **Smaller** and **Bigger** make every section 10% smaller or bigger.
 - **Font:** the global font, for every section whose own **Font** in move mode is global (all
   of them, until you give one its own): **System font** (the usual one), or a font of your
@@ -551,8 +556,30 @@ The window has two columns, under headings. The on/off options are the same as u
   the new font at once. TurboHUD draws its text bold, so a font with a bold style looks best;
   letters a font lacks come from the system font. A chosen font whose file is gone shows as
   "(missing)", and the system font is drawn until it comes back.
+
+**Sections**
 - **Light tint behind all sections**, **One tint for each group** (Mac and Windows; see section 2),
   **Move mode grid** and **Speed in mph**.
+
+### Colours
+
+**Colour-blind friendly colours**
+- **Off** (the default: TurboHUD's own colours), **All sections** or **Chosen sections**. In
+  colour-blind friendly colours, green turns sky blue, red orange, the fastest lap's purple reddish purple, and
+  yellow and dark yellow change a little, so the colours that tell gaining from losing, full from low or
+  the fastest from your own best stay apart with the common kinds of colour blindness. The bars, the
+  delta, the sector bars, the radar and the track map's dots all follow. The **Blue flag** and the
+  **Yellow flag** keep their colours whatever you choose.
+- With **Chosen sections**, tick the sections to draw in colour-blind friendly colours (a tick for each section
+  but the two flags). The ticks are greyed out with **Off** or **All sections**, and kept for next time.
+
+**TSU Legacy colours**
+- **TSU Legacy colours**: the bars of **Car status**, **Fuel**, **Tire wear** and **Car health** in the
+  colours of TSU's own HUD, each value in its own colour whatever is left: **Health** red, **Tires** teal,
+  **Fuel** olive yellow (shown below the tick). Off: TurboHUD's green, yellow and red. Where a section
+  is also in colour-blind friendly colours, those win.
+
+### Sections
 
 **Standings**
 - **Classes in the standings** and **Clan tags in the standings**.
@@ -583,11 +610,15 @@ The window has two columns, under headings. The on/off options are the same as u
 - **Blue flag for a car within:** how far behind you a car about to lap you shows the blue
   flag, 1 to 10 seconds (2 by default).
 
+### Race
+
 **Reading the race**
 - **Race reads a second:** 20, 10 (the default) or 5. Fewer ask less of the game, but the delta and the
   track map move less smoothly, and a track first learnt at 5 gets a coarser line.
 
-At the bottom:
+**More**: a new option not placed under a heading yet, when there is one.
+
+At the bottom, below every tab:
 - **Car classes**: every car class a clan tag can name, by category in its colour.
 - **About**: the name and the version. **Close** closes the window.
 

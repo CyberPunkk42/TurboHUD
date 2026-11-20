@@ -1514,12 +1514,15 @@ class CarStatusTests(unittest.TestCase):
         self.assertEqual(
             [r.text for r in rows], ['Health 90%', 'Tires 80%', 'Fuel 50.0%', 'Finish +1.0 laps']
         )
-        self.assertEqual([r.level for r in rows], [(0.9, 'ahead'), (0.8, 'ahead'), (0.5, 'lift'), ()])
+        self.assertEqual(
+            [r.level for r in rows],
+            [(0.9, 'ahead', 'health'), (0.8, 'ahead', 'tires'), (0.5, 'lift', 'fuel'), ()],
+        )
 
     def test_only_what_the_event_has(self):
         car = race.CarState(False, 0, 0, False, 0, 30.0, health=0.6, downforce_from=0.9, slowed_from=0.75)
         rows = race.car_sections(car)['carstatus']
-        self.assertEqual([(r.text, r.level) for r in rows], [('Health 60%', (0.6, 'behind'))])
+        self.assertEqual([(r.text, r.level) for r in rows], [('Health 60%', (0.6, 'behind', 'health'))])
         no_car_data = race.CarState(False, 0, 0, False, 0, 30.0)
         self.assertNotIn('carstatus', race.car_sections(no_car_data))
 
@@ -1594,3 +1597,42 @@ class CarStatusTests(unittest.TestCase):
         self.assertGreater(one, shift + bar.y + bar.height)  # its bar is inside the tint
         fuel = next(s for s in hud.RACE_SECTIONS if s.name == 'fuel')
         self.assertEqual(hud.tint_height(fuel, [], 50, scale, ink), 50)  # other sections: the whole box
+
+
+class ColourChoiceTests(unittest.TestCase):
+    """Colour-blind colours for all or chosen sections, and TSU's Legacy colours for the car sections
+    (asked for by the user on 2026-11-21)."""
+
+    def test_colour_blind_for_all_or_the_chosen_never_the_flags(self):
+        self.assertFalse(hud.colour_blind_for('fuel'))
+        self.assertTrue(hud.colour_blind_for('fuel', 'all'))
+        self.assertTrue(hud.colour_blind_for('fuel', 'chosen', ('fuel',)))
+        self.assertFalse(hud.colour_blind_for('radar', 'chosen', ('fuel',)))
+        for flag in ('blueflag', 'yellowflag'):
+            self.assertFalse(hud.colour_blind_for(flag, 'all'))
+            self.assertFalse(hud.colour_blind_for(flag, 'chosen', (flag,)))
+
+    def test_legacy_only_for_the_car_sections_and_colour_blind_wins(self):
+        for name in ('carstatus', 'fuel', 'fuelfinish', 'tires', 'health'):
+            self.assertTrue(hud.legacy_for(name, legacy=True), name)
+            self.assertFalse(hud.legacy_for(name), name)
+        self.assertFalse(hud.legacy_for('times', legacy=True))
+        self.assertFalse(hud.legacy_for('fuel', 'all', legacy=True))
+        self.assertFalse(hud.legacy_for('fuel', 'chosen', ('fuel',), legacy=True))
+        self.assertTrue(hud.legacy_for('fuel', 'chosen', ('tires',), legacy=True))
+
+    def test_colour_blind_colours_replace_green_red_and_purple(self):
+        blind = hud.COLOUR_BLIND
+        self.assertEqual(hud.shade('#5EE07A', blind), '#56b4e9')  # green: sky blue
+        self.assertEqual(hud.shade('#ff6b6b', blind), '#e69f00')  # red: orange
+        self.assertEqual(hud.shade('#c77dff', blind), '#cc79a7')  # purple: reddish purple
+        self.assertEqual(hud.shade('#ffffff', blind), '#ffffff')  # the others stay
+        self.assertEqual(hud.shade('#5ee07a', {}), '#5ee07a')
+        self.assertEqual(len(set(blind.values()) & set(blind)), 0)  # none mapped twice
+
+    def test_legacy_bars_in_tsus_colour_for_each_value(self):
+        self.assertEqual(hud.legacy_bar((0.4, 'behind'), 'health'), (0.4, hud.LEGACY_BARS['health']))
+        self.assertEqual(hud.legacy_bar((0.4, 'ahead'), 'tires'), (0.4, hud.LEGACY_BARS['tires']))
+        self.assertEqual(hud.legacy_bar((0.4, 'lift'), 'fuel'), (0.4, hud.LEGACY_BARS['fuel']))
+        self.assertEqual(hud.legacy_bar((0.4, 'draft'), 'draft'), (0.4, 'draft'))  # TSU has none there
+        self.assertEqual(hud.legacy_bar((), 'fuel'), ())

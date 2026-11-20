@@ -3332,7 +3332,7 @@ def car_status_rows(sections, levels):
     fuel to finish, each with its level bar under it, of those the event has, with no gap for the
     others. `sections` and `levels`: what car_sections made for the separate sections."""
     return [
-        dataclasses.replace(row, level=levels[name]) if isinstance(levels.get(name), tuple) else row
+        dataclasses.replace(row, level=(*levels[name], name)) if isinstance(levels.get(name), tuple) else row
         for name in CAR_STATUS_ORDER
         for row in sections.get(name, [])
     ]

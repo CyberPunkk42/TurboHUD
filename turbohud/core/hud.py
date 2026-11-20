@@ -68,7 +68,8 @@ class Row:
         ''  # a column lined up on the right just after the text (the overall place in the lap times)
     )
     lead: str = ''  # a column lined up on the right just before `middle` (the gap to the leader)
-    # (0 to 1, colour): a level bar right under this row, the next row below it (Car status, one bar a row).
+    # (0 to 1, colour[, what it shows: 'health', 'tires', 'fuel']): a level bar right under this row, the next row below it
+    # (Car status, one bar a row); what it shows gives it TSU's colour with Legacy colours (hud.legacy_bar).
     level: tuple = ()
 
 
@@ -570,9 +571,11 @@ EVERY_RACE_SECTION = (
         'Car status',
         (
             (
-                Row('Health 100%', 'medium', tail='  less downforce', level=(1.0, 'ahead')),
-                Row(f'Tires 100%  ~{WIDE_LAPS} laps', 'medium', level=(0.8, 'ahead')),
-                Row('Fuel 100.0%', 'medium', tail=f'  ~{WIDE_LAPS} laps  +0.00%', level=(0.6, 'ahead')),
+                Row('Health 100%', 'medium', tail='  less downforce', level=(1.0, 'ahead', 'health')),
+                Row(f'Tires 100%  ~{WIDE_LAPS} laps', 'medium', level=(0.8, 'ahead', 'tires')),
+                Row(
+                    'Fuel 100.0%', 'medium', tail=f'  ~{WIDE_LAPS} laps  +0.00%', level=(0.6, 'ahead', 'fuel')
+                ),
                 Row(f'Finish +{WIDE_LAPS} laps', 'medium'),
             ),
         ),
@@ -768,12 +771,62 @@ def off_where_left_out(places, current):
         for name in OFF_AT_FIRST
         if name not in places and name in current
     }
-    return {
-        **hidden,
-        **places,
-    }  # The move-mode panel lists the sections under these headings (asked for by the user on
+    return {**hidden, **places}
 
 
+# Colour choices (asked for by the user on 2026-11-21). A section draws with at most one: colour-blind
+# where the player chose it for that section, else Legacy for the car sections where it is on. The blue
+# and yellow flags keep their colours whatever is chosen.
+NO_COLOUR_CHOICE = frozenset({'blueflag', 'yellowflag'})
+COLOUR_BLIND_MODES = ('off', 'all', 'chosen')  # Settings.colour_blind
+# From TurboHUD's own colours ('#rrggbb', lower case) to the Okabe-Ito palette's, told apart with each of
+# the common kinds of colour blindness: green (gaining, a level well up, a personal best) to sky blue, red
+# (losing, low, damage) to orange, the fastest lap's purple (which looks blue with red-green colour
+# blindness) to reddish purple, dark yellow to vermillion and yellow to its yellow. Others stay.
+COLOUR_BLIND = {
+    '#5ee07a': '#56b4e9',  # green: ahead, a full bar, a personal best sector
+    '#3ecf7a': '#56b4e9',
+    '#ff6b6b': '#e69f00',  # red: behind, an empty bar, slowed by damage
+    '#ff3b3b': '#e69f00',
+    '#e8262c': '#56b4e9',  # the compass's red needle
+    '#c77dff': '#cc79a7',  # purple: the fastest lap or sector of anyone
+    '#c9a227': '#d55e00',  # dark yellow: a sector slower than your best
+    '#ffe14d': '#f0e442',  # yellow: lifting, half a bar, less downforce
+}
+# TSU's own colours (asked for by the user on 2026-11-21, read from a screenshot of TSU's HUD): each value
+# has its colour, whatever is left of it: health red, tires teal, fuel olive yellow. With Legacy colours on,
+# the car sections' bars are in these.
+LEGACY_SECTIONS = frozenset({'carstatus', 'fuel', 'fuelfinish', 'tires', 'health'})
+LEGACY_BARS = {'health': '#783c37', 'tires': '#3a7878', 'fuel': '#807927'}
+
+
+def colour_blind_for(name, colour_blind='off', chosen=()):
+    """Whether section `name` draws in colour-blind colours: `colour_blind` (COLOUR_BLIND_MODES) for
+    every section or for those `chosen`; never the flags (NO_COLOUR_CHOICE)."""
+    if name in NO_COLOUR_CHOICE:
+        return False
+    return colour_blind == 'all' or (colour_blind == 'chosen' and name in chosen)
+
+
+def legacy_for(name, colour_blind='off', chosen=(), legacy=False):
+    """Whether section `name` draws its bars in TSU's colours (LEGACY_BARS): a car section with Legacy
+    colours on, where it is not in colour-blind colours, which win."""
+    return legacy and name in LEGACY_SECTIONS and not colour_blind_for(name, colour_blind, chosen)
+
+
+def shade(colour, colours):
+    """`colour` ('#rrggbb', any case) as the colour map `colours` (COLOUR_BLIND, or {}) draws it."""
+    return colours.get(colour.lower(), colour) if colours else colour
+
+
+def legacy_bar(level, kind):
+    """A level bar's (0 to 1, colour) in TSU's colour for `kind` ('health', 'tires', 'fuel'), or as it is
+    where TSU has none (LEGACY_BARS)."""
+    colour = LEGACY_BARS.get(kind)
+    return (level[0], colour) if colour and level else level
+
+
+# The move-mode panel lists the sections under these headings (asked for by the user on
 # 2026-11-11); a section not named here comes under the last.
 PANEL_CATEGORIES = (
     ('Timing', ('lap', 'current', 'delta', 'deltabar', 'times', 'laptimes')),
