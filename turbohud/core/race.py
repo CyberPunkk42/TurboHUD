@@ -2601,6 +2601,10 @@ class EventModes:
     def __init__(self):
         self._told = None  # the mode told last
 
+    def reset(self):
+        """A new session: its first event is told whatever its mode."""
+        self._told = None
+
     def began(self, snapshot, now):
         """The new event's mode, or None."""
         if not on_grid(snapshot, now):
@@ -2610,6 +2614,53 @@ class EventModes:
             return None
         self._told = mode
         return mode
+
+
+SESSION_GAP = 5.0  # seconds with no session in TSU (its menu) before a session counts as over
+
+
+class SessionPresets:
+    """The preset each kind of event (event_mode) loads in this session: the player's Load by
+    itself choice, until they load another by hand during an event of that kind, which then stays
+    for that kind until the session is over (asked for by the user on 2026-11-20: they loaded
+    preset 5 by hand at every event). A session is over once TSU has had no session at all (its
+    menu, or no TSU) for SESSION_GAP seconds; between its events TSU sets the next race up."""
+
+    def __init__(self, gap=SESSION_GAP):
+        self.gap = gap
+        self.mode = None  # the kind of the event that began last in this session
+        self.chosen = {}  # kind of event -> preset loaded by hand during one this session
+        self._away_since = None
+
+    def began(self, mode):
+        self.mode = mode
+
+    def by_hand(self, number):
+        """A preset loaded by hand: kept for the kind of event this session is in; the kind, or None
+        outside a session (in TSU's menu: then it is only loaded)."""
+        if self.mode is None:
+            return None
+        self.chosen[self.mode] = number
+        return self.mode
+
+    def preset(self, mode, usual):
+        """The preset for an event of `mode`: chosen by hand this session, else `usual` (the
+        settings' auto_presets); None for none. Also whether it was chosen by hand."""
+        if mode in self.chosen:
+            return self.chosen[mode], True
+        return usual.get(mode), False
+
+    def over(self, status, now):
+        """Whether the session has just ended (`status`: the reader's): it then forgets."""
+        if status not in (WAITING_FOR_RACE, WAITING_FOR_GAME):
+            self._away_since = None
+            return False
+        if self._away_since is None:
+            self._away_since = now
+        if now - self._away_since < self.gap or (self.mode is None and not self.chosen):
+            return False
+        self.mode, self.chosen = None, {}
+        return True
 
 
 def status_text(snapshot, platform=sys.platform):
