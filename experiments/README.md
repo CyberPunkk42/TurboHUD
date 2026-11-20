@@ -815,3 +815,17 @@ worked out from what was seen, to about ±20°:
 All five match: the afternoon sun in the west, the morning sun in the east, on tracks with the default sun and
 with one turned by the track's maker (Giza, Abu Dhabi). Around midday the sun stands a little to the south
 (~247° and ~109° at 15.8 and 10), as on a real track in the northern hemisphere.
+
+## TSU's HUD colours, for TurboHUD's Legacy colours (2026-11-21, Windows)
+Asked for by the user: the car sections' bars in the colours of TSU's own HUD. Not in TSU's files:
+- The player's data folder (`%USERPROFILE%\AppData\LocalLow\Turbo Sliders\Unlimited\<SteamID>`) holds race
+  settings, liveries, logs and stats, no HUD colours. Its only "legacy" keys are rules
+  (`legacySlowdownSystem`, `oldLegacyCollisions`).
+- The game is an IL2CPP build (`GameAssembly.dll`, `il2cpp_data/Metadata/global-metadata.dat`). Its names hold
+  no HUD colour field and no "legacy colours" option; the only "health colour" names are the terrain's grass
+  (`m_healthyColour`, `DefaultHealthColor`). The colours are in compiled code or unnamed Unity assets.
+- So they were read from a screenshot of TSU's HUD (Health, Tires and Fuel at 100%): each value has a header in
+  its own colour, the median of its pixels: Health `#783c37` (red), Tires `#3a7878` (teal, the left and right
+  ends `#367677` and `#427b7a`), Fuel `#807927` (olive yellow). The headers are see-through over the track, so
+  these are the colours as seen over a brown and green track, darker than the headers' own. The `%` signs are
+  a beige `#aca25b` in all three. TurboHUD's `hud.LEGACY_BARS` uses the three header colours.
