@@ -28,6 +28,8 @@ Kept short: the state now and what to do next. Every change, with how it was che
   The repository is kept in step with a private GitHub repository.
 
 ## To try next (most recent first)
+- **The radar's cars steady** (`fix/radar-positions-together`): in a race with many cars, do the cars beside
+  and behind you on the radar still jump forward and back?
 0. **TurboHUD's memory** (backlog item 10): on Linux it now levels off near 300 MB in a race (465 before). Left:
    a session started as `TURBOHUD_TRACE_MEMORY=1 sh run_turbohud.sh` for Python's slow rise, and a long race on
    the Mac and Windows.

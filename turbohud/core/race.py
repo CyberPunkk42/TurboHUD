@@ -662,6 +662,7 @@ class LapReader:
         self._draft_time = {}  # lap index -> race time spent in a slipstream (0.1 ms)
         self._draft_clock = None  # race clock at the read before, for that time
         self._player_indices = []
+        self._position_spots, self._players_found = [], 0  # see _positions_together
         self._recorder_tick, self._recorder_moved = None, 0
         self._client_class = None  # TS.ClientEventController, once looked up
         self._host_class = None  # TS.HostEventController, once looked up (False: not in the game)
@@ -1769,16 +1770,40 @@ class LapReader:
         except (NotFound, OSError):
             return ()
         found, indices = [], []
+        self._position_spots = []  # (place in `found`, where its car's position is), for _positions_together
         for index, player in enumerate(players):
             if not player:
                 continue
             try:
+                self._players_found = len(found)  # its place in `found`, for _position_spots
                 found.append(self._player_state(player))
                 indices.append(index)
             except (NotFound, OSError):
                 continue  # one unreadable player must not hide the others
         self._player_indices = indices  # each one's place in the game's list
-        return tuple(found)
+        return tuple(self._positions_together(found))
+
+    def _positions_together(self, found):
+        """Every car's position read again at the end, all in one request, so that they are of the
+        same moment. Read in turn with the rest of each car, a car's came up to a read's length after
+        another's (33-41 ms in a race of 20 cars on Linux), varying from read to read: the proximity
+        radar's cars, placed from the gap to one's own, jumped forward and back (reported by the user
+        on 2026-11-20). Where the batch cannot be read, the positions read in turn stay."""
+        spots = self._position_spots
+        if not spots:
+            return found
+        try:
+            data = self.il.memory.read_many([where for _place, where in spots], 12)
+        except OSError:
+            return found
+        for (place, _where), raw in zip(spots, data):
+            if raw is None:
+                continue
+            x, _y, z = struct.unpack('<3f', raw)
+            position = _known_position(x, z)
+            if position is not None:
+                found[place] = dataclasses.replace(found[place], position=position)
+        return found
 
     def _recorded_positions(self, clock):
         """{place in the game's player list: (x, z)} from the replay recorder of an
@@ -1941,6 +1966,9 @@ class LapReader:
                 where = vehicle + self._offset('vehicle', vehicle, 'm_statsNewPosition')
                 x, _y, z = struct.unpack('<3f', memory.read(where, 12))
                 position = _known_position(x, z)
+                # Read again with every other car's at the end (_positions_together): this player's
+                # place in the list being built is how many are in it now.
+                self._position_spots.append((self._players_found, where))
             except (NotFound, ReadError):
                 pass
         return PlayerState(

@@ -4,6 +4,13 @@ Every finished change, newest first: what changed, why, how it was checked and w
 Each branch adds its dated entry at the top. Where things stand now: `RESUME.md`; what is open:
 `docs/BACKLOG.md`.
 
+- 2026-11-20: Every car's position read together (`fix/radar-positions-together`, reported by the user: on Linux
+  the proximity radar's cars jumped forward and back). Each car was read in turn, its position near the end of its
+  turn, so in a race of 20 cars (reads of 33-41 ms) one car's position came up to a read's length after another's,
+  by a varying amount; the radar places cars by the gap to one's own, and 35 ms is about 1.75 m at 180 km/h. Now
+  every position is read again at the end of a read, all in one request (`_positions_together`), so they are of
+  the same moment; where that request cannot be read, the positions read in turn stay. Tests: the positions from
+  the one request, and those read in turn where it fails; the race tests pass. Not yet seen in a race.
 - 2026-11-20: Text outlines no longer kept (`fix/memory-growth`, backlog item 10). In a race with the new
   `memory parts:` line (Linux, about 20 cars) glibc's heap in use grew 133 to 363 MB, with nothing freed but held;
   the biggest step came as the outline cache filled. A text's stroked outline with round joins is 4,600-7,400
