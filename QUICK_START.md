@@ -38,9 +38,10 @@ it goes.
    and outside a race every section shows a made-up race at Laguna Seca, so you see it filled.
 2. Drag a section, or click it and nudge it with the arrow keys (Shift: 10 px). A corner sizes
    its text, an edge adds room. While it moves, a label shows its X and Y on its screen and its size.
-3. The panel shows or hides each section, sets its text size and line spacing, and has **Undo**
+3. The panel shows or hides each section, sets its text size, line spacing and **Font** (its own,
+   or **global**: the **Global font** changes every such section at once), and has **Undo**
    and **Redo**, and says which preset the layout is in (**Preset: 3 Race**). Its **Layouts…** window
-   keeps five named layouts (**Save** / **Load** presets 1 to 5), can load one by itself as a recording,
+   keeps five named layouts, each with its own fonts (**Save** / **Load** presets 1 to 5), can load one by itself as a recording,
    spectating, hotlapping, race or special event begins (and starts in the Race one), and has
    **Load screen default**, **Export…**, **Import…** and **Design for** for layout files per screen
    size (in `customization/display_presets`; TurboHUD's own never replace yours).
@@ -49,7 +50,8 @@ it goes.
 
 ## 4. Settings
 
-Icon menu, **Settings...**: colours, all sections bigger or smaller, the **Font** (your own
+Icon menu, **Settings...**: colours, all sections bigger or smaller, the **Font** of every section
+on global (your own
 **Add font...** picks a `.ttf` or `.otf` file and uses it at once; **Fonts folder...** opens `customization/fonts`), km/h or mph, a tint behind
 the sections, which standings columns show, the radar (cockpit cameras or every camera, its
 slipstream cones, how soon it shows), the yellow and blue flags, how often the race is read,

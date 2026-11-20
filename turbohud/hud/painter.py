@@ -2,7 +2,7 @@ import math
 import sys
 from collections import OrderedDict
 from dataclasses import replace
-from functools import lru_cache
+from functools import cache, lru_cache
 
 from PySide6.QtCore import QPointF, QRectF, Qt
 from PySide6.QtGui import (
@@ -53,8 +53,12 @@ LINUX_FAMILIES = ['Noto Sans', 'DejaVu Sans', 'Liberation Sans', 'Cantarell', 'U
 
 
 # The player's own font (asked for by the user on 2026-11-16): a family from the font files in
-# customization/fonts (load_font_files), or '' for the system's. set_family changes it.
+# customization/fonts (load_font_files), or '' for the system's. set_family changes it. Since
+# 2026-11-20 (asked for by the user) a section can have a font of its own: `using` draws and
+# measures in it, and every kept text is kept by its font, so sections in different fonts share
+# the caches without mixing (a text kept once per font in use).
 _family = ''
+_active = []  # the fonts `using` set, innermost last; none: the global one (_family)
 _loaded = {}  # font file path -> the families it holds, once given to Qt
 
 
@@ -72,43 +76,73 @@ def load_font_files(paths):
 
 
 def font_family():
-    """The font family the HUD draws with: '' for the system's."""
+    """The font family the HUD draws with now: a section's own while `using` it, else the global
+    one; '' for the system's."""
+    return _active[-1] if _active else _family
+
+
+def global_family():
+    """The global font family (set_family), whatever section is drawn: '' for the system's."""
     return _family
 
 
 def set_family(family):
-    """Draw the HUD with `family` ('' for the system's font); True if it changed. Every text
-    measured or drawn before is forgotten, so the boxes can be fitted again."""
-    global _family, _images_size, _pieces_size
+    """Draw the HUD with `family` ('' for the system's font) where a section has no font of its
+    own; True if it changed. The kept texts are kept by font, so none is wrong; the box heights
+    measured in the global font are forgotten, so the boxes can be fitted again."""
+    global _family
     if family == _family:
         return False
     _family = family
-    for cached in (
-        hud_font,
-        _metrics,
-        text_advance,
-        text_path,
-        outline_path,
-        cap_height,
-        text_ink,
-        text_width,
-    ):
-        cached.cache_clear()
-    _images.clear()
-    _images_size = 0
-    _pieces.clear()
-    _pieces_size = 0
-    _glyph_shapes.clear()
     forget_measures()
     return True
 
 
-@lru_cache(maxsize=32)
+class using:
+    """`with using(family):` measures and draws in `family` ('' the system's font), a section's
+    own; None: the global one. They nest: the innermost counts."""
+
+    def __init__(self, family):
+        self.family = family
+
+    def __enter__(self):
+        _active.append(_family if self.family is None else self.family)
+        return self
+
+    def __exit__(self, *_exc):
+        _active.pop()
+        return False
+
+
+@cache
+def measures(family):
+    """(text_width, text_ink) for a section in `family` (None: the global font), to hand to
+    turbohud.core.hud as `measure` and `ink`. The same two each time for a family: core keeps
+    box heights by `ink`, so each font gets its own."""
+    if family is None:
+        return text_width, text_ink
+
+    def width(text, size):
+        with using(family):
+            return text_width(text, size)
+
+    def ink(text, size):
+        with using(family):
+            return text_ink(text, size)
+
+    return width, ink
+
+
 def hud_font(size):
+    return _hud_font(size, font_family())
+
+
+@lru_cache(maxsize=256)
+def _hud_font(size, family):
     font = QFont()
     fallback = LINUX_FAMILIES if sys.platform.startswith('linux') else []
-    if _family:
-        font.setFamilies([_family, *fallback])  # letters the player's font lacks: the usual ones
+    if family:
+        font.setFamilies([family, *fallback])  # letters the player's font lacks: the usual ones
     elif fallback:
         font.setFamilies(fallback)
     font.setPixelSize(size)
@@ -119,21 +153,24 @@ def hud_font(size):
     return font
 
 
-@lru_cache(maxsize=32)
-def _metrics(size):
-    return QFontMetricsF(hud_font(size))
+@lru_cache(maxsize=256)
+def _metrics(size, family):
+    return QFontMetricsF(_hud_font(size, family))
 
 
-@lru_cache(maxsize=4096)
 def text_advance(text, size):
     """How far the pen moves for `text`, spaces included (where the next text starts).
     Kept: the lap times and the player list measure each column's texts every frame, and
     the same texts come back (with digits as zeros, the steady ones are a handful); asking
     Qt each time was the largest part of drawing them (2026-11-12)."""
-    return _metrics(size).horizontalAdvance(text)
+    return _advance(text, size, font_family())
 
 
-@lru_cache(maxsize=512)
+@lru_cache(maxsize=4096)
+def _advance(text, size, family):
+    return _metrics(size, family).horizontalAdvance(text)
+
+
 def text_path(text, size):
     """The outline of a line of text, with its baseline at y 0.
 
@@ -142,8 +179,13 @@ def text_path(text, size):
     outline traces their inner edges, so letters look broken. Filling by winding and
     simplified() merge the parts into one clean outline.
     """
+    return _path(text, size, font_family())
+
+
+@lru_cache(maxsize=512)
+def _path(text, size, family):
     path = QPainterPath()
-    path.addText(0, 0, hud_font(size), text)
+    path.addText(0, 0, _hud_font(size, family), text)
     path.setFillRule(Qt.WindingFill)
     return path.simplified()
 
@@ -155,20 +197,25 @@ def outline_width(size):
     return max(1.2, size / 7)
 
 
-@lru_cache(maxsize=512)
 def outline_path(text, size):
     """The dark outline round a line of text, as a shape to fill. Stroking the text
     each time it is drawn took most of a frame with many texts (the lap times list);
     filling a kept shape is about five times quicker."""
+    return _outline(text, size, font_family())
+
+
+@lru_cache(maxsize=512)
+def _outline(text, size, family):
     stroker = QPainterPathStroker()
     stroker.setWidth(outline_width(size))
     stroker.setCapStyle(Qt.RoundCap)
     stroker.setJoinStyle(Qt.RoundJoin)
-    return stroker.createStroke(text_path(text, size))
+    return stroker.createStroke(_path(text, size, family))
 
 
 IMAGES_LIMIT = 64 * 1024 * 1024  # bytes of text images kept: large fonts take far more than small
-_images = OrderedDict()  # (text, size, color, outline, ratio) -> (image, left, top), oldest first
+# (text, size, color, outline, ratio, font family) -> (image, left, top), oldest first
+_images = OrderedDict()
 _images_size = 0
 
 
@@ -182,7 +229,7 @@ def text_image(text, size, color, outline, ratio):
     behind (found with a profile of a race on the Mac). The texts come back, as a lap
     runs through the same times, so each is filled once and then only copied."""
     global _images_size
-    key = (text, size, color, outline, ratio)
+    key = (text, size, color, outline, ratio, font_family())
     found = _images.get(key)
     if found is not None:
         _images.move_to_end(key)
@@ -365,24 +412,36 @@ def outlined_text(painter, x, y, text, size, color, outline):
     painter.drawImage(QPointF(round((x + left) * ratio) / ratio, round((y + top) * ratio) / ratio), image)
 
 
-@lru_cache(maxsize=256)
 def cap_height(size):
     """How tall a capital letter or digit of the HUD's font is, in pixels."""
-    return _metrics(size).capHeight()
+    return _cap(size, font_family())
+
+
+@lru_cache(maxsize=256)
+def _cap(size, family):
+    return _metrics(size, family).capHeight()
+
+
+def text_ink(text, size):
+    """How far a line of HUD text reaches (above, below) its baseline, with its outline."""
+    return _ink(text, size, font_family())
 
 
 @lru_cache(maxsize=4096)
-def text_ink(text, size):
-    """How far a line of HUD text reaches (above, below) its baseline, with its outline."""
-    box = text_path(text, size).boundingRect()
+def _ink(text, size, family):
+    box = _path(text, size, family).boundingRect()
     outline = outline_width(size) / 2
     return -box.top() + outline, box.bottom() + outline
 
 
-@lru_cache(maxsize=4096)
 def text_width(text, size):
     """How wide a line of HUD text is, in pixels, with its outline."""
-    return text_path(text, size).boundingRect().right() + outline_width(size)
+    return _width(text, size, font_family())
+
+
+@lru_cache(maxsize=4096)
+def _width(text, size, family):
+    return _path(text, size, family).boundingRect().right() + outline_width(size)
 
 
 def draw_bars(painter, bars):

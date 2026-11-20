@@ -122,16 +122,6 @@ itself), to see. What is left: nothing planned; tune the parts from what the use
 
 ## Nice to have (ideas, not planned)
 Ideas talked over and left for later; none is being worked on. Take one up only when the user asks.
-- **A font per section** (talked over on 2026-11-17; the user keeps one font for the whole HUD for now).
-  As a section's own text size: in the move-mode panel, a font per section beside its size, **Global** by
-  default (the settings window's Look > Font), saved with the layout, so presets, Export and Import keep it.
-  Work: the painter keeps its texts by text and size (`hud_font`, `text_path`, `text_advance`, the text images
-  and glyphs in `turbohud/hud/painter.py`), with one family for all (`set_family`); the family would join those
-  keys, and each section pass its own. Cost: none per frame (kept texts draw the same in any font), a short one
-  the first time a text shows in a font, and memory: each font in use keeps its own texts within the same limits
-  (64 MB of text images, 512 to 4,096 entries per kind), so with a font on every section the lap times and the
-  player list could push each other out and draw texts again more often. Measure the log's `HUD frames` drawing
-  share in a race with two or three fonts; raise the limits a little if needed.
 - **Offered earlier, not taken up:** the Mac's one-window canvas only as large as its sections; the
   one-window canvas on Linux (item 1c decides); sector times as numbers; a blue flag for the leader only;
   the settings window remembering where it was dragged; fixed slots for other numbers (fuel and tires move
