@@ -38,30 +38,31 @@ Kept short: the state now and what to do next. Every change, with how it was che
 ## To try next (most recent first)
 Details of each: its entry in `docs/CHANGELOG.md`. Checks on the Mac and Windows, and rare cases not yet seen:
 backlog item 14.
-1. **Standings steady**: in an online race with many cars, no gap below zero and the Gap and Best columns never
+1. **Radar zoom**: zoomed in on a car right beside you, about 3.5 car lengths ahead and behind (was 2.5).
+2. **Standings steady**: in an online race with many cars, no gap below zero and the Gap and Best columns never
    jumping out for a moment (a tester's video, 2026-11-21: a time not yet written read as 0).
-2. **The preset in use in the layouts window**: under Presets, the same line as the panel's (Preset: 3 Race,
+3. **The preset in use in the layouts window**: under Presets, the same line as the panel's (Preset: 3 Race,
    (changed), Preset: none), changing as you load, save and drag.
-3. **Colours** (2026-11-21): Settings > Colours: colour-blind friendly colours for All sections, then Chosen; are
+4. **Colours** (2026-11-21): Settings > Colours: colour-blind friendly colours for All sections, then Chosen; are
    the colours told apart over TSU? TSU Legacy colours: the car sections' bars as dark as in TSU's HUD?
-4. **Car status**: tick it in move mode (untick the four it stands for): Health, Tires, Fuel, Finish in one
+5. **Car status**: tick it in move mode (untick the four it stands for): Health, Tires, Fuel, Finish in one
    box with a bar under each of the first three, only the rows the event has, the tint ending below the last. The four separate ones at one
    text size look the same too, also with ~100 laps of tires (shown whole from 100 on).
-5. **Ungroup all**: in move mode, the button at the end of the group row ungroups every section; Undo brings
+6. **Ungroup all**: in move mode, the button at the end of the group row ungroups every section; Undo brings
    the groups back.
-6. **A preset by hand kept for the session**: load 5 by hand in a race; later races start in 5, hotlapping
+7. **A preset by hand kept for the session**: load 5 by hand in a race; later races start in 5, hotlapping
    keeps its own; 5 s in TSU's menu ends the session (log: `preset 5 for every race this session`, `the session
    is over`).
-7. **TurboHUD's memory** (backlog item 10): a session started as `TURBOHUD_TRACE_MEMORY=1 sh run_turbohud.sh`;
+8. **TurboHUD's memory** (backlog item 10): a session started as `TURBOHUD_TRACE_MEMORY=1 sh run_turbohud.sh`;
    the `memory grew:` lines say where Python's slow rise is.
-8. **Watching (Race Director mode)**: in a replay and spectating online, the battle warning's moments and
+9. **Watching (Race Director mode)**: in a replay and spectating online, the battle warning's moments and
    groups, and the watched driver's banner at each camera switch (log: `the camera follows player N`).
-9. **Presets**: the panel's "Preset: 3 Race" right after a load on Hyprland (or "(changed)"?); the Recording
+10. **Presets**: the panel's "Preset: 3 Race" right after a load on Hyprland (or "(changed)"?); the Recording
    and Spectating presets loading by themselves.
-10. **A font per section and per preset**: their own fonts kept by presets and Undo; is the panel's Font column
+11. **A font per section and per preset**: their own fonts kept by presets and Undo; is the panel's Font column
    wide enough on Linux?
-11. **Banners**: none for your own car taking the lead; "Race Winner" with your flag picture at the finish.
-12. **Tire wear**: TurboHUD's Tires percent the same as TSU's (log: `tires: ... worn out at ...`).
+12. **Banners**: none for your own car taking the lead; "Race Winner" with your flag picture at the finish.
+13. **Tire wear**: TurboHUD's Tires percent the same as TSU's (log: `tires: ... worn out at ...`).
 
 The Race Director mode (backlog item 8) has all its planned parts: what is left is tuning from what you see.
 

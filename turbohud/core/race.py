@@ -4791,7 +4791,8 @@ RADAR_VIEW_MAX = 24.0
 # Zoomed in on the cars that count (asked for by the user on 2026-11-16, with the real car size): as
 # far as the farthest of them needs, with this much room round them, but never closer than RADAR_ZOOM_LEAST.
 RADAR_ZOOM_ROOM = 1.5
-RADAR_ZOOM_LEAST = 10.0  # game units behind and ahead: 2.5 car lengths
+# Game units behind and ahead: 3.5 car lengths (2.5 until the user asked for a bit more room, 2026-11-21).
+RADAR_ZOOM_LEAST = 14.0
 # The zoom fits the nearest car that counts (radar_zoom), a share of the way a read: in gently (about 1.5 s),
 # out quickly (about 0.15 s), never a snap. Fitting the farthest made it pump in and out in the opening laps,
 # and snap out again and again with cars spread around; the user asked for it to stay on the car closest as
