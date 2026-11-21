@@ -339,6 +339,18 @@ def gate_share(behind, ahead, point):
     return before / (before + after) if before + after else 0.0
 
 
+def written_times(times, earlier=0):
+    """A lap's checkpoint times `times` up to the first one TSU has not written yet. Read
+    while the game adds a time, the newest slot can still hold 0: in a race's fourth lap a
+    car's gap to the leader showed -254.942 for a few frames, and the standings' columns moved
+    out for the wider text (seen in a tester's video, 2026-11-21). A time is 0 only at the very
+    start of a race: the first time of a lap when `earlier` (the last time before it) is 0."""
+    for k, passed_at in enumerate(times):
+        if passed_at == 0 and (k or earlier):
+            return times[:k]
+    return times
+
+
 def _passed(times, k):
     return times[k] != NO_CHECKPOINT and times[k] >= times[0]
 
@@ -1311,6 +1323,29 @@ class LapReader:
             return ()
         return struct.unpack(f'<{size}I', self.il.memory.read(array + ARRAY_DATA, 4 * size))
 
+    def _checkpoint_times(self, stats, laps_completed):
+        """A player's checkpoint times, lap by lap (PlayerState.checkpoints), as far as TSU
+        has written them (written_times). A finished lap is read once and kept, unless it was
+        read with a time not yet written."""
+        checkpoints = []
+        laps = self.il.list_items(self._ref('stats', stats, 'm_checkpointTimesForLaps'))
+        for index, lap in enumerate(laps):
+            if not lap:
+                continue
+            passed = self._laps.get(lap)
+            cut = False
+            if passed is None:
+                read = self._u32_list(self._ref('lap', lap, 'm_times'))
+                passed = written_times(read, checkpoints[-1][-1] if checkpoints else 0)
+                cut = len(passed) < len(read)
+                if index < laps_completed and not cut:
+                    self._laps[lap] = passed  # a finished lap does not change any more
+            if passed:
+                checkpoints.append(passed)
+            if cut:
+                break  # the laps after it are not written either
+        return checkpoints
+
     def plan_read(self):
         """'full' or 'quick': what the coming read reads, for the page cache to fetch the right
         pages (turbohud.tsu.winmemory.CachedReader). A full read about every FULL_READ_EVERY."""
@@ -1330,7 +1365,7 @@ class LapReader:
         return dataclasses.replace(state, replay=True, paused=self.replay_paused())
 
     def _read_race(self):
-        il, memory = self.il, self.il.memory
+        memory = self.il.memory
         state = self.event_state()
         if state != self._state:
             # A new event (or the first read): start the caches afresh.
@@ -1368,18 +1403,7 @@ class LapReader:
             finished = bool(memory.u8(stats + self._offset('stats', stats, 'm_finished')))
         except NotFound:
             finished = False
-        laps = il.list_items(self._ref('stats', stats, 'm_checkpointTimesForLaps'))
-        checkpoints = []
-        for index, lap in enumerate(laps):
-            if not lap:
-                continue
-            passed = self._laps.get(lap)
-            if passed is None:
-                passed = self._u32_list(self._ref('lap', lap, 'm_times'))
-                if index < laps_completed:
-                    self._laps[lap] = passed  # a finished lap does not change any more
-            if passed:
-                checkpoints.append(passed)
+        checkpoints = self._checkpoint_times(stats, laps_completed)
         position, gates = self._position_and_gates(player)
         car = self._car(player, len(checkpoints) - 1, len(checkpoints[-1]) - 1 if checkpoints else -1)
         state = LapState(
@@ -1911,17 +1935,7 @@ class LapReader:
             finished = bool(memory.u8(stats + self._offset('stats', stats, 'm_finished')))
         except NotFound:
             finished = False
-        checkpoints = []
-        for index, lap in enumerate(il.list_items(self._ref('stats', stats, 'm_checkpointTimesForLaps'))):
-            if not lap:
-                continue
-            passed = self._laps.get(lap)
-            if passed is None:
-                passed = self._u32_list(self._ref('lap', lap, 'm_times'))
-                if index < laps_completed:
-                    self._laps[lap] = passed
-            if passed:
-                checkpoints.append(passed)
+        checkpoints = self._checkpoint_times(stats, laps_completed)
         in_pit, position, velocity, forward, draft_drag = False, None, None, None, None
         forward_speed = wheel_grips = wheel_layers = spawns = compound = in_box = disabled = None
         car = ''

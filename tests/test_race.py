@@ -1109,6 +1109,35 @@ class CachingReaderTests(unittest.TestCase):
         reader.game.put(array + il.ARRAY_DATA, struct.pack('<I', 1))
         self.assertEqual(reader.read().checkpoints[0], first.checkpoints[0])
 
+    def lap_array(self, reader, lap):
+        times = reader.il.memory.u64(reader.game.laps[lap] + 0x10)
+        return reader.il.memory.u64(times + il.LIST_ITEMS)
+
+    def test_a_time_not_yet_written_is_left_out(self):
+        # Read while TSU adds it, the newest time can still be 0: the gap to the leader showed
+        # about minus the race clock for a few frames (a tester's video, 2026-11-21).
+        reader = build([10_000, 944_595, 1_785_545], laps_completed=2, clock=2_000_000, limit=0)
+        reader.game.put(self.lap_array(reader, 2) + il.ARRAY_DATA + 8, struct.pack('<I', 0))
+        self.assertEqual(reader.read().checkpoints[-1], (1_785_545, 1_785_545))
+
+    def test_a_lap_not_yet_written_is_left_out(self):
+        reader = build([10_000, 944_595, 1_785_545], laps_completed=2, clock=2_000_000, limit=0)
+        reader.game.put(self.lap_array(reader, 2) + il.ARRAY_DATA, struct.pack('<I', 0))
+        self.assertEqual(len(reader.read().checkpoints), 2)
+
+    def test_a_finished_lap_read_unwritten_is_read_again(self):
+        reader = build([10_000, 944_595, 1_785_545], laps_completed=2, clock=2_000_000, limit=0)
+        slot = self.lap_array(reader, 1) + il.ARRAY_DATA + 8
+        reader.game.put(slot, struct.pack('<I', 0))
+        self.assertEqual(len(reader.read().checkpoints), 2)  # the laps after it wait too
+        reader.game.put(slot, struct.pack('<I', 949_595))
+        self.assertEqual(reader.read().checkpoints[1], (944_595, 944_595, 949_595))
+
+    def test_the_race_start_may_be_at_zero(self):
+        self.assertEqual(race.written_times((0, 5_000)), (0, 5_000))
+        self.assertEqual(race.written_times((0, 5_000), earlier=4_000), ())
+        self.assertEqual(race.written_times((7_000, 0, 0), earlier=4_000), (7_000,))
+
 
 class CarTests(unittest.TestCase):
     def car(self, **changes):
