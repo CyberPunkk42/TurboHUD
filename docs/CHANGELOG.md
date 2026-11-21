@@ -4,6 +4,15 @@ Every finished change, newest first: what changed, why, how it was checked and w
 Each branch adds its dated entry at the top. Where things stand now: `RESUME.md`; what is open:
 `docs/BACKLOG.md`.
 
+- 2026-11-21: The standings no longer widen for a moment (`fix/unwritten-checkpoint-time`, reported by a tester with a
+  video). The video, frame by frame: twice in lap 4, about 1.3 s apart, one car's gap to the leader showed -254.942
+  (then -256.269) for two or three frames, and the wider text moved the Gap and Best columns out. The car's newest
+  checkpoint time had been read as 0: read while TSU adds a time, its slot can still hold 0, and the gap was then
+  0 minus the leader's time there (about the race clock). Now a lap's times stop before a time not yet written
+  (`race.written_times`: 0 is a real time only at the very start of a race), the laps after it wait for the next
+  read, and a finished lap read so is not kept but read again (`LapReader._checkpoint_times`, now one reader for the
+  local and the other cars). Tests: a 0 at the end of the current lap, a whole lap not yet written, a finished lap
+  read so and then written, a race starting at 0; the three reads fail without the fix. Not yet seen in a race.
 - 2026-11-21: Screenshots of the user's presets (`docs/preset-screenshots`, asked for by the user):
   `docs/screenshots/presets/`, each of the five (Recording, Spectator/RD, Practice/Hotlapping, Race, Special Event)
   drawn as the whole 5120x1440 screen, at half size, with move mode's preview race: each section in the preset's
