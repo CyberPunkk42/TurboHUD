@@ -43,7 +43,7 @@ off. On Linux and Windows each section keeps its own window for now.
 | Battle | only while watching (a replay, or spectating): "Battle for P<n>", "Possible Overtake" and "name vs name" on the same banner, when a car within 1 s of the one ahead has gained 0.1 s over 3 s or sits within 0.4 s, for 2 s, or "Group around name" and the drivers behind for 3 cars or more each within 1 s of the one ahead; not in the opening lap; one at a time, the highest place, 6 s, the same two not again for a minute; from the standings' order and live gaps, with no read of its own |
 | Watched driver | only while watching: "Watching" and "P<n>  name" on the same banner each time the camera turns to another driver and stays on them for 1 s (in a replay the replay camera's driver, `_followed`; spectating the one the spectator camera follows, `spectated_driver`: the cockpit view's camera, `m_targetChooser.m_target`); 6 s, at once in place of one showing, the same driver not again until the camera turned away; no place in an arena event |
 | Compass (built, not offered yet: `hud.COMPASS_AVAILABLE`) | your car's heading (`compass_view`: its `forward`, else its velocity) in whole degrees clockwise from north: by default from the track's sun (`sun_north`: TSU's `LocationProperties.sunDirection`, read once an event with the track's name, is where the sun sets, so north is it + 90°), with a small sun by the readout; with **Compass north from the sun** off, up on the track map (+z; the map never turns a track): a dial that turns under a fixed red needle and line, and "047° NE"; the needle and N sky blue with the colour-blind option |
-| Radar | your car and the cars around you, when one is within 0.5 s behind, beside or ahead: red beside, yellow closing in, grey not counting, a class colour for another class, arrows for cars past its edge; the slipstream behind cars ahead and the car you draft outlined; cars at their real size, zoomed in on the closest car (cars further behind arrows at its edge), out quickly and in gently; every car's position read in one request at the end of a read, so all are of the same moment; by default only in cockpit cameras |
+| Radar | your car and the cars around you, when one is within 0.5 s behind, beside or ahead: red beside, yellow closing in, grey not counting, a class colour for another class, arrows for cars past its edge; the slipstream behind cars ahead and the car you draft outlined; cars at their real size, zoomed in on the closest car, to 3.5 car lengths at the closest (cars further behind arrows at its edge), out quickly and in gently; every car's position read in one request at the end of a read, so all are of the same moment; by default only in cockpit cameras |
 | Track map | the track from above, with you, the race leader (gold), the next car ahead (red), the next car behind (green), backmarkers between you and the car ahead (small, bluish), and as an option the other cars (faint grey) |
 | Clock | your computer's clock, once TSU runs |
 | Time since start | how long TurboHUD has run; only on a system TurboHUD cannot read TSU on, instead of the race sections |
@@ -184,6 +184,12 @@ A lap has 120 checkpoints on the tracks seen. Each player's list of checkpoint t
 the backbone: lap times, the delta to your best lap, the player order and the gaps
 between players all come from it, made live between checkpoints by the cars'
 positions.
+
+TurboHUD reads the game's memory while the game runs, so a list can be read halfway through
+TSU adding to it: the newest checkpoint time may still be 0. A lap's times therefore stop
+before a time not yet written (`race.written_times`; a real time is 0 only at the very start
+of a race), and a finished lap read so is read again instead of kept. Without that, a gap to
+the leader showed about minus the race clock for a frame or two.
 
 What does not change during a race (field positions, finished laps, the track's
 checkpoint lines) is read once and kept. A normal update then needs about twenty small
