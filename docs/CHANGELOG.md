@@ -4,6 +4,9 @@ Every finished change, newest first: what changed, why, how it was checked and w
 Each branch adds its dated entry at the top. Where things stand now: `RESUME.md`; what is open:
 `docs/BACKLOG.md`.
 
+- 2026-11-21: The radar zooms in less close (`feature/radar-zoom-least`, asked for by the user): at most to 3.5 car
+  lengths behind and ahead (`race.RADAR_ZOOM_LEAST` 14 game units, was 10: 2.5 car lengths). USER_GUIDE says so.
+  Test: the limit is 3.5 car lengths, and a car beside zooms to it. Not yet seen in a race.
 - 2026-11-21: The standings no longer widen for a moment (`fix/unwritten-checkpoint-time`, reported by a tester with a
   video). The video, frame by frame: twice in lap 4, about 1.3 s apart, one car's gap to the leader showed -254.942
   (then -256.269) for two or three frames, and the wider text moved the Gap and Best columns out. The car's newest

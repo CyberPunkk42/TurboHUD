@@ -935,6 +935,7 @@ class WarningTimeTests(unittest.TestCase):
         self.assertEqual(race.radar_zoom((), view), view)
         beside = race.Blip(0.5, 1.6, 0.0, 0.0)
         self.assertEqual(race.radar_zoom((beside,), view), race.RADAR_ZOOM_LEAST)  # never closer
+        self.assertEqual(race.RADAR_ZOOM_LEAST, 3.5 * race.CAR_LENGTH)  # asked for by the user, 2026-11-21
         behind = race.Blip(-12.0, 0.0, 0.0, 0.2)
         self.assertAlmostEqual(
             race.radar_zoom((behind,), view), (12.0 + race.CAR_LENGTH / 2) * race.RADAR_ZOOM_ROOM
@@ -954,11 +955,11 @@ class WarningTimeTests(unittest.TestCase):
             return moving('Behind', (0.0, 40.0 * t - 14.0), (0.0, 40.0))
 
         def close(t):
-            return moving('Close', (0.0, 40.0 * t - 5.0), (0.0, 40.0))
+            return moving('Close', (0.0, 40.0 * t - 8.0), (0.0, 40.0))
 
         radar = race.Radar()
         far = (14.0 + race.CAR_LENGTH / 2) * race.RADAR_ZOOM_ROOM
-        near = (5.0 + race.CAR_LENGTH / 2) * race.RADAR_ZOOM_ROOM
+        near = (8.0 + race.CAR_LENGTH / 2) * race.RADAR_ZOOM_ROOM
         self.assertAlmostEqual(radar.update([me(0.0), behind(0.0)], 0.0).view, far)
         # A car comes up close: in on it, a step a read.
         views = [radar.update([me(t), behind(t), close(t)], t).view for t in (i * 0.05 for i in range(1, 80))]
@@ -981,7 +982,7 @@ class WarningTimeTests(unittest.TestCase):
             return moving('Beside', (1.8, 40.0 * t), (0.0, 40.0))
 
         def behind(t):
-            return moving('Behind', (0.0, 40.0 * t - 14.0), (0.0, 40.0))
+            return moving('Behind', (0.0, 40.0 * t - 18.0), (0.0, 40.0))
 
         radar = race.Radar()
         views = []
@@ -991,7 +992,7 @@ class WarningTimeTests(unittest.TestCase):
             view = radar.update(cars, t)
             views.append(view.view)
             if (i // 20) % 4 == 0:
-                self.assertIn(-14.0, [round(b.ahead, 1) for b in race.radar_edge_blips(view)])  # an arrow
+                self.assertIn(-18.0, [round(b.ahead, 1) for b in race.radar_edge_blips(view)])  # an arrow
         self.assertAlmostEqual(min(views), max(views))  # steady
         self.assertAlmostEqual(views[0], race.RADAR_ZOOM_LEAST)
 
