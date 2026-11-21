@@ -274,6 +274,10 @@ reader finds everything by name, in about 0.1 s, with no stored addresses:
 `players[i]` (`m_localHumanIndex >= 0`) `.m_stats` (`TS.PlayerRaceStats`:
 `m_lapsCompleted`, `m_lapsToFinish`, and per lap `m_checkpointTimesForLaps[lap].m_times`,
 120 checkpoint times whose first is the lap's start).
+Read while TSU adds a time, the list can already count the new slot while it still holds 0
+(seen 2026-11-21 in a tester's video of an online race: one car's gap to the leader was
+-254.942 for two or three frames, twice, at two checkpoints in a row). A time of 0 is
+therefore taken as not yet written, except at the very start of a race.
 
 `python3 -B experiments/tsu_lap_reader.py` prints lap, current, last and best lap and the
 time left twice a second.

@@ -4,6 +4,10 @@ Every finished change, newest first: what changed, why, how it was checked and w
 Each branch adds its dated entry at the top. Where things stand now: `RESUME.md`; what is open:
 `docs/BACKLOG.md`.
 
+- 2026-11-21: The documents after the radar and standings changes (`docs/after-radar-and-standings`, asked for by
+  the user). HOW_IT_WORKS: why a checkpoint time of 0 is taken as not yet written, and the radar's closest zoom
+  (3.5 car lengths) in the sections table. experiments/README: the finding itself (a list read while TSU adds to
+  it). The players' guides and README were already up to date.
 - 2026-11-21: The radar zooms in less close (`feature/radar-zoom-least`, asked for by the user): at most to 3.5 car
   lengths behind and ahead (`race.RADAR_ZOOM_LEAST` 14 game units, was 10: 2.5 car lengths). USER_GUIDE says so.
   Test: the limit is 3.5 car lengths, and a car beside zooms to it. Not yet seen in a race.
