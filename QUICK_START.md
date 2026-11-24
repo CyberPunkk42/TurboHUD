@@ -135,5 +135,6 @@ the entry set to **Ctrl+Shift+L**, then quit TurboHUD and start it again. Until 
   blue **W** tire.
 - **Replays and Custom races** work too; in a replay the HUD follows the car the camera follows.
 - **Settings and the log** (`settings.json`, `turbohud.log`): Windows `%APPDATA%\TurboHUD`,
-  macOS `~/Library/Application Support/TurboHUD`, Linux `~/.config/TurboHUD`. When reporting a
+  macOS `~/Library/Application Support/TurboHUD`, Linux `~/.config/TurboHUD`; there too your
+  `customization/` folder (layouts, fonts) with `TurboHUD.app` in the Mac's Applications. When reporting a
   problem, send `turbohud.log` right after it happened: it is replaced at the next start.

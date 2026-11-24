@@ -681,7 +681,8 @@ TurboHUD writes only its own files, in its settings folder:
 There you find `settings.json` (your layout, presets, colours and options), `tracks/` (the
 learnt track maps), `flags/` (TSU's flag pictures, read from your copy of the game and made
 small), and the logs: `turbohud.log`, plus `bottle_reader.log` on the Mac and
-`memory_probe.log` on Linux. Beside TurboHUD (or in that folder, as section 5 says) it makes
+`memory_probe.log` on Linux. Beside TurboHUD (or in that folder, as section 5 says: so on the Mac
+with `TurboHUD.app` in Applications) it makes
 `customization/`, with your layouts in `display_presets` and your fonts in `fonts`. It writes
 nothing into the game's folders.
 

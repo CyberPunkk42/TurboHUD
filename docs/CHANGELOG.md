@@ -13,7 +13,9 @@ Each branch adds its dated entry at the top. Where things stand now: `RESUME.md`
   (a file of the same name in the new one kept), deletes TurboHUD's own there (read-mes, default layouts, .DS_Store)
   and the folder once empty. USER_GUIDE says where the folder is on the Mac. Tests: a folder in or inside
   Applications, the Applications folders only on the Mac, the move (a same-named file kept), only TurboHUD's own
-  files, a folder beside the app elsewhere left alone. Not yet tried in a built app.
+  files, a folder beside the app elsewhere left alone. Not yet tried in a built app. The documents brought up to date
+  (2026-11-25, asked for by the user): README and QUICK_START say where `customization/` is, README the font buttons
+  in move mode's Text tab, HOW_IT_WORKS's code layout both changes, RESUME the state and both to try.
 - 2026-11-24: Add font... and Fonts folder... in the move-mode panel's Text tab too (`feature/text-tab-font-buttons`,
   asked for by the user), after Global font's All global: the same buttons as in Settings > Look > Font, so a font is
   added from where the fonts are chosen. Add font... now works without the settings window open (its file window

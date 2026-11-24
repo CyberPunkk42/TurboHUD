@@ -503,7 +503,8 @@ turbohud/
     settings.py         settings and theme, where they live on each system
     hud.py              the sections, their sizes, places, nudges and the grid's screen
     presets.py          layout files per screen size, fitting one to another size, the
-                        starting presets, and the design screen's frame
+                        starting presets, the design screen's frame, and where customization/
+                        is (beside the app, or the settings folder; Applications on the Mac)
     fonts.py            the player's own fonts: the customization/fonts folder and its files
     il2cpp.py           finds the game's classes and fields by name
     race.py             reads the race and works out what each section shows
@@ -536,7 +537,8 @@ turbohud/
   overlay/
     window.py           the section windows (drawings: blue flag, delta bar, radar, track
                         map), the one-window canvas (Mac), the grid and the move-mode panel
-                        (its General and Text tabs over the same rows of sections)
+                        (its General and Text tabs over the same rows of sections; the Text
+                        tab's Add font... and Fonts folder..., as in the settings window)
     settings_window.py  tabs Look, Colours, Sections and Race: text colours, size and font,
                         colour-blind friendly and Legacy colours, options, warning times,
                         reads a second
