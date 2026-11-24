@@ -453,6 +453,19 @@ class PanelFontTests(unittest.TestCase):
         buttons[1].click()
         self.assertEqual(every, [True])
 
+    def test_the_font_buttons_in_the_text_tab(self):
+        # As in the settings window (asked for by the user on 2026-11-24).
+        from PySide6.QtWidgets import QPushButton
+
+        panel = self.panel()
+        asked = []
+        panel.add_font_requested.connect(lambda: asked.append('add'))
+        panel.fonts_folder_requested.connect(lambda: asked.append('folder'))
+        for text in ('Add font...', 'Fonts folder...'):
+            (button,) = [b for b in panel.findChildren(QPushButton) if b.text() == text]
+            button.click()
+        self.assertEqual(asked, ['add', 'folder'])
+
 
 if __name__ == '__main__':
     unittest.main()

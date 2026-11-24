@@ -1820,6 +1820,10 @@ class MovePanel(QWidget):
     family_changed = Signal(str, object)
     global_family_changed = Signal(str)  # the global font: a family, '' the system's
     all_global_family_requested = Signal()  # every text section in the global font
+    # The font buttons of the settings window (Look > Font) in the Text tab too (asked for by the
+    # user on 2026-11-24): Add font... and Fonts folder...
+    add_font_requested = Signal()
+    fonts_folder_requested = Signal()
     spacing_changed = Signal(str, int)  # section name, its line spacing in percent of the usual
 
     focusable = True  # it takes clicks on its tick boxes and buttons
@@ -2205,6 +2209,19 @@ class MovePanel(QWidget):
         every_font.setToolTip('Every text section in the global font (one step for Undo)')
         every_font.clicked.connect(self.all_global_family_requested)
         typeface.addWidget(every_font)
+        add_font = QPushButton('Add font...')
+        add_font.setToolTip(
+            'Choose a font file (.ttf, .otf): it is copied into the fonts folder and used at once'
+        )
+        add_font.clicked.connect(self.add_font_requested)
+        typeface.addWidget(add_font)
+        fonts_folder = QPushButton('Fonts folder...')
+        fonts_folder.setToolTip(
+            'Open the fonts folder, to add or delete font files; move mode ends, so the folder can be'
+            ' seen, and fonts put there show the next time it starts'
+        )
+        fonts_folder.clicked.connect(self.fonts_folder_requested)
+        typeface.addWidget(fonts_folder)
         typeface.addStretch()
         column.addLayout(typeface)
         row = QHBoxLayout()
