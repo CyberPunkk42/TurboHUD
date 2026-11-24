@@ -359,6 +359,63 @@ class CustomFolderTests(unittest.TestCase):
             presets.custom_folder('/settings', missing), Path('/settings') / presets.CUSTOM_FOLDER
         )
 
+    def test_custom_folder_in_settings_in_the_macs_applications(self):
+        # An admin account can write to /Applications (found on 2026-11-24).
+        apps = Path(tempfile.mkdtemp())
+        for start in (apps, apps / 'Games'):
+            start.mkdir(exist_ok=True)
+            self.assertEqual(
+                presets.custom_folder('/settings', start, applications=(apps,)),
+                Path('/settings') / presets.CUSTOM_FOLDER,
+            )
+
+    def test_applications_folders_only_on_the_mac(self):
+        self.assertEqual(
+            presets.applications_folders('darwin', home='/Users/x'),
+            (Path('/Applications'), Path('/Users/x/Applications')),
+        )
+        self.assertEqual(presets.applications_folders('win32'), ())
+        self.assertEqual(presets.applications_folders('linux'), ())
+
+    def test_old_customization_in_applications_moved(self):
+        apps, settings = Path(tempfile.mkdtemp()), Path(tempfile.mkdtemp())
+        old = apps / 'customization'
+        (old / 'display_presets').mkdir(parents=True)
+        (old / 'fonts').mkdir()
+        (old / '.DS_Store').write_text('')
+        (old / 'display_presets' / presets.CUSTOM_README).write_text('read me')
+        (old / 'display_presets' / presets.default_name((1920, 1080))).write_text('{}')
+        (old / 'display_presets' / '2560x1440.json').write_text('mine')
+        (old / 'fonts' / 'README.txt').write_text('read me')
+        (old / 'fonts' / 'alpha.ttf').write_text('font')
+        (old / 'fonts' / 'beta.ttf').write_text('old beta')
+        new = settings / 'customization'
+        (new / 'fonts').mkdir(parents=True)
+        (new / 'fonts' / 'beta.ttf').write_text('new beta')
+        moved = presets.move_old_customization(settings, apps, applications=(apps,))
+        self.assertEqual(moved, ['display_presets/2560x1440.json', 'fonts/alpha.ttf'])
+        self.assertEqual((new / 'display_presets' / '2560x1440.json').read_text(), 'mine')
+        self.assertEqual((new / 'fonts' / 'alpha.ttf').read_text(), 'font')
+        self.assertEqual((new / 'fonts' / 'beta.ttf').read_text(), 'new beta')  # the one there kept
+        # Only the player's file that had one of its name in the new folder is left behind.
+        self.assertEqual([p.name for p in old.rglob('*') if p.is_file()], ['beta.ttf'])
+        self.assertFalse((old / 'display_presets').exists())
+
+    def test_old_customization_all_turbohuds_own_goes(self):
+        apps, settings = Path(tempfile.mkdtemp()), Path(tempfile.mkdtemp())
+        old = apps / 'customization' / 'display_presets'
+        old.mkdir(parents=True)
+        (old / presets.CUSTOM_README).write_text('read me')
+        self.assertEqual(presets.move_old_customization(settings, apps, applications=(apps,)), [])
+        self.assertFalse((apps / 'customization').exists())
+
+    def test_old_customization_beside_an_app_elsewhere_stays(self):
+        start, settings = Path(tempfile.mkdtemp()), Path(tempfile.mkdtemp())
+        (start / 'customization' / 'fonts').mkdir(parents=True)
+        (start / 'customization' / 'fonts' / 'alpha.ttf').write_text('font')
+        self.assertEqual(presets.move_old_customization(settings, start, applications=()), [])
+        self.assertTrue((start / 'customization' / 'fonts' / 'alpha.ttf').exists())
+
     def test_ready_folder_writes_its_read_me(self):
         folder = Path(tempfile.mkdtemp()) / 'customization' / 'display_presets'
         self.assertEqual(presets.ready_folder(folder), folder)

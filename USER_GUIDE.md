@@ -510,8 +510,10 @@ TurboHUD comes with layouts for 1920x1080, 2294x1490 (a Mac's), 2560x1440, 2560x
 nearest one to your screen, and then the **Nearby cars** text is never smaller than the
 **Standings**' text.
 They are in the **`customization/display_presets`** folder beside TurboHUD: beside
-`TurboHUD.exe` on Windows, beside the `TurboHUD` program on Linux; on the Mac, and wherever
-that folder cannot be written to, in TurboHUD's settings folder (section 8). They are named
+`TurboHUD.exe` on Windows, beside the `TurboHUD` program on Linux, beside `TurboHUD.app` on
+the Mac. With `TurboHUD.app` in **Applications**, and wherever that folder cannot be written to,
+they are in TurboHUD's settings folder instead (section 8). A `customization` folder an older
+TurboHUD made in Applications is moved there at the next start. They are named
 like `2560x1440 (TurboHUD default).json`.
 
 - **First start.** When your main screen has one of those sizes, TurboHUD lays out the HUD as
