@@ -428,7 +428,11 @@ section, the same sections in the same order, under the headings Timing, Car, Ra
   sets every text section back to the global size.
 - **Global font**: the font of every section whose **Font** is global, the same as Settings >
   Look > Font: change it here to change them all at once. **All global** beside it sets every
-  text section back to the global font. Both are a step for **Undo**.
+  text section back to the global font. Both are a step for **Undo**. **Add font...** and
+  **Fonts folder...** after them are the same buttons as in Settings > Look > Font (section 6):
+  **Add font...** copies a font file you choose into the fonts folder and uses it at once;
+  **Fonts folder...** opens that folder, so you can paste font files in, and ends move mode so
+  its window can be seen. Fonts pasted there are in the font lists the next time move mode starts.
 - **Layouts** opens the layouts window beside the panel: the presets, which preset loads
   for each kind of event, layout files and the design screen (see below).
 - The line above the buttons, in electric blue, says which preset the layout is in now, such as **Preset: 3 Race**:
@@ -557,7 +561,8 @@ the colour choices, which are only here.
   and used at once; your own file stays where it was. **Fonts folder...** opens that folder, to
   add files by hand or delete one to remove its font. As the folder's window would open beneath
   TurboHUD's, the settings window closes and move mode ends first. Fonts put in the folder by
-  hand show the next time the settings window opens. Every section's box is fitted to
+  hand show the next time the settings window opens. The move-mode panel's **Text** tab has
+  both buttons too. Every section's box is fitted to
   the new font at once. TurboHUD draws its text bold, so a font with a bold style looks best;
   letters a font lacks come from the system font. A chosen font whose file is gone shows as
   "(missing)", and the system font is drawn until it comes back.

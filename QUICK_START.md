@@ -40,7 +40,8 @@ it goes.
    its text, an edge adds room. While it moves, a label shows its X and Y on its screen and its size.
 3. The panel shows or hides each section; its **General** tab groups (**Ungroup all** below), centres and tints them, its
    **Text** tab sets their text in the middle, text size, line spacing and **Font** (its own, or
-   **global**: the **Global font** changes every such section at once). It has **Undo**
+   **global**: the **Global font** changes every such section at once; **Add font...** and
+   **Fonts folder...** beside it add your own fonts). It has **Undo**
    and **Redo**, and says which preset the layout is in (**Preset: 3 Race**). Its **Layouts** window
    keeps five named layouts, each with its own fonts (**Save** / **Load** presets 1 to 5), can load one by itself as a recording,
    spectating, hotlapping, race or special event begins (and starts in the Race one; one you load

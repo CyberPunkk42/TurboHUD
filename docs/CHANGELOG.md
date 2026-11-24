@@ -4,6 +4,12 @@ Every finished change, newest first: what changed, why, how it was checked and w
 Each branch adds its dated entry at the top. Where things stand now: `RESUME.md`; what is open:
 `docs/BACKLOG.md`.
 
+- 2026-11-24: Add font... and Fonts folder... in the move-mode panel's Text tab too (`feature/text-tab-font-buttons`,
+  asked for by the user), after Global font's All global: the same buttons as in Settings > Look > Font, so a font is
+  added from where the fonts are chosen. Add font... now works without the settings window open (its file window
+  and warning above the panel), and starting move mode reads the fonts folder again, so files pasted there by hand
+  are in the panel's font lists. USER_GUIDE and QUICK_START say so. Test: the two buttons in the panel ask for
+  their action. Not yet tried by hand.
 - 2026-11-21: The documents after the radar and standings changes (`docs/after-radar-and-standings`, asked for by
   the user). HOW_IT_WORKS: why a checkpoint time of 0 is taken as not yet written, and the radar's closest zoom
   (3.5 car lengths) in the sections table. experiments/README: the finding itself (a list read while TSU adds to

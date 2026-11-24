@@ -1005,6 +1005,9 @@ def run(args, folder):
             mover.pending.clear()
             seen_places.clear()  # a place label only for what moves from now on
             native.take_focus()
+            # Fonts put in the fonts folder by hand (Fonts folder...) in the panel's lists.
+            if panel is not None:
+                panel.set_fonts(own_fonts(), settings.font_family)
             history.resume(layout_state())
             show_history(history.current)
             relearn_available()
@@ -1655,7 +1658,7 @@ def run(args, folder):
             settings_window.about_requested.connect(lambda: show_about(settings_window))
             settings_window.font_chosen.connect(set_font_family)
             settings_window.fonts_folder_requested.connect(open_fonts_folder)
-            settings_window.add_font_requested.connect(add_font)
+            settings_window.add_font_requested.connect(lambda: add_font(settings_window))
         if not settings_window.isVisible():
             settings_window.set_fonts(own_fonts(), settings.font_family)  # files added since show now
             # Beside the panel where it is (it may have been dragged), and wholly on its screen.
@@ -1768,26 +1771,28 @@ def run(args, folder):
         QDesktopServices.openUrl(QUrl.fromLocalFile(str(fonts_dir)))
         log.info('opened %s', fonts_dir)
 
-    def add_font():
-        """Add font...: a font file chosen in a file window above TurboHUD's, copied into the fonts
-        folder, and the HUD drawn with it at once."""
+    def add_font(parent):
+        """Add font... (in the settings window or the panel's Text tab, `parent`): a font file chosen
+        in a file window above TurboHUD's, copied into the fonts folder, and the HUD drawn with it at
+        once."""
         if fonts_dir is None:
             log.warning('customization/fonts could not be made')
             return
         downloads = Path.home() / 'Downloads'
         start = downloads if downloads.is_dir() else Path.home()
-        chosen = open_path(settings_window, native, 'Add a font', start, font_filter())
+        chosen = open_path(parent, native, 'Add a font', start, font_filter())
         if not chosen:
             return
         copied = add_font_file(chosen, fonts_dir)
         families = own_fonts()
         family = next((f for f, file in families.items() if copied and file == copied.name), None)
         if family is None:
-            warn(settings_window, native, f'{Path(chosen).name} could not be used as a font.')
+            warn(parent, native, f'{Path(chosen).name} could not be used as a font.')
             log.warning('font file not added: %s', Path(chosen).name)
             return
         log.info('font added: %s (%s)', family, copied.name)
-        settings_window.set_fonts(families, family)
+        if settings_window is not None:
+            settings_window.set_fonts(families, family)
         panel.set_fonts(families, settings.font_family)  # the new font in the panel's lists too
         set_font_family(family)
 
@@ -2485,6 +2490,8 @@ def run(args, folder):
     panel.family_changed.connect(set_section_family)
     panel.global_family_changed.connect(set_font_family)
     panel.all_global_family_requested.connect(all_global_family)
+    panel.add_font_requested.connect(lambda: add_font(panel))
+    panel.fonts_folder_requested.connect(open_fonts_folder)
     panel.spacing_changed.connect(set_spacing)
     panel.undo_requested.connect(undo)
     panel.redo_requested.connect(redo)
