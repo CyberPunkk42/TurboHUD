@@ -17,6 +17,7 @@ wide screen's layout on a narrow one) are they scaled smaller, as little as need
 import hashlib
 import json
 import os
+import shutil
 import sys
 from dataclasses import replace
 from pathlib import Path
@@ -421,14 +422,63 @@ def app_folder(frozen=None, executable=None, source=None):
     return bundle.parent if bundle is not None else program.parent
 
 
-def custom_folder(settings_folder, start=None):
+def applications_folders(platform=sys.platform, home=None):
+    """The Mac's Applications folders: an app there keeps its customization folder in the settings
+    folder, as the Applications folder is no place for a player's files and an admin account can
+    write to it (found on 2026-11-24: customization/ was made in /Applications). None elsewhere."""
+    if platform != 'darwin':
+        return ()
+    return (Path('/Applications'), (Path(home) if home is not None else Path.home()) / 'Applications')
+
+
+def in_applications(start, applications=None):
+    """Whether the folder `start` is one of `applications` (applications_folders) or inside one."""
+    applications = applications_folders() if applications is None else applications
+    start = Path(start)
+    return any(start == folder or folder in start.parents for folder in applications)
+
+
+def custom_folder(settings_folder, start=None, applications=None):
     """customization/display_presets in the folder TurboHUD was started from (`start`, else
-    app_folder()), or in `settings_folder` where that one cannot be written to (an app installed
-    in the Mac's Applications)."""
+    app_folder()), or in `settings_folder` where that one cannot be written to or is a Mac's
+    Applications folder (`applications`, else applications_folders())."""
     start = Path(start) if start is not None else app_folder()
-    if os.access(start, os.W_OK):
+    if os.access(start, os.W_OK) and not in_applications(start, applications):
         return start / CUSTOM_FOLDER
     return Path(settings_folder) / CUSTOM_FOLDER
+
+
+def move_old_customization(settings_folder, start=None, applications=None):
+    """Where an earlier TurboHUD made customization/ in a Mac's Applications folder (beside the
+    app, before applications_folders): move the player's files in it to the settings folder's
+    (custom_folder), a file of the same name there kept, and delete TurboHUD's own (read-mes, its
+    default layouts, Finder's .DS_Store) and the folders left empty. The names of the files moved."""
+    start = Path(start) if start is not None else app_folder()
+    old = start / CUSTOM_FOLDER.parent
+    if not in_applications(start, applications) or not old.is_dir():
+        return []
+    new = Path(settings_folder) / CUSTOM_FOLDER.parent
+    moved = []
+    for path in sorted(old.rglob('*'), reverse=True):  # files before the folders holding them
+        try:
+            if path.is_dir():
+                if not any(path.iterdir()):
+                    path.rmdir()
+            elif path.name in (CUSTOM_README, '.DS_Store') or is_default_file(path):
+                path.unlink()
+            else:
+                target = new / path.relative_to(old)
+                if not target.exists():
+                    target.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.move(str(path), str(target))
+                    moved.append(str(path.relative_to(old)))
+        except OSError:
+            continue  # left where it is
+    try:
+        old.rmdir()
+    except OSError:
+        pass  # files the player keeps there
+    return sorted(moved)
 
 
 def ready_folder(folder):
@@ -521,6 +571,7 @@ __all__ = [
     'SectionPlace',
     'absolute',
     'app_folder',
+    'applications_folders',
     'custom_folder',
     'custom_for',
     'default_files',
@@ -529,11 +580,13 @@ __all__ = [
     'design_frame',
     'file_name',
     'fit_layout',
+    'in_applications',
     'into_frame',
     'is_default_file',
     'kept_sections',
     'layout_for',
     'load_file',
+    'move_old_customization',
     'nearest',
     'on_screen',
     'out_of_frame',

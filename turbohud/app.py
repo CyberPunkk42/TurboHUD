@@ -768,6 +768,13 @@ def run(args, folder):
     usable = [screen.availableGeometry().getRect() for screen in QGuiApplication.screens()]
     # The player's own fonts (customization/fonts, asked for by the user on 2026-11-16): given to Qt
     # and the chosen one set before any text is measured.
+    # A customization folder an earlier TurboHUD made in the Mac's Applications: the player's files
+    # in it moved to the settings folder's, where an app there keeps them now (2026-11-24).
+    moved_files = layout_presets.move_old_customization(settings_dir())
+    if moved_files:
+        log.info(
+            'customization: moved from beside the app to the settings folder: %s', ', '.join(moved_files)
+        )
     fonts_dir = ready_fonts_folder(fonts_folder(layout_presets.custom_folder(settings_dir())))
 
     def own_fonts():

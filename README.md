@@ -174,7 +174,7 @@ mode's preview race, and of each window and tab are in [docs/screenshots](docs/s
   **Lock** or Ctrl+Shift+L again ends it, and so does a race beginning.
 - **Settings…** (tabs **Look**, **Colours**, **Sections**, **Race**) sets the colours, colour-blind friendly colours for
   every section or those chosen, TSU's Legacy colours for the car sections' bars, the global font (your own `.ttf` or `.otf` files in
-  `customization/fonts`), the size of all sections, the standings' columns, the
+  `customization/fonts`, added with **Add font...** or **Fonts folder...**, also in move mode's **Text** tab), the size of all sections, the standings' columns, the
   warning times, the race reads a second and the on/off options (also under **Options** in
   the icon's menu).
 - **Ctrl+Shift+Q** quits; on Windows and Hyprland **Ctrl+Shift+F12** is a spare for Ctrl+Shift+L.
@@ -185,6 +185,9 @@ Where each section sits, its size, whether it shows, and the look are saved in
 - Windows: `%APPDATA%\TurboHUD`
 - macOS: `~/Library/Application Support/TurboHUD`
 - Linux: `~/.config/TurboHUD`
+
+Your own layouts and fonts go in `customization/` beside TurboHUD, or in that settings folder where
+TurboHUD cannot write beside itself or `TurboHUD.app` is in the Mac's Applications.
 
 In `settings.json`, `theme` sets the text colour, accent colour, outline colour
 (`#rrggbb` or `#rrggbbaa`) and `scale` (0.5 to 3). Change it while TurboHUD is closed.
