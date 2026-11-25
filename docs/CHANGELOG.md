@@ -4,6 +4,17 @@ Every finished change, newest first: what changed, why, how it was checked and w
 Each branch adds its dated entry at the top. Where things stand now: `RESUME.md`; what is open:
 `docs/BACKLOG.md`.
 
+- 2026-11-25: Race reads on Linux through the page cache (`fix/batch-car-reads`, backlog item 12, asked for by the
+  user). With about 20 cars a race read took 29-41 ms on Linux (3.4 ms hotlapping alone): every field of every car was
+  its own trip to the memory probe, several hundred a read. The Mac and Windows have long read through
+  `winmemory.PageCache`, each 4 KiB page once a read and the pages the read before used fetched in one request; Linux
+  now does the same (`client.connect` returns a `CachedReader`). The probe has a new `read_pages` question (pages next
+  to each other in one `process_vm_readv`, a read cut short counted as failed, `probe.read_whole`); a probe started
+  before the update gets the pages through `read_many` in hex, and the log says so once. The cars' positions read
+  together (`read_many`) still go straight to the probe, so they stay of the same moment. Tests: the probe's answer
+  (order, neighbours in one read, a short read), the connection's pages and its fallback, `connect` through the cache,
+  and 20 cars' fields costing one request from the second read on; against a real child process on Linux only. Not
+  yet seen in a race on Linux (RESUME.md, To try next).
 - 2026-11-24: The customization folder no longer goes into the Mac's Applications (`fix/mac-applications-customization-folder`,
   found while answering where the fonts folder is). With `TurboHUD.app` in Applications, `customization/` (layouts and
   fonts) was to be in the settings folder, but TurboHUD made it beside the app wherever it could write there, and an

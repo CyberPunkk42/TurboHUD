@@ -95,17 +95,26 @@ The probe talks to TurboHUD over a private socket in your user's runtime folder
 also checks the connecting program belongs to you). There is no network connection:
 nothing leaves your PC.
 
-The probe understands four questions, all read-only:
+The probe understands five questions, all read-only:
 
 | Question | What it does |
 |---|---|
 | `maps` | lists the game's memory areas (like `/proc/<pid>/maps`) |
 | `read` | copies some bytes from one address |
 | `read_many` | copies the same number of bytes from many addresses at once |
+| `read_pages` | copies whole 4 KiB pages, many at once |
 | `search` | finds where a value is stored (used to find an online race, see below) |
 
 Reading uses the Linux call `process_vm_readv`: it copies bytes out of the game's
 memory into the probe's. It cannot change anything in the game.
+
+Each question is a trip over the socket, and a race read asks for hundreds of small
+fields (a dozen or more for each car). So TurboHUD reads through the same page cache as on
+the Mac and Windows (below): each race read starts with one `read_pages` for all the pages
+the read before used, and the fields are then taken from those pages. Before this (until
+2026-11-25) a race of 20 cars took 29 to 41 ms a read, against 3.4 ms hotlapping alone.
+A probe started before TurboHUD had `read_pages` (TSU not restarted since the update)
+gets the pages through `read_many` instead, which works but is slower.
 
 ## On macOS: a reader in the bottle
 

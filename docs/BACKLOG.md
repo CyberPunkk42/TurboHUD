@@ -131,11 +131,6 @@ Each preset load froze the HUD 1.2-1.4 s (the log's `slow frame` lines right aft
 23 sections is placed through hyprctl, about ten requests each, one after another. Send them in one
 `hyprctl --batch`, or move only (no float, pin and props again) for sections already placed.
 
-## 12. Reads ten times slower with many cars (found 2026-11-20)
-A race of about 20 cars on Linux: reads took 29-41 ms (3.4 ms hotlapping alone), up to 80% of the reading time at
-20 a second; each car is read in turn, several dozen requests each. Read the cars' fields in batches
-(`read_many`), as their positions are since 2026-11-20.
-
 ## 13. The compass, hidden for now (2026-11-20)
 Built and confirmed (north from the sun on 5 tracks), but not offered to players for now (the user's call):
 `hud.COMPASS_AVAILABLE = False` leaves it out of RACE_SECTIONS, so no window, panel row or options; places in

@@ -1,6 +1,8 @@
 """TSU's live race data through the memory probe's socket (Linux).
 
-`connect()` opens the probe's socket and returns a LapReader on the game. `LiveRace`
+`connect()` opens the probe's socket and returns a LapReader on the game, read through
+the page cache the Mac and Windows use (turbohud.tsu.winmemory.PageCache): each 4 KiB
+page once a race read, and the pages the read before used fetched in one request. `LiveRace`
 keeps reading in a background thread and always has the latest Snapshot ready, so the
 overlay never waits for the game. Everything here only reads.
 """
@@ -20,6 +22,7 @@ from turbohud.core.race import RACING, STARTING, WAITING_FOR_GAME, WAITING_FOR_R
 from turbohud.core.stalls import STALL, clock_text
 from turbohud.tsu.gamelog import EventLog, RecordingWatch, tsu_data
 from turbohud.tsu.probe import receive_message, send_message, socket_path
+from turbohud.tsu.winmemory import PAGE, CachedReader, PageCache
 
 READ_SWITCH_INTERVAL = 0.001  # seconds a thread waits for Python's lock before it asks for it
 LEAST_WAIT = 0.005  # seconds after a read that took its whole interval, for the game's sake
@@ -41,6 +44,7 @@ class ProbeConnection:
     def __init__(self, path=None):
         self.conn = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         self.conn.settimeout(TIMEOUT)
+        self._pages_op = True  # the probe knows read_pages (one started before it did not)
         try:
             self.conn.connect(str(path or socket_path()))
         except OSError:
@@ -61,6 +65,24 @@ class ProbeConnection:
         values = self.ask({'op': 'read_many', 'addresses': addresses, 'size': size})[0]['values']
         return [bytes.fromhex(value) if value is not None else None for value in values]
 
+    def read_pages(self, pages):
+        """{page number: its 4 KiB} for those of `pages` the probe could read, in one request.
+        A probe from before read_pages (TSU started before TurboHUD was updated) gets them
+        through read_many, in hex: slower, but still one request."""
+        pages = list(pages)
+        if self._pages_op:
+            try:
+                header, data = self.ask({'op': 'read_pages', 'pages': pages})
+            except ReadError as error:
+                if 'unknown op' not in str(error):
+                    raise
+                log.info('the memory probe is older than this TurboHUD: pages read as hex (start TSU again)')
+                self._pages_op = False
+            else:
+                return {number: data[i * PAGE : (i + 1) * PAGE] for i, number in enumerate(header['got'])}
+        values = self.read_many([number * PAGE for number in pages], PAGE)
+        return {number: value for number, value in zip(pages, values) if value is not None}
+
     def maps(self):
         return self.ask({'op': 'maps'})[0]['regions']
 
@@ -74,20 +96,24 @@ class ProbeConnection:
 
 
 def connect(path=None):
-    """(LapReader, connection) on TSU through the probe. Raises OSError if TSU is not
-    running through the probe."""
+    """(race reader, connection) on TSU through the probe: a LapReader behind the page
+    cache (CachedReader). Raises OSError if TSU is not running through the probe."""
     conn = ProbeConnection(path)
     try:
         regions = conn.maps()
         metadata = next((r for r in regions if r[4].endswith('global-metadata.dat') and r[3] == 0), None)
         if metadata is None:
             raise NotFound('the game metadata is not mapped yet')
-        memory = Memory(conn.read, regions, conn.read_many, conn.find_pointers)
+        # Every request was a trip to the probe: a race of 20 cars made several hundred a read
+        # (29-41 ms on 2026-11-20, 3.4 ms hotlapping alone). read_many stays direct: the cars'
+        # positions read together must be of this moment (LapReader._positions_together).
+        cache = PageCache(conn.read, fetch_many=conn.read_pages)
+        memory = Memory(cache.read, regions, conn.read_many, conn.find_pointers)
         il2cpp = Il2Cpp(memory, Path(metadata[4]).read_bytes(), metadata[0])
         reader = LapReader(
             il2cpp, event_running=EventLog().running, recording_opened=RecordingWatch(tsu_data()).opened
         )
-        return reader, conn
+        return CachedReader(reader, cache), conn
     except BaseException:
         conn.close()
         raise

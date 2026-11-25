@@ -12,6 +12,8 @@ sys.path.insert(0, str(ROOT / 'experiments'))
 
 from turbohud.tsu import probe
 
+PAGES = {number: bytes([number]) * 4096 for number in (10, 11, 13)}  # ReadPagesTests' game
+
 MAPS = """\
 55d0c000-55d0e000 r--p 00000000 103:02 1234 /opt/game/TSU.x64
 7f1000000000-7f1000400000 r--p 00000000 103:02 5678 /opt/game/GameAssembly.so
@@ -111,6 +113,57 @@ class LapTimeTests(unittest.TestCase):
         self.assertEqual(self.scan.keep_matching([1, 2, 3], values, range(954210, 954220)), [1])
 
 
+class ReadPagesTests(unittest.TestCase):
+    """The read_pages request, against a stand-in game's memory (pages 10, 11 and 13)."""
+
+    def read_memory(self, _pid, address, size):
+        """Like process_vm_readv: the bytes up to the first page that is not there."""
+        data = b''
+        while len(data) < size:
+            page = PAGES.get((address + len(data)) // 4096)
+            if page is None:
+                break
+            data += page
+        if not data:
+            raise OSError(14, 'Bad address')
+        return data[:size]
+
+    def ask(self, pages):
+        from unittest import mock
+
+        self.calls = []
+
+        def read(pid, address, size):
+            self.calls.append((address // 4096, size // 4096))
+            return self.read_memory(pid, address, size)
+
+        with mock.patch.object(probe, 'read_memory', read):
+            return probe.handle(1234, {'op': 'read_pages', 'pages': pages})
+
+    def test_gives_the_pages_it_could_read_in_order_one_after_another(self):
+        header, data = self.ask([13, 10, 12, 11])
+        self.assertTrue(header['ok'])
+        self.assertEqual(header['got'], [10, 11, 13])
+        self.assertEqual(data, PAGES[10] + PAGES[11] + PAGES[13])
+
+    def test_neighbours_share_a_read(self):
+        self.ask([10, 11])
+        self.assertEqual(self.calls, [(10, 2)])
+
+    def test_a_read_cut_short_counts_as_failed(self):
+        # 11 and 12 in one read: process_vm_readv gives page 11 only, so 12 is tried alone.
+        header, _data = self.ask([11, 12])
+        self.assertEqual(header['got'], [11])
+
+    def test_read_whole_refuses_a_short_read(self):
+        from unittest import mock
+
+        with mock.patch.object(probe, 'read_memory', self.read_memory):
+            self.assertEqual(probe.read_whole(1, 10 * 4096, 8), b'\n' * 8)
+            with self.assertRaises(OSError):
+                probe.read_whole(1, 11 * 4096, 2 * 4096)
+
+
 @unittest.skipUnless(sys.platform.startswith('linux'), 'Linux only')
 class ServerTests(unittest.TestCase):
     """The socket service against a stand-in game: a child holding a known lap time."""
@@ -139,6 +192,9 @@ class ServerTests(unittest.TestCase):
         self.assertIn(address, header['hits'])
         header, data = client.ask(op='read', address=address, size=4)
         self.assertEqual(struct.unpack('<i', data)[0], 954216)
+        header, data = client.ask(op='read_pages', pages=[address // 4096])
+        self.assertEqual(header['got'], [address // 4096])
+        self.assertEqual(struct.unpack_from('<i', data, address % 4096)[0], 954216)
         client.conn.close()
 
 

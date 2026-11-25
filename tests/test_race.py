@@ -3340,6 +3340,112 @@ class LiveRaceTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as folder, self.assertRaises(OSError):
             self.client.connect(Path(folder, 'missing.sock'))
 
+    def connection(self, answers):
+        """A ProbeConnection whose probe answers each op from `answers` (op -> callable)."""
+        conn = self.client.ProbeConnection.__new__(self.client.ProbeConnection)
+        conn._pages_op = True
+        conn.asked = []
+
+        def ask(request):
+            conn.asked.append(request['op'])
+            return answers[request['op']](request)
+
+        conn.ask = ask
+        return conn
+
+    def test_pages_come_in_one_request(self):
+        page = self.client.PAGE
+
+        def read_pages(request):
+            self.assertEqual(request['pages'], [7, 3, 9])
+            return {'ok': True, 'got': [3, 7]}, b'c' * page + b'g' * page
+
+        conn = self.connection({'read_pages': read_pages})
+        self.assertEqual(conn.read_pages([7, 3, 9]), {3: b'c' * page, 7: b'g' * page})
+        self.assertEqual(conn.asked, ['read_pages'])
+
+    def test_an_older_probe_gives_the_pages_through_read_many(self):
+        page = self.client.PAGE
+
+        def unknown(_request):
+            raise il.ReadError("unknown op 'read_pages'")
+
+        def read_many(request):
+            self.assertEqual((request['addresses'], request['size']), ([3 * page, 9 * page], page))
+            return {'ok': True, 'values': [(b'c' * page).hex(), None]}, b''
+
+        conn = self.connection({'read_pages': unknown, 'read_many': read_many})
+        self.assertEqual(conn.read_pages([3, 9]), {3: b'c' * page})
+        self.assertEqual(conn.read_pages([3, 9]), {3: b'c' * page})
+        self.assertEqual(conn.asked, ['read_pages', 'read_many', 'read_many'])  # asked once only
+
+    def test_another_refusal_of_the_pages_is_not_hidden(self):
+        def refused(_request):
+            raise il.ReadError('size out of range')
+
+        conn = self.connection({'read_pages': refused})
+        with self.assertRaises(il.ReadError):
+            conn.read_pages([3])
+
+    def test_connect_reads_through_the_page_cache(self):
+        import tempfile
+
+        from turbohud.tsu import winmemory
+
+        with tempfile.TemporaryDirectory() as folder:
+            metadata = Path(folder, 'global-metadata.dat')
+            metadata.write_bytes(b'meta')
+            conn = mock.Mock()
+            conn.maps.return_value = [(0x1000, 0x2000, 'r--p', 0, str(metadata))]
+            with (
+                mock.patch.object(self.client, 'ProbeConnection', return_value=conn),
+                mock.patch.object(self.client, 'Il2Cpp') as il2cpp,
+                mock.patch.object(self.client, 'LapReader') as lap_reader,
+            ):
+                reader, found = self.client.connect()
+        self.assertIs(found, conn)
+        self.assertIsInstance(reader, winmemory.CachedReader)
+        self.assertIs(reader.reader, lap_reader.return_value)
+        memory = il2cpp.call_args[0][0]
+        self.assertEqual(memory.read, reader.cache.read)  # every small read through the cache
+        self.assertIs(memory._read_many, conn.read_many)  # the positions together: straight to the probe
+        reader.cache.prefetch()  # nothing yet
+        conn.read_pages.assert_not_called()
+
+    def test_from_the_second_race_read_on_a_car_s_fields_cost_one_trip(self):
+        from turbohud.tsu import winmemory
+
+        page = self.client.PAGE
+        game = {number: bytes([number]) * page for number in range(100, 140)}
+        reads = []
+
+        def read(address, size):
+            reads.append(address)
+            return game[address // page][address % page : address % page + size]
+
+        def read_pages(request):
+            got = [n for n in request['pages'] if n in game]
+            return {'ok': True, 'got': got}, b''.join(game[n] for n in got)
+
+        conn = self.connection({'read_pages': read_pages})
+        conn.read = read
+        cache = winmemory.PageCache(conn.read, fetch_many=conn.read_pages)
+
+        class Cars:  # 20 cars, a dozen fields each, two pages a car
+            def read(self):
+                return [
+                    cache.read(page * (100 + 2 * car) + 8 * field, 4)
+                    for car in range(20)
+                    for field in range(12)
+                ]
+
+        reader = winmemory.CachedReader(Cars(), cache)
+        first = reader.read()
+        self.assertEqual(len(reads), 20)  # the first read: each page once
+        reads.clear()
+        self.assertEqual(reader.read(), first)
+        self.assertEqual((reads, conn.asked), ([], ['read_pages']))  # then all in one request
+
 
 class WatchingTests(unittest.TestCase):
     """What a spectator's HUD shows."""
