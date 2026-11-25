@@ -42,14 +42,23 @@ MONITORS = [
 
 
 class FakeHyprctl:
-    """Answers like hyprctl; `lua` says whether this Hyprland takes Lua commands."""
+    """Answers like hyprctl; `lua` says whether this Hyprland takes Lua commands, `refused` the
+    commands it refuses (by a piece of their text), `batch_lines` what a batch's answers are
+    joined with (None: it has no batches)."""
 
-    def __init__(self, lua=True):
+    def __init__(self, lua=True, refused=(), batch_lines='\n\n'):
         self.lua = lua
+        self.refused = refused
+        self.batch_lines = batch_lines
         self.calls = []
 
     def __call__(self, args):
         self.calls.append(args)
+        if args[0] == '--batch':
+            if self.batch_lines is None:
+                return 'error: unknown request'
+            parts = [part.strip().split(' ', 1) for part in args[1].split(';')]
+            return self.batch_lines.join(self.answer(text) for _dispatch, text in parts)
         if args == ['-j', 'clients']:
             return json.dumps(CLIENTS)
         if args == ['-j', 'monitors']:
@@ -57,12 +66,26 @@ class FakeHyprctl:
         if args == ['-j', 'activewindow']:
             return json.dumps({'address': '0xgame'})
         if args[0] == 'dispatch':
-            is_lua = args[1].startswith('hl.')
-            return 'ok' if is_lua == self.lua else 'error: invalid dispatcher'
+            return self.answer(args[1])
         raise AssertionError(args)
 
+    def answer(self, text):
+        if any(piece in text for piece in self.refused):
+            return 'error: no such window'
+        return 'ok' if text.startswith('hl.') == self.lua else 'error: invalid dispatcher'
+
     def dispatched(self):
-        return [args[1] for args in self.calls if args[0] == 'dispatch']
+        """Every command sent, alone or in a batch."""
+        sent = []
+        for args in self.calls:
+            if args[0] == 'dispatch':
+                sent.append(args[1])
+            elif args[0] == '--batch':
+                sent += [part.strip().split(' ', 1)[1] for part in args[1].split(';')]
+        return sent
+
+    def hyprctl_calls(self):
+        return [args for args in self.calls if args[0] in ('dispatch', '--batch')]
 
 
 class AvailableTests(unittest.TestCase):
@@ -155,6 +178,61 @@ class HyprlandTests(unittest.TestCase):
         hypr.set_focusable('0xaaa', False)
         self.assertIn("prop = 'no_focus', value = '0', window = 'address:0xaaa'", fake.dispatched()[0])
         self.assertIn("value = '1'", fake.dispatched()[1])
+
+    def test_placing_a_window_is_one_hyprctl_call(self):
+        # A preset load froze the HUD 1.2-1.4 s: 23 sections, a dozen calls each (2026-11-20).
+        fake = FakeHyprctl()
+        hypr = hyprland.Hyprland(fake)
+        self.assertTrue(hypr.place('0xaaa', 40, 50, 420, 194))
+        self.assertEqual([args[0] for args in fake.hyprctl_calls()], ['--batch'])
+        self.assertEqual(
+            fake.dispatched(),
+            [lua for lua, _ in hyprland.place_commands('address:0xaaa', 40, 50, 420, 194, 1)],
+        )
+
+    def test_a_batch_answered_without_lines_between_counts_too(self):
+        fake = FakeHyprctl(batch_lines='')
+        self.assertTrue(hyprland.Hyprland(fake).place('0xaaa', 40, 50, 420, 194))
+        self.assertEqual(len(fake.hyprctl_calls()), 1)
+
+    def test_the_monitors_are_asked_once_for_many_windows_at_once(self):
+        now = [0.0]
+        fake = FakeHyprctl()
+        hypr = hyprland.Hyprland(fake, clock=lambda: now[0])
+        for _ in range(23):
+            hypr.place('0xaaa', 40, 50, 420, 194)
+        self.assertEqual(fake.calls.count(['-j', 'monitors']), 1)
+        now[0] += hyprland.MONITORS_KEPT
+        hypr.place('0xaaa', 40, 50, 420, 194)
+        self.assertEqual(fake.calls.count(['-j', 'monitors']), 2)  # a monitor added since is seen
+
+    def test_older_hyprland_without_lua_falls_back_once_and_then_goes_one_by_one(self):
+        fake = FakeHyprctl(lua=False)
+        hypr = hyprland.Hyprland(fake)
+        self.assertTrue(hypr.place('0xaaa', 40, 50, 420, 194))
+        self.assertIn('pin address:0xaaa', fake.dispatched())
+        fake.calls.clear()
+        self.assertTrue(hypr.place('0xaaa', 40, 50, 420, 194))
+        self.assertNotIn('--batch', [args[0] for args in fake.calls])  # not tried again
+
+    def test_hyprland_without_batches_places_one_by_one(self):
+        fake = FakeHyprctl(batch_lines=None)
+        hypr = hyprland.Hyprland(fake)
+        self.assertTrue(hypr.place('0xaaa', 40, 50, 420, 194))
+        self.assertTrue(all(text.startswith('hl.') for text in fake.dispatched()))
+        fake.calls.clear()
+        hypr.place('0xaaa', 40, 50, 420, 194)
+        self.assertNotIn('--batch', [args[0] for args in fake.calls])
+
+    def test_a_refusal_in_the_batch_is_tried_one_by_one_and_batches_go_on(self):
+        # The window refused a step (it was closing, say): as before, False, and the caller tries again.
+        fake = FakeHyprctl(refused=('pin(', 'pin address'))
+        hypr = hyprland.Hyprland(fake)
+        self.assertFalse(hypr.place('0xaaa', 40, 50, 420, 194))
+        fake.refused = ()
+        fake.calls.clear()
+        self.assertTrue(hypr.place('0xaaa', 40, 50, 420, 194))
+        self.assertEqual([args[0] for args in fake.hyprctl_calls()], ['--batch'])
 
     def test_a_missing_hyprctl_is_not_an_error(self):
         def broken(_args):

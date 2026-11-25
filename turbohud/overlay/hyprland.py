@@ -16,6 +16,10 @@ again), and a restart of Hyprland ends them, also after a crash of TurboHUD.
 
 Hyprland 0.55 and later take Lua commands (`hl.dsp.window.pin({...})`); older versions
 the classic ones (`pin address:0x...`). Each command is tried in the Lua form first.
+
+Placing a window takes a dozen commands. Each hyprctl call is a process of its own, so they
+go in one `hyprctl --batch` call (a preset load froze the HUD 1.2-1.4 s with one call each
+for 23 sections, seen 2026-11-20); where the batch is not taken in full, one by one as before.
 """
 
 import json
@@ -24,11 +28,13 @@ import os
 import shlex
 import shutil
 import subprocess
+import time
 
 from turbohud.core.system_env import system_env
 
 log = logging.getLogger(__name__)
 TIMEOUT = 2.0  # seconds for one hyprctl call
+MONITORS_KEPT = 1.0  # seconds the monitor list is kept: a preset load places 23 windows at once
 # Properties of TurboHUD's own window: (Lua name, classic name, value). No keyboard
 # focus, so the game keeps it; and none of the desktop's frame, shadow, blur, animation
 # or see-through for inactive windows, so only the HUD's text shows.
@@ -167,8 +173,40 @@ def focus_command(window):
 
 
 class Hyprland:
-    def __init__(self, run=_run):
+    def __init__(self, run=_run, clock=time.monotonic):
         self.run = run
+        self._clock = clock
+        self._monitors = (None, None)  # (when asked, the list): see MONITORS_KEPT
+        self._batch = True  # False once a batch was refused that the same commands one by one were not
+
+    def dispatch_all(self, commands):
+        """Run (lua, classic) pairs; True if every one was taken. First all in their Lua form in
+        one hyprctl call; where that is not taken in full, one by one (dispatch), the classic
+        form too, as before. A pair without a classic form is a best effort: older Hyprland
+        lacks it. Where the batch failed and one by one did not (an older Hyprland, or one
+        without batches), the batch is not tried again."""
+        commands = list(commands)
+        if self._batch and len(commands) > 1:
+            text = ' ; '.join(f'dispatch {lua}' for lua, _classic in commands)
+            try:
+                answer = self.run(['--batch', text])
+            except (OSError, subprocess.SubprocessError) as error:
+                log.info('hyprctl failed: %s', error)
+                return False
+            # One `ok` for each, with or without blank lines between them.
+            if ''.join(answer.split()) == 'ok' * len(commands):
+                return True
+            one_by_one = self._one_by_one(commands)
+            if one_by_one:
+                self._batch = False
+                log.info('Hyprland: no batches, each command on its own (%s)', ' '.join(answer.split())[:80])
+            return one_by_one
+        return self._one_by_one(commands)
+
+    def _one_by_one(self, commands):
+        # Every command is sent, also after one is refused.
+        results = [self.dispatch(command) or command[1] is None for command in commands]
+        return all(results)
 
     def dispatch(self, command):
         """Run a (lua, classic) pair; True if Hyprland answered ok to either."""
@@ -232,9 +270,18 @@ class Hyprland:
             )
         )
 
+    def monitors(self):
+        """Hyprland's monitors, asked again once MONITORS_KEPT has passed."""
+        asked, found = self._monitors
+        now = self._clock()
+        if found is None or now - asked >= MONITORS_KEPT:
+            found = self._json('monitors')
+            self._monitors = (now, found) if found is not None else (None, None)
+        return found or []
+
     def workspace_at(self, x, y):
         """The id of the workspace shown on the monitor that holds the point, or None."""
-        for monitor in self._json('monitors') or []:
+        for monitor in self.monitors():
             mx, my, width, height = monitor['x'], monitor['y'], monitor['width'], monitor['height']
             scale = monitor.get('scale') or 1
             if mx <= x < mx + width / scale and my <= y < my + height / scale:
@@ -244,10 +291,9 @@ class Hyprland:
     def place(self, address, x, y, width, height, focusable=False):
         """Float, place and pin the window; True if every command was taken."""
         window = f'address:{address}'
-        commands = place_commands(window, x, y, width, height, self.workspace_at(x, y), focusable)
-        # A step without a classic form is a best effort: older Hyprland lacks it.
-        results = [self.dispatch(command) or command[1] is None for command in commands]
-        return all(results)
+        return self.dispatch_all(
+            place_commands(window, x, y, width, height, self.workspace_at(x, y), focusable)
+        )
 
     def set_focusable(self, address, focusable):
         """Let the window take the mouse and focus (move mode) or not (locked). Hyprland's

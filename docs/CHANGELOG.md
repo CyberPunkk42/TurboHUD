@@ -4,6 +4,18 @@ Every finished change, newest first: what changed, why, how it was checked and w
 Each branch adds its dated entry at the top. Where things stand now: `RESUME.md`; what is open:
 `docs/BACKLOG.md`.
 
+- 2026-11-25: Presets load without the freeze on Hyprland (`fix/hyprland-batch-placing`, backlog item 11, asked for
+  by the user). Each preset load froze the HUD 1.2-1.4 s (2026-11-20 log): each of 23 sections was placed with about
+  14 hyprctl calls, each a process of its own (the monitors, then each command; on older Hyprland two a command). Now a
+  window's commands go in one `hyprctl --batch` call (`Hyprland.dispatch_all`, an answer of one `ok` each, with or
+  without lines between); where it is not taken in full, one by one as before, and where that works but the batch did
+  not (an older Hyprland, or no batches) no batch again (`Hyprland: no batches` in the log). The monitor list is kept
+  for a second (`MONITORS_KEPT`): one question for a whole preset. Tests: one call to place a window, both answer
+  forms, the monitors asked once for 23 windows and again after a second, the fallback on older Hyprland and on one
+  without batches, a refusal in a batch still reported. Not yet seen on Hyprland: whether its `--batch` takes the Lua
+  commands, and how it words its answers, were not checked against a real one; if it does not, the log says so and
+  placing works as before. A batch refused once while the same commands one by one work also ends the batches for
+  the session (the old speed, never worse).
 - 2026-11-24: The customization folder no longer goes into the Mac's Applications (`fix/mac-applications-customization-folder`,
   found while answering where the fonts folder is). With `TurboHUD.app` in Applications, `customization/` (layouts and
   fonts) was to be in the settings folder, but TurboHUD made it beside the app wherever it could write there, and an

@@ -268,7 +268,12 @@ to keep the keyboard focus away from them (`hyprctl dispatch`, aimed only at
 TurboHUD's own windows by their address). It does not change any Hyprland or Omarchy
 configuration file or setting, and nothing it asks for outlives TurboHUD. In move mode
 it lets its windows take the mouse so they can be dragged; when locked they let every
-click through to the game.
+click through to the game. Placing a window takes about a dozen such commands; they go in
+one `hyprctl --batch` call, as each call starts a process (a preset load, 23 windows, froze
+the HUD 1.2 to 1.4 s with one call a command). Where a batch is not taken in full, the
+commands go one by one, and on a Hyprland that takes them one by one but not in a batch
+(an older one, without the Lua commands) no batch is tried again. The monitor list each
+placing needs is kept for a second.
 
 Shortcuts: Wayland lets no program catch keys meant for another window, so while TurboHUD
 runs it adds Ctrl+Shift+L, Q and 1 to 5 to Hyprland's live keys (`hyprctl eval` with

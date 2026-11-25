@@ -126,11 +126,6 @@ outlines, 512 kept at about 220 KB each (about 114 MB), no longer kept: a race n
 blocks rise slowly (under 1 MB a minute): a session with `TURBOHUD_TRACE_MEMORY=1` says where. Then the Mac and
 Windows in a long race.
 
-## 11. A preset loads slowly on Hyprland (found 2026-11-20)
-Each preset load froze the HUD 1.2-1.4 s (the log's `slow frame` lines right after `preset N loaded`): each of the
-23 sections is placed through hyprctl, about ten requests each, one after another. Send them in one
-`hyprctl --batch`, or move only (no float, pin and props again) for sections already placed.
-
 ## 12. Reads ten times slower with many cars (found 2026-11-20)
 A race of about 20 cars on Linux: reads took 29-41 ms (3.4 ms hotlapping alone), up to 80% of the reading time at
 20 a second; each car is read in turn, several dozen requests each. Read the cars' fields in batches
