@@ -21,9 +21,9 @@ starts and runs as usual.
 
 While the game runs, the probe also answers read-only requests on a local socket that
 only this user can open (`$XDG_RUNTIME_DIR/turbohud/tsu-memory.sock`): the memory
-map, reading bytes, and searching for byte patterns, all in TSU only. TurboHUD's live
-race data (turbohud.tsu.client) and the search tool `experiments/tsu_memory_scan.py` use
-it. The socket goes away when the game quits.
+map, reading bytes (a piece, many pieces, or whole pages), and searching for byte
+patterns, all in TSU only. TurboHUD's live race data (turbohud.tsu.client) and the search
+tool `experiments/tsu_memory_scan.py` use it. The socket goes away when the game quits.
 
 `experiments/tsu_memory_probe.py` only starts this module, so the launch option keeps
 its path. Without Steam: `python3 experiments/tsu_memory_probe.py --self-test` starts a small
@@ -46,6 +46,7 @@ import time
 from pathlib import Path
 
 from turbohud.core.system_env import system_env
+from turbohud.tsu.winmemory import read_pages
 
 GAME_EXE = 'TSU.x64'
 GAME_CODE = 'GameAssembly.so'
@@ -95,6 +96,14 @@ def read_memory(pid, address, size):
         error = ctypes.get_errno()
         raise OSError(error, os.strerror(error))
     return buffer.raw[:count]
+
+
+def read_whole(pid, address, size):
+    """read_memory, raising OSError where fewer bytes came back (memory that ends inside)."""
+    data = read_memory(pid, address, size)
+    if len(data) < size:
+        raise OSError(f'only {len(data)} of {size} bytes at {address:#x}')
+    return data
 
 
 def parse_maps(text):
@@ -178,6 +187,10 @@ def check_read(pid, module):
 CHUNK = 16 * 1024 * 1024
 MAX_READ = 64 * 1024 * 1024
 MAX_HITS = 200_000
+MAX_PAGES = 4096  # pages a read_pages request gives at most (16 MiB)
+# Pages at most this far apart are read in one call. Unlike a call through Wine (MERGE_GAP), one
+# here costs a few microseconds, so only neighbours share one: nothing between them is copied.
+PAGE_GAP = 1
 
 
 def searchable(region):
@@ -251,6 +264,14 @@ def handle(pid, request):
             except OSError:
                 values.append(None)
         return {'ok': True, 'values': values}, b''
+    if op == 'read_pages':
+        # Whole 4 KiB pages in one request, for the page cache (turbohud.tsu.winmemory.PageCache):
+        # a race read with 20 cars made several hundred trips here, one per field (29-41 ms on
+        # 2026-11-20); now about one. `got`: the pages read, in order, their bytes one after another.
+        pages = [int(number) for number in request['pages'][:MAX_PAGES]]
+        found = read_pages(functools.partial(read_whole, pid), pages, gap=PAGE_GAP)[0]
+        got = sorted(found)
+        return {'ok': True, 'got': got}, b''.join(found[number] for number in got)
     if op == 'search':
         patterns = [bytes.fromhex(pattern) for pattern in request['patterns']]
         if not patterns or not all(patterns):
