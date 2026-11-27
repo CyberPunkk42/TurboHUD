@@ -40,6 +40,10 @@ class FloatAtOpen(QObject):
     for a moment as it opens on Hyprland (FIXED_AT_OPEN_MS): Hyprland then floats it at once, where
     it would otherwise tile it, large, until TurboHUD's requests floated it, a jump from large to its
     size the player saw (reported by the user on 2026-11-20: the settings and the layouts windows).
+    The sections too (reported by the user on 2026-11-28): a section tiled first, in among the windows
+    of a workspace without a fullscreen game, stayed cut to that small tile once floated and sized, only
+    a corner of it drawn. A size TurboHUD asks of a section while it is fixed (`asked_size`, kept by
+    the section) is given to it as the moment ends.
     Only TurboHUD's own windows: an event filter on its own app, no rule in Hyprland."""
 
     def __init__(self, parent=None):
@@ -54,14 +58,17 @@ class FloatAtOpen(QObject):
     def fix(self, widget):
         if not widget.isWindow() or widget.windowType() in (Qt.Popup, Qt.ToolTip) or id(widget) in self.kept:
             return
-        # Windows that take clicks (the settings, the layouts, the panel, dialogs) and the place labels;
-        # not the sections, which TurboHUD may size again just after they open.
+        # Windows that take clicks (the settings, the layouts, the panel, dialogs), the place labels and
+        # the sections (those keeping `asked_size`).
         if not (
             getattr(widget, 'focusable', False)
             or getattr(widget, 'float_at_open', False)
             or isinstance(widget, QDialog)
+            or hasattr(widget, 'asked_size')
         ):
             return
+        if hasattr(widget, 'asked_size'):
+            widget.asked_size = None  # only what is asked from now on counts (release)
         key = id(widget)
         self.kept[key] = (widget, widget.minimumSize(), widget.maximumSize())
         widget.setFixedSize(widget.size())
@@ -75,6 +82,9 @@ class FloatAtOpen(QObject):
         try:
             widget.setMinimumSize(least)
             widget.setMaximumSize(largest)
+            asked = getattr(widget, 'asked_size', None)
+            if asked is not None and asked != widget.size().toTuple():
+                widget.resize(*asked)  # asked while it was fixed, and held to the old size then
         except RuntimeError:  # closed and deleted meanwhile
             pass
 

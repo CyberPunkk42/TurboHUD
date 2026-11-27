@@ -47,6 +47,11 @@ class FakeWidget:
         return 'TurboHUD - Test'
 
 
+class SectionNative:
+    def raise_window(self, window):
+        return 'test'
+
+
 @unittest.skipUnless(importlib.util.find_spec('PySide6'), 'needs Qt')
 class LinuxNativeTests(unittest.TestCase):
     @classmethod
@@ -63,7 +68,11 @@ class LinuxNativeTests(unittest.TestCase):
     def native(self, hypr):
         from turbohud.overlay.linux import Native
 
-        return Native(hypr)
+        native = Native(hypr)
+        # prepare_app puts FloatAtOpen on the shared app: taken off again, or the later tests' sections
+        # would keep their size fixed as they show (no event loop there ends it).
+        self.addCleanup(lambda: native.float_at_open and self.app.removeEventFilter(native.float_at_open))
+        return native
 
     def test_without_hyprland_qt_does_it(self):
         self.assertIsNone(self.native(None).placement(FakeWidget()))
@@ -136,19 +145,64 @@ class LinuxNativeTests(unittest.TestCase):
         from turbohud.overlay.linux import FloatAtOpen
 
         float_at_open = FloatAtOpen()
-        settings, section = QWidget(), QWidget()
+        settings, other = QWidget(), QWidget()
         settings.focusable = True
-        for widget in (settings, section):
+        for widget in (settings, other):
             self.addCleanup(widget.close)
             widget.setMinimumSize(50, 40)
             widget.resize(300, 200)
             float_at_open.eventFilter(widget, QEvent(QEvent.Show))
         self.assertEqual(settings.minimumSize().toTuple(), (300, 200))
         self.assertEqual(settings.maximumSize().toTuple(), (300, 200))
-        self.assertEqual(section.minimumSize().toTuple(), (50, 40))  # a section is left alone
+        self.assertEqual(other.minimumSize().toTuple(), (50, 40))  # a window of none of those kinds
         float_at_open.release(id(settings))
         self.assertEqual(settings.minimumSize().toTuple(), (50, 40))
         self.assertGreater(settings.maximumSize().width(), 10000)
+
+    # Reported by the user on 2026-11-28: on a workspace of tiled windows (no fullscreen game) each
+    # section was tiled first, small, and stayed cut to that tile once floated: only a corner showed.
+    def test_a_section_opens_with_a_fixed_size_too_and_gets_what_was_asked_meanwhile(self):
+        from PySide6.QtCore import QEvent
+
+        from turbohud.core.hud import RACE_SECTIONS
+        from turbohud.core.settings import Theme
+        from turbohud.overlay.linux import FloatAtOpen
+        from turbohud.overlay.window import SectionWindow
+
+        float_at_open = FloatAtOpen()
+        section = SectionWindow(SectionNative(), Theme(), RACE_SECTIONS[0])
+        self.addCleanup(section.close)
+        section.setGeometry(10, 20, 300, 200)
+        least = section.minimumSize().toTuple()
+        float_at_open.eventFilter(section, QEvent(QEvent.Show))
+        self.assertEqual(section.maximumSize().toTuple(), (300, 200))  # Hyprland floats it as it opens
+        self.assertIsNone(section.asked_size)  # asked before it opened: already its size
+        section.setGeometry(10, 20, 420, 90)  # a preset loaded meanwhile: held to the old size
+        self.assertEqual(section.size().toTuple(), (300, 200))
+        float_at_open.release(id(section))
+        self.assertEqual(section.minimumSize().toTuple(), least)
+        self.assertEqual(section.size().toTuple(), (420, 90))  # given as the moment ends
+
+    def test_a_section_resized_by_dragging_is_not_sent_back_at_its_next_opening(self):
+        from PySide6.QtCore import QEvent
+
+        from turbohud.core.hud import RACE_SECTIONS
+        from turbohud.core.settings import Theme
+        from turbohud.overlay.linux import FloatAtOpen
+        from turbohud.overlay.window import SectionWindow
+
+        float_at_open = FloatAtOpen()
+        section = SectionWindow(SectionNative(), Theme(), RACE_SECTIONS[0])
+        self.addCleanup(section.close)
+        section.setGeometry(10, 20, 300, 200)  # long ago
+        float_at_open.eventFilter(section, QEvent(QEvent.Show))
+        float_at_open.release(id(section))
+        super(SectionWindow, section).resize(
+            350, 200
+        )  # the desktop resized it (a drag): not asked by TurboHUD
+        float_at_open.eventFilter(section, QEvent(QEvent.Show))  # opened again (move mode ended)
+        float_at_open.release(id(section))
+        self.assertEqual(section.size().toTuple(), (350, 200))
 
     def test_the_panel_is_placed_first_and_brought_in_front_again(self):
         # Move mode opens some 50 windows: the panel, opened last, came 2 s after the key (2026-11-20).
