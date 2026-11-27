@@ -291,6 +291,35 @@ class SettingsWindowTests(unittest.TestCase):
                 button.click()
         self.assertEqual(sorted(round(f, 3) for f in got), [0.909, 1.1])
 
+    # Reported by the user on 2026-11-28: on Linux the Look and Sections tabs' buttons and number
+    # boxes were see-through, their dark text on the window's navy, unlike Close beneath the tabs.
+    def test_the_tabs_buttons_and_boxes_have_a_face_as_close_does(self):
+        from PySide6.QtWidgets import QDoubleSpinBox, QPushButton
+
+        from turbohud.overlay.settings_window import Swatch
+
+        window = self.window(options=(('radar_cockpit_only', 'Radar', True, 'tip'),))
+        window.show()
+        self.addCleanup(window.close)
+        plain = [
+            widget
+            for widget in [*window.findChildren(QPushButton), *window.findChildren(QDoubleSpinBox)]
+            if not isinstance(widget, Swatch) and widget.styleSheet() == ''  # the system's own look
+        ]
+        seen = set()
+        for tab in (0, 1):  # Look, Sections
+            window.tabs.setCurrentIndex(tab)
+            self.app.processEvents()
+            image = window.grab().toImage()
+            for widget in (widget for widget in plain if widget.isVisible()):
+                # Inside the face beside the text: never the window's own navy (paintEvent).
+                spot = widget.mapTo(window, widget.rect().center())
+                spot.setX(widget.mapTo(window, widget.rect().topLeft()).x() + 4)
+                colour = image.pixelColor(spot)
+                self.assertNotEqual((colour.red(), colour.green(), colour.blue()), (15, 30, 55), widget)
+                seen.add(widget.text() if isinstance(widget, QPushButton) else 'seconds')
+        self.assertLessEqual({'Reset colours', 'Smaller', 'Bigger', 'Close', 'seconds'}, seen)
+
 
 class ColumnTests(unittest.TestCase):
     def test_the_sheet_has_every_category_once_and_in_order(self):
