@@ -4,6 +4,13 @@ Every finished change, newest first: what changed, why, how it was checked and w
 Each branch adds its dated entry at the top. Where things stand now: `RESUME.md`; what is open:
 `docs/BACKLOG.md`.
 
+- 2026-11-27: Two tests that failed on Linux pass there (`fix/linux-flaky-tests`, asked for by the user). The dialog
+  tests ran Qt's events once and expected the 0 ms timer that raises a dialog to have fired; on Linux it had not yet, so
+  `test_a_warning_on_top_too` failed (the Mac test beside it had the same race). They now run the events until it has
+  fired, for 2 s at most. The font test compared 'Playername' in a system monospace font and in the usual font,
+  expecting more than 1 px between them; Liberation Mono came within 0.97 px, so it now compares narrow letters
+  (`iiiiiiiiii`, 61 px apart there). Tests only, no change to the app. Checked: the full suite passes on Linux
+  (1670 tests, 15 skipped), both modules three times in a row. Not run on Windows or the Mac.
 - 2026-11-25: Presets load without the freeze on Hyprland (`fix/hyprland-batch-placing`, backlog item 11, asked for
   by the user). Each preset load froze the HUD 1.2-1.4 s (2026-11-20 log): each of 23 sections was placed with about
   14 hyprctl calls, each a process of its own (the monitors, then each command; on older Hyprland two a command). Now a
