@@ -85,6 +85,7 @@ TAB_STYLE = (
     f' QTabBar::tab:selected {{ color: #0f1e37; background: {TAB_EDGE}; }}'
     ' QTabBar::tab:!selected:hover { color: white; background: rgba(120, 170, 230, 80); }'
 )
+TAB_PAGE = 'tab_page'  # each tab's page, see-through to the window's own background (_tab)
 SWATCH = 22  # pixels
 CHOSEN_RING = (120, 190, 255)
 # On the Mac a plain checkable button looks the same checked or not.
@@ -344,7 +345,11 @@ class SettingsWindow(QWidget):
     def _tab(self, name, tip):
         """A new tab named `name`: its column, to fill from the top."""
         page = QWidget()
-        page.setStyleSheet('background: transparent;')
+        # The page alone see-through: a rule without a selector reached its buttons, drop-down and
+        # number boxes too, leaving their dark text on the window's navy on Linux (reported by the
+        # user on 2026-11-28), while Close beneath the tabs kept its button face.
+        page.setObjectName(TAB_PAGE)
+        page.setStyleSheet(f'#{TAB_PAGE} {{ background: transparent; }}')
         column = QVBoxLayout(page)
         column.setContentsMargins(2, 0, 2, 0)
         column.setSpacing(6)

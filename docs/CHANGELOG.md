@@ -4,6 +4,13 @@ Every finished change, newest first: what changed, why, how it was checked and w
 Each branch adds its dated entry at the top. Where things stand now: `RESUME.md`; what is open:
 `docs/BACKLOG.md`.
 
+- 2026-11-28: The settings window's buttons readable on Linux (`fix/settings-tab-buttons`, reported by the user).
+  In the Look and Sections tabs, Reset colours, Smaller, Bigger, Add font..., Fonts folder..., the font list and the
+  seconds boxes had no face, their dark text on the window's navy, while Close beneath the tabs had its own. Each
+  tab's page was made see-through with a style rule without a selector, which Qt applies to everything inside it;
+  the rule now names the page alone (`TAB_PAGE`). Tests: in the Look and Sections tabs the plain buttons, Close and
+  the seconds boxes show a face, not the navy (fails without the fix). Checked by a picture of each tab with a light
+  desktop palette, before and after; not yet seen on the user's desktop.
 - 2026-11-27: Two tests that failed on Linux pass there (`fix/linux-flaky-tests`, asked for by the user). The dialog
   tests ran Qt's events once and expected the 0 ms timer that raises a dialog to have fired; on Linux it had not yet, so
   `test_a_warning_on_top_too` failed (the Mac test beside it had the same race). They now run the events until it has
