@@ -175,8 +175,8 @@ mode's preview race, and of each window and tab are in [docs/screenshots](docs/s
 - **Settings…** (tabs **Look**, **Colours**, **Sections**, **Race**) sets the colours, colour-blind friendly colours for
   every section or those chosen, TSU's Legacy colours for the car sections' bars, the global font (your own `.ttf` or `.otf` files in
   `customization/fonts`, added with **Add font...** or **Fonts folder...**, also in move mode's **Text** tab), the size of all sections, the standings' columns, the
-  warning times, the race reads a second and the on/off options (also under **Options** in
-  the icon's menu).
+  warning times, the race reads a second, **Quit TurboHUD when TSU quits** and the on/off options
+  (also under **Options** in the icon's menu).
 - **Ctrl+Shift+Q** quits; on Windows and Hyprland **Ctrl+Shift+F12** is a spare for Ctrl+Shift+L.
 
 Where each section sits, its size, whether it shows, and the look are saved in

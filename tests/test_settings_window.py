@@ -128,6 +128,22 @@ class SettingsWindowTests(unittest.TestCase):
         self.assertEqual(tabs, ['Look', 'Sections', 'Race'])  # no Colours tab without its choices
         self.assertEqual(set(window.options), {key for key, *_rest in options})
 
+    # Asked for by drivers on 2026-11-28: TurboHUD closed once TSU closes.
+    def test_quit_with_tsu_is_in_the_race_tab_under_turbohud(self):
+        from PySide6.QtWidgets import QLabel
+
+        window = self.window(options=(('quit_with_tsu', 'Quit TurboHUD when TSU quits', False, 'tip'),))
+        tabs = [window.tabs.tabText(index) for index in range(window.tabs.count())]
+        race = window.tabs.widget(tabs.index('Race'))
+        self.assertIs(window.options['quit_with_tsu'].parent(), race)
+        headings = [label.text() for label in race.findChildren(QLabel) if '<small>' in label.text()]
+        self.assertTrue(any('TURBOHUD' in text for text in headings), headings)
+        self.assertFalse(any('MORE' in text for text in headings))  # not one of the rest
+        got = []
+        window.option_changed.connect(lambda key, on: got.append((key, on)))
+        window.options['quit_with_tsu'].click()
+        self.assertEqual(got, [('quit_with_tsu', True)])
+
     def test_colour_blind_off_all_or_chosen_sections(self):
         # Asked for by the user on 2026-11-21: for every section or the ones chosen.
         sections = [('fuel', 'Fuel'), ('radar', 'Radar'), ('times', 'My laps')]

@@ -147,6 +147,15 @@ class SpeedUnitSettingTests(unittest.TestCase):
             path.write_text(json.dumps({'backdrop': 'yes'}))
             self.assertFalse(s.load_settings(path).backdrop)
 
+    def test_quit_with_tsu_round_trips_and_is_off_by_default(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / 'settings.json'
+            self.assertFalse(s.load_settings(path).quit_with_tsu)
+            s.save_settings(path, s.Settings(quit_with_tsu=True))
+            self.assertTrue(s.load_settings(path).quit_with_tsu)
+            path.write_text(json.dumps({'quit_with_tsu': 'yes'}))
+            self.assertFalse(s.load_settings(path).quit_with_tsu)
+
     def test_other_cars_on_the_track_map_round_trip_and_are_off_by_default(self):
         with tempfile.TemporaryDirectory() as folder:
             path = Path(folder) / 'settings.json'

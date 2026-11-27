@@ -628,6 +628,12 @@ the colour choices, which are only here.
 - **Race reads a second:** 20, 10 (the default) or 5. Fewer ask less of the game, but the delta and the
   track map move less smoothly, and a track first learnt at 5 gets a coarser line.
 
+**TurboHUD**
+- **Quit TurboHUD when TSU quits:** off by default. On, TurboHUD quits by itself once TSU has been
+  closed for about 10 seconds, so you need not quit it by hand. Started before TSU, it waits for the
+  game as usual; a moment's lost connection while TSU still runs does not count. It goes by TurboHUD
+  reading TSU live, so on Linux TSU must be started with the launch option.
+
 **More**: a new option not placed under a heading yet, when there is one.
 
 At the bottom, below every tab:

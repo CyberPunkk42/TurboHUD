@@ -3,7 +3,7 @@
 Kept short: the state now and what to do next. Every change, with how it was checked, is in
 `docs/CHANGELOG.md`; open work in `docs/BACKLOG.md`; how it works in `docs/HOW_IT_WORKS.md`.
 
-## Current state (2026-11-25)
+## Current state (2026-11-28)
 - **The app** (`turbohud/`, Python with Qt): a see-through, click-through HUD over TSU with a locked
   mode and a move mode (Ctrl+Shift+L, or Ctrl+Shift+F12; quit Ctrl+Shift+Q), a tray icon, and a
   settings window. Start from the source with `run_turbohud.sh` / `run_turbohud.cmd`.
@@ -37,6 +37,7 @@ Kept short: the state now and what to do next. Every change, with how it was che
 - **Latest (2026-11-25, Linux)**: race reads through the page cache, as on the Mac and Windows (one request for the
   pages instead of one a field); a window's placing commands in one `hyprctl --batch` call, so a preset load no
   longer freezes the HUD. Neither seen on Linux yet (To try next).
+- **Latest (2026-11-28)**: Quit TurboHUD when TSU quits, an option in Settings > Race (off by default).
 - **Builds**: `tools/build_app.py` (PyInstaller) on each system: a Windows ZIP and a Mac disk image with
   the Rust reader, and a Linux `.tar.gz` built in Ubuntu 22.04 (`sh tools/build_linux.sh <version>`).
   The repository is kept in step with a private GitHub repository.
@@ -44,41 +45,43 @@ Kept short: the state now and what to do next. Every change, with how it was che
 ## To try next (most recent first)
 Details of each: its entry in `docs/CHANGELOG.md`. Checks on the Mac and Windows, and rare cases not yet seen:
 backlog item 14.
-1. **Race reads on Linux with many cars** (restart TSU first, so its probe is the new one): in a race of about 20
+1. **Quit TurboHUD when TSU quits**: tick it in Settings > Race, quit TSU: TurboHUD quits about 10 s later (log:
+   `TSU has quit: TurboHUD quits with it`); started before TSU, it waits; on the Mac and Windows too.
+2. **Race reads on Linux with many cars** (restart TSU first, so its probe is the new one): in a race of about 20
    cars, the log's `race reads:` line every 30 s should say a few ms a read (was 29-41 ms) and about 1 to 3 trips a
    read; `the memory probe is older` in the log means TSU was started before the update.
-2. **A preset load on Hyprland**: Ctrl+Shift+1 to 5 in a race, the HUD should no longer freeze (was 1.2-1.4 s, the
+3. **A preset load on Hyprland**: Ctrl+Shift+1 to 5 in a race, the HUD should no longer freeze (was 1.2-1.4 s, the
    log's `slow frame` lines after `preset N loaded`); `Hyprland: no batches` in the log means it went one by one.
-3. **The customization folder on the Mac** (wait for the next build): start the built app from Applications once;
+4. **The customization folder on the Mac** (wait for the next build): start the built app from Applications once;
    `/Applications/customization` is gone and `~/Library/Application Support/TurboHUD/customization` has the
    layouts and `fonts/` (log: `customization: moved ...` only where a file of yours was moved).
-4. **Font buttons in the Text tab**: in move mode, Add font... uses a font at once; Fonts folder..., paste a
+5. **Font buttons in the Text tab**: in move mode, Add font... uses a font at once; Fonts folder..., paste a
    font, start move mode again: it is in Global font. Does the row still fit the panel?
-5. **Radar zoom**: zoomed in on a car right beside you, about 3.5 car lengths ahead and behind (was 2.5).
-6. **Standings steady**: in an online race with many cars, no gap below zero and the Gap and Best columns never
+6. **Radar zoom**: zoomed in on a car right beside you, about 3.5 car lengths ahead and behind (was 2.5).
+7. **Standings steady**: in an online race with many cars, no gap below zero and the Gap and Best columns never
    jumping out for a moment (a tester's video, 2026-11-21: a time not yet written read as 0).
-7. **The preset in use in the layouts window**: under Presets, the same line as the panel's (Preset: 3 Race,
+8. **The preset in use in the layouts window**: under Presets, the same line as the panel's (Preset: 3 Race,
    (changed), Preset: none), changing as you load, save and drag.
-8. **Colours** (2026-11-21): Settings > Colours: colour-blind friendly colours for All sections, then Chosen; are
+9. **Colours** (2026-11-21): Settings > Colours: colour-blind friendly colours for All sections, then Chosen; are
    the colours told apart over TSU? TSU Legacy colours: the car sections' bars as dark as in TSU's HUD?
-9. **Car status**: tick it in move mode (untick the four it stands for): Health, Tires, Fuel, Finish in one
+10. **Car status**: tick it in move mode (untick the four it stands for): Health, Tires, Fuel, Finish in one
    box with a bar under each of the first three, only the rows the event has, the tint ending below the last. The four separate ones at one
    text size look the same too, also with ~100 laps of tires (shown whole from 100 on).
-10. **Ungroup all**: in move mode, the button at the end of the group row ungroups every section; Undo brings
+11. **Ungroup all**: in move mode, the button at the end of the group row ungroups every section; Undo brings
    the groups back.
-11. **A preset by hand kept for the session**: load 5 by hand in a race; later races start in 5, hotlapping
+12. **A preset by hand kept for the session**: load 5 by hand in a race; later races start in 5, hotlapping
    keeps its own; 5 s in TSU's menu ends the session (log: `preset 5 for every race this session`, `the session
    is over`).
-12. **TurboHUD's memory** (backlog item 10): a session started as `TURBOHUD_TRACE_MEMORY=1 sh run_turbohud.sh`;
+13. **TurboHUD's memory** (backlog item 10): a session started as `TURBOHUD_TRACE_MEMORY=1 sh run_turbohud.sh`;
    the `memory grew:` lines say where Python's slow rise is.
-13. **Watching (Race Director mode)**: in a replay and spectating online, the battle warning's moments and
+14. **Watching (Race Director mode)**: in a replay and spectating online, the battle warning's moments and
    groups, and the watched driver's banner at each camera switch (log: `the camera follows player N`).
-14. **Presets**: the panel's "Preset: 3 Race" right after a load on Hyprland (or "(changed)"?); the Recording
+15. **Presets**: the panel's "Preset: 3 Race" right after a load on Hyprland (or "(changed)"?); the Recording
    and Spectating presets loading by themselves.
-15. **A font per section and per preset**: their own fonts kept by presets and Undo; is the panel's Font column
+16. **A font per section and per preset**: their own fonts kept by presets and Undo; is the panel's Font column
    wide enough on Linux?
-16. **Banners**: none for your own car taking the lead; "Race Winner" with your flag picture at the finish.
-17. **Tire wear**: TurboHUD's Tires percent the same as TSU's (log: `tires: ... worn out at ...`).
+17. **Banners**: none for your own car taking the lead; "Race Winner" with your flag picture at the finish.
+18. **Tire wear**: TurboHUD's Tires percent the same as TSU's (log: `tires: ... worn out at ...`).
 
 The Race Director mode (backlog item 8) has all its planned parts: what is left is tuning from what you see.
 

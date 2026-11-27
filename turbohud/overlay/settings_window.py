@@ -47,6 +47,7 @@ GROUPS = {
     'sections': ('nearby_short', 'sector_bars', 'gear', 'map_others', 'compass_colourblind', 'compass_sun'),
     'radar': ('radar_cone',),
     'flags': ('yellow_flags',),
+    'app': ('quit_with_tsu',),  # TurboHUD itself, in the Race tab
 }
 # The radar's cameras (asked for by the user on 2026-11-15: in the views from outside the car too):
 # (radar_cockpit_only, button, tooltip)
@@ -293,13 +294,21 @@ class SettingsWindow(QWidget):
         sections.addStretch()
 
         # Anything not placed above (a new option) still shows, in the last tab.
-        rest = [key for key in listed if key not in self.options and key != 'radar_cockpit_only']
+        app_keys = [key for key in GROUPS['app'] if key in listed]
+        rest = [
+            key
+            for key in listed
+            if key not in self.options and key != 'radar_cockpit_only' and key not in app_keys
+        ]
         self.read_buttons = {}
-        if rest or reads_per_second is not None:
-            race = self._tab('Race', 'How often the race is read, and any other option')
+        if rest or app_keys or reads_per_second is not None:
+            race = self._tab('Race', 'How often the race is read, when TurboHUD quits, and any other option')
             if reads_per_second is not None:
                 race.addWidget(self._heading('Reading the race'))
                 race.addLayout(self._reads_row(reads_per_second))
+            if app_keys:
+                race.addWidget(self._heading('TurboHUD'))
+                self._boxes(race, listed, app_keys)
             if rest:
                 race.addWidget(self._heading('More'))
                 self._boxes(race, listed, rest)

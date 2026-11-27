@@ -183,6 +183,8 @@ class Settings:
     radar_cockpit_only: bool = True  # the proximity radar only while the camera sits at the driver
     sector_bars: bool = True  # the sector bars below the last and best lap
     yellow_flags: bool = True  # the yellow flag section and the yellow rings on the track map
+    # TurboHUD quits once TSU has quit (asked for by drivers, 2026-11-28); off: it keeps running.
+    quit_with_tsu: bool = False
     gear: bool = True  # the Gear section: the engine sound's gear and revs (read only while on and shown)
     clan_tags: bool = True  # the lap times show each driver's clan tag, outside a multi-class race
     classes: bool = True  # the lap times grouped by class, from the drivers' clan tags (see class_tags)
@@ -501,6 +503,7 @@ def load_settings(path):
         sector_bars=data.get('sector_bars') is not False,
         yellow_flags=data.get('yellow_flags') is not False,
         gear=data.get('gear') is not False,
+        quit_with_tsu=data.get('quit_with_tsu') is True,
         classes=data.get('classes') is not False,
         clan_tags=data.get('clan_tags') is not False,
         class_tags=_class_tags(data.get('class_tags')),
@@ -552,6 +555,7 @@ def save_settings(path, settings):
         'sector_bars': settings.sector_bars,
         'yellow_flags': settings.yellow_flags,
         'gear': settings.gear,
+        'quit_with_tsu': settings.quit_with_tsu,
         'classes': settings.classes,
         'clan_tags': settings.clan_tags,
         'lap_columns': list(settings.lap_columns),
