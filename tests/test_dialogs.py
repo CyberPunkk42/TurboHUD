@@ -5,6 +5,7 @@ import importlib.util
 import os
 import sys
 import tempfile
+import time
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -40,6 +41,13 @@ class DialogTests(unittest.TestCase):
 
         cls.app = QApplication.instance() or QApplication([])
 
+    def _until(self, done, seconds=2.0):
+        """Qt's events run until `done()`: a 0 ms timer may not fire in the first round (Linux)."""
+        end = time.monotonic() + seconds
+        while not done() and time.monotonic() < end:
+            self.app.processEvents()
+            time.sleep(0.005)
+
     def test_on_the_mac_qts_own_window_raised_to_turbohuds_level(self):
         from PySide6.QtCore import Qt
         from PySide6.QtWidgets import QFileDialog
@@ -53,7 +61,7 @@ class DialogTests(unittest.TestCase):
         self.assertTrue(dialog.windowFlags() & Qt.WindowStaysOnTopHint)
         self.assertTrue(dialog.focusable)  # a name is typed in it
         self.assertEqual(native.raised, [])
-        self.app.processEvents()  # as exec() runs: raised once shown
+        self._until(lambda: len(native.raised) >= 2)  # as exec() runs: raised once shown
         # then in front of TurboHUD's windows on that level: raised alone, it went behind the
         # settings window (Add font..., 2026-11-17)
         self.assertEqual(native.raised, [dialog, ('in front', dialog)])
@@ -96,7 +104,7 @@ class DialogTests(unittest.TestCase):
         shown = []
         with mock.patch.object(QMessageBox, 'exec', lambda box: shown.append(box.text()) or 0):
             warn(None, native, 'That file is not a TurboHUD layout.')
-        self.app.processEvents()
+        self._until(lambda: len(native.raised) >= 2)  # one round was too soon for it on Linux
         self.assertEqual(shown, ['That file is not a TurboHUD layout.'])
         self.assertEqual(native.raised[1:], [('in front', native.raised[0])])  # raised, then in front
 

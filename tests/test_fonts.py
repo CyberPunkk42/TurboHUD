@@ -367,8 +367,9 @@ class SectionFontPainterTests(unittest.TestCase):
         with self.painter.using(self.family):
             self.assertEqual(width('L12', 20), self.painter.text_width('L12', 20))
             self.assertEqual(ink('L12', 20), self.painter.text_ink('L12', 20))
+        # Narrow letters: 'Playername' came out within 1 px in both fonts on Linux (2026-11-27).
         self.assertNotAlmostEqual(
-            width('Playername', 20), self.painter.text_width('Playername', 20), delta=1.0
+            width('iiiiiiiiii', 20), self.painter.text_width('iiiiiiiiii', 20), delta=1.0
         )
 
     def test_a_text_image_is_kept_for_each_font(self):
