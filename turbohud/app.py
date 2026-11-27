@@ -14,6 +14,7 @@ from pathlib import Path
 
 from turbohud import __version__
 from turbohud.core import stalls
+from turbohud.core.game_watch import GameWatch
 from turbohud.core.hud import (
     CLOCK_SECTIONS,
     RACE_SECTIONS,
@@ -90,6 +91,7 @@ NARROWER = ('laptimes', 'players')  # the boxes layout 7 makes narrower
 LEGACY_LABEL = 'TSU Legacy colours'  # the option, in the settings window's Colours tab
 COMPASS_COLOURBLIND_LABEL = 'Compass in colour-blind colours'  # the option, in the settings and the menu
 COMPASS_SUN_LABEL = 'Compass north from the sun'  # the option, in the settings and the menu
+QUIT_WITH_TSU_LABEL = 'Quit TurboHUD when TSU quits'  # the option, in the settings window's Race tab
 # The banners that fade in and out (overlay.window): section name -> the key of what it shows (race_sections).
 BANNERS = {'leader': 'banner', 'battle': 'battlebanner', 'watched': 'watchedbanner'}
 
@@ -1226,6 +1228,18 @@ def run(args, folder):
             )
             for column, label, tip in LAP_COLUMN_OPTIONS:
                 listed.append((f'column_{column}', label, column in settings.lap_columns, tip))
+        if live is not None:  # TurboHUD reads TSU here, so it knows when the game quits
+            listed.append(
+                (
+                    'quit_with_tsu',
+                    QUIT_WITH_TSU_LABEL,
+                    settings.quit_with_tsu,
+                    (
+                        'TurboHUD quits by itself once TSU has been closed for a few seconds;'
+                        ' started before TSU, it waits for it as before'
+                    ),
+                )
+            )
         return listed
 
     def set_radar_cone(cone):
@@ -1247,6 +1261,13 @@ def run(args, folder):
         show_option('radar_cockpit_only', only)
         save()
         log.info('proximity radar %s', 'only in cockpit cameras' if only else 'in every camera')
+
+    def set_quit_with_tsu(on):
+        nonlocal settings
+        settings = replace(settings, quit_with_tsu=on)
+        show_option('quit_with_tsu', on)
+        save()
+        log.info('quit with TSU %s', 'on' if on else 'off')
 
     def set_sector_bars(shown):
         nonlocal settings
@@ -1647,6 +1668,7 @@ def run(args, folder):
                 'compass_sun': set_compass_sun,
                 'nearby_short': set_nearby_short,
                 'sector_bars': set_sector_bars,
+                'quit_with_tsu': set_quit_with_tsu,
                 'yellow_flags': set_yellow_flags,
                 'gear': set_gear,
                 'classes': set_classes,
@@ -2548,6 +2570,7 @@ def run(args, folder):
     last_seen = 0.0
 
     shown_status = None
+    game_watch = GameWatch()  # Quit with TSU
 
     # The tester's stutter (2026-11-13): slow frames and reads with their time and the garbage
     # collections in them, and which sections cost the drawing (turbohud.core.stalls).
@@ -2598,6 +2621,10 @@ def run(args, folder):
         racing, fresh = False, True
         if live is not None:
             snapshot = live.snapshot()
+            if game_watch.gone(snapshot.status, time.monotonic()) and settings.quit_with_tsu:
+                log.info('TSU has quit: TurboHUD quits with it (Quit with TSU)')
+                app.quit()
+                return
             racing = snapshot.status == RACING
             due, fresh = pacer.due(snapshot.read_at, racing, time.monotonic())
             if not due:

@@ -4,6 +4,16 @@ Every finished change, newest first: what changed, why, how it was checked and w
 Each branch adds its dated entry at the top. Where things stand now: `RESUME.md`; what is open:
 `docs/BACKLOG.md`.
 
+- 2026-11-28: Quit TurboHUD when TSU quits (`feature/quit-with-tsu`, asked for by drivers through the user). A new
+  option in the settings window's Race tab, under a TurboHUD heading, off by default (`quit_with_tsu`). Once TSU has been
+  read this session (any status but waiting for the game), TurboHUD quits after the game has been gone 10 s without a
+  break (`turbohud/core/game_watch.py`, `GONE_FOR`), so a connection dropped and made again at once while TSU runs
+  does not end it; started before TSU, it waits for it as before. Shown wherever TurboHUD reads TSU live. Tests: the
+  watch (started before TSU, gone long enough, a quick reconnect, each status), the setting saved and loaded, the
+  option in the Race tab under its heading. Checked on Linux with an isolated TurboHUD (own settings and runtime
+  folders, offscreen, no Hyprland) and a stand-in probe: TSU seen, the probe ended, TurboHUD quit 10 s later with
+  `TSU has quit: TurboHUD quits with it` in the log; with the option off, and with no TSU at all, it ran on. Not
+  yet seen with the real TSU, nor on the Mac and Windows, where TSU's quitting comes through the reader.
 - 2026-11-28: The settings window's buttons readable on Linux (`fix/settings-tab-buttons`, reported by the user).
   In the Look and Sections tabs, Reset colours, Smaller, Bigger, Add font..., Fonts folder..., the font list and the
   seconds boxes had no face, their dark text on the window's navy, while Close beneath the tabs had its own. Each

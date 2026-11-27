@@ -60,7 +60,7 @@ on global (your own
 **Add font...** picks a `.ttf` or `.otf` file and uses it at once; **Fonts folder...** opens `customization/fonts`), km/h or mph, a tint behind
 the sections, which standings columns show, the radar (cockpit cameras or every camera, its
 slipstream cones, how soon it shows), the yellow and blue flags, how often the race is read,
-and the on/off options also under **Options** in the icon's menu. **Car classes** lists the
+**Quit TurboHUD when TSU quits** (off by default), and the on/off options also under **Options** in the icon's menu. **Car classes** lists the
 class codes you can put in your clan tag; **About** shows your version.
 
 ## 5. What each section shows
