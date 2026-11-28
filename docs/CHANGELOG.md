@@ -4,6 +4,10 @@ Every finished change, newest first: what changed, why, how it was checked and w
 Each branch adds its dated entry at the top. Where things stand now: `RESUME.md`; what is open:
 `docs/BACKLOG.md`.
 
+- 2026-11-28: Build 2026.11.28 (`releases/TurboHUD-2026.11.28-macos-arm64.dmg`, 34.1 MB, macOS 27,
+  `--any-macos`, built with `.buildtools/build-venv`), asked for by the user: `main` after pulling GitHub's main
+  (the Windows memory figure, the customization test fix). Smoke test passed; the app's 207 files checked for the
+  privacy terms, none. Tests on `main`: all 1682 pass on the Mac (15 skipped), Ruff clean.
 - 2026-11-28: A test passing on Windows again (`fix/windows-customization-test`). The names of the files moved from
   an old customization folder in the Mac's Applications (`move_old_customization`, for the log) had the system's own
   separator, so its test, written on the Mac, failed on Windows (`display_presets\2560x1440.json`). They now have /
