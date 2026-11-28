@@ -296,6 +296,23 @@ class SettingsWindowTests(unittest.TestCase):
         )
         self.assertEqual(got[-1].scale, 1.2)  # the scale is not a colour
 
+    # Reported by the user on 2026-11-28: with a light desktop theme the white tick sat on a light box.
+    def test_every_tick_box_is_dark_inside_so_its_white_tick_shows(self):
+        from PySide6.QtGui import QColor, QPalette
+        from PySide6.QtWidgets import QApplication, QCheckBox
+
+        app = QApplication.instance()
+        self.addCleanup(app.setPalette, app.palette())
+        light = QPalette(app.palette())  # a light desktop theme, as GTK's on the user's Linux
+        light.setColor(QPalette.Base, QColor('#ffffff'))
+        app.setPalette(light)
+
+        window = self.window(options=self.OPTIONS, colours=('chosen', (), [('fuel', 'Fuel')]))
+        boxes = window.findChildren(QCheckBox)
+        self.assertGreaterEqual(len(boxes), 3)
+        for box in boxes:
+            self.assertLess(box.palette().color(QPalette.Base).lightness(), 60, box.text())
+
     def test_bigger_and_smaller_ask_for_a_factor(self):
         from PySide6.QtWidgets import QPushButton
 

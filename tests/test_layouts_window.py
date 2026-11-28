@@ -112,6 +112,27 @@ class LayoutsWindowTests(unittest.TestCase):
         panel.show_preset_status('Preset 2 Race saved')
         self.assertEqual(panel.layouts.status.text(), '\u2713 Preset 2 Race saved')
 
+    def test_the_panels_tick_boxes_are_dark_inside_so_their_white_tick_shows(self):
+        # Reported by the user on 2026-11-28: with a light desktop theme the ticks looked faded.
+        from PySide6.QtGui import QColor, QPalette
+        from PySide6.QtWidgets import QApplication, QCheckBox
+
+        app = QApplication.instance()
+        self.addCleanup(app.setPalette, app.palette())
+        light = QPalette(app.palette())  # a light desktop theme, as GTK's on the user's Linux
+        light.setColor(QPalette.Base, QColor('#ffffff'))
+        app.setPalette(light)
+
+        from turbohud.core.hud import RACE_SECTIONS
+        from turbohud.overlay.window import MovePanel
+
+        panel = MovePanel(FakeNative(), RACE_SECTIONS, True)
+        self.addCleanup(panel.close)
+        boxes = panel.findChildren(QCheckBox)
+        self.assertGreater(len(boxes), len(RACE_SECTIONS))  # Show in both tabs, Tint, Centre
+        for box in boxes:
+            self.assertLess(box.palette().color(QPalette.Base).lightness(), 60)
+
     def test_it_shows_the_preset_in_use_as_the_panel_does(self):
         # Asked for by the user on 2026-11-21: the layouts window says which preset is in use too.
         from turbohud.core.hud import RACE_SECTIONS
