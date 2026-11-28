@@ -40,6 +40,21 @@ class OwnMemoryTests(unittest.TestCase):
     def test_an_unknown_system_says_nothing(self):
         self.assertIsNone(memory.own_memory('sunos5'))
 
+    @unittest.skipUnless(sys.platform == 'win32', 'Windows')
+    def test_windows_gives_the_private_working_set(self):
+        # Task Manager's Memory: without the pages shared with Windows and Qt's libraries, so
+        # less than the whole working set the log showed before (2026-11-28).
+        import ctypes
+
+        counters = memory._ProcessMemoryCountersEx2()
+        counters.cb = ctypes.sizeof(counters)
+        process = ctypes.c_void_p(ctypes.WinDLL('kernel32').GetCurrentProcess())
+        if not ctypes.WinDLL('psapi').GetProcessMemoryInfo(process, ctypes.byref(counters), counters.cb):
+            self.skipTest('a Windows before 10 2004 has no private working set')
+        size = memory.own_memory()
+        self.assertLess(size, counters.WorkingSetSize)
+        self.assertLess(abs(size - counters.PrivateWorkingSetSize), 8 * memory.MB)
+
     @unittest.skipUnless(hasattr(os, 'sysconf'), "Linux and the Mac: Windows has no page size there")
     def test_linux_reads_its_resident_pages(self):
         with tempfile.TemporaryDirectory() as folder:

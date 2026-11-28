@@ -51,7 +51,7 @@ backlog item 14.
 2. **A preset load on Hyprland**: Ctrl+Shift+1 to 5 in a race, the HUD should no longer freeze (was 1.2-1.4 s, the
    log's `slow frame` lines after `preset N loaded`); `Hyprland: no batches` in the log means it went one by one.
 3. **TurboHUD's memory** (backlog item 10): a session started as `TURBOHUD_TRACE_MEMORY=1 sh run_turbohud.sh`;
-   the `memory grew:` lines say where Python's slow rise is.
+   the `memory grew:` lines say where Python's slow rise is. Windows levels off (2026-11-28); the Mac in a long race.
 
 Seen working in races by the user (2026-11-28): font buttons, radar zoom, steady standings, the preset in use
 in the layouts window, the colours, Car status, Ungroup all, a preset kept for the session, Race Director mode

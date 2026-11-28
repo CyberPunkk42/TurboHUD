@@ -124,8 +124,8 @@ nothing planned; tune the parts from what the user sees.
 ## 10. TurboHUD's memory grows on Linux (found 2026-11-20)
 189 to 542 MB in 18 min of racing. Found: the drawn-text images (capped at 64 MB, as meant) and the text
 outlines, 512 kept at about 220 KB each (about 114 MB), no longer kept: a race now levels off near 300 MB. Left: Python's
-blocks rise slowly (under 1 MB a minute): a session with `TURBOHUD_TRACE_MEMORY=1` says where. Then the Mac and
-Windows in a long race.
+blocks rise slowly (under 1 MB a minute): a session with `TURBOHUD_TRACE_MEMORY=1` says where. Windows levels off near
+310 MB (2026-11-28, `experiments/README.md`); left: the Mac in a long race.
 
 
 ## 13. The compass, hidden for now (2026-11-20)

@@ -780,6 +780,17 @@ generation 2). Fast at first, then slower and flat: more like caches filling tha
   was full the total levelled off (453, 463 MB). Python's blocks still rise slowly (6,000-8,000 every 30 s,
   under 1 MB a minute): to trace.
 
+## TurboHUD's own memory on Windows (2026-11-28, the user: a race, then spectating AI)
+
+On TSU's game update of 2026-11-28 (Steam build 26981767), Coco Jambo against AI. The log's `memory:` line was
+then the whole working set (with the pages shared with Windows and Qt's libraries; since `fix/windows-memory-figure`
+the private working set, Task Manager's Memory: 260 MB where the whole was 310 MB).
+- Driving, 6 minutes: 163 MB at the start, 321 MB as the text images reached their 64 MB cap (4 minutes in), 344 MB
+  at the end; Python's blocks 219,000 to 334,000, nearly flat after the cap.
+- Spectating, 18 minutes in a fresh session: 214, 294, 305 MB (cap reached), then 309, 309, 310, 310, 310 MB for
+  the last 10 minutes; Python's blocks flat near 320,000-330,000. It levels off: the rise while driving was the end
+  of the caches filling, not a leak. Windows has no `C heap` part (glibc only).
+
 ## TSU's sun, for a compass with north from it (2026-11-20, Windows, the user in a session of 4 races)
 
 Asked for by the user: could the compass take north from the game's sun? TSU's metadata (read only) has
