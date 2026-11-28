@@ -9,7 +9,7 @@ import logging
 from dataclasses import replace
 
 from PySide6.QtCore import QRectF, Qt, Signal
-from PySide6.QtGui import QColor, QPainter, QPen
+from PySide6.QtGui import QColor, QPainter, QPalette, QPen
 from PySide6.QtWidgets import (
     QButtonGroup,
     QCheckBox,
@@ -95,6 +95,19 @@ READS_BUTTON = (
     ' border-radius: 6px; padding: 3px 14px; }'
     f' QPushButton:checked {{ color: black; background: rgb{CHOSEN_RING}; border-color: rgb{CHOSEN_RING}; }}'
 )
+
+
+TICK_BOX = '#0f1e37'  # inside a tick box: the windows' own navy, so the white tick shows
+
+
+def readable_tick(box):
+    """`box` (a QCheckBox) with a dark inside: its tick is drawn in its text's colour, white in TurboHUD's
+    windows, and on a desktop with a light theme the box was light, the tick hard to see (reported by
+    the user on 2026-11-28, Linux with GTK's colours). Returns `box`."""
+    palette = box.palette()
+    palette.setColor(QPalette.Base, QColor(TICK_BOX))
+    box.setPalette(palette)
+    return box
 
 
 def _qcolor(text):
@@ -399,7 +412,7 @@ class SettingsWindow(QWidget):
         grid = QGridLayout()
         grid.setHorizontalSpacing(14)
         for index, (name, label) in enumerate(sections):
-            box = QCheckBox(label)
+            box = readable_tick(QCheckBox(label))
             box.setStyleSheet(f'QCheckBox {{ color: white; }} QCheckBox:disabled {{ color: {UNUSABLE}; }}')
             box.setChecked(name in chosen)
             box.setToolTip(f'{label} in colour-blind friendly colours (with Chosen sections)')
@@ -445,7 +458,7 @@ class SettingsWindow(QWidget):
         return label
 
     def _box(self, key, label, on, tip):
-        box = QCheckBox(label)
+        box = readable_tick(QCheckBox(label))
         box.setStyleSheet(f'QCheckBox {{ color: white; }} QCheckBox:disabled {{ color: {UNUSABLE}; }}')
         box.setChecked(on)
         box.setToolTip(tip)

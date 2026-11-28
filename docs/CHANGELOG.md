@@ -4,6 +4,12 @@ Every finished change, newest first: what changed, why, how it was checked and w
 Each branch adds its dated entry at the top. Where things stand now: `RESUME.md`; what is open:
 `docs/BACKLOG.md`.
 
+- 2026-11-28: Tick boxes readable on Linux (`fix/tick-boxes-readable`, reported by the user: the ticks looked faded). In
+  move mode's panel and the settings window a tick is drawn in its label's colour, white there, inside a box of the
+  desktop's own colour; with GTK's light colours (`QT_QPA_PLATFORMTHEME=gtk3` on the user's Omarchy) that was a
+  white tick in a light box. Each tick box is now dark inside (`readable_tick`, the windows' navy), whatever the
+  desktop's colours. Tests: with a light desktop palette every tick box of both windows is dark inside (fail without
+  the fix). Checked by pictures of both windows with a light palette; not yet seen on the user's desktop.
 - 2026-11-28: Sections whole again on Hyprland (`fix/hyprland-sections-clipped`, reported by the user: "only 10% of
   each section is visible"). Started over a workspace of tiled windows (no fullscreen TSU on it), each section's
   window was first tiled in among them, small (Qt warned of a "maximized or fullscreen" configure of size 0), then

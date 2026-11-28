@@ -126,6 +126,7 @@ from turbohud.hud.painter import (
     using,
 )
 from turbohud.overlay.layouts_window import STATUS_COLOUR, LayoutsWindow
+from turbohud.overlay.settings_window import readable_tick
 
 TINT = (23, 56, 97, 153)  # move mode's background: red, green, blue, opacity (0-255)
 # Move mode's place label (SectionWindow.show_place): shown this long after the last move, this
@@ -2040,7 +2041,7 @@ class MovePanel(QWidget):
 
     def _show_box(self, section, boxes):
         """A section's Show tick in one tab, in `boxes`; ticked or not, the other tab's follows."""
-        box = QCheckBox(section.label)
+        box = readable_tick(QCheckBox(section.label))
         box.setToolTip(section.tip or f'Show {section.label.lower()}')
         box.toggled.connect(lambda checked, name=section.name: self._shown(name, checked))
         boxes[section.name] = box
@@ -2085,7 +2086,7 @@ class MovePanel(QWidget):
             )
             grid.addWidget(button, row, column_)
         if has_tint(section):
-            tint = QCheckBox()
+            tint = readable_tick(QCheckBox())
             tint.setToolTip(
                 'The dark square behind the track map'
                 if section.drawing
@@ -2100,7 +2101,7 @@ class MovePanel(QWidget):
     def _text_row(self, grid, row, section):
         """The Text tab's columns for `section`: its text in the middle, size, line spacing, font."""
         if text_can_centre(section):
-            centre = QCheckBox()
+            centre = readable_tick(QCheckBox())
             centre.setToolTip('Put the text in the middle of the box, not at its left')
             centre.toggled.connect(
                 lambda checked, name=section.name: self.text_centred_changed.emit(name, checked)
