@@ -452,7 +452,8 @@ def move_old_customization(settings_folder, start=None, applications=None):
     """Where an earlier TurboHUD made customization/ in a Mac's Applications folder (beside the
     app, before applications_folders): move the player's files in it to the settings folder's
     (custom_folder), a file of the same name there kept, and delete TurboHUD's own (read-mes, its
-    default layouts, Finder's .DS_Store) and the folders left empty. The names of the files moved."""
+    default layouts, Finder's .DS_Store) and the folders left empty. The names of the files moved,
+    with / between folders on every system."""
     start = Path(start) if start is not None else app_folder()
     old = start / CUSTOM_FOLDER.parent
     if not in_applications(start, applications) or not old.is_dir():
@@ -471,7 +472,7 @@ def move_old_customization(settings_folder, start=None, applications=None):
                 if not target.exists():
                     target.parent.mkdir(parents=True, exist_ok=True)
                     shutil.move(str(path), str(target))
-                    moved.append(str(path.relative_to(old)))
+                    moved.append(path.relative_to(old).as_posix())
         except OSError:
             continue  # left where it is
     try:

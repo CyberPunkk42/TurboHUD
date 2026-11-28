@@ -4,6 +4,10 @@ Every finished change, newest first: what changed, why, how it was checked and w
 Each branch adds its dated entry at the top. Where things stand now: `RESUME.md`; what is open:
 `docs/BACKLOG.md`.
 
+- 2026-11-28: A test passing on Windows again (`fix/windows-customization-test`). The names of the files moved from
+  an old customization folder in the Mac's Applications (`move_old_customization`, for the log) had the system's own
+  separator, so its test, written on the Mac, failed on Windows (`display_presets\2560x1440.json`). They now have /
+  on every system. All tests pass on Windows; nothing a player sees changes (the move is the Mac's only).
 - 2026-11-28: TurboHUD's memory on Windows, as Task Manager shows it (`fix/windows-memory-figure`, backlog item 10).
   The log's `memory:` line on Windows was the whole working set, with the pages shared with Windows and Qt's
   libraries, though its code said Task Manager's figure: 310 MB where Task Manager had 260 MB. It is now the private
