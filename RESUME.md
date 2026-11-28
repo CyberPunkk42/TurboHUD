@@ -30,10 +30,11 @@ Kept short: the state now and what to do next. Every change, with how it was che
   TSU's Legacy colours for the car sections' bars; the settings window in tabs Look, Colours, Sections, Race.
 - **Latest (2026-11-20 and 21, Windows)**: Ungroup all; Car status; the car sections' text size kept with many
   laps; colour-blind friendly and Legacy colours; the settings window in tabs; the preset in use in the layouts
-  window. None of these is seen over TSU yet (To try next).
+  window. All seen working in races by the user (2026-11-28).
 - **Latest (2026-11-24, Mac)**: Add font... and Fonts folder... in the move-mode panel's Text tab too; with
   `TurboHUD.app` in Applications, `customization/` (layouts, fonts) is in the settings folder, no longer in
-  `/Applications` (an old one moved at start). Not yet tried in a built app (To try next).
+  `/Applications` (an old one moved at start). The font buttons seen working (2026-11-28); the folder not yet
+  tried in a built app (To try next).
 - **Latest (2026-11-25, Linux)**: race reads through the page cache, as on the Mac and Windows (one request for the
   pages instead of one a field); a window's placing commands in one `hyprctl --batch` call, so a preset load no
   longer freezes the HUD. Neither seen on Linux yet (To try next).
@@ -60,35 +61,12 @@ backlog item 14.
 7. **The customization folder on the Mac** (wait for the next build): start the built app from Applications once;
    `/Applications/customization` is gone and `~/Library/Application Support/TurboHUD/customization` has the
    layouts and `fonts/` (log: `customization: moved ...` only where a file of yours was moved).
-8. **Font buttons in the Text tab**: in move mode, Add font... uses a font at once; Fonts folder..., paste a
-   font, start move mode again: it is in Global font. Does the row still fit the panel?
-9. **Radar zoom**: zoomed in on a car right beside you, about 3.5 car lengths ahead and behind (was 2.5).
-10. **Standings steady**: in an online race with many cars, no gap below zero and the Gap and Best columns never
-   jumping out for a moment (a tester's video, 2026-11-21: a time not yet written read as 0).
-11. **The preset in use in the layouts window**: under Presets, the same line as the panel's (Preset: 3 Race,
-   (changed), Preset: none), changing as you load, save and drag.
-12. **Colours** (2026-11-21): Settings > Colours: colour-blind friendly colours for All sections, then Chosen; are
-   the colours told apart over TSU? TSU Legacy colours: the car sections' bars as dark as in TSU's HUD?
-13. **Car status**: tick it in move mode (untick the four it stands for): Health, Tires, Fuel, Finish in one
-   box with a bar under each of the first three, only the rows the event has, the tint ending below the last. The four separate ones at one
-   text size look the same too, also with ~100 laps of tires (shown whole from 100 on).
-14. **Ungroup all**: in move mode, the button at the end of the group row ungroups every section; Undo brings
-   the groups back.
-15. **A preset by hand kept for the session**: load 5 by hand in a race; later races start in 5, hotlapping
-   keeps its own; 5 s in TSU's menu ends the session (log: `preset 5 for every race this session`, `the session
-   is over`).
-16. **TurboHUD's memory** (backlog item 10): a session started as `TURBOHUD_TRACE_MEMORY=1 sh run_turbohud.sh`;
+8. **TurboHUD's memory** (backlog item 10): a session started as `TURBOHUD_TRACE_MEMORY=1 sh run_turbohud.sh`;
    the `memory grew:` lines say where Python's slow rise is.
-17. **Watching (Race Director mode)**: in a replay and spectating online, the battle warning's moments and
-   groups, and the watched driver's banner at each camera switch (log: `the camera follows player N`).
-18. **Presets**: the panel's "Preset: 3 Race" right after a load on Hyprland (or "(changed)"?); the Recording
-   and Spectating presets loading by themselves.
-19. **A font per section and per preset**: their own fonts kept by presets and Undo; is the panel's Font column
-   wide enough on Linux?
-20. **Banners**: none for your own car taking the lead; "Race Winner" with your flag picture at the finish.
-21. **Tire wear**: TurboHUD's Tires percent the same as TSU's (log: `tires: ... worn out at ...`).
 
-The Race Director mode (backlog item 8) has all its planned parts: what is left is tuning from what you see.
+Seen working in races by the user (2026-11-28): font buttons, radar zoom, steady standings, the preset in use
+in the layouts window, the colours, Car status, Ungroup all, a preset kept for the session, Race Director mode
+(battle warning, watched driver), presets loading by themselves, a font per section and preset, banners, tire wear.
 
 ## Working notes
 - Tests: `.buildtools/venv/bin/python -B -m unittest discover -s tests` (macOS, Linux; Windows:

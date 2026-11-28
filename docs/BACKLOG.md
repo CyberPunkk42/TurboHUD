@@ -118,7 +118,8 @@ Built: (1) the battle warning (`turbohud/core/battle.py`), to see in a replay an
 (`BATTLE_*`); (2) the watched driver's banner in a replay (`turbohud/core/watched.py`), to see; (3) the
 banner while spectating, from the camera TSU's cockpit view is read from (`spectated_driver`): not yet seen
 live, the log says whether it reads; (4) a Spectating kind of event for the presets (Layouts > Load by
-itself), to see. What is left: nothing planned; tune the parts from what the user sees.
+itself), to see. All seen working by the user in replays and spectating (2026-11-28). What is left:
+nothing planned; tune the parts from what the user sees.
 
 ## 10. TurboHUD's memory grows on Linux (found 2026-11-20)
 189 to 542 MB in 18 min of racing. Found: the drawn-text images (capped at 64 MB, as meant) and the text
