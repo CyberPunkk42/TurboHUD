@@ -4,6 +4,15 @@ Every finished change, newest first: what changed, why, how it was checked and w
 Each branch adds its dated entry at the top. Where things stand now: `RESUME.md`; what is open:
 `docs/BACKLOG.md`.
 
+- 2026-11-28: TurboHUD's memory on Windows, as Task Manager shows it (`fix/windows-memory-figure`, backlog item 10).
+  The log's `memory:` line on Windows was the whole working set, with the pages shared with Windows and Qt's
+  libraries, though its code said Task Manager's figure: 310 MB where Task Manager had 260 MB. It is now the private
+  working set (`PrivateWorkingSetSize`, Windows 10 2004 and later; an older Windows still gets the whole working
+  set). Also measured, on TSU's game update of that day (its class and field names, flags and tire constants checked
+  against the new metadata, all unchanged): a race against AI and 18 minutes spectating AI read with no errors, and
+  the memory levels off near 310 MB (`experiments/README.md`). Test: on Windows the figure is the private working set
+  and below the whole. Not yet seen in a race with the new figure; online, Custom races and replays not yet tried on
+  the game update.
 - 2026-11-28: Seen working in races (`docs/confirmed-in-races`, the user's own tries): the font buttons in the Text
   tab, the radar zoom, steady standings, the preset in use in the layouts window, the colour-blind friendly and
   Legacy colours, Car status, Ungroup all, a preset loaded by hand kept for the session, Race Director mode (the

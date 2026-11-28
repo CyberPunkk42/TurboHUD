@@ -2,8 +2,8 @@
 
 A tester's Mac had 2.9 GB of 18 GB left with TSU and the whole HUD running, and TurboHUD's own
 share was not in his logs. The 30 s summary of reads and frames now says it: what Activity
-Monitor's Memory column shows on the Mac (the physical footprint), the private working set's
-size on Windows (Task Manager's Memory), the resident size on Linux. One system call, about a
+Monitor's Memory column shows on the Mac (the physical footprint), the private working set on
+Windows (Task Manager's Memory), the resident size on Linux. One system call, about a
 microsecond, once every 30 s: nothing the HUD would notice. None where it cannot be read.
 """
 
@@ -77,13 +77,32 @@ class _ProcessMemoryCountersEx(ctypes.Structure):
     ]
 
 
+class _ProcessMemoryCountersEx2(_ProcessMemoryCountersEx):
+    """PROCESS_MEMORY_COUNTERS_EX2 (psapi.h, Windows 10 2004 and later): the private working set."""
+
+    _fields_ = [
+        ('PrivateWorkingSetSize', ctypes.c_size_t),
+        ('SharedCommitUsage', ctypes.c_uint64),
+    ]
+
+
 def _windows():
+    """Task Manager's Memory column: the private working set (PrivateWorkingSetSize). The whole
+    working set counts the pages shared with Windows and Qt's libraries too, so it shows more than
+    Task Manager (seen 2026-11-28); a Windows before 10 2004 has only that, and gets it."""
     kernel32 = ctypes.WinDLL('kernel32', use_last_error=True)
     psapi = ctypes.WinDLL('psapi', use_last_error=True)
     kernel32.GetCurrentProcess.restype = ctypes.c_void_p
+    process = ctypes.c_void_p(kernel32.GetCurrentProcess())
+    counters = _ProcessMemoryCountersEx2()
+    counters.cb = ctypes.sizeof(counters)
+    if (
+        psapi.GetProcessMemoryInfo(process, ctypes.byref(counters), counters.cb)
+        and counters.PrivateWorkingSetSize
+    ):
+        return counters.PrivateWorkingSetSize
     counters = _ProcessMemoryCountersEx()
     counters.cb = ctypes.sizeof(counters)
-    process = ctypes.c_void_p(kernel32.GetCurrentProcess())
     if not psapi.GetProcessMemoryInfo(process, ctypes.byref(counters), counters.cb):
         return None
     return counters.WorkingSetSize or None
