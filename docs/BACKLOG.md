@@ -137,8 +137,7 @@ the settings and presets are kept. To offer it: set it True, and bring back its 
 ## 14. Checks on the Mac and Windows, and rare cases not yet seen (from RESUME.md, 2026-11-20)
 Each one's details are in its changelog entry.
 - **The Mac and Windows**: the radar on the closest car; TurboHUD's memory in a long race; the Race preset at
-  start; the panel's General and Text tabs (Mac); the customization folder in the settings folder with the
-  app in Applications, an old one moved (Mac, built app); the place label following a drag and staying above the
+  start; the panel's General and Text tabs (Mac); the place label following a drag and staying above the
   sections (Mac); a replay found in about 5 s (Mac, reader rebuilt); one tint per group (Windows, then on by
   default there); the tester's stutter times and 10 reads a second (item 0).
 - **Linux**: the window count probe over TSU on Hyprland (item 1c); the log's slow-frame lines only for real

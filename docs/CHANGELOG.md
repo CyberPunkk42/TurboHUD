@@ -9,7 +9,10 @@ Each branch adds its dated entry at the top. Where things stand now: `RESUME.md`
   Legacy colours, Car status, Ungroup all, a preset loaded by hand kept for the session, Race Director mode (the
   battle warning and the watched driver's banner), the Recording and Spectating presets loading by themselves, a
   font per section and per preset, the banners, and TurboHUD's tire wear matching TSU's. Taken off `RESUME.md`'s
-  To try next; Race Director mode marked seen in the backlog (item 8). Docs only: nothing to test.
+  To try next; Race Director mode marked seen in the backlog (item 8). Then five more: the tick boxes on Linux, Quit
+  TurboHUD when TSU quits, the settings window's buttons on Linux, race reads on Linux with many cars (the page
+  cache), and the customization folder in the built Mac app (taken off backlog item 14 too). Left to try: sections
+  whole on Hyprland, a preset load on Hyprland, TurboHUD's memory. Docs only: nothing to test.
 - 2026-11-28: Tick boxes readable on Linux (`fix/tick-boxes-readable`, reported by the user: the ticks looked faded). In
   move mode's panel and the settings window a tick is drawn in its label's colour, white there, inside a box of the
   desktop's own colour; with GTK's light colours (`QT_QPA_PLATFORMTHEME=gtk3` on the user's Omarchy) that was a

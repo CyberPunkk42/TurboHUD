@@ -33,12 +33,12 @@ Kept short: the state now and what to do next. Every change, with how it was che
   window. All seen working in races by the user (2026-11-28).
 - **Latest (2026-11-24, Mac)**: Add font... and Fonts folder... in the move-mode panel's Text tab too; with
   `TurboHUD.app` in Applications, `customization/` (layouts, fonts) is in the settings folder, no longer in
-  `/Applications` (an old one moved at start). The font buttons seen working (2026-11-28); the folder not yet
-  tried in a built app (To try next).
+  `/Applications` (an old one moved at start). Both seen working (2026-11-28).
 - **Latest (2026-11-25, Linux)**: race reads through the page cache, as on the Mac and Windows (one request for the
   pages instead of one a field); a window's placing commands in one `hyprctl --batch` call, so a preset load no
-  longer freezes the HUD. Neither seen on Linux yet (To try next).
-- **Latest (2026-11-28)**: Quit TurboHUD when TSU quits, an option in Settings > Race (off by default).
+  longer freezes the HUD. The race reads seen working (2026-11-28); the preset load not yet (To try next).
+- **Latest (2026-11-28)**: Quit TurboHUD when TSU quits, an option in Settings > Race (off by default); seen
+  working by the user.
 - **Builds**: `tools/build_app.py` (PyInstaller) on each system: a Windows ZIP and a Mac disk image with
   the Rust reader, and a Linux `.tar.gz` built in Ubuntu 22.04 (`sh tools/build_linux.sh <version>`).
   The repository is kept in step with a private GitHub repository.
@@ -46,27 +46,18 @@ Kept short: the state now and what to do next. Every change, with how it was che
 ## To try next (most recent first)
 Details of each: its entry in `docs/CHANGELOG.md`. Checks on the Mac and Windows, and rare cases not yet seen:
 backlog item 14.
-1. **Tick boxes on Linux**: in move mode's panel and the settings window, each tick white in a dark box, clear at a glance.
-2. **Sections whole on Hyprland**: start TurboHUD with ordinary windows on the screen (no game), and again over TSU;
+1. **Sections whole on Hyprland**: start TurboHUD with ordinary windows on the screen (no game), and again over TSU;
    every section shows whole, in move mode and locked (was only a corner of each).
-3. **Quit TurboHUD when TSU quits**: tick it in Settings > Race, quit TSU: TurboHUD quits about 10 s later (log:
-   `TSU has quit: TurboHUD quits with it`); started before TSU, it waits; on the Mac and Windows too.
-4. **The settings window on Linux**: in the Look and Sections tabs, Reset colours, Smaller, Bigger, Add font...,
-   Fonts folder..., the font list and the seconds boxes have a face like Close's, their text readable.
-5. **Race reads on Linux with many cars** (restart TSU first, so its probe is the new one): in a race of about 20
-   cars, the log's `race reads:` line every 30 s should say a few ms a read (was 29-41 ms) and about 1 to 3 trips a
-   read; `the memory probe is older` in the log means TSU was started before the update.
-6. **A preset load on Hyprland**: Ctrl+Shift+1 to 5 in a race, the HUD should no longer freeze (was 1.2-1.4 s, the
+2. **A preset load on Hyprland**: Ctrl+Shift+1 to 5 in a race, the HUD should no longer freeze (was 1.2-1.4 s, the
    log's `slow frame` lines after `preset N loaded`); `Hyprland: no batches` in the log means it went one by one.
-7. **The customization folder on the Mac** (wait for the next build): start the built app from Applications once;
-   `/Applications/customization` is gone and `~/Library/Application Support/TurboHUD/customization` has the
-   layouts and `fonts/` (log: `customization: moved ...` only where a file of yours was moved).
-8. **TurboHUD's memory** (backlog item 10): a session started as `TURBOHUD_TRACE_MEMORY=1 sh run_turbohud.sh`;
+3. **TurboHUD's memory** (backlog item 10): a session started as `TURBOHUD_TRACE_MEMORY=1 sh run_turbohud.sh`;
    the `memory grew:` lines say where Python's slow rise is.
 
 Seen working in races by the user (2026-11-28): font buttons, radar zoom, steady standings, the preset in use
 in the layouts window, the colours, Car status, Ungroup all, a preset kept for the session, Race Director mode
-(battle warning, watched driver), presets loading by themselves, a font per section and preset, banners, tire wear.
+(battle warning, watched driver), presets loading by themselves, a font per section and preset, banners, tire wear;
+then tick boxes on Linux, Quit TurboHUD when TSU quits, the settings window's buttons on Linux, race reads on
+Linux with many cars, the customization folder in the built Mac app.
 
 ## Working notes
 - Tests: `.buildtools/venv/bin/python -B -m unittest discover -s tests` (macOS, Linux; Windows:
