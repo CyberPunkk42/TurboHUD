@@ -118,7 +118,8 @@ Built: (1) the battle warning (`turbohud/core/battle.py`), to see in a replay an
 (`BATTLE_*`); (2) the watched driver's banner in a replay (`turbohud/core/watched.py`), to see; (3) the
 banner while spectating, from the camera TSU's cockpit view is read from (`spectated_driver`): not yet seen
 live, the log says whether it reads; (4) a Spectating kind of event for the presets (Layouts > Load by
-itself), to see. What is left: nothing planned; tune the parts from what the user sees.
+itself), to see. All seen working by the user in replays and spectating (2026-11-28). What is left:
+nothing planned; tune the parts from what the user sees.
 
 ## 10. TurboHUD's memory grows on Linux (found 2026-11-20)
 189 to 542 MB in 18 min of racing. Found: the drawn-text images (capped at 64 MB, as meant) and the text
@@ -136,8 +137,7 @@ the settings and presets are kept. To offer it: set it True, and bring back its 
 ## 14. Checks on the Mac and Windows, and rare cases not yet seen (from RESUME.md, 2026-11-20)
 Each one's details are in its changelog entry.
 - **The Mac and Windows**: the radar on the closest car; TurboHUD's memory in a long race; the Race preset at
-  start; the panel's General and Text tabs (Mac); the customization folder in the settings folder with the
-  app in Applications, an old one moved (Mac, built app); the place label following a drag and staying above the
+  start; the panel's General and Text tabs (Mac); the place label following a drag and staying above the
   sections (Mac); a replay found in about 5 s (Mac, reader rebuilt); one tint per group (Windows, then on by
   default there); the tester's stutter times and 10 reads a second (item 0).
 - **Linux**: the window count probe over TSU on Hyprland (item 1c); the log's slow-frame lines only for real
