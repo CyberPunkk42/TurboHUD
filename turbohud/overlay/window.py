@@ -384,6 +384,9 @@ class SectionWindow(QWidget):
         self.backdrop = False  # its tint (its own option): behind the text while locked, the map's square
         self.locked = True
         self.wanted = True  # the player wants it shown
+        # The last size TurboHUD asked for (width, height), for a window held to its size as it opens
+        # on Hyprland (overlay.linux.FloatAtOpen), which then gives it this size.
+        self.asked_size = None
         self.group = ''  # sections of the same group move together (move mode)
         self.text_centred = False  # its text in the middle of its box (an option)
         self.delta_view = None  # the delta bar's content (a DeltaBarView)
@@ -531,6 +534,16 @@ class SectionWindow(QWidget):
     def resizeEvent(self, event):
         super().resizeEvent(event)
         self._moved()
+
+    def setGeometry(self, *args):
+        rect = args[0] if len(args) == 1 else QRect(*args)
+        self.asked_size = (rect.width(), rect.height())
+        super().setGeometry(rect)
+
+    def resize(self, *args):
+        size = args[0].toTuple() if len(args) == 1 else tuple(args)
+        self.asked_size = (size[0], size[1])
+        super().resize(*args)
 
     def show_on_top(self):
         if self.on_canvas:

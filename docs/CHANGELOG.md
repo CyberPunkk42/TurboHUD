@@ -4,6 +4,21 @@ Every finished change, newest first: what changed, why, how it was checked and w
 Each branch adds its dated entry at the top. Where things stand now: `RESUME.md`; what is open:
 `docs/BACKLOG.md`.
 
+- 2026-11-28: Sections whole again on Hyprland (`fix/hyprland-sections-clipped`, reported by the user: "only 10% of
+  each section is visible"). Started over a workspace of tiled windows (no fullscreen TSU on it), each section's
+  window was first tiled in among them, small (Qt warned of a "maximized or fullscreen" configure of size 0), then
+  floated and sized by TurboHUD's requests; Hyprland and Qt both had the full size, but Hyprland kept showing only
+  the first tile's corner of it (Nearby cars 215x108 of 524x275), for good. Over a fullscreen TSU, as in the races
+  of 2026-11-27, it did not happen. Not caused by the builds of 2026-11-27 or 28: their code showed the same, as did
+  placing without batches and with the window properties first; resizing each window 1 px and back healed it, and
+  so does opening it floated. Sections now open with their size fixed for 0.5 s, as the windows taking clicks have
+  since 2026-11-20, so Hyprland floats them at once (`FloatAtOpen` in `overlay/linux.py`). They had been left out
+  as TurboHUD may size a section just after it opens; a size asked meanwhile is now kept by the section
+  (`SectionWindow.asked_size`) and given to it as the moment ends, and a size from before it opened never counts,
+  so a section resized by a drag is not sent back. Tests: a section held to its size as it opens and given the size
+  asked meanwhile (fails without the fix); one resized by the desktop keeps it at its next opening. Checked on the
+  user's Hyprland with a copy of their settings in move mode: every section whole, no configure warnings, no place
+  changed. Not yet seen in a race, nor locked over TSU.
 - 2026-11-28: Quit TurboHUD when TSU quits (`feature/quit-with-tsu`, asked for by drivers through the user). A new
   option in the settings window's Race tab, under a TurboHUD heading, off by default (`quit_with_tsu`). Once TSU has been
   read this session (any status but waiting for the game), TurboHUD quits after the game has been gone 10 s without a
